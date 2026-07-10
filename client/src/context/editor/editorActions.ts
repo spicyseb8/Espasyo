@@ -1,6 +1,7 @@
 import { Tool } from "./tools";
 
-import type { Wall } from "../../types/Wall";
+import type { Wall } from "../../engine/walls/WallTypes";
+import type { Corner } from "../../engine/walls/Corner";
 
 export type EditorAction =
 
@@ -56,4 +57,21 @@ export type EditorAction =
 
           type: "TOGGLE_SNAP";
 
+      }
+    | { type:"REMOVE_WALL"; payload: string }
+    | {
+          type: "ADD_CORNER";
+          payload: Corner;
+      }
+    | {
+          type: "REMOVE_CORNER";
+          payload: string;
+      }
+    | {
+          type: "SELECT_WALL";
+          payload: string | null;
+      }
+    | {
+          type: "SELECT_CORNER";
+          payload: string | null;
       };

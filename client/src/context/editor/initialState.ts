@@ -10,6 +10,12 @@ export const initialState: EditorState = {
 
     walls: [],
 
+    corners: [],
+
+    selectedWallId: null,
+
+    selectedCornerId: null,
+
     wallHeight: 2.7,
 
     wallThickness: 0.15,

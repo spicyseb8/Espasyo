@@ -1,6 +1,6 @@
 import { Tool } from "./tools";
-
-import type { Wall } from "../../types/Walls";
+import type { Wall } from "../../engine/walls";
+import type { Corner } from "../../engine/walls";
 
 export interface EditorState {
 
@@ -9,6 +9,12 @@ export interface EditorState {
     activeTool: Tool;
 
     walls: Wall[];
+
+    corners: Corner[];
+
+    selectedWallId: string | null;
+
+    selectedCornerId: string | null;
 
     wallHeight: number;
 

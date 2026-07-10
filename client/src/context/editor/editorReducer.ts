@@ -82,6 +82,86 @@ export function editorReducer(
 
             };
 
+        case "REMOVE_WALL":
+
+    return {
+
+        ...state,
+
+        walls: state.walls.filter(
+
+            wall => wall.id !== action.payload
+
+        )
+
+    };
+
+        case "ADD_CORNER": {
+
+            if (
+
+                state.corners.some(
+
+                    c => c.id === action.payload.id
+
+                )
+
+            ) {
+
+                return state;
+
+            }
+
+            return {
+
+                ...state,
+
+                corners: [
+
+                    ...state.corners,
+
+                    action.payload
+
+                ]
+
+            };
+
+        }
+
+        case "REMOVE_CORNER":
+
+            return {
+
+                ...state,
+
+                corners: state.corners.filter(
+
+                    c => c.id !== action.payload
+
+                )
+
+            };
+
+        case "SELECT_WALL":
+
+            return {
+
+                ...state,
+
+                selectedWallId: action.payload
+
+            };
+
+        case "SELECT_CORNER":
+
+            return {
+
+                ...state,
+
+                selectedCornerId: action.payload
+
+            };
+
         default:
 
             return state;

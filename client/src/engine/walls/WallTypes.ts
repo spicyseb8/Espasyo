@@ -1,13 +1,15 @@
-import { Vector3 } from "three";
+import type { Vector3 } from "three";
 
 export interface Wall {
-  id: string;
 
-  start: Vector3;
+    id: string;
 
-  end: Vector3;
+    start: Vector3;
 
-  height: number;
+    end: Vector3;
 
-  thickness: number;
+    height: number;
+
+    thickness: number;
+
 }
