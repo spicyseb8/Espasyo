@@ -1,0 +1,85 @@
+.panel {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+
+    padding: 20px;
+
+    color: white;
+}
+
+.panel h2 {
+    margin: 0;
+    font-size: 22px;
+}
+
+.panel-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.panel-section h3 {
+    margin: 0;
+    font-size: 15px;
+    color: #B0B0B0;
+}
+
+.tool-button {
+    width: 100%;
+
+    padding: 12px;
+
+    border: none;
+
+    border-radius: 10px;
+
+    background: #2F3136;
+
+    color: white;
+
+    cursor: pointer;
+
+    text-align: left;
+}
+
+.tool-button.active {
+    background: #F5CB5C;
+    color: #1E1F22;
+}
+
+input {
+    width: 100%;
+
+    padding: 10px;
+
+    border-radius: 8px;
+
+    border: 1px solid #444;
+
+    background: #1E1F22;
+
+    color: white;
+}
+
+.checkbox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.start-button {
+    padding: 14px;
+
+    border: none;
+
+    border-radius: 10px;
+
+    background: #F5CB5C;
+
+    color: #1E1F22;
+
+    font-weight: 600;
+
+    cursor: pointer;
+}

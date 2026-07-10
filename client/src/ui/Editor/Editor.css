@@ -1,0 +1,27 @@
+.editor {
+    display: grid;
+
+    grid-template-rows:
+        64px
+        1fr;
+
+    height: 100vh;
+
+    background: #1E1F22;
+}
+
+.editor-body {
+
+    display: grid;
+
+    grid-template-columns:
+        300px
+        1fr;
+     min-height: 0;
+    overflow: hidden;
+}
+
+.viewport {
+
+    overflow: hidden;
+}

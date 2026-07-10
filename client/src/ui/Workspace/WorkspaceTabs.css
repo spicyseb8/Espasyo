@@ -1,0 +1,45 @@
+.workspace-tabs{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    padding:12px;
+
+    border-bottom:1px solid #3A3D44;
+
+}
+
+.tab{
+
+    background:none;
+
+    border:none;
+
+    color:#B3B3B3;
+
+    padding:10px;
+
+    border-radius:10px;
+
+    cursor:pointer;
+
+    transition:.2s;
+
+}
+
+.tab:hover{
+
+    background:#32353B;
+
+    color:white;
+
+}
+
+.tab.active{
+
+    background:#F5CB5C;
+
+    color:#1E1F22;
+
+}
