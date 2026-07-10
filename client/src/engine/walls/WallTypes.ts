@@ -1,12 +1,12 @@
-import type { Vector3 } from "three";
+import type { Corner } from "./Corner";
 
 export interface Wall {
 
     id: string;
 
-    start: Vector3;
+    start: Corner;
 
-    end: Vector3;
+    end: Corner;
 
     height: number;
 

@@ -14,23 +14,15 @@ export default function Floors() {
     );
 
     return (
+    <>
+        {regions.map((region, index) => (
+            <Floor
+                key={index}
+                polygon={region.corners}
+            />
+        ))}
+    </>
+);
 
-        <>
-
-            {regions.map((region, index) => (
-
-                <Floor
-
-                    key={index}
-
-                    polygon={region.corners}
-
-                />
-
-            ))}
-
-        </>
-
-    );
 
 }

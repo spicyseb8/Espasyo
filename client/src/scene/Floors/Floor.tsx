@@ -24,25 +24,17 @@ export default function Floor({
             console.log(i, p.x, p.y, p.z);
         });
 
-        const shape = new Shape();
+  const shape = new Shape();
 
-        shape.moveTo(
-            valid[0].x,
-            valid[0].z
-        );
+shape.moveTo(valid[0].x, -valid[0].z);
 
-        for (let i = 1; i < valid.length; i++) {
+for (let i = 1; i < valid.length; i++) {
+    shape.lineTo(valid[i].x, -valid[i].z);
+}
 
-            shape.lineTo(
-                valid[i].x,
-                valid[i].z
-            );
+shape.closePath();
 
-        }
-
-        shape.closePath();
-
-        return new ShapeGeometry(shape);
+return new ShapeGeometry(shape);
 
     }, [polygon]);
 
