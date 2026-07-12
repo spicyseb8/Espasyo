@@ -25,6 +25,10 @@ export const initialState: EditorState = {
 
     snapEnabled: true,
 
-    gridSize: 0.25
+    gridSize: 0.25,
+
+    layoutConfirmed: false
+    
+    
 
 };

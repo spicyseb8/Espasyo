@@ -23,5 +23,9 @@
 
 .viewport {
 
-    overflow: hidden;
+
+    position: relative;
+
+    flex: 1;
+
 }

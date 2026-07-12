@@ -80,16 +80,20 @@ export type EditorAction =
       type: "SET_CORNERS";
       payload: Corner[];
   }
+  
 
   | {
 
     type: "SET_WALL_MODE";
 
     payload: WallMode;
-
-}
+  }
+  
     | {
           type: "SELECT_CORNER";
           payload: string | null;
-      };
+      }
+    | {
+        type: "CONFIRM_LAYOUT";
+    };
     

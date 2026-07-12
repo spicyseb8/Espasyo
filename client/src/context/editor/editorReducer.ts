@@ -188,7 +188,8 @@ export function editorReducer(
                 wallMode: action.payload
 
             };
-
+            case "CONFIRM_LAYOUT":
+                return {... state, layoutConfirmed: true, activeTab: "build"};
         default:
 
             return state;

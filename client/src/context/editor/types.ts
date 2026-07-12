@@ -1,7 +1,7 @@
 import { Tool } from "./tools";
 import type { Wall } from "../../engine/walls";
 import type { Corner } from "../../engine/walls";
-import { WallMode } from "./WallMode";
+import { WallMode } from "../WallMode";
 export interface EditorState {
 
     activeTab: string;
@@ -23,5 +23,7 @@ export interface EditorState {
     snapEnabled: boolean;
 
     gridSize: number;
+
+    layoutConfirmed: boolean;
 
 }

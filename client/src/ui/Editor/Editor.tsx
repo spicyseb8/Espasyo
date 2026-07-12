@@ -3,23 +3,32 @@ import "./Editor.css";
 import Topbar from "../Topbar/Topbar";
 import Workspace from "../Workspace/Workspace";
 import Scene from "../../scene/Scene";
+import ConfirmLayoutButton from "../../scene/ConfirmLayoutButton";
 
 export default function Editor() {
-  return (
-    <div className="editor">
 
-      <Topbar />
+    return (
 
-      <div className="editor-body">
+        <div className="editor">
 
-        <Workspace />
+            <Topbar />
 
-        <main className="viewport">
-          <Scene />
-        </main>
+            <div className="editor-body">
 
-      </div>
+                <Workspace />
 
-    </div>
-  );
+                <main className="viewport">
+
+                    <Scene />
+
+                    <ConfirmLayoutButton />
+
+                </main>
+
+            </div>
+
+        </div>
+
+    );
+
 }

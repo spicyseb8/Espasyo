@@ -8,10 +8,10 @@ import {
     Lightbulb,
     FolderOpen
 } from "lucide-react";
-
 interface Props {
 
     activeTab: string;
+    layoutConfirmed: boolean;
 
     onTabChange: (tab: string) => void;
 
@@ -20,6 +20,7 @@ interface Props {
 export default function WorkspaceTabs({
 
     activeTab,
+    layoutConfirmed,
 
     onTabChange
 
@@ -67,16 +68,22 @@ export default function WorkspaceTabs({
 
                 const Icon = tab.icon;
 
+                const disabled =
+                layoutConfirmed &&
+                tab.id === "floorplan";
+
                 return (
 
                     <button
 
                         key={tab.id}
 
+                        disabled={disabled}
+
                         className={
-                            activeTab === tab.id
-                                ? "tab active"
-                                : "tab"
+                            `${activeTab === tab.id ? "tab active" : "tab"} ${
+                                disabled ? "disabled" : ""
+                            }`
                         }
 
                         onClick={() => onTabChange(tab.id)}
@@ -88,7 +95,6 @@ export default function WorkspaceTabs({
                     </button>
 
                 );
-
             })}
 
         </div>

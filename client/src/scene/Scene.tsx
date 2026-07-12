@@ -39,8 +39,8 @@ export default function Scene() {
             <WallDrawer />
 
             <Camera />
-
-        </Canvas>
+            </Canvas>
+            
 
     );
 

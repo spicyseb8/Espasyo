@@ -9,7 +9,12 @@
     border-bottom:1px solid #3A3D44;
 
 }
-
+.tab:disabled,
+.tab.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
 .tab{
 
     background:none;

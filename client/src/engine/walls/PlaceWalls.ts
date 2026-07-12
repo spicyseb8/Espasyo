@@ -5,7 +5,7 @@ import type { Wall } from "./WallTypes";
 
 import { findOrCreateCorner } from "./CornerSolver";
 import { removeDuplicateWalls } from "./RemoveDuplicateWalls";
-
+import { mergeCollinearWalls } from "./MergeCollinearWalls";
 export interface PlaceWallResult {
 
     corners: Corner[];
@@ -78,20 +78,13 @@ export function placeWall(
     // Add wall
     //----------------------------------------
 
-    const walls = removeDuplicateWalls([
-
-        ...existingWalls,
-
-        newWall
-
-    ]);
-
+    const walls = removeDuplicateWalls([ ...existingWalls, newWall]);
+    const merged = mergeCollinearWalls(corners, walls);
+    
     return {
 
-        corners,
-
-        walls
-
+    corners: merged.corners,
+    walls: merged.walls
     };
 
 }

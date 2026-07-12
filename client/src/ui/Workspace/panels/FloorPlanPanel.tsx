@@ -17,6 +17,7 @@ export default function FloorPlanPanel() {
         <h3>Drawing Tools</h3>
 
         <button
+          disabled={state.layoutConfirmed}
           className={`tool-button ${
             state.activeTool === Tool.Wall ? "active" : ""
           }`}
@@ -29,18 +30,22 @@ export default function FloorPlanPanel() {
         >
           Draw Walls
         </button>
+         
           <div className="wall-actions">
-          <button className={`wall-icon-button ${ state.wallMode === WallMode.Default ? "active" : ""}`}
+          <button disabled={state.layoutConfirmed}
+          className={`wall-icon-button ${ state.wallMode === WallMode.Default ? "active" : ""}`}
           onClick={() => dispatch({  type: "SET_WALL_MODE",  payload: WallMode.Default})}>
             <Square size={18} />
           </button>
 
-          <button className={`wall-icon-button ${ state.wallMode === WallMode.Join ? "active" : ""}`}
+          <button disabled={state.layoutConfirmed}
+          className={`wall-icon-button ${ state.wallMode === WallMode.Join ? "active" : ""}`}
           onClick={() => dispatch({  type: "SET_WALL_MODE",  payload: WallMode.Join})}>
             <Columns2 size={18} />
           </button>
 
-          <button className={`wall-icon-button ${ state.wallMode === WallMode.Split ? "active" : ""}`}
+          <button disabled={state.layoutConfirmed}
+          className={`wall-icon-button ${ state.wallMode === WallMode.Split ? "active" : ""}`}
           onClick={() => dispatch({  type: "SET_WALL_MODE",  payload: WallMode.Split})}>
             <SquareSplitHorizontal size={18} />
           </button>
@@ -54,7 +59,7 @@ export default function FloorPlanPanel() {
 
         <label>Height (m)</label>
 
-<input
+<input disabled={state.layoutConfirmed}
     type="number"
     value={state.wallHeight}
     step="0.1"
@@ -67,7 +72,7 @@ export default function FloorPlanPanel() {
 />
         <label>Thickness (m)</label>
 
-<input
+<input disabled={state.layoutConfirmed}
     type="number"
     value={state.wallThickness}
     step="0.05"
@@ -88,7 +93,7 @@ export default function FloorPlanPanel() {
       {/* Start Drawing */}
       {/* ========================= */}
 
-      <button
+      <button disabled={state.layoutConfirmed} 
         className="start-button"
         onClick={() =>
           dispatch({
