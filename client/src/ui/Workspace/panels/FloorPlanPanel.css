@@ -42,7 +42,40 @@
 
     text-align: left;
 }
+.wall-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: -4px;
+}
 
+.wall-icon-button {
+    flex: 1;
+
+    height: 42px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: none;
+    border-radius: 10px;
+
+    background: #2F3136;
+    color: #D5D5D5;
+
+    cursor: pointer;
+
+    transition: 0.18s;
+}
+
+.wall-icon-button:hover {
+    background: #3B3D42;
+}
+
+.wall-icon-button.active {
+    background: #F5CB5C;
+    color: #1E1F22;
+}
 .tool-button.active {
     background: #F5CB5C;
     color: #1E1F22;

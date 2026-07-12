@@ -41,7 +41,25 @@ export function editorReducer(
                 walls: [...state.walls, action.payload]
 
             };
+        case "SET_WALLS":
 
+            return {
+
+                ...state,
+
+                walls: action.payload
+
+            };
+
+        case "SET_CORNERS":
+
+            return {
+
+                ...state,
+
+                corners: action.payload
+
+            };
         case "SET_WALL_HEIGHT":
 
             return {

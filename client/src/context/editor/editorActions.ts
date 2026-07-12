@@ -71,6 +71,15 @@ export type EditorAction =
           type: "SELECT_WALL";
           payload: string | null;
       }
+      | {
+      type: "SET_WALLS";
+      payload: Wall[];
+  }
+
+| {
+      type: "SET_CORNERS";
+      payload: Corner[];
+  }
     | {
           type: "SELECT_CORNER";
           payload: string | null;

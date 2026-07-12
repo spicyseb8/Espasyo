@@ -1,5 +1,5 @@
 import "./FloorPlanPanel.css";
-
+import { Square, Columns2, SquareSplitHorizontal} from "lucide-react";
 import useEditor from "../../../context/editor/useEditor";
 import { Tool } from "../../../context/editor/tools";
 export default function FloorPlanPanel() {
@@ -28,23 +28,20 @@ export default function FloorPlanPanel() {
         >
           Draw Walls
         </button>
+          <div className="wall-actions">
+          <button className="wall-icon-button active" title="Default Wall">
+            <Square size={18} />
+          </button>
 
-        <button
-          className={`tool-button ${
-            state.activeTool === Tool.RectangleRoom ? "active" : ""
-          }`}
-          onClick={() =>
-            dispatch({
-              type: "SET_ACTIVE_TOOL",
-              payload: Tool.RectangleRoom,
-            })
-          }
-        >
-          Rectangle Room
-        </button>
+          <button className="wall-icon-button" title="Join Wall">
+            <Columns2 size={18} />
+          </button>
 
-
-      </section>
+          <button className="wall-icon-button" title="Split Wall">
+            <SquareSplitHorizontal size={18} />
+          </button>
+        </div>
+    </section>
 
 
       <section className="panel-section">
@@ -53,52 +50,35 @@ export default function FloorPlanPanel() {
 
         <label>Height (m)</label>
 
-        <input
-          type="number"
-          value={state.wallHeight}
-          step="0.1"
-          readOnly
-        />
-
+<input
+    type="number"
+    value={state.wallHeight}
+    step="0.1"
+    onChange={(e) =>
+        dispatch({
+            type: "SET_WALL_HEIGHT",
+            payload: Number(e.target.value)
+        })
+    }
+/>
         <label>Thickness (m)</label>
 
-        <input
-          type="number"
-          value={state.wallThickness}
-          step="0.05"
-          readOnly
-        />
+<input
+    type="number"
+    value={state.wallThickness}
+    step="0.05"
+    onChange={(e) =>
+        dispatch({
+            type: "SET_WALL_THICKNESS",
+            payload: Number(e.target.value)
+        })
+    }
+/>
 
       </section>
 
 
 
-      <section className="panel-section">
-
-        <h3>Grid</h3>
-
-        <label className="checkbox">
-
-          <input
-            type="checkbox"
-            checked={state.snapEnabled}
-            readOnly
-          />
-
-          Snap to Grid
-
-        </label>
-
-        <label>Grid Size (m)</label>
-
-        <input
-          type="number"
-          value={state.gridSize}
-          step="0.05"
-          readOnly
-        />
-
-      </section>
 
       {/* ========================= */}
       {/* Start Drawing */}

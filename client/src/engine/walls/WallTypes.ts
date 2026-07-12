@@ -8,8 +8,4 @@ export interface Wall {
 
     end: Corner;
 
-    height: number;
-
-    thickness: number;
-
 }

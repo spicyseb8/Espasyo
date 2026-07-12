@@ -1,8 +1,49 @@
 import { Vector3 } from "three";
 import type { Wall } from "./WallTypes";
-
+import type { Corner } from "./Corner";
 // Wall snapping utilities for editor
 
+const CORNER_SNAP_DISTANCE = 0.15;
+
+export function snapToCorner(
+
+    point: Vector3,
+
+    corners: Corner[]
+
+): Vector3 {
+
+    let closest: Corner | null = null;
+
+    let minDistance = CORNER_SNAP_DISTANCE;
+
+    for (const corner of corners) {
+
+        const distance = point.distanceTo(
+
+            corner.position
+
+        );
+
+        if (distance < minDistance) {
+
+            minDistance = distance;
+
+            closest = corner;
+
+        }
+
+    }
+
+    if (closest) {
+
+        return closest.position.clone();
+
+    }
+
+    return point;
+
+}
 export function snapToGrid(
     point: Vector3,
     gridSize: number
