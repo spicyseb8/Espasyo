@@ -1,16 +1,6 @@
 import type { Corner } from "../walls/Corner";
 import type { Wall } from "../walls/WallTypes";
-
-export interface Edge {
-    wall: Wall;
-    from: Corner;
-    to: Corner;
-}
-
-export interface GraphNode {
-    corner: Corner;
-    edges: Edge[];
-}
+import type { HalfEdge, GraphNode } from "./RegionTypes";
 
 export function buildRegionGraph(
     corners: Corner[],
@@ -19,28 +9,84 @@ export function buildRegionGraph(
 
     const graph = new Map<string, GraphNode>();
 
-    for (const corner of corners) {
+    for (const c of corners) {
 
-        graph.set(corner.id, {
-            corner,
+        graph.set(c.id, {
+
+            corner: c,
+
             edges: []
+
         });
 
     }
 
     for (const wall of walls) {
 
-        graph.get(wall.start.id)?.edges.push({
-            wall,
-            from: wall.start,
-            to: wall.end
-        });
+        const dx =
+            wall.end.position.x -
+            wall.start.position.x;
 
-        graph.get(wall.end.id)?.edges.push({
+        const dz =
+            wall.end.position.z -
+            wall.start.position.z;
+
+        const angleAB =
+            Math.atan2(dz, dx);
+
+        const angleBA =
+            Math.atan2(-dz, -dx);
+
+        const ab: HalfEdge = {
+
             wall,
+
+            from: wall.start,
+
+            to: wall.end,
+
+            angle: angleAB,
+
+            visited: false
+
+        };
+
+        const ba: HalfEdge = {
+
+            wall,
+
             from: wall.end,
-            to: wall.start
-        });
+
+            to: wall.start,
+
+            angle: angleBA,
+
+            visited: false
+
+        };
+
+        ab.twin = ba;
+        ba.twin = ab;
+
+        graph
+            .get(wall.start.id)!
+            .edges
+            .push(ab);
+
+        graph
+            .get(wall.end.id)!
+            .edges
+            .push(ba);
+
+    }
+
+    for (const node of graph.values()) {
+
+        node.edges.sort(
+
+            (a, b) => a.angle - b.angle
+
+        );
 
     }
 

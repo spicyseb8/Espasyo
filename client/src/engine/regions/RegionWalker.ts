@@ -1,5 +1,5 @@
 import { Vector3 } from "three";
-import type { GraphNode } from "./RegionGraph";
+import type { GraphNode, HalfEdge } from "./RegionTypes";
 import type { RegionPolygon } from "./Polygon";
 
 export function walkRegions(
@@ -8,55 +8,61 @@ export function walkRegions(
 
     const polygons: RegionPolygon[] = [];
 
-    const visited = new Set<string>();
-
     for (const node of graph.values()) {
 
-        for (const edge of node.edges) {
+        for (const startEdge of node.edges) {
 
-            const key = edge.from.id + "_" + edge.to.id;
-
-            if (visited.has(key))
+            if (startEdge.visited)
                 continue;
 
             const polygon: Vector3[] = [];
 
-            let current = edge;
+            let edge: HalfEdge | undefined = startEdge;
 
-            while (true) {
+            while (edge) {
 
-                visited.add(current.from.id + "_" + current.to.id);
+                if (edge.visited)
+                    break;
+
+                edge.visited = true;
 
                 polygon.push(
-                    current.from.position.clone()
+                    edge.from.position.clone()
                 );
 
-                const nextNode = graph.get(current.to.id);
+                const nextNode = graph.get(edge.to.id);
 
                 if (!nextNode)
                     break;
 
-                const next = nextNode.edges.find(
-                    e =>
-                        e.to.id !== current.from.id &&
-                        !visited.has(
-                            e.from.id + "_" + e.to.id
-                        )
+                const twin = edge.twin!;
+
+                const twinIndex = nextNode.edges.findIndex(
+
+                    e => e === twin
+
                 );
 
-                if (!next)
+                if (twinIndex === -1)
                     break;
 
-                current = next;
+                // Walk clockwise around the face
+                let nextIndex = twinIndex - 1;
 
-                if (current.to.id === edge.from.id) {
+                if (nextIndex < 0)
+                    nextIndex = nextNode.edges.length - 1;
 
-                    polygon.push(
-                        current.from.position.clone()
-                    );
+                edge = nextNode.edges[nextIndex];
+
+                if (
+                    edge.from.id === startEdge.from.id &&
+                    edge.to.id === startEdge.to.id
+                ) {
 
                     polygons.push({
+
                         corners: polygon
+
                     });
 
                     break;
@@ -69,6 +75,33 @@ export function walkRegions(
 
     }
 
-    return polygons;
+    return removeDuplicatePolygons(polygons);
+
+}
+
+function removeDuplicatePolygons(
+    polygons: RegionPolygon[]
+): RegionPolygon[] {
+
+    const unique: RegionPolygon[] = [];
+    const seen = new Set<string>();
+
+    for (const polygon of polygons) {
+
+        const ids = polygon.corners
+            .map(c => `${c.x},${c.z}`)
+            .sort()
+            .join("|");
+
+        if (seen.has(ids))
+            continue;
+
+        seen.add(ids);
+
+        unique.push(polygon);
+
+    }
+
+    return unique;
 
 }
