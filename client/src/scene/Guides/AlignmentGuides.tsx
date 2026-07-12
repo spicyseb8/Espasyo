@@ -15,7 +15,8 @@ export default function AlignmentGuides({ guides }: AlignmentGuidesProps) {
                         [guide.start.x, 0.01, guide.start.z],
                         [guide.end.x, 0.01, guide.end.z]
                     ]}
-                    color={guide.direction === "horizontal" ? "#FF6B6B" : "#4ECDC4"}
+                    color={ guide.aligned? "#22C55E" : "#4DA3FF"   // blue
+}
                     lineWidth={2}
                     dashed={false}
                 />

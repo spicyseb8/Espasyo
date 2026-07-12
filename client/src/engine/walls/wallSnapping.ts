@@ -62,8 +62,13 @@ export function snapToGrid(
 }
 
 export function snap90Degrees(
+
     start: Vector3,
-    end: Vector3
+
+    end: Vector3,
+
+    tolerance = 0.20 // 20 cm
+
 ): Vector3 {
 
     const snapped = end.clone();
@@ -71,21 +76,26 @@ export function snap90Degrees(
     const dx = snapped.x - start.x;
     const dz = snapped.z - start.z;
 
-    const threshold = 0.35;
-
-    if (Math.abs(dx) > Math.abs(dz) * (1 + threshold)) {
+    // Close to horizontal
+    if (Math.abs(dz) < tolerance) {
 
         snapped.z = start.z;
 
+        return snapped;
+
     }
 
-    else if (Math.abs(dz) > Math.abs(dx) * (1 + threshold)) {
+    // Close to vertical
+    if (Math.abs(dx) < tolerance) {
 
         snapped.x = start.x;
 
+        return snapped;
+
     }
 
-    return snapped;
+    // Otherwise don't snap
+    return end.clone();
 
 }
 
