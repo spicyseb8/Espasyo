@@ -2,6 +2,7 @@ import "./FloorPlanPanel.css";
 import { Square, Columns2, SquareSplitHorizontal} from "lucide-react";
 import useEditor from "../../../context/editor/useEditor";
 import { Tool } from "../../../context/editor/tools";
+import { WallMode } from "../../../context/WallMode";
 export default function FloorPlanPanel() {
   const { state, dispatch } = useEditor();
 
@@ -29,15 +30,18 @@ export default function FloorPlanPanel() {
           Draw Walls
         </button>
           <div className="wall-actions">
-          <button className="wall-icon-button active" title="Default Wall">
+          <button className={`wall-icon-button ${ state.wallMode === WallMode.Default ? "active" : ""}`}
+          onClick={() => dispatch({  type: "SET_WALL_MODE",  payload: WallMode.Default})}>
             <Square size={18} />
           </button>
 
-          <button className="wall-icon-button" title="Join Wall">
+          <button className={`wall-icon-button ${ state.wallMode === WallMode.Join ? "active" : ""}`}
+          onClick={() => dispatch({  type: "SET_WALL_MODE",  payload: WallMode.Join})}>
             <Columns2 size={18} />
           </button>
 
-          <button className="wall-icon-button" title="Split Wall">
+          <button className={`wall-icon-button ${ state.wallMode === WallMode.Split ? "active" : ""}`}
+          onClick={() => dispatch({  type: "SET_WALL_MODE",  payload: WallMode.Split})}>
             <SquareSplitHorizontal size={18} />
           </button>
         </div>

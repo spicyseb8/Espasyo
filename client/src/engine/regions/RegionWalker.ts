@@ -26,10 +26,16 @@ export function walkRegions(
 
                 edge.visited = true;
 
-                polygon.push(
-                    edge.from.position.clone()
-                );
-
+                const p = edge.from.position;
+                const last = polygon[polygon.length - 1];
+                if (
+                    !last ||
+                    !last.equals(p)
+                ) {
+                    polygon.push(
+                        p.clone()
+                    );
+                }
                 const nextNode = graph.get(edge.to.id);
 
                 if (!nextNode)
@@ -79,24 +85,84 @@ export function walkRegions(
 
 }
 
+function normalizePolygon(points: Vector3[]): string {
+
+    const coords = points.map(
+        p => `${p.x},${p.z}`
+    );
+
+    function rotate(list: string[]) {
+
+        let smallest = 0;
+
+        for (let i = 1; i < list.length; i++) {
+
+            if (list[i] < list[smallest]) {
+
+                smallest = i;
+
+            }
+
+        }
+
+        return [
+
+            ...list.slice(smallest),
+
+            ...list.slice(0, smallest)
+
+        ];
+
+    }
+
+    //------------------------------------
+    // Clockwise
+    //------------------------------------
+
+    const clockwise = rotate(coords);
+
+    //------------------------------------
+    // Counter Clockwise
+    //------------------------------------
+
+    const counter = rotate(
+
+        [...coords].reverse()
+
+    );
+
+    //------------------------------------
+    // Choose canonical ordering
+    //------------------------------------
+
+    const cw = clockwise.join("|");
+
+    const ccw = counter.join("|");
+
+    return cw < ccw ? cw : ccw;
+
+}
+
 function removeDuplicatePolygons(
     polygons: RegionPolygon[]
 ): RegionPolygon[] {
 
     const unique: RegionPolygon[] = [];
+
     const seen = new Set<string>();
 
     for (const polygon of polygons) {
 
-        const ids = polygon.corners
-            .map(c => `${c.x},${c.z}`)
-            .sort()
-            .join("|");
+        const key = normalizePolygon(
 
-        if (seen.has(ids))
+            polygon.corners
+
+        );
+
+        if (seen.has(key))
             continue;
 
-        seen.add(ids);
+        seen.add(key);
 
         unique.push(polygon);
 

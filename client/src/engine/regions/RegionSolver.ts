@@ -19,13 +19,17 @@ export function solveRegions(
 
     const polygons = walkRegions(graph);
 
-    return polygons.filter(p =>
+    return polygons.filter(p => {
 
-        p.corners.length >= 4 &&
-        Math.abs(
-            polygonArea(p.corners)
-        ) > 0.01
-
+    const area = Math.abs(
+        polygonArea(p.corners)
     );
+
+    return (
+        p.corners.length >= 3 &&
+        area > 0.01
+    );
+
+});
 
 }

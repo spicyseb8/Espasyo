@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import useEditor from "../../context/editor/useEditor";
 import { Tool } from "../../context/editor/tools";
+import { WallMode } from "../../context/WallMode";
 
 import PreviewWall from "../Preview/PreviewWall";
 import WallMeasurement from "../Preview/WallMeasurement";
@@ -15,14 +16,19 @@ import {
     snapToGrid,
     snap90Degrees,
     snapToWall,
-    snapToWallEndpoint,
-    snapToCorner
+    snapToWallEndpoint
 } from "../../engine/walls/wallSnapping";
 
 import { getAlignmentGuides } from "../../engine/walls/Alignment";
+
 import { placeWall } from "../../engine/walls/PlaceWalls";
+import { placeJoinedWall } from "../../engine/walls/PlaceJoinedWalls";
+import { placeSplitWall } from "../../engine/walls/PlaceSplitWalls";
+
+import { hitWall } from "../../engine/walls/wallHit";
 
 const raycaster = new Raycaster();
+
 const groundPlane = new Plane(
     new Vector3(0, 1, 0),
     0
@@ -79,59 +85,31 @@ export default function WallDrawer() {
 
         if (state.snapEnabled) {
 
-        snapped = snapToGrid(
+            snapped = snapToGrid(
+                snapped,
+                state.gridSize
+            );
 
+        }
+
+        snapped = snapToWallEndpoint(
             snapped,
-
-            state.gridSize
-
+            state.walls
         );
 
-    }
-
-    // 2 Existing corner
-
-    snapped = snapToCorner(
-
-        snapped,
-
-        state.corners
-
-    );
-
-    // 3 Existing endpoint
-
-    snapped = snapToWallEndpoint(
-
-        snapped,
-
-        state.walls
-
-    );
-
-    // 4 Wall body
-
-    snapped = snapToWall(
-
-        snapped,
-
-        state.walls
-
-    );
-
-    // 5 90°
-
-    if (startPoint) {
-
-        snapped = snap90Degrees(
-
-            startPoint,
-
-            snapped
-
+        snapped = snapToWall(
+            snapped,
+            state.walls
         );
 
-    }
+        if (startPoint) {
+
+            snapped = snap90Degrees(
+                startPoint,
+                snapped
+            );
+
+        }
 
         currentPoint.current.copy(
             snapped
@@ -158,7 +136,6 @@ export default function WallDrawer() {
             mouseDown.current = {
 
                 x: e.clientX,
-
                 y: e.clientY
 
             };
@@ -222,7 +199,7 @@ export default function WallDrawer() {
         // First Click
         //--------------------------------
 
-        if (!startPoint) {
+        if (startPoint === null) {
 
             setStartPoint(
                 currentPoint.current.clone()
@@ -233,20 +210,93 @@ export default function WallDrawer() {
         }
 
         //--------------------------------
-        // Create Wall
+        // Place Wall
         //--------------------------------
 
-        const result = placeWall(
+        let result;
 
-            state.corners,
+        switch (state.wallMode) {
 
-            state.walls,
+            case WallMode.Default:
 
-            startPoint,
+                result = placeWall(
 
-            currentPoint.current
+                    state.corners,
+                    state.walls,
 
-        );
+                    startPoint,
+                    currentPoint.current
+
+                );
+
+                break;
+
+            case WallMode.Join:
+
+                result = placeJoinedWall(
+
+                    state.corners,
+                    state.walls,
+
+                    startPoint,
+                    currentPoint.current
+
+                );
+
+                break;
+
+            case WallMode.Split: {
+
+                const wall = hitWall(
+
+                    startPoint,
+
+                    state.walls,
+
+                    0.6
+
+                );
+
+                if (!wall) {
+
+                    setStartPoint(null);
+
+                    return;
+
+                }
+
+                result = placeSplitWall(
+
+                    state.corners,
+                    state.walls,
+
+                    wall,
+
+                    startPoint,
+
+                    currentPoint.current
+
+                );
+
+                break;
+
+            }
+
+            default:
+
+                setStartPoint(null);
+
+                return;
+
+        }
+
+        if (!result) {
+
+            setStartPoint(null);
+
+            return;
+
+        }
 
         dispatch({
 
@@ -266,16 +316,14 @@ export default function WallDrawer() {
 
         setStartPoint(null);
 
-    },
-
-    [
+    }, [
 
         startPoint,
 
         state.activeTool,
+        state.wallMode,
 
         state.corners,
-
         state.walls,
 
         dispatch
@@ -289,121 +337,117 @@ export default function WallDrawer() {
     useEffect(() => {
 
         window.addEventListener(
-
             "pointerdown",
-
             handlePointerDown
-
         );
 
         window.addEventListener(
-
             "pointermove",
-
             handlePointerMove
-
         );
 
         window.addEventListener(
-
             "pointerup",
-
             handlePointerUp
-
         );
-        
+
         return () => {
 
             window.removeEventListener(
-
                 "pointerdown",
-
                 handlePointerDown
-
             );
 
             window.removeEventListener(
-
                 "pointermove",
-
                 handlePointerMove
-
             );
 
             window.removeEventListener(
-
                 "pointerup",
-
                 handlePointerUp
-
             );
 
         };
 
-    },
-
-    [
+    }, [
 
         handlePointerDown,
-
         handlePointerMove,
-
         handlePointerUp
 
     ]);
+
+    //----------------------------------------------------
+    // Ghost Preview
+    //----------------------------------------------------
+
     const ghostHalfLength = 0.10;
 
-const ghostStart = new Vector3(
-    currentPoint.current.x - ghostHalfLength,
-    0,
-    currentPoint.current.z
-);
+    const ghostStart = new Vector3(
+        currentPoint.current.x - ghostHalfLength,
+        0,
+        currentPoint.current.z
+    );
 
-const ghostEnd = new Vector3(
-    currentPoint.current.x + ghostHalfLength,
-    0,
-    currentPoint.current.z
-);
+    const ghostEnd = new Vector3(
+        currentPoint.current.x + ghostHalfLength,
+        0,
+        currentPoint.current.z
+    );
+
     //----------------------------------------------------
     // Render
     //----------------------------------------------------
 
     return (
-    <>
-        <AlignmentGuides
-            guides={guides.current}
-        />
 
-        <CornerHighlight
-            guides={guides.current}
-        />
+        <>
 
-        {state.activeTool === Tool.Wall && (
-            startPoint ? (
-                <>
+            <AlignmentGuides
+                guides={guides.current}
+            />
+
+            <CornerHighlight
+                guides={guides.current}
+            />
+
+            {state.activeTool === Tool.Wall && (
+
+                startPoint ? (
+
+                    <>
+
+                        <PreviewWall
+                            start={startPoint}
+                            end={currentPoint.current}
+                            height={state.wallHeight}
+                            thickness={state.wallThickness}
+                        />
+
+                        <WallMeasurement
+                            start={startPoint}
+                            end={currentPoint.current}
+                            height={state.wallHeight}
+                        />
+
+                    </>
+
+                ) : (
+
                     <PreviewWall
-                        start={startPoint}
-                        end={currentPoint.current}
+                        start={ghostStart}
+                        end={ghostEnd}
                         height={state.wallHeight}
                         thickness={state.wallThickness}
                     />
 
-                    <WallMeasurement
-                        start={startPoint}
-                        end={currentPoint.current}
-                        height={state.wallHeight}
-                    />
-                </>
-            ) : (
-                <PreviewWall
-                    start={ghostStart}
-                    end={ghostEnd}
-                    height={state.wallHeight}
-                    thickness={state.wallThickness}
-                />
-            )
-        )}
-    </>
-);
+                )
+
+            )}
+
+        </>
+
+    );
 
 }

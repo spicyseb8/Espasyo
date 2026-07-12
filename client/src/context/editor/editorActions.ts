@@ -2,7 +2,7 @@ import { Tool } from "./tools";
 
 import type { Wall } from "../../engine/walls/WallTypes";
 import type { Corner } from "../../engine/walls/Corner";
-
+import { WallMode } from "../WallMode";
 export type EditorAction =
 
     | {
@@ -80,7 +80,16 @@ export type EditorAction =
       type: "SET_CORNERS";
       payload: Corner[];
   }
+
+  | {
+
+    type: "SET_WALL_MODE";
+
+    payload: WallMode;
+
+}
     | {
           type: "SELECT_CORNER";
           payload: string | null;
       };
+    

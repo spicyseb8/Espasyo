@@ -179,6 +179,15 @@ export function editorReducer(
                 selectedCornerId: action.payload
 
             };
+            case "SET_WALL_MODE":
+
+            return {
+
+                ...state,
+
+                wallMode: action.payload
+
+            };
 
         default:
 

@@ -1,6 +1,7 @@
 import type { EditorState } from "./types";
 
 import { Tool } from "./tools";
+import { WallMode } from "../WallMode";
 
 export const initialState: EditorState = {
 
@@ -9,6 +10,8 @@ export const initialState: EditorState = {
     activeTool: Tool.Select,
 
     walls: [],
+
+    wallMode: WallMode.Default,
 
     corners: [],
 

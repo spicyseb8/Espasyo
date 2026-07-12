@@ -12,7 +12,6 @@ export interface AlignmentGuide {
 export function getAlignmentGuides(
     currentPoint: Vector3,
     corners: Corner[],
-    snapRadius = 0.5
     
 ): AlignmentGuide[] {
     const guides: AlignmentGuide[] = [];
