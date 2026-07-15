@@ -1,8 +1,9 @@
 import useEditor from "../context/editor/useEditor";
+import { Tool } from "../context/editor/tools";
 
 export default function ClearSelection() {
 
-    const { dispatch } = useEditor();
+    const { state, dispatch } = useEditor();
 
     return (
 
@@ -11,6 +12,9 @@ export default function ClearSelection() {
             rotation={[-Math.PI / 2, 0, 0]}
 
             onClick={() => {
+
+                if (state.activeTool === Tool.Wall)
+                    return;
 
                 dispatch({
 

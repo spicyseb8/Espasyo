@@ -1,0 +1,41 @@
+.asset-card{
+
+    display:flex;
+
+    flex-direction:column;
+
+    align-items:center;
+
+    gap:8px;
+
+    border:none;
+
+    background:#333;
+
+    border-radius:10px;
+
+    padding:10px;
+
+    cursor:pointer;
+
+}
+
+.asset-card img{
+
+    width:100%;
+
+    aspect-ratio:1;
+
+    object-fit:contain;
+
+}
+
+.asset-card span{
+
+    font-size:12px;
+
+    color:white;
+
+    text-align:center;
+
+}

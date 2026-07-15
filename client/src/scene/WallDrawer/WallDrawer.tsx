@@ -25,7 +25,7 @@ import { placeWall } from "../../engine/walls/PlaceWalls";
 import { placeJoinedWall } from "../../engine/walls/PlaceJoinedWalls";
 import { placeSplitWall } from "../../engine/walls/PlaceSplitWalls";
 
-import { hitWall } from "../../engine/walls/wallHit";
+import { hitWall, hitWallByRaycast } from "../../engine/walls/wallHit";
 
 const raycaster = new Raycaster();
 
@@ -38,7 +38,7 @@ export default function WallDrawer() {
 
     const { state, dispatch } = useEditor();
 
-    const { camera, pointer } = useThree();
+    const { camera, pointer, gl, scene } = useThree();
 
     const mouseDown = useRef({
         x: 0,
@@ -46,6 +46,22 @@ export default function WallDrawer() {
     });
 
     const moved = useRef(false);
+
+    // Which mouse button started the current gesture. Right-click toggles
+    // the wall tool on/off (replacing the old "Start/Stop Drawing"
+    // button); left-click does the actual point-placement/drawing. We
+    // capture this on pointerdown rather than re-reading e.button on
+    // pointerup, since not all browsers populate PointerEvent.button
+    // reliably on release.
+    const pointerButton = useRef(0);
+
+    // Tracks whether the current pointer gesture actually started on the
+    // canvas. We listen on `window` (not the canvas element) so that
+    // dragging off-canvas still works mid-drag -- but that also means
+    // clicks on the sidebar, toolbar, "Confirm Layout", inputs, tabs,
+    // etc. would otherwise reach this listener too and get misread as
+    // wall clicks. Gating on where the gesture *began* fixes that.
+    const startedOnCanvas = useRef(false);
 
     const [startPoint, setStartPoint] =
         useState<Vector3 | null>(null);
@@ -63,6 +79,15 @@ export default function WallDrawer() {
     //----------------------------------------------------
     // Mouse Position
     //----------------------------------------------------
+    // Picking order is wall-first, ground-plane as fallback:
+    //
+    //   raycast scene
+    //     -> hit a wall?  use the hit point, projected onto the ground
+    //     -> otherwise    fall back to intersecting the ground plane
+    //
+    // This makes the wall mesh itself intercept the click instead of
+    // the ray always passing through to the floor first.
+    //----------------------------------------------------
 
     useFrame(() => {
 
@@ -74,12 +99,32 @@ export default function WallDrawer() {
             camera
         );
 
-        const point = new Vector3();
-
-        raycaster.ray.intersectPlane(
-            groundPlane,
-            point
+        const wallHit = hitWallByRaycast(
+            raycaster,
+            scene.children,
+            state.walls
         );
+
+        let point: Vector3;
+
+        if (wallHit) {
+
+            // Ray hit a wall -- use that point (already projected to
+            // the ground by hitWallByRaycast) instead of continuing on
+            // to the floor.
+            point = wallHit.point;
+
+        } else {
+
+            // No wall in the way -- fall back to the ground plane.
+            point = new Vector3();
+
+            raycaster.ray.intersectPlane(
+                groundPlane,
+                point
+            );
+
+        }
 
         let snapped = point.clone();
 
@@ -142,9 +187,27 @@ export default function WallDrawer() {
 
             moved.current = false;
 
+            pointerButton.current = e.button;
+
+            // Only treat this gesture as a viewport interaction if it
+            // actually began on the canvas. This is what stops UI
+            // clicks (sidebar, toolbar, Confirm Layout, inputs, ...)
+            // from being picked up as wall placement clicks, since the
+            // pointerup listener below is registered on `window`.
+            const target = e.target as Node | null;
+
+            startedOnCanvas.current =
+
+                target !== null &&
+
+                (
+                    target === gl.domElement ||
+                    gl.domElement.contains(target)
+                );
+
         },
 
-        []
+        [gl]
 
     );
 
@@ -189,7 +252,54 @@ export default function WallDrawer() {
 
     const handlePointerUp = useCallback(() => {
 
+        // Ignore any gesture that didn't start on the canvas -- this is
+        // what stops UI clicks from placing wall points or toggling
+        // the tool.
+        if (!startedOnCanvas.current)
+            return;
+
         if (moved.current)
+            return;
+
+        //--------------------------------
+        // Right click -> toggle drawing on/off
+        //--------------------------------
+        // Replaces the old "Start/Stop Drawing" button: right-clicking
+        // the viewport starts wall drawing if it's off, and stops it
+        // (cancelling any in-progress point) if it's already on.
+        if (pointerButton.current === 2) {
+
+            if (state.layoutConfirmed)
+                return;
+
+            dispatch({
+
+                type: "SET_ACTIVE_TOOL",
+
+                // NOTE: swap Tool.Select for whatever your actual idle /
+                // off-state tool is called if it isn't "Select".
+                payload:
+                    state.activeTool === Tool.Wall
+                        ? Tool.Select
+                        : Tool.Wall
+
+            });
+
+            setStartPoint(null);
+
+            // Drop any stale alignment/corner guides from the last
+            // active session so nothing lingers on screen once the
+            // tool is off.
+            guides.current = [];
+
+            return;
+
+        }
+
+        //--------------------------------
+        // Left click -> existing placement flow
+        //--------------------------------
+        if (pointerButton.current !== 0)
             return;
 
         if (state.activeTool !== Tool.Wall)
@@ -247,7 +357,19 @@ export default function WallDrawer() {
 
             case WallMode.Split: {
 
-                const wall = hitWall(
+                // Which wall (if any) is the split point on? Check
+                // BOTH click points with the tolerant, distance-based
+                // test -- not just whichever point the cursor happens
+                // to be over right now. This is what lets you:
+                //
+                //   - click a wall, then click empty ground   (T-junction)
+                //   - click empty ground, then click a wall   (T-junction, reverse order)
+                //   - click one wall, then click another wall (split a room in two)
+                //
+                // Whichever point actually lands on/near a wall becomes
+                // the split point; the other point becomes the new
+                // wall segment's far end.
+                const startHit = hitWall(
 
                     startPoint,
 
@@ -257,7 +379,33 @@ export default function WallDrawer() {
 
                 );
 
-                if (!wall) {
+                const endHit = hitWall(
+
+                    currentPoint.current,
+
+                    state.walls,
+
+                    0.6
+
+                );
+
+                let splitWall;
+                let splitPoint;
+                let otherPoint;
+
+                if (startHit) {
+
+                    splitWall = startHit;
+                    splitPoint = startPoint;
+                    otherPoint = currentPoint.current;
+
+                } else if (endHit) {
+
+                    splitWall = endHit;
+                    splitPoint = currentPoint.current;
+                    otherPoint = startPoint;
+
+                } else {
 
                     setStartPoint(null);
 
@@ -270,11 +418,11 @@ export default function WallDrawer() {
                     state.corners,
                     state.walls,
 
-                    wall,
+                    splitWall,
 
-                    startPoint,
+                    splitPoint,
 
-                    currentPoint.current
+                    otherPoint
 
                 );
 
@@ -322,6 +470,7 @@ export default function WallDrawer() {
 
         state.activeTool,
         state.wallMode,
+        state.layoutConfirmed,
 
         state.corners,
         state.walls,
@@ -329,6 +478,39 @@ export default function WallDrawer() {
         dispatch
 
     ]);
+
+    //----------------------------------------------------
+    // Suppress Right-Click Context Menu
+    //----------------------------------------------------
+    // Right-click now toggles the wall tool, so the browser's native
+    // context menu needs to be suppressed whenever the click lands on
+    // the canvas -- otherwise every right-click pops up the menu
+    // instead of toggling drawing on/off.
+    //----------------------------------------------------
+
+    const handleContextMenu = useCallback(
+
+        (e: MouseEvent) => {
+
+            const target = e.target as Node | null;
+
+            const onCanvas =
+
+                target !== null &&
+
+                (
+                    target === gl.domElement ||
+                    gl.domElement.contains(target)
+                );
+
+            if (onCanvas)
+                e.preventDefault();
+
+        },
+
+        [gl]
+
+    );
 
     //----------------------------------------------------
     // Events
@@ -351,6 +533,11 @@ export default function WallDrawer() {
             handlePointerUp
         );
 
+        window.addEventListener(
+            "contextmenu",
+            handleContextMenu
+        );
+
         return () => {
 
             window.removeEventListener(
@@ -368,13 +555,19 @@ export default function WallDrawer() {
                 handlePointerUp
             );
 
+            window.removeEventListener(
+                "contextmenu",
+                handleContextMenu
+            );
+
         };
 
     }, [
 
         handlePointerDown,
         handlePointerMove,
-        handlePointerUp
+        handlePointerUp,
+        handleContextMenu
 
     ]);
 
@@ -404,45 +597,49 @@ export default function WallDrawer() {
 
         <>
 
-            <AlignmentGuides
-                guides={guides.current}
-            />
-
-            <CornerHighlight
-                guides={guides.current}
-            />
-
             {state.activeTool === Tool.Wall && (
 
-                startPoint ? (
+                <>
 
-                    <>
+                    <AlignmentGuides
+                        guides={guides.current}
+                    />
+
+                    <CornerHighlight
+                        guides={guides.current}
+                    />
+
+                    {startPoint ? (
+
+                        <>
+
+                            <PreviewWall
+                                start={startPoint}
+                                end={currentPoint.current}
+                                height={state.wallHeight}
+                                thickness={state.wallThickness}
+                            />
+
+                            <WallMeasurement
+                                start={startPoint}
+                                end={currentPoint.current}
+                                height={state.wallHeight}
+                            />
+
+                        </>
+
+                    ) : (
 
                         <PreviewWall
-                            start={startPoint}
-                            end={currentPoint.current}
+                            start={ghostStart}
+                            end={ghostEnd}
                             height={state.wallHeight}
                             thickness={state.wallThickness}
                         />
 
-                        <WallMeasurement
-                            start={startPoint}
-                            end={currentPoint.current}
-                            height={state.wallHeight}
-                        />
+                    )}
 
-                    </>
-
-                ) : (
-
-                    <PreviewWall
-                        start={ghostStart}
-                        end={ghostEnd}
-                        height={state.wallHeight}
-                        thickness={state.wallThickness}
-                    />
-
-                )
+                </>
 
             )}
 

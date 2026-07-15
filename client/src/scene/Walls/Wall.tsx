@@ -61,6 +61,12 @@ function WallComponent({
                 -angle,
                 0
             ]}
+            // Tag this mesh with its wall id so raycasts (WallDrawer's
+            // click/hover picking via hitWallByRaycast) can identify
+            // which wall was actually intercepted by the ray.
+            userData={{
+                wallId: wall.id
+            }}
             onPointerOver={(e) => {
                 e.stopPropagation();
                 setHovered(true);

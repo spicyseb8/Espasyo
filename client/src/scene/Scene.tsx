@@ -10,6 +10,9 @@ import WallDrawer from "./WallDrawer/WallDrawer";
 
 import ClearSelection from "./ClearSelection";
 import Floors from "./Floors/Floors";
+
+
+
 export default function Scene() {
 
     return (
@@ -32,6 +35,7 @@ export default function Scene() {
 
             <ClearSelection />
             <Floors />
+                
             <Walls />
 
             <WallMeasurements />

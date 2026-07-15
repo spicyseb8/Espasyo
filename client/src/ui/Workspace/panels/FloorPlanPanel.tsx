@@ -15,21 +15,6 @@ export default function FloorPlanPanel() {
       <section className="panel-section">
 
         <h3>Drawing Tools</h3>
-
-        <button
-          disabled={state.layoutConfirmed}
-          className={`tool-button ${
-            state.activeTool === Tool.Wall ? "active" : ""
-          }`}
-          onClick={() =>
-            dispatch({
-              type: "SET_ACTIVE_TOOL",
-              payload: Tool.Wall,
-            })
-          }
-        >
-          Draw Walls
-        </button>
          
           <div className="wall-actions">
           <button disabled={state.layoutConfirmed}

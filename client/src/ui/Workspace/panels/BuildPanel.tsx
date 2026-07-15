@@ -1,14 +1,40 @@
+import "./BuildPanel.css";
+
+import AssetSection from "./AssetSection";
+
+import { AssetLibrary } from "../../../assets/AssetLibrary";
+
 export default function BuildPanel() {
 
     return (
 
-        <>
+        <div className="build-panel">
 
-            <h2>Build doors and</h2>
+            <AssetSection
 
-            <p>Draw walls and create rooms.</p>
+                title="Openings"
 
-        </>
+                assets={AssetLibrary.openings}
+
+            />
+
+            <AssetSection
+
+                title="Doors"
+
+                assets={AssetLibrary.doors}
+
+            />
+
+            <AssetSection
+
+                title="Windows"
+
+                assets={AssetLibrary.windows}
+
+            />
+
+        </div>
 
     );
 
