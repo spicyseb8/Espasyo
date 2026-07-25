@@ -2,6 +2,7 @@ import type { EditorState } from "./types";
 
 import { Tool } from "./tools";
 import { WallMode } from "../WallMode";
+import { BuildTool } from "../BuildTool";
 
 export const initialState: EditorState = {
 
@@ -19,7 +20,7 @@ export const initialState: EditorState = {
 
     selectedCornerId: null,
 
-    wallHeight: 2.7,
+    wallHeight: 3,
 
     wallThickness: 0.15,
 
@@ -27,8 +28,12 @@ export const initialState: EditorState = {
 
     gridSize: 0.25,
 
-    layoutConfirmed: false
-    
-    
+    layoutConfirmed: false,
 
+    selectedAsset: null,
+
+    buildTool: BuildTool.None,
+
+    doors: [],
+    
 };

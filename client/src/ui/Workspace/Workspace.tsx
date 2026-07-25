@@ -34,6 +34,8 @@ export default function Workspace() {
                 }}
             />
 
+            <div className="workspace-divider" />
+
             <div className="workspace-content">
 
                 <WorkspaceContent

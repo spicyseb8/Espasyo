@@ -2,9 +2,7 @@ export const Tool = {
 
     Select: "select",
 
-    Wall: "wall",
-
-    RectangleRoom: "rectangle",
+    Wall: "wall"
 
 
 } as const;

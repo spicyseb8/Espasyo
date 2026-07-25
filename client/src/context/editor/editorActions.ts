@@ -3,6 +3,9 @@ import { Tool } from "./tools";
 import type { Wall } from "../../engine/walls/WallTypes";
 import type { Corner } from "../../engine/walls/Corner";
 import { WallMode } from "../WallMode";
+import type { Asset } from "../../assets/Asset";
+import { BuildTool } from "../BuildTool";
+import type { Door } from "../../engine/doors/DoorTypes";
 export type EditorAction =
 
     | {
@@ -95,5 +98,19 @@ export type EditorAction =
       }
     | {
         type: "CONFIRM_LAYOUT";
-    };
+    
+      }
+  |   {
+          type: "SET_BUILD_TOOL";
+          payload: BuildTool;
+      }
+    | {
+          type: "SET_SELECTED_ASSET";
+          payload: Asset | null;
+      }
+    | {
+          type: "ADD_DOOR";
+          payload: Door;
+      }
+;
     

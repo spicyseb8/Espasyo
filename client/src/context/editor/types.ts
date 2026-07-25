@@ -2,6 +2,10 @@ import { Tool } from "./tools";
 import type { Wall } from "../../engine/walls";
 import type { Corner } from "../../engine/walls";
 import { WallMode } from "../WallMode";
+import type { Asset } from "../../assets/Asset";
+import { BuildTool } from "../BuildTool";
+import type { Door } from "../../engine/doors/DoorTypes";
+
 export interface EditorState {
 
     activeTab: string;
@@ -25,5 +29,10 @@ export interface EditorState {
     gridSize: number;
 
     layoutConfirmed: boolean;
+    selectedAsset: Asset | null;
+
+    buildTool: BuildTool;
+
+    doors: Door[];
 
 }

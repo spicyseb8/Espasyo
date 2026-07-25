@@ -13,7 +13,7 @@ export default function WallMeasurement({
 
     start,
     end,
-    height = 2.7,
+    height = 3,
     length: providedLength,
 
     }: WallMeasurementProps) {

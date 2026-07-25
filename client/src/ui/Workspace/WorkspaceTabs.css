@@ -1,50 +1,89 @@
-.workspace-tabs{
-
-    display:flex;
-
-    justify-content:space-between;
-
-    padding:12px;
-
-    border-bottom:1px solid #3A3D44;
-
+.workspace-tabs {
+    display: flex;
+    justify-content: space-between;
+    gap: 4px;
+    padding: 10px 12px;
 }
+
+.tab {
+    position: relative;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: none;
+
+    border: 1.5px solid transparent;
+
+    color: var(--ws-text-muted);
+
+    padding: 10px;
+
+    border-radius: 12px;
+
+    cursor: pointer;
+
+    transition: background .18s ease, border-color .18s ease, color .18s ease;
+}
+
+.tab:hover {
+    background: rgba(104, 104, 104, 0.05);
+    color: var(--ws-accent);
+}
+
 .tab:disabled,
 .tab.disabled {
-    opacity: 0.4;
+    opacity: 0.35;
     cursor: not-allowed;
     pointer-events: none;
 }
-.tab{
 
-    background:none;
-
-    border:none;
-
-    color:#B3B3B3;
-
-    padding:10px;
-
-    border-radius:10px;
-
-    cursor:pointer;
-
-    transition:.2s;
-
+.tab.active {
+    background: var(--ws-accent-soft);
+    border-color: var(--ws-accent);
+    color: var(--ws-accent);
 }
 
-.tab:hover{
-
-    background:#32353B;
-
-    color:white;
-
+.tab-lock {
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    color: var(--ws-text-muted);
+    background: #FFFFFF;
+    border-radius: 50%;
+    padding: 2px;
+    box-shadow: 0 1px 3px rgba(28, 28, 30, 0.2);
 }
 
-.tab.active{
+.tab-tooltip {
+    position: absolute;
+    bottom: -32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-4px);
 
-    background:#F5CB5C;
+    background: #1C1C1E;
+    color: #FFFFFF;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 9px;
+    border-radius: 8px;
+    white-space: nowrap;
 
-    color:#1E1F22;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .15s ease, transform .15s ease;
+    z-index: 10;
+}
 
+.tab:hover .tab-tooltip {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tab,
+    .tab-tooltip {
+        transition: none;
+    }
 }

@@ -188,8 +188,26 @@ export function editorReducer(
                 wallMode: action.payload
 
             };
+            case "SET_SELECTED_ASSET":
+                return {
+                    ...state,
+                    selectedAsset: action.payload
+                };
+            case "SET_BUILD_TOOL":
+
+                return {
+
+                    ...state,
+
+                    buildTool: action.payload
+
+                };
+    
             case "CONFIRM_LAYOUT":
                 return {... state, layoutConfirmed: true, activeTab: "build"};
+            
+            case "ADD_DOOR":
+                return {...state, doors: [...state.doors, action.payload]};
         default:
 
             return state;

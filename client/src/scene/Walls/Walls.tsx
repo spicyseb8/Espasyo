@@ -1,30 +1,77 @@
+import { memo } from "react";
+
 import useEditor from "../../context/editor/useEditor";
 
-import Wall from "./Wall";
-import { useMemo } from "react";
+import WallPiece from "./WallPiece";
 
-export default function Walls() {
+import { buildWallMeshes } from "../../engine/walls/WallMeshBuilder";
+
+function Walls() {
 
     const { state } = useEditor();
-
-    const wallElements = useMemo(() => 
-        state.walls.map((wall) => (
-            <Wall
-                key={wall.id}
-                wall={wall}
-            />
-        )),
-        [state.walls]
-    );
 
     return (
 
         <>
 
-            {wallElements}
+            {
+
+                state.walls.map((wall) => {
+
+                    //--------------------------------------------------
+                    // Build renderable pieces
+                    //--------------------------------------------------
+
+                    const pieces = buildWallMeshes(
+
+                        wall,
+
+                        state.wallHeight,
+
+                        state.wallThickness,
+
+                        state.doors
+
+                    );
+
+                    //--------------------------------------------------
+                    // Render every piece
+                    //--------------------------------------------------
+
+                    return (
+
+                        <>
+
+                            {
+
+                                pieces.map((piece, index) => (
+
+                                    <WallPiece
+
+                                        key={`${wall.id}-${index}`}
+
+                                        wallId={wall.id}
+
+                                        piece={piece}
+
+                                    />
+
+                                ))
+
+                            }
+
+                        </>
+
+                    );
+
+                })
+
+            }
 
         </>
 
     );
 
 }
+
+export default memo(Walls);

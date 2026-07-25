@@ -1,13 +1,6 @@
 import { Vector3 } from "three";
 
-export interface Door {
-
-
-    id: string;
-
-    assetId: string;
-
-    wallId: string;
+export interface WallPiece {
 
     position: Vector3;
 
@@ -16,7 +9,9 @@ export interface Door {
     width: number;
 
     height: number;
+    
+    thickness: number;
 
-    depth: number;
+    kind: "full" | "header" | "left" | "right";
 
 }

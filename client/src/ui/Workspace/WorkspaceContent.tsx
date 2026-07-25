@@ -1,3 +1,5 @@
+import "./WorkspaceContent.css";
+
 import FloorPlanPanel from "./panels/FloorPlanPanel";
 import BuildPanel from "./panels/BuildPanel";
 import FurniturePanel from "./panels/FurniturePanel";
@@ -35,7 +37,7 @@ export default function WorkspaceContent({
 
     return (
 
-        <div>
+        <div key={activeTab} className="workspace-content-inner">
 
             {panels[activeTab as keyof typeof panels]}
 

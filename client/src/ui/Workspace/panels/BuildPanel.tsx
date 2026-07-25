@@ -1,41 +1,60 @@
 import "./BuildPanel.css";
 
+import { useMemo, useState } from "react";
+
+import { Search } from "lucide-react";
+
 import AssetSection from "./AssetSection";
 
 import { AssetLibrary } from "../../../assets/AssetLibrary";
+import type { Asset } from "../../../assets/Asset";
+
+function filterAssets(assets: Asset[], query: string) {
+    if (!query) return assets;
+    const q = query.toLowerCase();
+    return assets.filter(asset => asset.name.toLowerCase().includes(q));
+}
 
 export default function BuildPanel() {
 
-    return (
+    const [query, setQuery] = useState("");
 
+    const sections = useMemo(() => ([
+        { title: "Openings", assets: AssetLibrary.openings },
+        { title: "Doors", assets: AssetLibrary.doors},
+        { title: "Windows", assets: AssetLibrary.windows },
+    ]), []);
+
+    const isSearching = query.trim().length > 0;
+
+    return (
         <div className="build-panel">
 
-            <AssetSection
+            <div className="build-panel-search">
+                <Search size={14} className="build-panel-search-icon" />
+                <input
+                    type="text"
+                    placeholder="Search assets"
+                    value={query}
+                    onChange={e => setQuery(e.target.value)}
+                />
+            </div>
 
-                title="Openings"
+            <div className="build-panel-sections">
+                {
+                    sections.map(section => (
+                        <AssetSection
+                            key={section.title}
+                            title={section.title}
 
-                assets={AssetLibrary.openings}
-
-            />
-
-            <AssetSection
-
-                title="Doors"
-
-                assets={AssetLibrary.doors}
-
-            />
-
-            <AssetSection
-
-                title="Windows"
-
-                assets={AssetLibrary.windows}
-
-            />
+                            assets={filterAssets(section.assets, query)}
+                            defaultOpen={section.title === "Openings"}
+                            forceOpen={isSearching ? true : undefined}
+                        />
+                    ))
+                }
+            </div>
 
         </div>
-
     );
-
 }

@@ -10,40 +10,44 @@ import WallDrawer from "./WallDrawer/WallDrawer";
 
 import ClearSelection from "./ClearSelection";
 import Floors from "./Floors/Floors";
+import AssetPreview from "./Build/AssetPreview";
+import BuildInteractionEvents from "./Build/BuildInteractionEvents";
 
-
-
+import Doors from "./Doors/Doors";
 export default function Scene() {
 
     return (
 
         <Canvas
+        camera={{
+            position: [0, 20, 0],
+            fov: 50
+        }}
+    >
 
-            camera={{
+        <Lights />
 
-                position: [0, 20, 0],
+        <Grid />
 
-                fov: 50
+        <Camera />
 
-            }}
+        <ClearSelection />
 
-        >
+        <BuildInteractionEvents />
 
-            <Lights />
+        <Floors />
 
-            <Grid />
+        <Walls />
 
-            <ClearSelection />
-            <Floors />
-                
-            <Walls />
+        <Doors />
 
-            <WallMeasurements />
+        <WallMeasurements />
 
-            <WallDrawer />
+        <AssetPreview />
 
-            <Camera />
-            </Canvas>
+        <WallDrawer />
+
+    </Canvas>
             
 
     );

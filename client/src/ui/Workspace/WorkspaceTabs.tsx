@@ -6,8 +6,10 @@ import {
     Sofa,
     Paintbrush,
     Lightbulb,
-    FolderOpen
+    FolderOpen,
+    Lock
 } from "lucide-react";
+
 interface Props {
 
     activeTab: string;
@@ -28,35 +30,12 @@ export default function WorkspaceTabs({
 
     const tabs = [
 
-        {
-            id: "floorplan",
-            icon: DraftingCompass
-        },
-
-        {
-            id: "build",
-            icon: Hammer
-        },
-
-        {
-            id: "furniture",
-            icon: Sofa
-        },
-
-        {
-            id: "design",
-            icon: Paintbrush
-        },
-
-        {
-            id: "lighting",
-            icon: Lightbulb
-        },
-
-        {
-            id: "project",
-            icon: FolderOpen
-        }
+        { id: "floorplan", label: "Floor Plan", icon: DraftingCompass },
+        { id: "build", label: "Build", icon: Hammer },
+        { id: "furniture", label: "Furniture", icon: Sofa },
+        { id: "design", label: "Design", icon: Paintbrush },
+        { id: "lighting", label: "Lighting", icon: Lightbulb },
+        { id: "project", label: "Project", icon: FolderOpen }
 
     ];
 
@@ -69,8 +48,8 @@ export default function WorkspaceTabs({
                 const Icon = tab.icon;
 
                 const disabled =
-                layoutConfirmed &&
-                tab.id === "floorplan";
+                    layoutConfirmed &&
+                    tab.id === "floorplan";
 
                 return (
 
@@ -79,6 +58,7 @@ export default function WorkspaceTabs({
                         key={tab.id}
 
                         disabled={disabled}
+                        aria-label={tab.label}
 
                         className={
                             `${activeTab === tab.id ? "tab active" : "tab"} ${
@@ -91,6 +71,8 @@ export default function WorkspaceTabs({
                     >
 
                         <Icon size={20} />
+                        {disabled && <Lock size={10} className="tab-lock" />}
+                        <span className="tab-tooltip">{tab.label}</span>
 
                     </button>
 
