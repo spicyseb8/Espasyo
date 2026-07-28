@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import useEditor from "../../context/editor/useEditor";
 import { Tool } from "../../context/editor/tools";
-import { WallMode } from "../../context/WallMode";
+
 
 import PreviewWall from "../Preview/PreviewWall";
 import WallMeasurement from "../Preview/WallMeasurement";
@@ -22,10 +22,8 @@ import {
 import { getAlignmentGuides } from "../../engine/walls/Alignment";
 
 import { placeWall } from "../../engine/walls/PlaceWalls";
-import { placeJoinedWall } from "../../engine/walls/PlaceJoinedWalls";
-import { placeSplitWall } from "../../engine/walls/PlaceSplitWalls";
 
-import { hitWall, hitWallByRaycast } from "../../engine/walls/wallHit";
+import { hitWallByRaycast } from "../../engine/walls/wallHit";
 
 const raycaster = new Raycaster();
 
@@ -323,160 +321,44 @@ export default function WallDrawer() {
         // Place Wall
         //--------------------------------
 
-        let result;
+        //--------------------------------
 
-        switch (state.wallMode) {
-
-            case WallMode.Default:
-
-                result = placeWall(
-
-                    state.corners,
-                    state.walls,
-
-                    startPoint,
-                    currentPoint.current
-
-                );
-
-                break;
-
-            case WallMode.Join:
-
-                result = placeJoinedWall(
-
-                    state.corners,
-                    state.walls,
-
-                    startPoint,
-                    currentPoint.current
-
-                );
-
-                break;
-
-            case WallMode.Split: {
-
-                // Which wall (if any) is the split point on? Check
-                // BOTH click points with the tolerant, distance-based
-                // test -- not just whichever point the cursor happens
-                // to be over right now. This is what lets you:
-                //
-                //   - click a wall, then click empty ground   (T-junction)
-                //   - click empty ground, then click a wall   (T-junction, reverse order)
-                //   - click one wall, then click another wall (split a room in two)
-                //
-                // Whichever point actually lands on/near a wall becomes
-                // the split point; the other point becomes the new
-                // wall segment's far end.
-                const startHit = hitWall(
-
-                    startPoint,
-
-                    state.walls,
-
-                    0.6
-
-                );
-
-                const endHit = hitWall(
-
-                    currentPoint.current,
-
-                    state.walls,
-
-                    0.6
-
-                );
-
-                let splitWall;
-                let splitPoint;
-                let otherPoint;
-
-                if (startHit) {
-
-                    splitWall = startHit;
-                    splitPoint = startPoint;
-                    otherPoint = currentPoint.current;
-
-                } else if (endHit) {
-
-                    splitWall = endHit;
-                    splitPoint = currentPoint.current;
-                    otherPoint = startPoint;
-
-                } else {
-
-                    setStartPoint(null);
-
-                    return;
-
-                }
-
-                result = placeSplitWall(
-
-                    state.corners,
-                    state.walls,
-
-                    splitWall,
-
-                    splitPoint,
-
-                    otherPoint
-
-                );
-
-                break;
-
-            }
-
-            default:
-
-                setStartPoint(null);
-
-                return;
-
-        }
-
-        if (!result) {
-
-            setStartPoint(null);
-
-            return;
-
-        }
+        const result = placeWall(
+            state.corners,
+            state.walls,
+            startPoint,
+            currentPoint.current
+        );
 
         dispatch({
-
             type: "SET_CORNERS",
-
             payload: result.corners
-
         });
 
         dispatch({
-
             type: "SET_WALLS",
-
             payload: result.walls
-
         });
 
-        setStartPoint(null);
+        //--------------------------------
+        // Set next start point or finish
+        //--------------------------------
+        if (result.shouldFinish) {
+            setStartPoint(null);
+        } else {
+            setStartPoint(
+                result.endCorner.position.clone()
+            );
+        }
 
     }, [
-
         startPoint,
-
         state.activeTool,
         state.wallMode,
         state.layoutConfirmed,
-
         state.corners,
         state.walls,
-
         dispatch
-
     ]);
 
     //----------------------------------------------------

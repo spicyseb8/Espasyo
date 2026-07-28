@@ -2,23 +2,38 @@ import type { Wall } from "./WallTypes";
 import type { Corner } from "./Corner";
 
 export function splitWall(
+
     wall: Wall,
-    corner: Corner
+
+    splitCorner: Corner
+
 ): [Wall, Wall] {
+
+    const leftWall: Wall = {
+
+        id: crypto.randomUUID(),
+
+        start: wall.start,
+
+        end: splitCorner
+
+    };
+
+    const rightWall: Wall = {
+
+        id: crypto.randomUUID(),
+
+        start: splitCorner,
+
+        end: wall.end
+
+    };
 
     return [
 
-        {
-            id: crypto.randomUUID(),
-            start: wall.start,
-            end: corner
-        },
+        leftWall,
 
-        {
-            id: crypto.randomUUID(),
-            start: corner,
-            end: wall.end
-        }
+        rightWall
 
     ];
 
