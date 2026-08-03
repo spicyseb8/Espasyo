@@ -89,6 +89,31 @@ export default function FloorPlanPanel() {
           </div>
 
         </div>
+        <label>
+
+    <input
+
+        type="checkbox"
+
+        checked={state.showWallMeasurements}
+
+        onChange={(e) =>
+
+            dispatch({
+
+                type: "SET_SHOW_WALL_MEASUREMENTS",
+
+                payload: e.target.checked
+
+            })
+
+        }
+
+    />
+
+    Show Wall Measurements
+
+</label>
 
       </section>
 

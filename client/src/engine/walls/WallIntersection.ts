@@ -1,5 +1,9 @@
 import { Vector3 } from "three";
+
 import type { Wall } from "./WallTypes";
+import type { Corner } from "./Corner";
+
+const EPSILON = 0.001;
 
 export interface WallIntersection {
 
@@ -9,14 +13,25 @@ export interface WallIntersection {
 
     distance: number;
 
+    corner?: Corner;
+
+    isEndpoint: boolean;
+
 }
 
-const EPSILON = 0.0001;
+//------------------------------------------------------
+// Returns every intersection between a new wall segment
+// and existing walls.
+//
+// It detects BOTH:
+//
+// 1. Passing through a wall body
+// 2. Passing through an existing wall endpoint
+//------------------------------------------------------
 
 export function findWallIntersections(
 
     start: Vector3,
-
     end: Vector3,
 
     walls: Wall[]
@@ -27,7 +42,83 @@ export function findWallIntersections(
 
     for (const wall of walls) {
 
-        const hit = segmentIntersection(
+        //----------------------------------
+        // Existing start corner
+        //----------------------------------
+
+        if (
+
+            isPointOnSegment(
+
+                wall.start.position,
+
+                start,
+
+                end
+
+            )
+
+        ) {
+
+            intersections.push({
+
+                wall,
+
+                point: wall.start.position.clone(),
+
+                distance:
+
+                    wall.start.position.distanceTo(start),
+
+                corner: wall.start,
+
+                isEndpoint: true
+
+            });
+
+        }
+
+        //----------------------------------
+        // Existing end corner
+        //----------------------------------
+
+        if (
+
+            isPointOnSegment(
+
+                wall.end.position,
+
+                start,
+
+                end
+
+            )
+
+        ) {
+
+            intersections.push({
+
+                wall,
+
+                point: wall.end.position.clone(),
+
+                distance:
+
+                    wall.end.position.distanceTo(start),
+
+                corner: wall.end,
+
+                isEndpoint: true
+
+            });
+
+        }
+
+        //----------------------------------
+        // Middle intersection
+        //----------------------------------
+
+        const hit = getSegmentIntersection(
 
             start,
             end,
@@ -40,13 +131,23 @@ export function findWallIntersections(
         if (!hit)
             continue;
 
-        // Ignore intersections exactly on the wall's endpoints.
-        // Connecting to an existing corner is handled elsewhere.
+        //----------------------------------
+        // Ignore exact endpoints
+        //----------------------------------
+
         if (
 
-            hit.distanceTo(wall.start.position) < EPSILON ||
+            hit.distanceTo(
 
-            hit.distanceTo(wall.end.position) < EPSILON
+                wall.start.position
+
+            ) < EPSILON ||
+
+            hit.distanceTo(
+
+                wall.end.position
+
+            ) < EPSILON
 
         ) {
 
@@ -60,24 +161,61 @@ export function findWallIntersections(
 
             point: hit,
 
-            distance: hit.distanceTo(start)
+            distance:
+
+                hit.distanceTo(start),
+
+            isEndpoint: false
 
         });
 
     }
 
-    // Closest intersection first
-    intersections.sort(
+    //--------------------------------------
+    // Remove duplicate corners/intersections
+    //--------------------------------------
 
-        (a, b) => a.distance - b.distance
+    const unique: WallIntersection[] = [];
+
+    for (const hit of intersections) {
+
+        const exists = unique.some(
+
+            other =>
+
+                other.point.distanceTo(
+
+                    hit.point
+
+                ) < EPSILON
+
+        );
+
+        if (!exists)
+
+            unique.push(hit);
+
+    }
+
+    //--------------------------------------
+
+    unique.sort(
+
+        (a, b) =>
+
+            a.distance - b.distance
 
     );
 
-    return intersections;
+    return unique;
 
 }
 
-function segmentIntersection(
+//------------------------------------------------------
+// Segment intersection
+//------------------------------------------------------
+
+function getSegmentIntersection(
 
     a1: Vector3,
     a2: Vector3,
@@ -106,23 +244,28 @@ function segmentIntersection(
         (z1 - z2) * (x3 - x4);
 
     if (Math.abs(denominator) < EPSILON)
+
         return null;
 
     const t =
 
-        ((x1 - x3) * (z3 - z4) -
+        (
 
-            (z1 - z3) * (x3 - x4)) /
+            (x1 - x3) * (z3 - z4) -
 
-        denominator;
+            (z1 - z3) * (x3 - x4)
+
+        ) / denominator;
 
     const u =
 
-        ((x1 - x3) * (z1 - z2) -
+        (
 
-            (z1 - z3) * (x1 - x2)) /
+            (x1 - x3) * (z1 - z2) -
 
-        denominator;
+            (z1 - z3) * (x1 - x2)
+
+        ) / denominator;
 
     if (
 
@@ -145,6 +288,63 @@ function segmentIntersection(
         0,
 
         z1 + t * (z2 - z1)
+
+    );
+
+}
+
+//------------------------------------------------------
+// Checks if a point lies on a finite segment.
+// Used for detecting when a new wall passes
+// through an existing corner.
+//------------------------------------------------------
+
+function isPointOnSegment(
+
+    point: Vector3,
+
+    start: Vector3,
+    end: Vector3
+
+): boolean {
+
+    const segment = end.clone().sub(start);
+
+    const toPoint = point.clone().sub(start);
+
+    const length = segment.length();
+
+    if (length < EPSILON)
+
+        return false;
+
+    const projection =
+
+        toPoint.dot(segment) /
+
+        (length * length);
+
+    if (
+
+        projection < 0 ||
+
+        projection > 1
+
+    )
+
+        return false;
+
+    const closest =
+
+        start.clone().add(
+
+            segment.multiplyScalar(projection)
+
+        );
+
+    return (
+
+        closest.distanceTo(point) < EPSILON
 
     );
 

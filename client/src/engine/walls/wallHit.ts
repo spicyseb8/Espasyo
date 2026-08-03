@@ -64,6 +64,55 @@ export function hitWall(
 // modes all consume it the same way.
 //----------------------------------------------------
 
+export interface WallPointHit {
+
+    wall: Wall;
+
+    point: Vector3;
+
+}
+
+export function hitWallAtPoint(
+
+    point: Vector3,
+
+    walls: Wall[],
+
+    radius = 0.25
+
+): WallPointHit | null {
+
+    for (const wall of walls) {
+
+        const closest = closestPointOnWall(
+
+            point,
+
+            wall
+
+        );
+
+        if (
+
+            closest.distanceTo(point) < radius
+
+        ) {
+
+            return {
+
+                wall,
+
+                point: closest
+
+            };
+
+        }
+
+    }
+
+    return null;
+
+}
 export interface WallRaycastHit {
 
     wall: Wall;

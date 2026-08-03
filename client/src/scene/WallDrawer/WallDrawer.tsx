@@ -12,6 +12,9 @@ import WallMeasurement from "../Preview/WallMeasurement";
 import AlignmentGuides from "../Guides/AlignmentGuides";
 import CornerHighlight from "../Corners/CornerHighlight";
 
+
+
+
 import {
     snapToGrid,
     snap90Degrees,
@@ -307,15 +310,15 @@ export default function WallDrawer() {
         // First Click
         //--------------------------------
 
-        if (startPoint === null) {
+      if (startPoint === null) {
 
-            setStartPoint(
-                currentPoint.current.clone()
-            );
+    setStartPoint(
+        currentPoint.current.clone()
+    );
 
-            return;
+    return;
 
-        }
+}
 
         //--------------------------------
         // Place Wall

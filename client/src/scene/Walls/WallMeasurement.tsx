@@ -1,33 +1,117 @@
 import useEditor from "../../context/editor/useEditor";
 
+import { Tool } from "../../context/editor/tools";
+
 import WallMeasurement from "../Preview/WallMeasurement";
-import { buildMeasurementGroups } from "../../engine/walls/Measurement";
+
+import {
+
+    buildMeasurementGroups
+
+} from "../../engine/walls/Measurement";
 
 export default function WallMeasurements() {
 
     const { state } = useEditor();
 
-    const groups = buildMeasurementGroups(state.walls);
+    //----------------------------------------
+    // Preview handled inside WallDrawer
+    //----------------------------------------
+
+    if (
+
+        state.activeTool === Tool.Wall
+
+    ) {
+
+        return null;
+
+    }
+
+    //----------------------------------------
+    // Hidden
+    //----------------------------------------
+
+    if (
+
+        !state.showWallMeasurements &&
+
+        !state.selectedWallId
+
+    ) {
+
+        return null;
+
+    }
+
+    const groups = buildMeasurementGroups(
+
+        state.walls
+
+    );
+
+    //----------------------------------------
+    // Selected wall only
+    //----------------------------------------
+
+    if (state.selectedWallId) {
+
+        const group = groups.find(
+
+            g =>
+
+                g.walls.some(
+
+                    wall =>
+
+                        wall.id === state.selectedWallId
+
+                )
+
+        );
+
+        if (!group)
+            return null;
+
+        return (
+
+            <WallMeasurement
+
+                measurement={group}
+
+            />
+
+        );
+
+    }
+
+    //----------------------------------------
+    // Show all
+    //----------------------------------------
 
     return (
 
         <>
 
-            {groups.map((group) => (
+            {
 
-                <WallMeasurement
+                groups.map(group => (
 
-                    key={`${group.start.id}-${group.end.id}`}
+                    <WallMeasurement
 
-                    start={group.start.position}
+                        key={
 
-                    end={group.end.position}
+                            `${group.start.id}-${group.end.id}`
 
-                    length={group.length}
+                        }
 
-                />
+                        measurement={group}
 
-            ))}
+                    />
+
+                ))
+
+            }
 
         </>
 

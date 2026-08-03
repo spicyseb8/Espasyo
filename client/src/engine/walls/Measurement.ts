@@ -6,6 +6,9 @@ export interface MeasurementGroup {
     start: Corner;
     end: Corner;
     length: number;
+    center: Vector3;
+    direction: Vector3;
+    perpendicular: Vector3;
     walls: Wall[];
 }
 
@@ -21,6 +24,38 @@ function isCollinear(dir1: Vector3, dir2: Vector3, tolerance = 0.01): boolean {
     // Check if directions are parallel (same or opposite)
     const cross = new Vector3().crossVectors(dir1, dir2);
     return cross.length() < tolerance;
+}
+
+function calculateMeasurementData(start: Corner, end: Corner): {
+    length: number;
+    center: Vector3;
+    direction: Vector3;
+    perpendicular: Vector3;
+} {
+    const length = start.position.distanceTo(end.position);
+    
+    const direction = end.position
+        .clone()
+        .sub(start.position)
+        .normalize();
+    
+    const perpendicular = new Vector3(
+        -direction.z,
+        0,
+        direction.x
+    );
+    
+    const center = start.position
+        .clone()
+        .add(end.position)
+        .multiplyScalar(0.5);
+    
+    return {
+        length,
+        center,
+        direction,
+        perpendicular
+    };
 }
 
 export function buildMeasurementGroups(
@@ -45,12 +80,10 @@ export function buildMeasurementGroups(
     for (const wall of walls) {
         if (processedWalls.has(wall.id)) continue;
 
-        const group: MeasurementGroup = {
-            start: wall.start,
-            end: wall.end,
-            length: wall.start.position.distanceTo(wall.end.position),
-            walls: [wall],
-        };
+        let groupStart = wall.start;
+        let groupEnd = wall.end;
+        const groupWalls: Wall[] = [wall];
+        let groupLength = wall.start.position.distanceTo(wall.end.position);
 
         processedWalls.add(wall.id);
         const groupDirection = getWallDirection(wall);
@@ -69,14 +102,14 @@ export function buildMeasurementGroups(
                 // Check if otherWall connects to the end of current group (normal direction)
                 // Only merge if this corner is NOT an intersection (degree === 2)
                 if (
-                    group.end.id === otherWall.start.id &&
-                    cornerDegree.get(group.end.id) === 2 &&
+                    groupEnd.id === otherWall.start.id &&
+                    cornerDegree.get(groupEnd.id) === 2 &&
                     isCollinear(groupDirection, otherDirection)
                 ) {
-                    group.end = otherWall.end;
-                    group.walls.push(otherWall);
+                    groupEnd = otherWall.end;
+                    groupWalls.push(otherWall);
                     processedWalls.add(otherWall.id);
-                    group.length += otherWall.start.position.distanceTo(
+                    groupLength += otherWall.start.position.distanceTo(
                         otherWall.end.position
                     );
                     extended = true;
@@ -85,14 +118,14 @@ export function buildMeasurementGroups(
 
                 // Check if otherWall connects to the end of current group (reverse direction - both end at same point)
                 if (
-                    group.end.id === otherWall.end.id &&
-                    cornerDegree.get(group.end.id) === 2 &&
+                    groupEnd.id === otherWall.end.id &&
+                    cornerDegree.get(groupEnd.id) === 2 &&
                     isCollinear(groupDirection, otherDirection)
                 ) {
-                    group.end = otherWall.start;
-                    group.walls.push(otherWall);
+                    groupEnd = otherWall.start;
+                    groupWalls.push(otherWall);
                     processedWalls.add(otherWall.id);
-                    group.length += otherWall.start.position.distanceTo(
+                    groupLength += otherWall.start.position.distanceTo(
                         otherWall.end.position
                     );
                     extended = true;
@@ -101,14 +134,14 @@ export function buildMeasurementGroups(
 
                 // Check if otherWall connects to the start of current group (normal direction)
                 if (
-                    group.start.id === otherWall.end.id &&
-                    cornerDegree.get(group.start.id) === 2 &&
+                    groupStart.id === otherWall.end.id &&
+                    cornerDegree.get(groupStart.id) === 2 &&
                     isCollinear(groupDirection, otherDirection)
                 ) {
-                    group.start = otherWall.start;
-                    group.walls.unshift(otherWall);
+                    groupStart = otherWall.start;
+                    groupWalls.unshift(otherWall);
                     processedWalls.add(otherWall.id);
-                    group.length += otherWall.start.position.distanceTo(
+                    groupLength += otherWall.start.position.distanceTo(
                         otherWall.end.position
                     );
                     extended = true;
@@ -117,14 +150,14 @@ export function buildMeasurementGroups(
 
                 // Check if otherWall connects to the start of current group (reverse direction - both start at same point)
                 if (
-                    group.start.id === otherWall.start.id &&
-                    cornerDegree.get(group.start.id) === 2 &&
+                    groupStart.id === otherWall.start.id &&
+                    cornerDegree.get(groupStart.id) === 2 &&
                     isCollinear(groupDirection, otherDirection)
                 ) {
-                    group.start = otherWall.end;
-                    group.walls.unshift(otherWall);
+                    groupStart = otherWall.end;
+                    groupWalls.unshift(otherWall);
                     processedWalls.add(otherWall.id);
-                    group.length += otherWall.start.position.distanceTo(
+                    groupLength += otherWall.start.position.distanceTo(
                         otherWall.end.position
                     );
                     extended = true;
@@ -133,7 +166,17 @@ export function buildMeasurementGroups(
             }
         }
 
-        groups.push(group);
+        const measurementData = calculateMeasurementData(groupStart, groupEnd);
+        
+        groups.push({
+            start: groupStart,
+            end: groupEnd,
+            length: groupLength,
+            center: measurementData.center,
+            direction: measurementData.direction,
+            perpendicular: measurementData.perpendicular,
+            walls: groupWalls,
+        });
     }
 
     return groups;
