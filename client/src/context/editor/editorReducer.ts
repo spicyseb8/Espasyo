@@ -91,11 +91,6 @@ export function editorReducer(
                 ...state,
                 selectedCornerId: action.payload
             };
-        case "SET_WALL_MODE":
-            return {
-                ...state,
-                wallMode: action.payload
-            };
         case "SET_SELECTED_ASSET":
             return {
                 ...state,

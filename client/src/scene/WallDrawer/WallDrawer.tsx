@@ -357,7 +357,6 @@ export default function WallDrawer() {
     }, [
         startPoint,
         state.activeTool,
-        state.wallMode,
         state.layoutConfirmed,
         state.corners,
         state.walls,

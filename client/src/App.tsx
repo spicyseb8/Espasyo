@@ -1,6 +1,6 @@
 import EditorProvider from "./context/EditorProvider";
 
-import Editor from "./ui/Editor/Editor";
+import Editor from "./Studio/Editor/Editor";
 
 function App() {
 

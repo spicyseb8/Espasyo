@@ -1,12 +1,20 @@
 import { Vector3 } from "three";
 import type { GraphNode, HalfEdge } from "./RegionTypes";
-import type { RegionPolygon } from "./Polygon";
+import type { Region } from "./Polygon";
+
+function createRegionId(points: Vector3[]): string {
+    const normalized = normalizePolygon(points);
+    return `region-${normalized
+        .split("")
+        .map(char => char.charCodeAt(0).toString(16).padStart(2, "0"))
+        .join("")}`;
+}
 
 export function walkRegions(
     graph: Map<string, GraphNode>
-): RegionPolygon[] {
+): Region[] {
 
-    const polygons: RegionPolygon[] = [];
+    const regions: Region[] = [];
 
     for (const node of graph.values()) {
 
@@ -16,6 +24,7 @@ export function walkRegions(
                 continue;
 
             const polygon: Vector3[] = [];
+            const wallIds = new Set<string>();
 
             let edge: HalfEdge | undefined = startEdge;
 
@@ -25,6 +34,8 @@ export function walkRegions(
                     break;
 
                 edge.visited = true;
+
+                wallIds.add(edge.wall.id);
 
                 const p = edge.from.position;
                 const last = polygon[polygon.length - 1];
@@ -52,7 +63,6 @@ export function walkRegions(
                 if (twinIndex === -1)
                     break;
 
-                // Walk clockwise around the face
                 let nextIndex = twinIndex - 1;
 
                 if (nextIndex < 0)
@@ -65,12 +75,31 @@ export function walkRegions(
                     edge.to.id === startEdge.to.id
                 ) {
 
-                    polygons.push({
+                    const walls = Array.from(wallIds)
+                        .map(id => {
+                            return graph.get(node.corner.id)?.edges.find(
+                                halfEdge => halfEdge.wall.id === id
+                            )?.wall;
+                        })
+                        .filter((wall): wall is NonNullable<typeof wall> => Boolean(wall));
 
-                        corners: polygon
+                    const region: Region = {
+                        id: createRegionId(polygon),
+                        corners: polygon,
+                        walls,
+                        parentRegionId: null,
+                        childRegionIds: [],
+                        adjacentRegionIds: [],
+                        boundaryLoops: [{
+                            corners: polygon,
+                            wallIds: Array.from(wallIds)
+                        }],
+                        area: Math.abs(polygonArea(polygon)),
+                        perimeter: polygonPerimeter(polygon),
+                        relationshipSummary: []
+                    };
 
-                    });
-
+                    regions.push(region);
                     break;
 
                 }
@@ -81,8 +110,36 @@ export function walkRegions(
 
     }
 
-    return removeDuplicatePolygons(polygons);
+    return removeDuplicateRegions(regions);
 
+}
+
+function polygonArea(points: Vector3[]) {
+    let area = 0;
+
+    for (let i = 0; i < points.length; i++) {
+        const a = points[i];
+        const b = points[(i + 1) % points.length];
+        area += a.x * b.z - b.x * a.z;
+    }
+
+    return area / 2;
+}
+
+function polygonPerimeter(points: Vector3[]) {
+    if (points.length < 2) {
+        return 0;
+    }
+
+    let perimeter = 0;
+
+    for (let i = 0; i < points.length; i++) {
+        const current = points[i];
+        const next = points[(i + 1) % points.length];
+        perimeter += current.distanceTo(next);
+    }
+
+    return perimeter;
 }
 
 function normalizePolygon(points: Vector3[]): string {
@@ -115,48 +172,30 @@ function normalizePolygon(points: Vector3[]): string {
 
     }
 
-    //------------------------------------
-    // Clockwise
-    //------------------------------------
-
     const clockwise = rotate(coords);
-
-    //------------------------------------
-    // Counter Clockwise
-    //------------------------------------
-
     const counter = rotate(
-
         [...coords].reverse()
-
     );
 
-    //------------------------------------
-    // Choose canonical ordering
-    //------------------------------------
-
     const cw = clockwise.join("|");
-
     const ccw = counter.join("|");
 
     return cw < ccw ? cw : ccw;
 
 }
 
-function removeDuplicatePolygons(
-    polygons: RegionPolygon[]
-): RegionPolygon[] {
+function removeDuplicateRegions(
+    regions: Region[]
+): Region[] {
 
-    const unique: RegionPolygon[] = [];
+    const unique: Region[] = [];
 
     const seen = new Set<string>();
 
-    for (const polygon of polygons) {
+    for (const region of regions) {
 
         const key = normalizePolygon(
-
-            polygon.corners
-
+            region.corners
         );
 
         if (seen.has(key))
@@ -164,7 +203,7 @@ function removeDuplicatePolygons(
 
         seen.add(key);
 
-        unique.push(polygon);
+        unique.push(region);
 
     }
 

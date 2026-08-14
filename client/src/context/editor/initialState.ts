@@ -1,13 +1,11 @@
 import type { EditorState } from "./types";
 import { Tool } from "./tools";
-import { WallMode } from "../WallMode";
 import { BuildTool } from "../BuildTool";
 
 export const initialState: EditorState = {
     activeTab: "floorplan",
-    activeTool: Tool.Select,
+    activeTool: Tool.Wall,
     walls: [],
-    wallMode: WallMode.Default,
     corners: [],
     selectedWallId: null,
     selectedCornerId: null,
