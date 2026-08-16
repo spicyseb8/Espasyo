@@ -3,7 +3,6 @@ import "./Editor.css";
 import Topbar from "../Topbar/Topbar";
 import Workspace from "../Workspace/Workspace";
 import Scene from "../../scene/Scene";
-import ConfirmLayoutButton from "../../scene/ConfirmLayoutButton";
 
 export default function Editor() {
 
@@ -21,7 +20,6 @@ export default function Editor() {
 
                     <Scene />
 
-                    <ConfirmLayoutButton />
 
                 </main>
 

@@ -11,7 +11,7 @@ export default function WallMeasurements() {
         return null;
     }
 
-    const measurements = buildWallMeasurementGroups(state.walls, state.wallHeight);
+    const measurements = buildWallMeasurementGroups(state.walls, state.wallHeight, state.wallThickness);
 
     return (
 
@@ -23,9 +23,8 @@ export default function WallMeasurements() {
 
                     key={measurement.id}
 
-                    start={measurement.start}
-                    end={measurement.end}
-                    length={measurement.length}
+                    measurement={measurement}
+
                 />
 
             ))}

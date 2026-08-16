@@ -17,11 +17,13 @@ export default function ClearSelection() {
                     return;
 
                 dispatch({
-
                     type: "SELECT_WALL",
-
                     payload: null
+                });
 
+                dispatch({
+                    type: "SELECT_REGION",
+                    payload: null
                 });
 
             }}

@@ -11,6 +11,14 @@ export interface MeasurementGroup {
     length: number;
     area?: number;
     center: Vector3;
+    /** Horizontal, normalized direction the wall run travels in (world XZ). */
+    direction: Vector3;
+    /** Horizontal, normalized outward-facing normal of the wall run (world XZ). */
+    normal: Vector3;
+    /** Wall height, used to vertically center/scale the on-wall label. */
+    height: number;
+    /** Wall thickness, used to push the on-wall label outside the solid wall mesh. */
+    thickness: number;
     walls: Wall[];
 }
 
@@ -41,7 +49,7 @@ function calculateMeasurementData(start: Corner, end: Corner): {
     return { length, center, direction, perpendicular };
 }
 
-export function buildWallMeasurementGroups(walls: Wall[], wallHeight = 3): MeasurementGroup[] {
+export function buildWallMeasurementGroups(walls: Wall[], wallHeight = 3, wallThickness = 0.1): MeasurementGroup[] {
     const groups: MeasurementGroup[] = [];
     const processedWalls = new Set<string>();
     const cornerDegree = new Map<string, number>();
@@ -129,11 +137,15 @@ export function buildWallMeasurementGroups(walls: Wall[], wallHeight = 3): Measu
 
         groups.push({
             id: `${groupStart.id}-${groupEnd.id}`,
-            start: measurementData.center.clone(),
-            end: measurementData.center.clone(),
+            start: groupStart.position.clone(),
+            end: groupEnd.position.clone(),
             length: groupLength,
             area: groupLength * wallHeight,
             center: measurementData.center,
+            direction: measurementData.direction,
+            normal: measurementData.perpendicular,
+            height: wallHeight,
+            thickness: wallThickness,
             walls: groupWalls,
         });
     }
@@ -158,6 +170,13 @@ export function buildRegionMeasurements(
                 end,
                 length: region.perimeter,
                 center,
+                // Regions are floor polygons, not oriented wall runs -
+                // these are placeholders since floor labels are laid out
+                // directly in Floor.tsx rather than through this path.
+                direction: new Vector3(1, 0, 0),
+                normal: new Vector3(0, 1, 0),
+                height: 0,
+                thickness: 0,
                 walls: region.walls,
             };
         });
@@ -186,7 +205,8 @@ function getPolygonCenter(points: Vector3[]): Vector3 {
 
 export function buildMeasurementGroups(
     walls: Wall[],
-    wallHeight = 3
+    wallHeight = 3,
+    wallThickness = 0.1
 ): MeasurementGroup[] {
-    return buildWallMeasurementGroups(walls, wallHeight);
+    return buildWallMeasurementGroups(walls, wallHeight, wallThickness);
 }

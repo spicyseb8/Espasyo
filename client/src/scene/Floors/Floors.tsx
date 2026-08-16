@@ -12,10 +12,15 @@ export default function Floors() {
 
     const regions = useMemo(() => {
 
-        return solveRegions(
+        const filteredRegions = solveRegions(
             state.corners,
             state.walls
-        );
+        ).filter(region => {
+            const area = Math.abs(region.area || 0);
+            return region.corners.length >= 3 && area > 0.01;
+        });
+
+        return filteredRegions;
 
     }, [
         state.corners,

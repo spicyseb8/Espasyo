@@ -8,6 +8,7 @@ export const initialState: EditorState = {
     walls: [],
     corners: [],
     selectedWallId: null,
+    selectedRegionId: null,
     selectedCornerId: null,
     wallHeight: 3,
     wallThickness: 0.15,
@@ -17,5 +18,6 @@ export const initialState: EditorState = {
     selectedAsset: null,
     buildTool: BuildTool.None,
     doors: [],
-    showWallMeasurements: false // Added this line
+    draftWallLength: null,
+    showWallMeasurements: false
 };

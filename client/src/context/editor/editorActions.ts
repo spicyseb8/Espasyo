@@ -48,6 +48,10 @@ export type EditorAction =
           payload: string | null;
       }
     | {
+          type: "SELECT_REGION";
+          payload: string | null;
+      }
+    | {
           type: "SET_WALLS";
           payload: Wall[];
       }
@@ -75,6 +79,10 @@ export type EditorAction =
           payload: Door;
       }
     | {
-          type: "SET_SHOW_WALL_MEASUREMENTS"; // Added this action
+          type: "SET_DRAFT_WALL_LENGTH";
+          payload: number | null;
+      }
+    | {
+          type: "SET_SHOW_WALL_MEASUREMENTS";
           payload: boolean;
       };

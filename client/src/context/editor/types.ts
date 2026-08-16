@@ -11,6 +11,7 @@ export interface EditorState {
     walls: Wall[];
     corners: Corner[];
     selectedWallId: string | null;
+    selectedRegionId: string | null;
     selectedCornerId: string | null;
     wallHeight: number;
     wallThickness: number;
@@ -20,5 +21,6 @@ export interface EditorState {
     selectedAsset: Asset | null;
     buildTool: BuildTool;
     doors: Door[];
-    showWallMeasurements: boolean; // Changed from false: to boolean:
+    draftWallLength: number | null;
+    showWallMeasurements: boolean;
 }

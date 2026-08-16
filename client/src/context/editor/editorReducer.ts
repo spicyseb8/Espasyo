@@ -86,6 +86,11 @@ export function editorReducer(
                 ...state,
                 selectedWallId: action.payload
             };
+        case "SELECT_REGION":
+            return {
+                ...state,
+                selectedRegionId: action.payload
+            };
         case "SELECT_CORNER":
             return {
                 ...state,
@@ -105,7 +110,12 @@ export function editorReducer(
             return {...state, layoutConfirmed: true, activeTab: "build"};
         case "ADD_DOOR":
             return {...state, doors: [...state.doors, action.payload]};
-        case "SET_SHOW_WALL_MEASUREMENTS": // Already correct
+        case "SET_DRAFT_WALL_LENGTH":
+            return {
+                ...state,
+                draftWallLength: action.payload
+            };
+        case "SET_SHOW_WALL_MEASUREMENTS":
             return {
                 ...state,
                 showWallMeasurements: action.payload

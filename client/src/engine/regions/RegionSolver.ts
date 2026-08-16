@@ -22,6 +22,7 @@ export function solveRegions(
     );
 
     const regions = walkRegions(graph);
+    console.log(`🔧 After walkRegions: ${regions.length} candidates`);
 
     const validRegions = regions.filter(region => {
 
@@ -35,9 +36,57 @@ export function solveRegions(
         );
     });
 
-    return classifyRegionRelationships(
-        validRegions
+    const minimalRegions = validRegions.filter(region => {
+        const contained = validRegions.filter(
+            other =>
+                other.id !== region.id &&
+                isPolygonContained(
+                    other.corners,
+                    region.corners
+                )
+        );
+
+        if (contained.length <= 1) {
+            return true;
+        }
+
+        return !isRedundantCompositeRegion(region, validRegions);
+    });
+
+    const classified = classifyRegionRelationships(
+        minimalRegions
     );
+
+    /*
+     * A larger loop that encloses multiple room faces is not a valid room.
+     * It is only the outer composite boundary created by adjacent rooms
+     * sharing a wall or corner.
+     */
+    const removed: { id: string; reason: string }[] = [];
+    const result = classified.filter(region => {
+        const contained = classified.filter(
+            other =>
+                other.id !== region.id &&
+                isPolygonContained(
+                    other.corners,
+                    region.corners
+                )
+        );
+
+        const isComposite = isRedundantCompositeRegion(region, classified);
+
+        if (isComposite) {
+            removed.push({
+                id: region.id,
+                reason: `Composite union: contains ${contained.length} child regions with no extra boundary walls`
+            });
+            return false;
+        }
+
+        return true;
+    });
+
+    return result;
 }
 
 function classifyRegionRelationships(
@@ -307,6 +356,18 @@ function classifyRegionRelationships(
      * ----------------------------------------
      */
 
+    console.group("📋 REGION RELATIONSHIPS AFTER CLASSIFICATION");
+    for (const region of candidates) {
+        console.log(`Region ${region.id}:`, {
+            area: region.area.toFixed(2),
+            parentId: region.parentRegionId || "NONE",
+            childCount: region.childRegionIds.length,
+            adjacentCount: region.adjacentRegionIds.length,
+            relationships: region.relationshipSummary.join(", ")
+        });
+    }
+    console.groupEnd();
+
     return candidates.map(region => {
 
         const outerArea =
@@ -361,6 +422,85 @@ function classifyRegionRelationships(
  * ----------------------------------------
  */
 
+function isPointOnSegment(
+    point: Vector3,
+    a: Vector3,
+    b: Vector3,
+    tolerance = 0.0001
+): boolean {
+    const dx = b.x - a.x;
+    const dz = b.z - a.z;
+    const segmentLengthSquared = dx * dx + dz * dz;
+
+    if (segmentLengthSquared <= tolerance * tolerance) {
+        return point.distanceTo(a) <= tolerance;
+    }
+
+    const t = ((point.x - a.x) * dx + (point.z - a.z) * dz) / segmentLengthSquared;
+    if (t < 0 || t > 1) {
+        return false;
+    }
+
+    const closestX = a.x + t * dx;
+    const closestZ = a.z + t * dz;
+    const distanceToSegment = Math.hypot(point.x - closestX, point.z - closestZ);
+
+    return distanceToSegment <= tolerance;
+}
+
+function isPointOnPolygonBoundary(
+    point: Vector3,
+    polygon: Vector3[],
+    tolerance = 0.0001
+): boolean {
+    return polygon.some((corner, index) => {
+        const next = polygon[(index + 1) % polygon.length];
+        return isPointOnSegment(point, corner, next, tolerance);
+    });
+}
+
+function pointInOrOnPolygon(
+    point: Vector3,
+    polygon: Vector3[]
+): boolean {
+    return pointInPolygon(point, polygon) || isPointOnPolygonBoundary(point, polygon);
+}
+
+function isRedundantCompositeRegion(
+    region: Region,
+    regions: Region[]
+): boolean {
+    const contained = regions.filter(
+        other =>
+            other.id !== region.id &&
+            isPolygonContained(
+                other.corners,
+                region.corners
+            )
+    );
+
+    if (contained.length <= 1) {
+        return false;
+    }
+
+    const parentWallIds = new Set(
+        region.walls.map(wall => wall.id)
+    );
+
+    const childWallIds = new Set(
+        contained.flatMap(other =>
+            other.walls.map(wall => wall.id)
+        )
+    );
+
+    const hasExtraBoundary =
+        Array.from(parentWallIds).some(
+            wallId => !childWallIds.has(wallId)
+        );
+
+    return !hasExtraBoundary;
+}
+
 function isPolygonContained(
     child: Vector3[],
     parent: Vector3[]
@@ -374,13 +514,15 @@ function isPolygonContained(
     }
 
     /*
-     * Every child corner must be inside the parent.
+     * Every child corner may lie inside the parent or exactly on its boundary.
+     * Shared edges between a composite outer boundary and its contained child rooms
+     * are valid and should not cause the relationship to be rejected.
      */
 
     for (const point of child) {
 
         if (
-            !pointInPolygon(
+            !pointInOrOnPolygon(
                 point,
                 parent
             )
@@ -392,6 +534,8 @@ function isPolygonContained(
     /*
      * A child boundary must not cross
      * the parent boundary.
+     * Collinear overlap along a shared wall is allowed and should be treated as a
+     * composite boundary condition rather than a boundary violation.
      */
 
     for (
@@ -508,11 +652,19 @@ function segmentsProperlyCross(
             a2
         );
 
-    /*
-     * If the boundaries only touch at a corner,
-     * that is not considered crossing.
-     */
+    if (
+        o1 === 0 &&
+        o2 === 0 &&
+        o3 === 0 &&
+        o4 === 0
+    ) {
+        return false;
+    }
 
+    /*
+     * If either segment only touches the other at an endpoint or sits along the
+     * same line, it is not a proper crossing.
+     */
     if (
         o1 === 0 ||
         o2 === 0 ||

@@ -1,5 +1,5 @@
 import "./FloorPlanPanel.css";
-import { MousePointer2, PenLine, Square } from "lucide-react";
+import { MousePointer2, PenLine, Square, CircleCheck } from "lucide-react";
 import useEditor from "../../../context/editor/useEditor";
 import { Tool } from "../../../context/editor/tools";
 import { solveRegions } from "../../../engine/regions/RegionSolver";
@@ -17,15 +17,74 @@ export default function FloorPlanPanel() {
   const { state, dispatch } = useEditor();
 
   const locked = state.layoutConfirmed;
-  const regions = solveRegions(state.corners, state.walls);
-  const regionDebug = regions.length
-    ? regions.map((region) => ({
-        id: region.id,
-        parent: region.parentRegionId ?? "root",
-        children: region.childRegionIds.length,
-        shares: region.relationshipSummary.join(",") || "none"
-      }))
-    : [];
+
+  // ==========================================================
+  // Measurement section - live drag length, or the selected
+  // wall/floor's measurement.
+  //
+  // NOTE: the fields read below aren't ones I've seen in your
+  // editor state yet, so I'm guessing reasonable names. Rename
+  // these to match your actual reducer, or tell me the real
+  // field names and I'll wire it up exactly:
+  //
+  // - state.draftWallLength: number | null
+  //     Set by WallDrawer.tsx on every frame while a wall is
+  //     actively being dragged out (e.g.
+  //     dispatch({ type: "SET_DRAFT_WALL_LENGTH", payload: length })),
+  //     and cleared back to null when the drag ends/finishes.
+  //     Without this dispatch added to WallDrawer.tsx, this will
+  //     just stay null and the section falls through to the
+  //     selection case below.
+  //
+  // - state.selectedWallId / state.selectedRegionId: string | null
+  //     Whatever your <ClearSelection /> component (seen in
+  //     Scene.tsx) already manages.
+  // ==========================================================
+
+  const draftWallLength = state.draftWallLength ?? null;
+
+  const selectedWallId = state.selectedWallId ?? null;
+  const selectedRegionId = state.selectedRegionId ?? null;
+
+  const selectedWall = selectedWallId
+    ? state.walls.find((wall) => wall.id === selectedWallId) ?? null
+    : null;
+
+  const selectedWallLength = selectedWall
+    ? selectedWall.start.position.distanceTo(selectedWall.end.position)
+    : null;
+
+  const selectedRegionArea = selectedRegionId
+    ? solveRegions(state.corners, state.walls).find((region) => region.id === selectedRegionId)?.area ?? null
+    : null;
+
+  let measurementCaption: string | null = null;
+  let measurementValue: string | null = null;
+  let isLive = false;
+
+  const handleConfirmLayout = () => {
+    const confirmed = window.confirm(
+      "Once you confirm the layout, walls and rooms can no longer be edited.\n\nContinue?"
+    );
+
+    if (!confirmed) return;
+
+    dispatch({
+      type: "CONFIRM_LAYOUT"
+    });
+  };
+
+  if (draftWallLength !== null) {
+    measurementCaption = "Drawing Wall";
+    measurementValue = `${draftWallLength.toFixed(2)} m`;
+    isLive = true;
+  } else if (selectedWallLength !== null) {
+    measurementCaption = "Selected Wall";
+    measurementValue = `${selectedWallLength.toFixed(2)} m`;
+  } else if (selectedRegionArea !== null) {
+    measurementCaption = "Selected Floor";
+    measurementValue = `${selectedRegionArea.toFixed(2)} m²`;
+  }
 
   return (
     <div className="panel">
@@ -130,18 +189,43 @@ export default function FloorPlanPanel() {
           />
         </div>
 
-        {regionDebug.length > 0 && (
-          <div style={{ marginTop: 4, fontSize: 11, color: "#7a7a7a" }}>
-            <div style={{ fontWeight: 700, marginBottom: 6 }}>Regions</div>
-            {regionDebug.map((region) => (
-              <div key={region.id} style={{ lineHeight: 1.4 }}>
-                {region.id.slice(0, 8)} · parent: {region.parent} · children: {region.children} · {region.shares}
-              </div>
-            ))}
+      </div>
+
+      {/* ========================= */}
+      {/* Measurement */}
+      {/* ========================= */}
+
+      <div className="panel-group">
+        <h3>Measurement</h3>
+
+        {measurementCaption && measurementValue ? (
+          <div className="measurement-row">
+            <span className="measurement-caption">
+              {isLive && <span className="live-dot" />}
+              {measurementCaption}
+            </span>
+            <span className="measurement-value">{measurementValue}</span>
+          </div>
+        ) : (
+          <div className="measurement-empty">
+            Draw a wall or select a wall/floor
           </div>
         )}
-
       </div>
+
+      {/* ========================= */}
+      {/* Confirm Layout */}
+      {/* ========================= */}
+
+      {!locked && (
+        <button
+          type="button"
+          className="start-button"
+          onClick={handleConfirmLayout}
+        >
+          Confirm Layout
+        </button>
+      )}
 
     </div>
   );
