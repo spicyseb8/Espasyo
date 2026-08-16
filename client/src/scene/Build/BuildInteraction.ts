@@ -1,7 +1,9 @@
 import { Raycaster, Vector2 } from "three";
 
 import type { PlacementTransform } from "./BuildPlacement";
+import type { FurniturePlacement } from "./BuildFurniturePlacement";
 import type { AssetBounds } from "./AssetBounds";
+import type { FurnitureCollisionResult } from "../../engine/furniture/FurnitureCollision";
 
 class BuildInteraction {
 
@@ -21,9 +23,20 @@ class BuildInteraction {
     // Current preview placement
     //--------------------------------------------------
 
-    currentPlacement: PlacementTransform | null = null;
+    currentPlacement:
+        | PlacementTransform
+        | FurniturePlacement
+        | null = null;
 
     currentBounds: AssetBounds | null = null;
+
+    //--------------------------------------------------
+    // Current furniture collision state
+    //--------------------------------------------------
+
+    currentFurnitureCollision:
+        | FurnitureCollisionResult
+        | null = null;
 
     //--------------------------------------------------
     // Pointer
@@ -34,14 +47,14 @@ class BuildInteraction {
         canvas: HTMLCanvasElement
     ) {
 
-        const rect = canvas.getBoundingClientRect();
+        const rect =
+            canvas.getBoundingClientRect();
 
         this.pointer.x =
             ((event.clientX - rect.left) / rect.width) * 2 - 1;
 
         this.pointer.y =
             -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
     }
 
     //--------------------------------------------------
@@ -57,15 +70,13 @@ class BuildInteraction {
             return null;
 
         return {
-
             transform: this.currentPlacement,
-
-            bounds: this.currentBounds
-
+            bounds: this.currentBounds,
+            collision: this.currentFurnitureCollision
         };
-
     }
 
 }
 
-export const buildInteraction = new BuildInteraction();
+export const buildInteraction =
+    new BuildInteraction();

@@ -14,6 +14,9 @@ import AssetPreview from "./Build/AssetPreview";
 import BuildInteractionEvents from "./Build/BuildInteractionEvents";
 
 import Doors from "./Doors/Doors";
+
+import FurnitureScene from "./Furniture/FurnitureScene";
+
 export default function Scene() {
 
     return (
@@ -40,12 +43,14 @@ export default function Scene() {
         <Walls />
 
         <Doors />
+        
 
         <WallMeasurements />
 
         <AssetPreview />
 
         <WallDrawer />
+         <FurnitureScene />
 
     </Canvas>
             

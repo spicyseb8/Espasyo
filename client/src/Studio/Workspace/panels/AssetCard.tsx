@@ -19,13 +19,13 @@ export default function AssetCard({
             className={`asset-card ${selected ? "selected" : ""}`}
             aria-pressed={selected}
             onClick={() => {
+                // Selecting only ever marks the pending choice - it does
+                // not arm placement (that's SET_BUILD_TOOL, fired from the
+                // Apply button in AssetSection.tsx). Clicking an already-
+                // selected card deselects it.
                 dispatch({
                     type: "SET_SELECTED_ASSET",
-                    payload: asset
-                });
-                dispatch({
-                    type: "SET_BUILD_TOOL",
-                    payload: asset.type
+                    payload: selected ? null : asset
                 });
             }}
         >
@@ -40,9 +40,12 @@ export default function AssetCard({
                     </span>
                 )}
             </div>
-            <span>
-                {asset.name}
-            </span>
+            <div>
+    <span>{asset.name}</span>
+    <small>
+        ₱{asset.price.toLocaleString()}
+    </small>
+</div>
         </button>
     );
 }

@@ -64,11 +64,7 @@ export function walkRegions(
                 if (twinIndex === -1)
                     break;
 
-                let nextIndex = twinIndex - 1;
-
-                if (nextIndex < 0)
-                    nextIndex = nextNode.edges.length - 1;
-
+                const nextIndex = (twinIndex + 1) % nextNode.edges.length;
                 edge = nextNode.edges[nextIndex];
 
                 if (

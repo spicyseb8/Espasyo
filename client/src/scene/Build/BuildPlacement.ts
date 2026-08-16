@@ -6,6 +6,8 @@ import type { AssetBounds } from "./AssetBounds";
 
 
 export interface PlacementTransform {
+    kind: "wall";
+
     wall: Wall;
     position: Vector3;
     rotationY: number;
@@ -14,6 +16,7 @@ export interface PlacementTransform {
     wallLength: number;
     wallNormal: Vector3;
 }
+
 
 export function buildPlacement(
     wall: Wall,
@@ -73,6 +76,7 @@ export function buildPlacement(
     );
 
     return {
+        kind: "wall",
         wall,
         position: projected,
         rotationY,

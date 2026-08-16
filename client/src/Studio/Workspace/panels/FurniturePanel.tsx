@@ -1,15 +1,21 @@
+import AssetSection from "./AssetSection";
+import { AssetLibrary } from "../../../assets/AssetLibrary";
+import useEditor from "../../../context/editor/useEditor";
+
 export default function FurniturePanel() {
 
+    const { state } = useEditor();
+
+    console.log("Selected furniture asset:", state.selectedAsset);
+    console.log("Current build tool:", state.buildTool);
+
     return (
-
-        <>
-
-            <h2>Create Floor 678Plan</h2>
-
-            <p>Draw walls and create rooms.</p>
-
-        </>
-
+        <div>
+            <AssetSection
+                title="Furniture"
+                assets={AssetLibrary.furniture}
+                defaultOpen={true}
+            />
+        </div>
     );
-
 }

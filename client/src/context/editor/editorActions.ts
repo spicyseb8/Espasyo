@@ -5,7 +5,7 @@ import type { Corner } from "../../engine/walls/Corner";
 import type { Asset } from "../../assets/Asset";
 import { BuildTool } from "../BuildTool";
 import type { Door } from "../../engine/doors/DoorTypes";
-
+import type { Furniture } from "../../engine/furniture/FurnitureTypes";
 export type EditorAction =
     | {
           type: "SET_ACTIVE_TAB";
@@ -78,6 +78,10 @@ export type EditorAction =
           type: "ADD_DOOR";
           payload: Door;
       }
+            | {
+                  type: "ADD_FURNITURE";
+                  payload: Furniture;
+              }
     | {
           type: "SET_DRAFT_WALL_LENGTH";
           payload: number | null;

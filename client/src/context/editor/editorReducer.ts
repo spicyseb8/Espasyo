@@ -1,5 +1,6 @@
 import type { EditorState } from "./types";
 import type { EditorAction } from "./editorActions";
+import { Tool } from "./tools";
 
 export function editorReducer(
     state: EditorState,
@@ -110,6 +111,9 @@ export function editorReducer(
             return {...state, layoutConfirmed: true, activeTab: "build"};
         case "ADD_DOOR":
             return {...state, doors: [...state.doors, action.payload]};
+        
+        case "ADD_FURNITURE":
+            return {...state, furniture: [...state.furniture, action.payload]};
         case "SET_DRAFT_WALL_LENGTH":
             return {
                 ...state,

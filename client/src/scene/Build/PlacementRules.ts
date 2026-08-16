@@ -34,53 +34,38 @@ export interface PlacementRule {
 }
 
 export const PlacementRules: Record<BuildTool, PlacementRule> = {
-
     none: {
-
         anchor: "bottom",
-
         rotateWithWall: false,
-
         clampToWall: false,
-
         requiresWall: false
-
     },
 
     door: {
-
         anchor: "bottom",
-
         rotateWithWall: true,
-
         clampToWall: true,
-
         requiresWall: true
-
     },
 
     opening: {
-
         anchor: "bottom",
-
         rotateWithWall: true,
-
         clampToWall: true,
-
         requiresWall: true
-
     },
 
     window: {
-
         anchor: "center",
-
         rotateWithWall: true,
-
         clampToWall: true,
-
         requiresWall: true
+    },
 
+    furniture: {
+        anchor: "bottom",
+        rotateWithWall: false,
+        clampToWall: false,
+        requiresWall: false
     }
-
 };

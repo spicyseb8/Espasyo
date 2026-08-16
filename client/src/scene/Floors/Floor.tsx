@@ -362,6 +362,7 @@ export default function Floor({
 
             <mesh
                 geometry={geometry}
+                userData={{ isFloor: true }}
                 position={[
                     0,
                     isChildRegion

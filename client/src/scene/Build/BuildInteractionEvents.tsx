@@ -9,6 +9,7 @@ import { placeDoor } from "../../engine/doors/PlaceDoor";
 
 import { BuildTool } from "../../context/BuildTool";
 
+import { placeFurniture } from "../../engine/furniture/PlaceFurniture";
 export default function BuildInteractionEvents() {
 
     const { gl } = useThree();
@@ -18,10 +19,6 @@ export default function BuildInteractionEvents() {
     useEffect(() => {
 
         const canvas = gl.domElement;
-
-        //--------------------------------------------------
-        // Pointer Move
-        //--------------------------------------------------
 
         function onPointerMove(
             e: PointerEvent
@@ -34,17 +31,37 @@ export default function BuildInteractionEvents() {
 
         }
 
-        //--------------------------------------------------
-        // Pointer Down
-        //--------------------------------------------------
+        function onContextMenu(
+            e: MouseEvent
+        ) {
+            if (!state.selectedAsset)
+                return;
 
+            if (
+                state.selectedAsset.type !==
+                BuildTool.Furniture
+            ) {
+                return;
+            }
+
+            e.preventDefault();
+
+            buildInteraction.currentPlacement = null;
+            buildInteraction.currentBounds = null;
+
+            dispatch({
+                type: "SET_SELECTED_ASSET",
+                payload: null
+            });
+
+            dispatch({
+                type: "SET_BUILD_TOOL",
+                payload: BuildTool.None
+            });
+        }
         function onPointerDown(
             e: PointerEvent
         ) {
-
-            //--------------------------------------------------
-            // Left Click only
-            //--------------------------------------------------
 
             if (e.button !== 0)
                 return;
@@ -54,23 +71,17 @@ export default function BuildInteractionEvents() {
                 canvas
             );
 
-            //--------------------------------------------------
-            // Selected Asset
-            //--------------------------------------------------
-
-            if (!state.selectedAsset)
+            if (!state.selectedAsset) {
                 return;
+            }
 
-            //--------------------------------------------------
-            // Only doors for now
-            //--------------------------------------------------
+            const activeAsset = state.selectedAsset;
+            const hasArmedPlacement =
+                state.buildTool !== BuildTool.None &&
+                state.buildTool === activeAsset.type;
 
-            if (state.selectedAsset.type !== BuildTool.Door)
+            if (!hasArmedPlacement)
                 return;
-
-            //--------------------------------------------------
-            // Current preview placement
-            //--------------------------------------------------
 
             const result =
                 buildInteraction.pointerDown();
@@ -78,32 +89,102 @@ export default function BuildInteractionEvents() {
             if (!result)
                 return;
 
-            //--------------------------------------------------
-            // Create Door
-            //--------------------------------------------------
+            if (
+                activeAsset.type === BuildTool.Door
+            ) {
 
-            const door = placeDoor(
+                if (result.transform.kind !== "wall")
+                    return;
 
-                state.selectedAsset,
+                const door = placeDoor(
+                    activeAsset,
+                    result.transform,
+                    result.bounds
+                );
 
-                result.transform,
+                dispatch({
+                    type: "ADD_DOOR",
+                    payload: door
+                });
 
-                result.bounds
+                dispatch({
+                    type: "SET_BUILD_TOOL",
+                    payload: BuildTool.None
+                });
 
-            );
+                dispatch({
+                    type: "SET_SELECTED_ASSET",
+                    payload: null
+                });
 
-            //--------------------------------------------------
-            // Store Door
-            //--------------------------------------------------
-            console.log(door);
-            dispatch({
+                return;
+            }
 
-                type: "ADD_DOOR",
+            if (
+                activeAsset.type ===
+                BuildTool.Furniture
+            ) {
 
-                payload: door
+                //--------------------------------------------------
+                // Furniture placement requires furniture transform
+                //--------------------------------------------------
 
-            });
+                if (
+                    result.transform.kind !==
+                    "furniture"
+                ) {
+                    return;
+                }
 
+                //--------------------------------------------------
+                // Furniture must be collision-free
+                //--------------------------------------------------
+
+                if (
+                    !result.collision ||
+                    !result.collision.valid
+                ) {
+
+                    console.log(
+                        "Furniture placement blocked:",
+                        result.collision?.reason
+                    );
+
+                    return;
+                }
+
+                //--------------------------------------------------
+                // Create permanent furniture
+                //--------------------------------------------------
+
+                const furniture =
+                    placeFurniture(
+                        activeAsset,
+                        result.transform,
+                        result.bounds
+                    );
+
+                //--------------------------------------------------
+                // Store furniture
+                //--------------------------------------------------
+
+                dispatch({
+                    type: "ADD_FURNITURE",
+                    payload: furniture
+                });
+
+                dispatch({
+                    type: "SET_BUILD_TOOL",
+                    payload: BuildTool.None
+                });
+
+                dispatch({
+                    type: "SET_SELECTED_ASSET",
+                    payload: null
+                });
+
+                return;
+            }
         }
 
         canvas.addEventListener(
@@ -116,6 +197,11 @@ export default function BuildInteractionEvents() {
             onPointerDown
         );
 
+        canvas.addEventListener(
+          "contextmenu",
+          onContextMenu
+        );
+
         return () => {
 
             canvas.removeEventListener(
@@ -126,6 +212,11 @@ export default function BuildInteractionEvents() {
             canvas.removeEventListener(
                 "pointerdown",
                 onPointerDown
+            );
+
+            canvas.removeEventListener(
+                "contextmenu",
+                onContextMenu
             );
 
         };

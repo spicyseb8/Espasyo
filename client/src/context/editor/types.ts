@@ -4,6 +4,7 @@ import type { Corner } from "../../engine/walls";
 import type { Asset } from "../../assets/Asset";
 import { BuildTool } from "../BuildTool";
 import type { Door } from "../../engine/doors/DoorTypes";
+import type { Furniture } from "../../engine/furniture/FurnitureTypes";
 
 export interface EditorState {
     activeTab: string;
@@ -21,6 +22,7 @@ export interface EditorState {
     selectedAsset: Asset | null;
     buildTool: BuildTool;
     doors: Door[];
+    furniture: Furniture[];
     draftWallLength: number | null;
     showWallMeasurements: boolean;
 }

@@ -27,6 +27,10 @@ export default function BuildPanel() {
 
     const isSearching = query.trim().length > 0;
 
+    // NOTE: Confirm Layout button has moved out of BuildPanel - see
+    // FurniturePanel.tsx (pending). The Apply button also moved: it's now
+    // per-section, rendered inside AssetSection.tsx instead of here.
+
     return (
         <div className="build-panel">
 

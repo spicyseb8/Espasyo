@@ -1,5 +1,5 @@
 import "./FloorPlanPanel.css";
-import { MousePointer2, PenLine, Square, CircleCheck } from "lucide-react";
+import { MousePointer2, PenLine, Square } from "lucide-react";
 import useEditor from "../../../context/editor/useEditor";
 import { Tool } from "../../../context/editor/tools";
 import { solveRegions } from "../../../engine/regions/RegionSolver";

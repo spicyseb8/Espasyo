@@ -90,9 +90,65 @@
     color: var(--ws-text-muted);
 }
 
+/* ========================= */
+/* Apply button                */
+/* sits bottom-left inside the */
+/* collapsible content, below  */
+/* the grid, flush with its    */
+/* horizontal padding          */
+/* ========================= */
+
+.asset-apply-row {
+    display: flex;
+    justify-content: flex-end;
+
+    padding: 10px 14px 16px;
+
+    border-top: 1px solid var(--ws-border);
+}
+
+.asset-apply-button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    padding: 9px 16px;
+
+    border: none;
+    border-radius: 10px;
+
+    background: var(--ws-surface-active);
+
+    color: var(--ws-accent-ink);
+
+    font-size: 12px;
+    font-weight: 700;
+
+    cursor: pointer;
+
+    box-shadow: var(--ws-shadow-accent);
+
+    transition: transform .12s ease, box-shadow .18s ease, background .18s ease, opacity .18s ease;
+}
+
+.asset-apply-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.asset-apply-button:active:not(:disabled) {
+    transform: scale(.97);
+}
+
+.asset-apply-button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .asset-collapse,
-    .asset-chevron {
+    .asset-chevron,
+    .asset-apply-button {
         transition: none;
     }
 }

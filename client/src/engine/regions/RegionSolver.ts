@@ -22,7 +22,6 @@ export function solveRegions(
     );
 
     const regions = walkRegions(graph);
-    console.log(`🔧 After walkRegions: ${regions.length} candidates`);
 
     const validRegions = regions.filter(region => {
 
@@ -355,18 +354,6 @@ function classifyRegionRelationships(
      * Final metadata.
      * ----------------------------------------
      */
-
-    console.group("📋 REGION RELATIONSHIPS AFTER CLASSIFICATION");
-    for (const region of candidates) {
-        console.log(`Region ${region.id}:`, {
-            area: region.area.toFixed(2),
-            parentId: region.parentRegionId || "NONE",
-            childCount: region.childRegionIds.length,
-            adjacentCount: region.adjacentRegionIds.length,
-            relationships: region.relationshipSummary.join(", ")
-        });
-    }
-    console.groupEnd();
 
     return candidates.map(region => {
 

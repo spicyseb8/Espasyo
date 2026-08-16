@@ -11,5 +11,6 @@ export interface Asset {
     model: string;
 
     type: BuildTool;
+    price: number;
 
 }
