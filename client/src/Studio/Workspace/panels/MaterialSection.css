@@ -1,0 +1,170 @@
+.material-section {
+    width: 100%;
+
+    background: #ffffff;
+
+    border-bottom: 1px solid #e8e8e8;
+}
+
+.material-section-header {
+    width: 100%;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 11px 14px;
+
+    border: none;
+
+    background: #ffffff;
+
+    cursor: pointer;
+
+    text-align: left;
+}
+
+.material-section-title {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+
+    font-size: 13px;
+    font-weight: 600;
+
+    color: #272727;
+}
+
+.material-section-count {
+    min-width: 20px;
+    height: 18px;
+
+    padding: 0 6px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 9px;
+
+    background: #fff0e4;
+    color: #ec8a36;
+
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.material-section-chevron {
+    transition: transform 0.2s ease;
+
+    color: #777777;
+}
+
+.material-section-chevron.open {
+    transform: rotate(180deg);
+}
+
+.material-section-collapse {
+    display: grid;
+    grid-template-rows: 0fr;
+
+    transition:
+        grid-template-rows 0.22s ease;
+}
+
+.material-section-collapse.open {
+    grid-template-rows: 1fr;
+}
+
+.material-section-inner {
+    min-height: 0;
+    overflow: hidden;
+
+    padding: 0 10px 10px;
+}
+
+.material-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+
+    gap: 8px;
+}
+
+.material-empty {
+    margin: 12px 4px;
+
+    text-align: center;
+
+    font-size: 11px;
+    color: #999999;
+}
+
+.material-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+
+    gap: 7px;
+
+    margin-top: 10px;
+
+    padding-top: 8px;
+
+    border-top: 1px solid #eeeeee;
+}
+
+.material-apply-button,
+.material-apply-all-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 32px;
+
+    padding: 7px 12px;
+
+    border-radius: 8px;
+
+    font-size: 11px;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition:
+        opacity 0.15s ease,
+        background 0.15s ease;
+}
+
+.material-apply-button {
+    gap: 5px;
+
+    border: none;
+
+    background: #ff963f;
+    color: #ffffff;
+}
+
+.material-apply-button:hover:not(:disabled) {
+    background: #f58a30;
+}
+
+.material-apply-all-button {
+    border: 1px solid #ff963f;
+
+    background: #ffffff;
+
+    color: #ee882d;
+}
+
+.material-apply-all-button:hover:not(:disabled) {
+    background: #fff5eb;
+}
+
+.material-apply-button:disabled,
+.material-apply-all-button:disabled {
+    opacity: 0.45;
+
+    cursor: not-allowed;
+}

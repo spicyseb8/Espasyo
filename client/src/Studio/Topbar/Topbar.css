@@ -65,6 +65,10 @@
     border-color: #dcdfe4;
 }
 
+/* ==================================================
+   COST ESTIMATOR
+   ================================================== */
+
 .cost-estimator {
     position: relative;
 }
@@ -74,12 +78,14 @@
     align-items: center;
     gap: 8px;
 
-    padding: 9px 14px;
+    height: 40px;
+    padding: 0 14px;
 
-    border: 1px solid #dcdfe4;
-    border-radius: 9px;
+    border: 1px solid #dedede;
+    border-radius: 10px;
 
     background: #ffffff;
+    color: #202020;
 
     font-size: 13px;
     font-weight: 600;
@@ -87,130 +93,239 @@
     cursor: pointer;
 
     transition:
+        border-color 0.15s ease,
         background 0.15s ease,
-        border-color 0.15s ease;
+        box-shadow 0.15s ease;
 }
 
 .cost-estimator-button:hover {
-    background: #f7f7f7;
-    border-color: #cfd3d8;
+    border-color: #ff963f;
+    background: #fffaf5;
 }
 
 .cost-chevron {
-    transition: transform 0.15s ease;
+    transition: transform 0.2s ease;
 }
 
 .cost-chevron.open {
     transform: rotate(180deg);
 }
 
+
+/* ==================================================
+   DROPDOWN
+   ================================================== */
+
 .cost-estimator-dropdown {
     position: absolute;
 
-    top: calc(100% + 8px);
+    top: calc(100% + 9px);
     right: 0;
 
-    width: 330px;
+    width: 350px;
+    max-height: 520px;
+
+    display: flex;
+    flex-direction: column;
 
     background: #ffffff;
 
-    border: 1px solid #e1e4e8;
-    border-radius: 12px;
+    border: 1px solid #e7e7e7;
+    border-radius: 14px;
 
     box-shadow:
-        0 12px 30px rgba(0, 0, 0, 0.12);
+        0 12px 35px rgba(0, 0, 0, 0.12),
+        0 3px 10px rgba(0, 0, 0, 0.05);
 
     overflow: hidden;
+
+    z-index: 1000;
 }
 
-.cost-estimator-header {
-    padding: 15px 16px;
 
-    border-bottom: 1px solid #eceff1;
+/* ==================================================
+   HEADER
+   ================================================== */
+
+.cost-estimator-header {
+    padding: 16px 18px 14px;
+
+    border-bottom: 1px solid #eeeeee;
+
+    background:
+        linear-gradient(
+            180deg,
+            #ffffff 0%,
+            #fffaf6 100%
+        );
+}
+
+.cost-estimator-header > div {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
 }
 
 .cost-estimator-header strong {
-    display: block;
+    font-size: 16px;
+    font-weight: 700;
 
-    font-size: 14px;
+    color: #222222;
 }
 
 .cost-estimator-header span {
-    display: block;
-
-    margin-top: 3px;
-
-    font-size: 12px;
-
-    color: #73777c;
+    font-size: 11px;
+    color: #8b8b8b;
 }
 
+
+/* ==================================================
+   LIST
+   ================================================== */
+
 .cost-estimator-list {
-    max-height: 300px;
+    flex: 1;
+
+    padding: 6px 10px;
 
     overflow-y: auto;
 }
+
+
+/* ==================================================
+   CATEGORY
+   ================================================== */
+
+.cost-category {
+    margin: 6px 0;
+
+    padding: 10px 10px 8px;
+
+    border: 1px solid #eeeeee;
+    border-radius: 10px;
+
+    background: #ffffff;
+}
+
+.cost-category-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding-bottom: 7px;
+
+    border-bottom: 1px solid #f1f1f1;
+}
+
+.cost-category-header span {
+    font-size: 10px;
+    font-weight: 700;
+
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+
+    color: #7d7d7d;
+}
+
+.cost-category-header strong {
+    font-size: 11px;
+    font-weight: 700;
+
+    color: #4f8765;
+}
+
+
+/* ==================================================
+   ITEM
+   ================================================== */
 
 .cost-item {
     display: flex;
     align-items: center;
     justify-content: space-between;
 
-    padding: 12px 16px;
+    gap: 12px;
 
-    border-bottom: 1px solid #f1f2f3;
+    padding: 10px 2px 4px;
 }
 
 .cost-item-info {
+    min-width: 0;
+
     display: flex;
     flex-direction: column;
     gap: 3px;
 }
 
 .cost-item-name {
-    font-size: 13px;
+    overflow: hidden;
+
+    white-space: nowrap;
+    text-overflow: ellipsis;
+
+    font-size: 12px;
     font-weight: 600;
+
+    color: #292929;
 }
 
 .cost-item-quantity {
-    font-size: 11px;
-    color: #777b80;
+    font-size: 10px;
+
+    color: #999999;
 }
 
 .cost-item-total {
-    font-size: 13px;
-    font-weight: 600;
-    color: #3F7D5A;
+    flex-shrink: 0;
+
+    font-size: 12px;
+    font-weight: 700;
+
+    color: #4f8765;
 }
 
+
+/* ==================================================
+   EMPTY
+   ================================================== */
+
 .cost-empty {
-    padding: 24px 16px;
+    padding: 35px 15px;
 
     text-align: center;
 
-    font-size: 13px;
+    font-size: 12px;
 
-    color: #81868c;
+    color: #9a9a9a;
 }
+
+
+/* ==================================================
+   TOTAL
+   ================================================== */
 
 .cost-estimator-total {
     display: flex;
     align-items: center;
     justify-content: space-between;
 
-    padding: 15px 16px;
+    padding: 15px 18px;
+
+    border-top: 1px solid #e8e8e8;
 
     background: #fafafa;
-
-    border-top: 1px solid #e7e9eb;
 }
 
 .cost-estimator-total span {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
+
+    color: #555555;
 }
 
 .cost-estimator-total strong {
-    font-size: 16px;
-    color: #3F7D5A;
+    font-size: 18px;
+    font-weight: 800;
+
+    color: #4f8765;
 }

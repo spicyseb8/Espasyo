@@ -62,6 +62,17 @@ export type EditorAction =
           type: "SET_CORNERS";
           payload: Corner[];
       }
+      | {
+    type: "SET_FLOOR_FINISH";
+    payload: {
+        regionId: string;
+        materialId: string;
+    };
+    }
+    | {
+        type: "SET_FLOOR_FINISH_ALL";
+        payload: string;
+    }
     | {
           type: "SELECT_CORNER";
           payload: string | null;
@@ -116,4 +127,6 @@ export type EditorAction =
           type: "SET_SHOW_WALL_MEASUREMENTS";
           payload: boolean;
       };
+
+      
       

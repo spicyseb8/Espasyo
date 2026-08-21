@@ -12,34 +12,52 @@ import {
     useState
 } from "react";
 
-import type { ChangeEvent } from "react";
+import type {
+    ChangeEvent
+} from "react";
 
-import useEditor from "../../context/editor/useEditor";
-import { findAsset } from "../../assets/AssetLibrary";
+import useEditor
+    from "../../context/editor/useEditor";
+
+import {
+    calculateCostEstimate
+} from "../../engine/cost/CostEstimator";
+
+import type {
+    CostCategory
+} from "../../engine/cost/CostTypes";
 
 export default function Topbar() {
 
-    const { state } = useEditor();
-    const furnitureList = Array.isArray(state?.furniture) ? state.furniture : [];
+    const { state } =
+        useEditor();
 
-    const [open, setOpen] = useState(false);
+    const [open, setOpen] =
+        useState(false);
 
-    const dropdownRef = useRef<HTMLDivElement>(null);
+    const dropdownRef =
+        useRef<HTMLDivElement>(null);
 
     //--------------------------------------------------
     // Project title
     //--------------------------------------------------
 
-    const [projectName, setProjectName] = useState<string>(() => {
+    const [projectName, setProjectName] =
+        useState<string>(() => {
 
-        if (typeof window === "undefined")
-            return "";
+            if (
+                typeof window ===
+                "undefined"
+            ) {
+                return "";
+            }
 
-        return (
-            localStorage.getItem("espasyo_project_name") || ""
-        );
-
-    });
+            return (
+                localStorage.getItem(
+                    "espasyo_project_name"
+                ) || ""
+            );
+        });
 
     useEffect(() => {
 
@@ -54,91 +72,75 @@ export default function Topbar() {
         event: ChangeEvent<HTMLInputElement>
     ) {
 
-        setProjectName(event.target.value);
-
+        setProjectName(
+            event.target.value
+        );
     }
 
     //--------------------------------------------------
-    // Build cost estimation from placed furniture
+    // Calculate complete estimate
     //--------------------------------------------------
 
-    const costItems = useMemo(() => {
-
-        const grouped = new Map<
-            string,
-            {
-                assetId: string;
-                name: string;
-                quantity: number;
-                unitPrice: number;
-                totalPrice: number;
-            }
-        >();
-
-        for (const furniture of furnitureList) {
-
-            const asset = findAsset(
-                furniture.assetId
-            );
-
-            if (!asset)
-                continue;
-
-            const existing =
-                grouped.get(asset.id);
-
-            if (existing) {
-
-                existing.quantity += 1;
-
-                existing.totalPrice =
-                    existing.quantity *
-                    existing.unitPrice;
-
-            } else {
-
-                grouped.set(
-                    asset.id,
-                    {
-                        assetId: asset.id,
-                        name: asset.name,
-                        quantity: 1,
-                        unitPrice: asset.price,
-                        totalPrice: asset.price
-                    }
-                );
-            }
-        }
-
-        return Array.from(
-            grouped.values()
+    const estimate =
+        useMemo(
+            () =>
+                calculateCostEstimate(
+                    state
+                ),
+            [state]
         );
 
-    }, [furnitureList]);
-
     //--------------------------------------------------
-    // Total cost
+    // Format currency
     //--------------------------------------------------
 
-    const totalCost = useMemo(() => {
+    const formatCurrency =
+        (amount: number) => {
 
-        return costItems.reduce(
-            (sum, item) =>
-                sum + item.totalPrice,
-            0
-        );
-
-    }, [costItems]);
-
-    //--------------------------------------------------
-    // Total number of furniture
-    //--------------------------------------------------
-
-    const totalItems =
-        furnitureList.length;
+            return new Intl.NumberFormat(
+                "en-PH",
+                {
+                    style: "currency",
+                    currency: "PHP",
+                    minimumFractionDigits: 2
+                }
+            ).format(amount);
+        };
 
     //--------------------------------------------------
-    // Close when clicking outside
+    // Category label
+    //--------------------------------------------------
+
+    const categoryLabels:
+        Record<CostCategory, string> = {
+
+        furniture:
+            "Furniture",
+
+        flooring:
+            "Flooring",
+
+        wallFinish:
+            "Wall Finish",
+
+        doors:
+            "Doors",
+
+        windows:
+            "Windows"
+    };
+
+    //--------------------------------------------------
+    // Count placed furniture
+    //
+    // Only used for the summary text.
+    //--------------------------------------------------
+
+    const furnitureCount =
+        state.furniture.length;
+
+    //--------------------------------------------------
+    // Close dropdown when clicking outside
     //--------------------------------------------------
 
     useEffect(() => {
@@ -153,9 +155,9 @@ export default function Topbar() {
                     event.target as Node
                 )
             ) {
+
                 setOpen(false);
             }
-
         }
 
         document.addEventListener(
@@ -169,46 +171,78 @@ export default function Topbar() {
                 "mousedown",
                 handleOutsideClick
             );
-
         };
 
     }, []);
 
     //--------------------------------------------------
-    // Currency formatter
+    // Group cost items by category
     //--------------------------------------------------
 
-    const formatCurrency = (
-        amount: number
-    ) => {
+    const groupedItems =
+        useMemo(() => {
 
-        return new Intl.NumberFormat(
-            "en-PH",
-            {
-                style: "currency",
-                currency: "PHP",
-                minimumFractionDigits: 2
+            const groups:
+                Record<
+                    CostCategory,
+                    typeof estimate.items
+                > = {
+
+                furniture: [],
+                flooring: [],
+                wallFinish: [],
+                doors: [],
+                windows: []
+            };
+
+            for (
+                const item of
+                estimate.items
+            ) {
+
+                groups[
+                    item.category
+                ].push(item);
             }
-        ).format(amount);
 
-    };
+            return groups;
+
+        }, [estimate.items]);
+
+    //--------------------------------------------------
+    // Render
+    //--------------------------------------------------
 
     return (
 
         <header className="topbar">
 
+            {/* -------------------------------------- */}
+            {/* Brand                                  */}
+            {/* -------------------------------------- */}
+
             <div className="topbar-brand">
                 ESPASYO
             </div>
+
+            {/* -------------------------------------- */}
+            {/* Project title                          */}
+            {/* -------------------------------------- */}
 
             <input
                 type="text"
                 className="project-title-input"
                 placeholder="Type your project name or whatever"
                 value={projectName}
-                onChange={handleProjectNameChange}
+                onChange={
+                    handleProjectNameChange
+                }
                 aria-label="Project name"
             />
+
+            {/* -------------------------------------- */}
+            {/* Cost estimation                        */}
+            {/* -------------------------------------- */}
 
             <div
                 className="cost-estimator"
@@ -216,9 +250,13 @@ export default function Topbar() {
             >
 
                 <button
+                    type="button"
                     className="cost-estimator-button"
                     onClick={() =>
-                        setOpen(value => !value)
+                        setOpen(
+                            value =>
+                                !value
+                        )
                     }
                     aria-expanded={open}
                 >
@@ -242,77 +280,211 @@ export default function Topbar() {
 
                 {open && (
 
-                    <div className="cost-estimator-dropdown">
+                    <div
+                        className="cost-estimator-dropdown"
+                    >
 
-                        <div className="cost-estimator-header">
+                        {/* ---------------------------------- */}
+                        {/* Header                             */}
+                        {/* ---------------------------------- */}
+
+                        <div
+                            className="cost-estimator-header"
+                        >
 
                             <div>
+
                                 <strong>
                                     Cost Estimation
                                 </strong>
 
                                 <span>
-                                    {totalItems} furniture item
-                                    {totalItems !== 1
+                                    {furnitureCount} furniture
+                                    {furnitureCount !== 1
+                                        ? " items"
+                                        : " item"}
+                                    {" · "}
+                                    {estimate.items.length}
+                                    {" "}
+                                    cost item
+                                    {estimate.items.length !== 1
                                         ? "s"
                                         : ""}
                                 </span>
+
                             </div>
 
                         </div>
 
-                        <div className="cost-estimator-list">
+                        {/* ---------------------------------- */}
+                        {/* Items                              */}
+                        {/* ---------------------------------- */}
 
-                            {costItems.length === 0 ? (
+                        <div
+                            className="cost-estimator-list"
+                        >
 
-                                <div className="cost-empty">
+                            {estimate.items.length === 0 ? (
 
-                                    No furniture placed yet.
-
+                                <div
+                                    className="cost-empty"
+                                >
+                                    No cost items yet.
                                 </div>
 
                             ) : (
 
-                                costItems.map(
-                                    item => (
+                                (
+                                    Object.keys(
+                                        groupedItems
+                                    ) as CostCategory[]
+                                ).map(
+                                    category => {
 
-                                        <div
-                                            key={item.assetId}
-                                            className="cost-item"
-                                        >
+                                        const items =
+                                            groupedItems[
+                                                category
+                                            ];
 
-                                            <div className="cost-item-info">
+                                        if (
+                                            items.length === 0
+                                        ) {
+                                            return null;
+                                        }
 
-                                                <span className="cost-item-name">
-                                                    {item.name}
-                                                </span>
+                                        const categoryTotal =
+                                            items.reduce(
+                                                (
+                                                    sum,
+                                                    item
+                                                ) =>
+                                                    sum +
+                                                    item.subtotal,
+                                                0
+                                            );
 
-                                                <span className="cost-item-quantity">
-                                                    × {item.quantity}
-                                                </span>
+                                        return (
 
-                                            </div>
+                                            <div
+                                                key={
+                                                    category
+                                                }
+                                                className="cost-category"
+                                            >
 
-                                            <span className="cost-item-total">
+                                                {/* Category heading */}
+
+                                                <div
+                                                    className="cost-category-header"
+                                                >
+
+                                                    <span>
+                                                        {
+                                                            categoryLabels[
+                                                                category
+                                                            ]
+                                                        }
+                                                    </span>
+
+                                                    <strong>
+                                                        {
+                                                            formatCurrency(
+                                                                categoryTotal
+                                                            )
+                                                        }
+                                                    </strong>
+
+                                                </div>
+
+                                                {/* Category items */}
 
                                                 {
-                                                    formatCurrency(
-                                                        item.totalPrice
+                                                    items.map(
+                                                        (
+                                                            item,
+                                                            index
+                                                        ) => (
+
+                                                            <div
+                                                                key={
+                                                                    `${item.name}-${index}`
+                                                                }
+                                                                className="cost-item"
+                                                            >
+
+                                                                <div
+                                                                    className="cost-item-info"
+                                                                >
+
+                                                                    <span
+                                                                        className="cost-item-name"
+                                                                    >
+                                                                        {
+                                                                            item.name
+                                                                        }
+                                                                    </span>
+
+                                                                    <span
+                                                                        className="cost-item-quantity"
+                                                                    >
+                                                                        {
+                                                                            item.quantity.toFixed(
+                                                                                item.unit ===
+                                                                                    "m²"
+                                                                                    ? 2
+                                                                                    : 0
+                                                                            )
+                                                                        }{" "}
+                                                                        {
+                                                                            item.unit
+                                                                        }
+
+                                                                        {" × "}
+
+                                                                        {
+                                                                            formatCurrency(
+                                                                                item.rate
+                                                                            )
+                                                                        }
+
+                                                                        /{
+                                                                            item.unit
+                                                                        }
+                                                                    </span>
+
+                                                                </div>
+
+                                                                <span
+                                                                    className="cost-item-total"
+                                                                >
+                                                                    {
+                                                                        formatCurrency(
+                                                                            item.subtotal
+                                                                        )
+                                                                    }
+                                                                </span>
+
+                                                            </div>
+
+                                                        )
                                                     )
                                                 }
 
-                                            </span>
-
-                                        </div>
-
-                                    )
+                                            </div>
+                                        );
+                                    }
                                 )
-
                             )}
 
                         </div>
 
-                        <div className="cost-estimator-total">
+                        {/* ---------------------------------- */}
+                        {/* Total                             */}
+                        {/* ---------------------------------- */}
+
+                        <div
+                            className="cost-estimator-total"
+                        >
 
                             <span>
                                 Estimated Total
@@ -321,7 +493,7 @@ export default function Topbar() {
                             <strong>
                                 {
                                     formatCurrency(
-                                        totalCost
+                                        estimate.total
                                     )
                                 }
                             </strong>
@@ -335,6 +507,5 @@ export default function Topbar() {
             </div>
 
         </header>
-
     );
 }

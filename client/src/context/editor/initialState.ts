@@ -22,7 +22,7 @@ export const initialState: EditorState = {
     furniture: [],
     windows: [],
     openings: [],
-    
+    floorFinishes: {},
     draftWallLength: null,
     showWallMeasurements: false
 };

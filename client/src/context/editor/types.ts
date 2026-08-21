@@ -28,7 +28,7 @@ export interface EditorState {
     furniture: Furniture[];
     windows: Window[];
     openings: Opening[];
-    
+    floorFinishes: Record<string, string>;
     draftWallLength: number | null;
     showWallMeasurements: boolean;
 }

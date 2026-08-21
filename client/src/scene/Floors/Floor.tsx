@@ -15,7 +15,7 @@ import useEditor from "../../context/editor/useEditor";
 
 import type { Region } from "../../engine/regions/Polygon";
 import { pointInPolygon } from "../../engine/regions/Polygon";
-
+import { MaterialLibrary } from "../../engine/materials/MaterialLibrary";
 interface FloorProps {
     region: Region;
 }
@@ -147,12 +147,31 @@ export default function Floor({
         Boolean(region.parentRegionId);
     const isSelected = state.selectedRegionId === region.id;
 
-    const textures = useTexture({
-        map: "/textures/floor/wood-color.png",
-        normalMap: "/textures/floor/wood-normal.png",
-        roughnessMap: "/textures/floor/wood-roughness.png",
-    });
+    const selectedMaterialId =
+    state.floorFinishes[region.id];
 
+const selectedMaterial =
+    MaterialLibrary.find(
+        material =>
+            material.id ===
+            selectedMaterialId &&
+            material.category === "flooring"
+    );
+    const defaultFloorMaterial =
+    MaterialLibrary.find(
+        material =>
+            material.category === "flooring"
+    );
+
+const textureUrl =
+    selectedMaterial?.texture ??
+    defaultFloorMaterial?.texture;
+
+    const floorTexture =
+    useTexture(
+        textureUrl ??
+        "/uploads/materials/flooring/ceramic-white.jpg"
+    );
     /*
      * ----------------------------------------
      * Configure floor textures once loaded.
@@ -161,20 +180,20 @@ export default function Floor({
 
     useEffect(() => {
 
-        Object.values(textures).forEach(texture => {
+    floorTexture.wrapS =
+        RepeatWrapping;
 
-            texture.wrapS = RepeatWrapping;
-            texture.wrapT = RepeatWrapping;
+    floorTexture.wrapT =
+        RepeatWrapping;
 
-            texture.repeat.set(
-                0.5,
-                0.5
-            );
+    floorTexture.repeat.set(
+        1,
+        1
+    );
 
-            texture.needsUpdate = true;
-        });
+    floorTexture.needsUpdate = true;
 
-    }, [textures]);
+}, [floorTexture]);
 
     /*
      * ----------------------------------------
@@ -391,16 +410,23 @@ export default function Floor({
             >
 
                 <meshStandardMaterial
-                    map={textures.map}
-                    normalMap={textures.normalMap}
-                    roughnessMap={textures.roughnessMap}
-                    metalness={0}
-                    side={DoubleSide}
-                    transparent={false}
-                    opacity={1}
-                    emissive={isSelected ? "#64b5f6" : "#000000"}
-                    emissiveIntensity={isSelected ? 0.45 : 0}
-                />
+    map={floorTexture}
+    metalness={0}
+    roughness={0.8}
+    side={DoubleSide}
+    transparent={false}
+    opacity={1}
+    emissive={
+        isSelected
+            ? "#64b5f6"
+            : "#000000"
+    }
+    emissiveIntensity={
+        isSelected
+            ? 0.45
+            : 0
+    }
+/>
 
             </mesh>
 

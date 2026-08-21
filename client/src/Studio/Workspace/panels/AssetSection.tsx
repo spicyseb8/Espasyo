@@ -3,12 +3,23 @@ import "./AssetSection.css";
 import { useState } from "react";
 import type { ReactNode } from "react";
 
-import { ChevronDown } from "lucide-react";
+import {
+    ChevronDown,
+    Check
+} from "lucide-react";
 
 import AssetCard from "./AssetCard";
 
 import useEditor from "../../../context/editor/useEditor";
 import type { Asset } from "../../../assets/Asset";
+
+import {
+    BuildTool
+} from "../../../context/BuildTool";
+
+import {
+    furnitureInteraction
+} from "../../../scene/Furniture/FurnitureInteraction";
 
 
 interface Props {
@@ -27,76 +38,245 @@ export default function AssetSection({
     forceOpen
 }: Props) {
 
-    const { state, dispatch } = useEditor();
+    const {
+        state,
+        dispatch
+    } = useEditor();
 
-    const [open, setOpen] = useState(defaultOpen);
-    const isOpen = forceOpen ?? open;
+    const [
+        open,
+        setOpen
+    ] = useState(defaultOpen);
 
-    // The Apply button only lights up in the section the pending selection
-    // actually belongs to - selecting a door in "Doors" shouldn't let you
-    // hit Apply from inside "Windows".
-    const pendingAsset = state.selectedAsset ?? null;
-    const pendingInThisSection = pendingAsset
-        ? assets.some(asset => asset.id === pendingAsset.id)
-        : false;
+    const isOpen =
+        forceOpen ?? open;
+
+    //--------------------------------------------------
+    // Selected asset
+    //--------------------------------------------------
+
+    const pendingAsset =
+        state.selectedAsset ?? null;
+
+    //--------------------------------------------------
+    // Is selected asset inside this section?
+    //--------------------------------------------------
+
+    const pendingInThisSection =
+        pendingAsset
+            ? assets.some(
+                asset =>
+                    asset.id ===
+                    pendingAsset.id
+            )
+            : false;
+
+    //--------------------------------------------------
+    // Is this section currently placing furniture?
+    //--------------------------------------------------
+
+    const isPlacingFurniture =
+        state.buildTool ===
+        BuildTool.Furniture;
+
+    //--------------------------------------------------
+    // Apply
+    //--------------------------------------------------
 
     const handleApply = () => {
-        if (!pendingAsset) return;
+
+        if (
+            !pendingAsset ||
+            !pendingInThisSection
+        ) {
+            return;
+        }
+
+        //--------------------------------------------------
+        // Furniture
+        //--------------------------------------------------
+
+        if (
+            pendingAsset.type ===
+            BuildTool.Furniture
+        ) {
+
+            //--------------------------------------------------
+            // Start each new placement at 0°
+            //--------------------------------------------------
+
+            furnitureInteraction
+                .resetRotation();
+
+            //--------------------------------------------------
+            // Activate furniture placement
+            //--------------------------------------------------
+
+            dispatch({
+                type:
+                    "SET_BUILD_TOOL",
+
+                payload:
+                    BuildTool.Furniture
+            });
+
+            return;
+        }
+
+        //--------------------------------------------------
+        // Other build assets
+        //
+        // Keep existing behavior for them.
+        //--------------------------------------------------
 
         dispatch({
-            type: "APPLY_SELECTED_ASSET"
+            type:
+                "SET_BUILD_TOOL",
+
+            payload:
+                pendingAsset.type
         });
+
+        dispatch({
+            type:
+                "SET_SELECTED_ASSET",
+
+            payload:
+                null
+        });
+
     };
 
     return (
-        <section className="asset-section">
+
+        <section
+            className="asset-section"
+        >
+
+            {/* -------------------------------------- */}
+            {/* Header                                 */}
+            {/* -------------------------------------- */}
 
             <button
                 className="asset-section-header"
-                onClick={() => setOpen(o => !o)}
+                onClick={() =>
+                    setOpen(
+                        o => !o
+                    )
+                }
                 aria-expanded={isOpen}
             >
-                <span className="asset-section-title">
+
+                <span
+                    className="asset-section-title"
+                >
+
                     {icon}
+
                     {title}
-                    <span className="asset-count">{assets.length}</span>
+
+                    <span
+                        className="asset-count"
+                    >
+                        {assets.length}
+                    </span>
+
                 </span>
+
                 <ChevronDown
                     size={16}
-                    className={`asset-chevron ${isOpen ? "open" : ""}`}
+                    className={
+                        `asset-chevron ${
+                            isOpen
+                                ? "open"
+                                : ""
+                        }`
+                    }
                 />
+
             </button>
 
-            <div className={`asset-collapse ${isOpen ? "open" : ""}`}>
+            {/* -------------------------------------- */}
+            {/* Content                                */}
+            {/* -------------------------------------- */}
+
+            <div
+                className={
+                    `asset-collapse ${
+                        isOpen
+                            ? "open"
+                            : ""
+                    }`
+                }
+            >
+
                 <div className="asset-collapse-inner">
+
+    {
+        assets.length > 0 ? (
+
+            <div className="asset-grid-scroll">
+
+                <div className="asset-grid">
+
                     {
-                        assets.length > 0 ? (
-                            <div className="asset-grid">
-                                {
-                                    assets.map(asset => (
-                                        <AssetCard
-                                            key={asset.id}
-                                            asset={asset}
-                                        />
-                                    ))
-                                }
-                            </div>
-                        ) : (
-                            <p className="asset-empty">No matches in this category.</p>
-                        )
+                        assets.map(asset => (
+                            <AssetCard
+                                key={asset.id}
+                                asset={asset}
+                            />
+                        ))
                     }
 
-                    <div className="asset-apply-row">
+                </div>
+
+            </div>
+
+        ) : (
+            <p className="asset-empty">
+                No matches in this category.
+            </p>
+        )
+    }
+
+    <div className="asset-apply-row">
+
                         <button
                             type="button"
                             className="asset-apply-button"
-                            disabled={!pendingInThisSection}
-                            onClick={handleApply}
+                            disabled={
+                                !pendingInThisSection ||
+                                (
+                                    pendingAsset
+                                        ?.type ===
+                                    BuildTool.Furniture &&
+                                    isPlacingFurniture
+                                )
+                            }
+                            onClick={
+                                handleApply
+                            }
                         >
-                            Apply
+
+                            <Check
+                                size={16}
+                            />
+
+                            {
+                                pendingAsset
+                                    ?.type ===
+                                    BuildTool.Furniture &&
+                                isPlacingFurniture
+                                    ? "Placing..."
+                                    : "Apply"
+                            }
+
                         </button>
+
                     </div>
+
                 </div>
+
             </div>
 
         </section>

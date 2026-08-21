@@ -1,117 +1,100 @@
-import "./FurniturePanel.css";
+import AssetSection from "./AssetSection";
 
-import { AssetLibrary } from "../../../assets/AssetLibrary";
+import {
+    AssetLibrary
+} from "../../../assets/AssetLibrary";
 
-import useEditor from "../../../context/editor/useEditor";
+import type {
+    FurnitureCategory
+} from "../../../engine/furniture/FurnitureCategory";
 
-import { BuildTool } from "../../../context/BuildTool";
-import { furnitureInteraction } from "../../../scene/Furniture/FurnitureInteraction";
+const furnitureSections: {
+    title: string;
+    category: FurnitureCategory;
+}[] = [
 
-import AssetCard from "./AssetCard";
+    {
+        title: "Living Room",
+        category: "livingRoom"
+    },
+
+    {
+        title: "Bedroom",
+        category: "bedroom"
+    },
+
+    {
+        title: "Dining Room",
+        category: "diningRoom"
+    },
+
+    {
+        title: "Kitchen",
+        category: "kitchen"
+    },
+
+    {
+        title: "Bathroom",
+        category: "bathroom"
+    },
+
+    {
+        title: "Office",
+        category: "office"
+    }
+
+];
 
 export default function FurniturePanel() {
-
-    const { state, dispatch } = useEditor();
-
-    //--------------------------------------------------
-    // Only furniture assets
-    //--------------------------------------------------
-
-    const furniture =
-        AssetLibrary.furniture;
-
-    //--------------------------------------------------
-    // Start furniture placement
-    //--------------------------------------------------
-
-    const handleApply = () => {
-
-        if (!state.selectedAsset)
-            return;
-
-        //--------------------------------------------------
-        // Only allow furniture here
-        //--------------------------------------------------
-        furnitureInteraction.resetRotation();
-        if (
-            state.selectedAsset.type !==
-            BuildTool.Furniture
-        ) {
-            return;
-        }
-
-        //--------------------------------------------------
-        // NOW activate placement mode
-        //--------------------------------------------------
-
-        dispatch({
-            type: "SET_BUILD_TOOL",
-            payload: BuildTool.Furniture
-        });
-
-    };
-
-    //--------------------------------------------------
-    // Check whether furniture is currently being placed
-    //--------------------------------------------------
-
-    const isPlacingFurniture =
-        state.buildTool === BuildTool.Furniture;
 
     return (
 
         <div className="furniture-panel">
 
-            <div className="furniture-panel-header">
+            {
+                furnitureSections.map(
+                    section => {
 
-                <h2>
-                    Furniture
-                </h2>
+                        const assets =
+                            AssetLibrary.furniture.filter(
+                                asset =>
+                                    asset.furnitureCategory ===
+                                    section.category
+                            );
 
-                <span>
-                    {furniture.length}
-                </span>
+                        if (
+                            assets.length === 0
+                        ) {
+                            return null;
+                        }
 
-            </div>
+                        return (
 
-            <div className="furniture-panel-grid">
+                            <AssetSection
+                                key={
+                                    section.category
+                                }
 
-                {furniture.map(
-                    asset => (
+                                title={
+                                    section.title
+                                }
 
-                        <AssetCard
-                            key={asset.id}
-                            asset={asset}
-                        />
+                                assets={
+                                    assets
+                                }
 
-                    )
-                )}
+                                defaultOpen={
+                                    section.category ===
+                                    "livingRoom"
+                                }
+                            />
 
-            </div>
+                        );
 
-            <div className="furniture-panel-footer">
-
-                <button
-                    type="button"
-                    className="furniture-apply-button"
-                    disabled={
-                        !state.selectedAsset ||
-                        state.selectedAsset.type !==
-                            BuildTool.Furniture ||
-                        isPlacingFurniture
                     }
-                    onClick={handleApply}
-                >
-
-                    {isPlacingFurniture
-                        ? "Placing..."
-                        : "✓ Apply"}
-
-                </button>
-
-            </div>
+                )
+            }
 
         </div>
-
     );
 }

@@ -101,6 +101,18 @@ export function editorReducer(
                 ...state,
                 selectedAsset: action.payload
             };
+            case "SET_FLOOR_FINISH":
+
+    return {
+        ...state,
+
+        floorFinishes: {
+            ...state.floorFinishes,
+
+            [action.payload.regionId]:
+                action.payload.materialId
+        }
+    };
         case "SET_BUILD_TOOL":
             return {
                 ...state,
