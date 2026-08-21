@@ -56,14 +56,22 @@ export function buildPlacement(
     projected.add(direction.clone().multiplyScalar(distance));
 
     // Vertical Anchor
-    switch (rule.anchor) {
-        case "bottom":
-            projected.y = 0;
-            break;
-        case "center":
-            projected.y = wallHeight * 0.5;
-            break;
-    }
+switch (rule.anchor) {
+    case "bottom":
+        // Doors sit on the floor.
+        projected.y = 0;
+        break;
+
+    case "center":
+        // Used later for windows.
+        projected.y = wallHeight * 0.5;
+        break;
+
+    case "top":
+        projected.y =
+            wallHeight - bounds.height;
+        break;
+}
 
     // Wall Rotation
     const rotationY = Math.atan2(direction.x, direction.z);

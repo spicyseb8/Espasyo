@@ -1,15 +1,24 @@
-import { Raycaster, Vector2 } from "three";
+import {
+    Raycaster,
+    Vector2
+} from "three";
 
-import type { PlacementTransform } from "./BuildPlacement";
-import type { AssetBounds } from "./AssetBounds";
+import type {
+    FurniturePlacement
+} from "./FurniturePlacement";
+
+import type {
+    AssetBounds
+} from "../Build/AssetBounds";
+
 import type {
     FurnitureCollisionResult
 } from "../../engine/furniture/FurnitureCollision";
 
-class BuildInteraction {
+class FurnitureInteraction {
 
     //--------------------------------------------------
-    // Shared raycaster for wall-based build objects
+    // Raycaster
     //--------------------------------------------------
 
     readonly raycaster =
@@ -18,35 +27,29 @@ class BuildInteraction {
     //--------------------------------------------------
     // Normalized pointer
     //--------------------------------------------------
+//--------------------------------------------------
+// Current furniture rotation
+//--------------------------------------------------
 
+    rotationY = 0;
     readonly pointer =
         new Vector2();
 
     //--------------------------------------------------
-    // Current wall/door placement
+    // Current preview
     //--------------------------------------------------
 
     currentPlacement:
-        | PlacementTransform
-        | null = null;
-
-    //--------------------------------------------------
-    // Current bounds
-    //--------------------------------------------------
+        FurniturePlacement | null =
+        null;
 
     currentBounds:
-        AssetBounds | null = null;
+        AssetBounds | null =
+        null;
 
-    //--------------------------------------------------
-    // Current collision
-    //
-    // Kept here for compatibility with the existing
-    // generic build system. Furniture now uses its own
-    // FurnitureInteraction.
-    //--------------------------------------------------
-
-    currentFurnitureCollision:
-        FurnitureCollisionResult | null = null;
+    currentCollision:
+        FurnitureCollisionResult | null =
+        null;
 
     //--------------------------------------------------
     // Pointer-up suppression
@@ -56,9 +59,26 @@ class BuildInteraction {
         false;
 
     //--------------------------------------------------
-    // Update pointer
+    // Update normalized pointer
+    //--------------------------------------------------
+    rotateClockwise() {
+
+        this.rotationY +=
+            Math.PI / 2;
+
+        this.rotationY =
+            this.rotationY %
+            (Math.PI * 2);
+    }
+
+    //--------------------------------------------------
+    // Reset rotation
     //--------------------------------------------------
 
+    resetRotation() {
+
+        this.rotationY = 0;
+    }
     updatePointer(
         event: PointerEvent,
         canvas: HTMLCanvasElement
@@ -88,7 +108,7 @@ class BuildInteraction {
     }
 
     //--------------------------------------------------
-    // Suppress next pointerup
+    // Suppress the next pointerup
     //--------------------------------------------------
 
     suppressPointerUp() {
@@ -116,7 +136,7 @@ class BuildInteraction {
     }
 
     //--------------------------------------------------
-    // Get current wall/door placement
+    // Get current placement
     //--------------------------------------------------
 
     pointerDown() {
@@ -142,11 +162,27 @@ class BuildInteraction {
                 this.currentBounds,
 
             collision:
-                this.currentFurnitureCollision
+                this.currentCollision
 
         };
     }
+
+    //--------------------------------------------------
+    // Clear preview
+    //--------------------------------------------------
+
+    clearPreview() {
+
+        this.currentPlacement =
+            null;
+
+        this.currentBounds =
+            null;
+
+        this.currentCollision =
+            null;
+    }
 }
 
-export const buildInteraction =
-    new BuildInteraction();
+export const furnitureInteraction =
+    new FurnitureInteraction();

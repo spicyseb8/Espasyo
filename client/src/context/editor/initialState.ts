@@ -4,12 +4,13 @@ import { BuildTool } from "../BuildTool";
 
 export const initialState: EditorState = {
     activeTab: "floorplan",
-    activeTool: Tool.Wall,
+    activeTool: Tool.None,
     walls: [],
     corners: [],
     selectedWallId: null,
     selectedRegionId: null,
     selectedCornerId: null,
+    selectedOpeningId: null,
     wallHeight: 3,
     wallThickness: 0.15,
     snapEnabled: true,
@@ -18,6 +19,10 @@ export const initialState: EditorState = {
     selectedAsset: null,
     buildTool: BuildTool.None,
     doors: [],
+    furniture: [],
+    windows: [],
+    openings: [],
+    
     draftWallLength: null,
     showWallMeasurements: false
 };

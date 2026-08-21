@@ -1,5 +1,7 @@
 export const Tool = {
 
+    None: "none",
+
     Select: "select",
 
     Wall: "wall",

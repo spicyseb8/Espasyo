@@ -1,0 +1,105 @@
+/* ---------- Panel ---------- */
+.furniture-panel {
+    width: 100%;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    overflow: hidden;
+}
+
+/* ---------- Header ---------- */
+.furniture-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 14px 16px;
+}
+
+.furniture-panel-header h2 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    margin: 0;
+
+    font-size: 14px;
+    font-weight: 700;
+    color: #1a1a1a;
+}
+
+.furniture-panel-header span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-width: 18px;
+    height: 18px;
+    padding: 0 6px;
+
+    background: #f0f0f0;
+    border-radius: 999px;
+
+    font-size: 11px;
+    font-weight: 600;
+    color: #8a8a8a;
+}
+
+.furniture-panel-chevron {
+    color: #b3b3b3;
+    cursor: pointer;
+}
+
+/* ---------- Grid ---------- */
+.furniture-panel-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: 12px;
+
+    padding: 4px 16px 16px;
+}
+
+/* ---------- Footer ---------- */
+.furniture-panel-footer {
+    display: flex;
+    justify-content: flex-end;
+
+    padding: 10px 14px;
+
+    border-top: 1px solid #e7e7e7;
+}
+
+.furniture-apply-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+
+    padding: 8px 16px;
+
+    min-width: 78px;
+
+    border: none;
+    border-radius: 999px;
+
+    background: #ff963f;
+    color: #ffffff;
+
+    font-size: 12px;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition:
+        background 0.15s ease,
+        opacity 0.15s ease;
+}
+
+.furniture-apply-button:hover:not(:disabled) {
+    background: #f58a30;
+}
+
+.furniture-apply-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

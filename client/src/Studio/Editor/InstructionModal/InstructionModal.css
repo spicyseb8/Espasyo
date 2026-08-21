@@ -1,0 +1,475 @@
+.instruction-button {
+    position: absolute;
+    right: 24px;
+    bottom: 24px;
+    z-index: 20;
+
+    width: 40px;
+    height: 40px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: 50%;
+
+    background: rgba(255, 255, 255, 0.9);
+    color: #3f3f46;
+
+    cursor: pointer;
+
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+
+    transition:
+        background 0.15s ease,
+        transform 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+.instruction-button:hover {
+    background: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
+}
+
+
+/* ========================= */
+/* Modal Overlay */
+/* ========================= */
+
+.instruction-modal-overlay {
+    position: fixed;
+    inset: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: rgba(20, 20, 22, 0.35);
+
+    z-index: 1000;
+}
+
+
+/* ========================= */
+/* Modal */
+/* ========================= */
+
+.instruction-modal {
+    width: 640px;
+    max-width: calc(100vw - 32px);
+    max-height: 560px;
+
+    background: #ffffff;
+
+    border-radius: 14px;
+
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+
+    display: flex;
+    flex-direction: column;
+
+    overflow: hidden;
+}
+
+
+/* ========================= */
+/* Header */
+/* ========================= */
+
+.instruction-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 20px 24px 16px;
+}
+
+.instruction-title {
+    margin: 0;
+
+    font-family: "Segoe UI";
+    font-size: 17px;
+    font-weight: 600;
+
+    color: #18181b;
+}
+
+.instruction-close-button {
+    border: none;
+    background: transparent;
+
+    font-size: 20px;
+    line-height: 1;
+
+    color: #71717a;
+
+    cursor: pointer;
+
+    padding: 4px;
+    border-radius: 6px;
+}
+
+.instruction-close-button:hover {
+    background: #f4f4f5;
+    color: #18181b;
+}
+
+
+/* ========================= */
+/* Search */
+/* ========================= */
+
+.instruction-search-wrapper {
+    margin: 0 24px 16px;
+
+    position: relative;
+
+    display: flex;
+    align-items: center;
+}
+
+.instruction-search-icon {
+    position: absolute;
+
+    left: 14px;
+
+    color: #a1a1aa;
+
+    pointer-events: none;
+}
+
+.instruction-search-input {
+    width: 100%;
+
+    padding: 10px 14px 10px 38px;
+
+    border: none;
+    border-radius: 10px;
+
+    background: #f4f4f5;
+
+    font-size: 14px;
+    color: #18181b;
+
+    outline: none;
+}
+
+.instruction-search-input::placeholder {
+    color: #a1a1aa;
+}
+
+.instruction-search-input:focus {
+    outline: 2px solid #d4d4d8;
+    outline-offset: -1px;
+}
+
+
+/* ========================= */
+/* Modal Body */
+/* ========================= */
+
+.instruction-modal-body {
+    display: flex;
+
+    flex: 1;
+    min-height: 0;
+
+    border-top: 1px solid #ececee;
+}
+
+
+/* ========================= */
+/* Sidebar */
+/* ========================= */
+
+.instruction-sidebar {
+    width: 168px;
+    flex-shrink: 0;
+
+    display: flex;
+    flex-direction: column;
+
+    padding: 12px;
+
+    border-right: 1px solid #ececee;
+
+    overflow-y: auto;
+}
+
+.instruction-sidebar-item {
+    text-align: left;
+
+    border: none;
+    background: transparent;
+
+    font-size: 14px;
+    font-weight: 500;
+
+    color: #52525b;
+
+    padding: 9px 12px;
+
+    border-radius: 8px;
+
+    cursor: pointer;
+
+    margin-bottom: 2px;
+}
+
+.instruction-sidebar-item:hover {
+    background: #f4f4f5;
+    color: #18181b;
+}
+
+.instruction-sidebar-item.active {
+    background: #f0f0f1;
+    color: #18181b;
+
+    font-weight: 600;
+}
+
+
+/* ========================= */
+/* Shortcut List */
+/* ========================= */
+
+.instruction-shortcut-list {
+    flex: 1;
+
+    overflow-y: auto;
+
+    padding: 14px 24px;
+}
+
+.instruction-shortcut-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 11px 0;
+}
+
+.instruction-shortcut-label {
+    font-size: 14px;
+    color: #18181b;
+    font-weight: 500;
+}
+
+.instruction-key-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.instruction-key {
+    min-width: 30px;
+    height: 30px;
+
+    padding: 0 8px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 1px solid #e4e4e7;
+    border-radius: 7px;
+
+    background: #ffffff;
+
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+
+    font-size: 13px;
+    font-family: inherit;
+
+    color: #3f3f46;
+}
+
+.instruction-key-separator {
+    font-size: 12px;
+    color: #a1a1aa;
+
+    padding: 0 2px;
+}
+
+
+/* ========================= */
+/* How It Works */
+/* ========================= */
+
+.instruction-steps-panel {
+    flex: 1;
+
+    display: flex;
+    flex-direction: column;
+
+    padding: 20px 24px;
+
+    min-width: 0;
+}
+
+.instruction-step-image-wrapper {
+    position: relative;
+
+    width: 100%;
+    height: 220px;
+
+    border-radius: 10px;
+
+    overflow: hidden;
+
+    background: #f4f4f5;
+
+    flex-shrink: 0;
+}
+
+.instruction-step-image {
+    width: 100%;
+    height: 100%;
+
+    object-fit: cover;
+
+    display: block;
+}
+
+.instruction-step-badges {
+    position: absolute;
+
+    top: 10px;
+    right: 10px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+
+    gap: 6px;
+
+    z-index: 1;
+}
+
+.instruction-step-badge {
+    font-size: 11px;
+    font-weight: 600;
+
+    padding: 5px 10px;
+
+    border-radius: 999px;
+}
+
+.instruction-step-badge-locked {
+    background: #18181b;
+    color: #ffffff;
+}
+
+.instruction-step-badge-cost {
+    background: #16a34a;
+    color: #ffffff;
+}
+
+.instruction-step-image-fade {
+    position: absolute;
+
+    left: 0;
+    right: 0;
+    bottom: 0;
+
+    height: 70px;
+
+    background: linear-gradient(
+        to top,
+        #ffffff,
+        rgba(255, 255, 255, 0)
+    );
+
+    pointer-events: none;
+}
+
+.instruction-step-text {
+    margin: 16px 0 0;
+
+    font-size: 14px;
+    line-height: 1.5;
+
+    color: #3f3f46;
+
+    flex: 1;
+}
+
+
+/* ========================= */
+/* Step Navigation */
+/* ========================= */
+
+.instruction-step-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    margin-top: 16px;
+    padding-top: 16px;
+
+    border-top: 1px solid #ececee;
+
+    flex-shrink: 0;
+}
+
+.instruction-step-nav-button {
+    padding: 8px 16px;
+
+    font-size: 13px;
+    font-weight: 500;
+
+    border: 1px solid #e4e4e7;
+    border-radius: 8px;
+
+    background: #ffffff;
+    color: #18181b;
+
+    cursor: pointer;
+}
+
+.instruction-step-nav-button:hover:not(:disabled) {
+    background: #f4f4f5;
+}
+
+.instruction-step-nav-button:disabled {
+    color: #d4d4d8;
+    border-color: #ececee;
+
+    cursor: not-allowed;
+}
+
+.instruction-step-indicator {
+    font-size: 12px;
+    color: #a1a1aa;
+}
+
+
+/* ========================= */
+/* Empty State */
+/* ========================= */
+
+.instruction-empty-state {
+    font-size: 14px;
+
+    color: #a1a1aa;
+
+    padding: 20px 0;
+}
+
+
+/* ========================= */
+/* Scrollbars */
+/* ========================= */
+
+.instruction-sidebar::-webkit-scrollbar,
+.instruction-shortcut-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.instruction-sidebar::-webkit-scrollbar-thumb,
+.instruction-shortcut-list::-webkit-scrollbar-thumb {
+    background: #d4d4d8;
+    border-radius: 3px;
+}

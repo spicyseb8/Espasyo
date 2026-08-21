@@ -14,9 +14,14 @@ import AssetPreview from "./Build/AssetPreview";
 import BuildInteractionEvents from "./Build/BuildInteractionEvents";
 
 import Doors from "./Doors/Doors";
+import Windows from "./Windows/Windows";
 
 import FurnitureScene from "./Furniture/FurnitureScene";
+import FurniturePreview
+    from "./Furniture/FurniturePreview";
 
+import FurnitureInteractionEvents
+    from "./Furniture/FurnitureInteractionEvents";
 export default function Scene() {
 
     return (
@@ -43,7 +48,7 @@ export default function Scene() {
         <Walls />
 
         <Doors />
-        
+        <Windows />
 
         <WallMeasurements />
 
@@ -51,6 +56,8 @@ export default function Scene() {
 
         <WallDrawer />
          <FurnitureScene />
+         <FurniturePreview />
+        <FurnitureInteractionEvents />
 
     </Canvas>
             

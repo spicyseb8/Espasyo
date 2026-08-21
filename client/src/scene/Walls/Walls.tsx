@@ -11,67 +11,36 @@ function Walls() {
     const { state } = useEditor();
 
     return (
-
         <>
+            {state.walls.map((wall) => {
 
-            {
+                const pieces = buildWallMeshes(
+                    wall,
+                    state.wallHeight,
+                    state.wallThickness,
+                    state.doors,
+                    state.openings
+                );
 
-                state.walls.map((wall) => {
+                return (
+                    <group key={wall.id}>
 
-                    //--------------------------------------------------
-                    // Build renderable pieces
-                    //--------------------------------------------------
+                        {pieces.map((piece, index) => (
 
-                    const pieces = buildWallMeshes(
+                            <WallPiece
+                                key={`${wall.id}-${piece.kind}-${index}`}
+                                wallId={wall.id}
+                                piece={piece}
+                            />
 
-                        wall,
+                        ))}
 
-                        state.wallHeight,
+                    </group>
+                );
 
-                        state.wallThickness,
-
-                        state.doors
-
-                    );
-
-                    //--------------------------------------------------
-                    // Render every piece
-                    //--------------------------------------------------
-
-                    return (
-
-                        <>
-
-                            {
-
-                                pieces.map((piece, index) => (
-
-                                    <WallPiece
-
-                                        key={`${wall.id}-${index}`}
-
-                                        wallId={wall.id}
-
-                                        piece={piece}
-
-                                    />
-
-                                ))
-
-                            }
-
-                        </>
-
-                    );
-
-                })
-
-            }
-
+            })}
         </>
-
     );
-
 }
 
 export default memo(Walls);

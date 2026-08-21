@@ -63,16 +63,21 @@ export default function FloorPlanPanel() {
   let isLive = false;
 
   const handleConfirmLayout = () => {
-    const confirmed = window.confirm(
-      "Once you confirm the layout, walls and rooms can no longer be edited.\n\nContinue?"
-    );
+  const confirmed = window.confirm(
+    "Once you confirm the layout, walls and rooms can no longer be edited.\n\nContinue?"
+  );
 
-    if (!confirmed) return;
+  if (!confirmed) return;
 
-    dispatch({
-      type: "CONFIRM_LAYOUT"
-    });
-  };
+  dispatch({
+    type: "CONFIRM_LAYOUT"
+  });
+
+  dispatch({
+    type: "SET_ACTIVE_TOOL",
+    payload: Tool.None
+  });
+};
 
   if (draftWallLength !== null) {
     measurementCaption = "Drawing Wall";

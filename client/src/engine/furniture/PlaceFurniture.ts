@@ -1,7 +1,16 @@
 import type { Asset } from "../../assets/Asset";
-import type { Furniture } from "./FurnitureTypes";
-import type { FurniturePlacement } from "../../scene/Build/BuildFurniturePlacement";
-import type { AssetBounds } from "../../scene/Build/AssetBounds";
+
+import type {
+    Furniture
+} from "./FurnitureTypes";
+
+import type {
+    FurniturePlacement
+} from "../../scene/Furniture/FurniturePlacement";
+
+import type {
+    AssetBounds
+} from "../../scene/Build/AssetBounds";
 
 export function placeFurniture(
     asset: Asset,
@@ -10,18 +19,34 @@ export function placeFurniture(
 ): Furniture {
 
     return {
-        id: crypto.randomUUID(),
 
-        assetId: asset.id,
+        id:
+            crypto.randomUUID(),
 
-        position: placement.position.clone(),
+        assetId:
+            asset.id,
 
-        rotationY: placement.rotationY,
+        position:
+            placement.position.clone(),
 
-        modelOffset: placement.modelOffset.clone(),
+        rotationY:
+            placement.rotationY,
 
-        width: bounds.width,
+        modelOffset:
+            placement.modelOffset.clone(),
 
-        depth: bounds.depth
+        //--------------------------------------------------
+        // Store the actual scaled furniture dimensions
+        //--------------------------------------------------
+
+        width:
+            bounds.width,
+
+        depth:
+            bounds.depth,
+
+        height:
+            bounds.height
+
     };
 }

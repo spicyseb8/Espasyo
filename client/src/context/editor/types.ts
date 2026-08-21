@@ -5,6 +5,8 @@ import type { Asset } from "../../assets/Asset";
 import { BuildTool } from "../BuildTool";
 import type { Door } from "../../engine/doors/DoorTypes";
 import type { Furniture } from "../../engine/furniture/FurnitureTypes";
+import type { Window } from "../../engine/windows/WindowTypes";
+import type { Opening } from "../../engine/openings/OpeningTypes";
 
 export interface EditorState {
     activeTab: string;
@@ -14,6 +16,7 @@ export interface EditorState {
     selectedWallId: string | null;
     selectedRegionId: string | null;
     selectedCornerId: string | null;
+    selectedOpeningId: string | null;
     wallHeight: number;
     wallThickness: number;
     snapEnabled: boolean;
@@ -23,6 +26,9 @@ export interface EditorState {
     buildTool: BuildTool;
     doors: Door[];
     furniture: Furniture[];
+    windows: Window[];
+    openings: Opening[];
+    
     draftWallLength: number | null;
     showWallMeasurements: boolean;
 }

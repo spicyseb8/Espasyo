@@ -1,8 +1,10 @@
 .workspace-tabs {
     display: flex;
     justify-content: space-between;
-    gap: 4px;
-    padding: 10px 12px;
+    gap: 6px;
+    padding: 12px 14px;
+
+    border-bottom: 1px solid var(--ws-border);
 }
 
 .tab {
@@ -12,24 +14,25 @@
     align-items: center;
     justify-content: center;
 
-    background: none;
+    background: var(--ws-surface);
 
-    border: 1.5px solid transparent;
+    border: 1px solid var(--ws-border);
 
     color: var(--ws-text-muted);
 
     padding: 10px;
 
-    border-radius: 12px;
+    border-radius: 9px;
 
     cursor: pointer;
 
-    transition: background .18s ease, border-color .18s ease, color .18s ease;
+    transition: background .15s ease, border-color .15s ease, color .15s ease;
 }
 
 .tab:hover {
-    background: rgba(104, 104, 104, 0.05);
-    color: var(--ws-accent);
+    background: var(--ws-surface-hover);
+    border-color: #cfd3d8;
+    color: var(--ws-text);
 }
 
 .tab:disabled,
@@ -47,13 +50,13 @@
 
 .tab-lock {
     position: absolute;
-    top: 0px;
-    right: 0px;
+    top: -6px;
+    right: -6px;
     color: var(--ws-text-muted);
-    background: #FFFFFF;
+    background: #ffffff;
     border-radius: 50%;
     padding: 2px;
-    box-shadow: 0 1px 3px rgba(28, 28, 30, 0.2);
+    box-shadow: var(--ws-shadow-sm);
 }
 
 .tab-tooltip {

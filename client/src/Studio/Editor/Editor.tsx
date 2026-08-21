@@ -3,11 +3,10 @@ import "./Editor.css";
 import Topbar from "../Topbar/Topbar";
 import Workspace from "../Workspace/Workspace";
 import Scene from "../../scene/Scene";
+import InstructionModal from "./InstructionModal/InstructionModal";
 
 export default function Editor() {
-
     return (
-
         <div className="editor">
 
             <Topbar />
@@ -20,13 +19,12 @@ export default function Editor() {
 
                     <Scene />
 
+                    <InstructionModal />
 
                 </main>
 
             </div>
 
         </div>
-
     );
-
 }

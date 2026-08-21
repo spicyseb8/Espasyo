@@ -25,6 +25,46 @@
     letter-spacing: 0.08em;
 }
 
+.project-title-input {
+    flex: 1;
+
+    max-width: 320px;
+
+    margin: 0 22px;
+
+    padding: 7px 10px;
+
+    border: 1px solid transparent;
+    border-radius: 8px;
+
+    background: transparent;
+
+    font-size: 14px;
+    font-weight: 500;
+    color: #1f2328;
+
+    outline: none;
+
+    transition:
+        background 0.15s ease,
+        border-color 0.15s ease;
+}
+
+.project-title-input::placeholder {
+    color: #9a9ea3;
+    font-weight: 400;
+}
+
+.project-title-input:hover {
+    background: #f7f7f7;
+    border-color: #e5e7eb;
+}
+
+.project-title-input:focus {
+    background: #ffffff;
+    border-color: #dcdfe4;
+}
+
 .cost-estimator {
     position: relative;
 }

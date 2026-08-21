@@ -6,6 +6,9 @@ import type { Asset } from "../../assets/Asset";
 import { BuildTool } from "../BuildTool";
 import type { Door } from "../../engine/doors/DoorTypes";
 import type { Furniture } from "../../engine/furniture/FurnitureTypes";
+import type { Window } from "../../engine/windows/WindowTypes";
+import type { Opening } from "../../engine/openings/OpeningTypes";
+
 export type EditorAction =
     | {
           type: "SET_ACTIVE_TAB";
@@ -78,15 +81,39 @@ export type EditorAction =
           type: "ADD_DOOR";
           payload: Door;
       }
+      | {
+            type: "ADD_WINDOW";
+            payload: Window;
+        }
             | {
                   type: "ADD_FURNITURE";
                   payload: Furniture;
               }
+        | {
+    type: "ADD_OPENING";
+    payload: Opening;
+}
+| {
+    type: "UPDATE_OPENING";
+    payload: Opening;
+}
+| {
+    type: "REMOVE_OPENING";
+    payload: string;
+}
+| {
+    type: "SELECT_OPENING";
+    payload: string | null;
+}
     | {
           type: "SET_DRAFT_WALL_LENGTH";
           payload: number | null;
+      }
+      | {
+          type: "APPLY_SELECTED_ASSET";
       }
     | {
           type: "SET_SHOW_WALL_MEASUREMENTS";
           payload: boolean;
       };
+      

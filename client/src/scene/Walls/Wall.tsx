@@ -37,16 +37,12 @@ function WallComponent({
     //--------------------------------------------------
 
     const pieces = buildWallMeshes(
-
-        wall,
-
-        height,
-
-        thickness,
-
-        state.doors
-
-    );
+    wall,
+    height,
+    thickness,
+    state.doors,
+    state.openings
+);
 
     return (
 

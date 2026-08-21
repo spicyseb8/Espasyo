@@ -1,5 +1,12 @@
 import { Vector3 } from "three";
 
+export type WallPieceKind =
+    | "full"
+    | "header"
+    | "left"
+    | "right"
+    | "arch";
+
 export interface WallPiece {
 
     position: Vector3;
@@ -9,9 +16,16 @@ export interface WallPiece {
     width: number;
 
     height: number;
-    
+
     thickness: number;
 
-    kind: "full" | "header" | "left" | "right";
+    kind: WallPieceKind;
 
+    /**
+     * Used only for arch openings.
+     */
+    arch?: {
+        openingWidth: number;
+        openingHeight: number;
+    };
 }

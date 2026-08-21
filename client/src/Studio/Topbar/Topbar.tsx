@@ -12,6 +12,8 @@ import {
     useState
 } from "react";
 
+import type { ChangeEvent } from "react";
+
 import useEditor from "../../context/editor/useEditor";
 import { findAsset } from "../../assets/AssetLibrary";
 
@@ -23,6 +25,38 @@ export default function Topbar() {
     const [open, setOpen] = useState(false);
 
     const dropdownRef = useRef<HTMLDivElement>(null);
+
+    //--------------------------------------------------
+    // Project title
+    //--------------------------------------------------
+
+    const [projectName, setProjectName] = useState<string>(() => {
+
+        if (typeof window === "undefined")
+            return "";
+
+        return (
+            localStorage.getItem("espasyo_project_name") || ""
+        );
+
+    });
+
+    useEffect(() => {
+
+        localStorage.setItem(
+            "espasyo_project_name",
+            projectName
+        );
+
+    }, [projectName]);
+
+    function handleProjectNameChange(
+        event: ChangeEvent<HTMLInputElement>
+    ) {
+
+        setProjectName(event.target.value);
+
+    }
 
     //--------------------------------------------------
     // Build cost estimation from placed furniture
@@ -166,6 +200,15 @@ export default function Topbar() {
             <div className="topbar-brand">
                 ESPASYO
             </div>
+
+            <input
+                type="text"
+                className="project-title-input"
+                placeholder="Type your project name or whatever"
+                value={projectName}
+                onChange={handleProjectNameChange}
+                aria-label="Project name"
+            />
 
             <div
                 className="cost-estimator"

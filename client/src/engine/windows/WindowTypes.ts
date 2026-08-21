@@ -1,20 +1,19 @@
 import { Vector3 } from "three";
 
-export interface Furniture {
-
+export interface Window {
     id: string;
 
     assetId: string;
+
+    wallId: string;
 
     position: Vector3;
 
     rotationY: number;
 
-    modelOffset: Vector3;
-
     width: number;
 
-    depth: number;
-
     height: number;
+
+    depth: number;
 }

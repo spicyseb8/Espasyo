@@ -1,268 +1,543 @@
-import { Suspense, useMemo, useRef } from "react";
-import { useFrame, useThree } from "@react-three/fiber";
+import {
+    Suspense,
+    useEffect,
+    useMemo,
+    useRef
+} from "react";
+
+import {
+    useFrame,
+    useThree
+} from "@react-three/fiber";
+
 import { useGLTF } from "@react-three/drei";
-import { Box3, Group, Vector3, Mesh, MeshStandardMaterial } from "three";
+
+import {
+    Box3,
+    Group,
+    Vector3,
+    Mesh,
+    MeshStandardMaterial
+} from "three";
+
 import useEditor from "../../context/editor/useEditor";
+
 import { buildInteraction } from "./BuildInteraction";
+
 import { hitWallByRaycast } from "../../engine/walls/wallHit";
+
 import { buildPlacement } from "./BuildPlacement";
+
 import type { AssetBounds } from "./AssetBounds";
-import { getFloorObjects, hitFloorByRaycast } from "../../engine/floors/floorHit";
-import { buildFurniturePlacement } from "./BuildFurniturePlacement";
+
 import { BuildTool } from "../../context/BuildTool";
-import { checkFurnitureCollision } from "../../engine/furniture/FurnitureCollision";
 
-function PreviewModel() {
+
+// ==================================================
+// OPENING PREVIEW
+// ==================================================
+
+function OpeningPreview() {
+
     const { state } = useEditor();
+
     const { camera, scene } = useThree();
-    const previewRef = useRef<Group>(null);
-    const debugFrameCount = useRef(0);
 
-    //--------------------------------------------------
-    // Selected asset
-    //--------------------------------------------------
-    const asset = state.selectedAsset;
-    if (!asset) return null;
+    const previewRef =
+        useRef<Group>(null);
 
-    //--------------------------------------------------
-    // Load GLB
-    //--------------------------------------------------
-    const { scene: gltfScene } = useGLTF(asset.model);
+    const asset =
+        state.selectedAsset;
 
-    //--------------------------------------------------
-    // Clone once
-    //--------------------------------------------------
-    const model = useMemo(() => gltfScene.clone(), [gltfScene]);
+    if (!asset) {
+        return null;
+    }
 
-    //--------------------------------------------------
-    // Replace every material with preview material
-    //--------------------------------------------------
-    useMemo(() => {
-        model.traverse((child) => {
-            if (!(child instanceof Mesh)) return;
-            
-            child.material = new MeshStandardMaterial({
-                color: "#4DA3FF",
-                transparent: true,
-                opacity: 0.55,
-                depthTest: false
-            });
-            
-            child.renderOrder = 1000;
-        });
-    }, [model]);
 
-    //--------------------------------------------------
-    // Measure model
-    //--------------------------------------------------
-    const bounds: AssetBounds = useMemo(() => {
-        const box = new Box3().setFromObject(model);
-        const size = new Vector3();
-        box.getSize(size);
-        return {
-            width: size.x,
-            height: size.y,
-            depth: size.z
-        };
-    }, [model]);
+    // --------------------------------------------------
+    // Opening dimensions
+    // --------------------------------------------------
 
-    //--------------------------------------------------
-    // Get floor objects for furniture
-    //--------------------------------------------------
-    const floorObjects = useMemo(
-        () => getFloorObjects(scene),
-        [scene]
-    );
+    const width = 1.0;
 
-    //--------------------------------------------------
-    // Preview movement
-    //--------------------------------------------------
+    const height = 2.0;
+
+    // Very thin preview surface.
+    // We don't need it to be as thick as the wall.
+    const previewDepth = 0.025;
+
+
+    // --------------------------------------------------
+    // Fake bounds
+    //
+    // These are still used by BuildPlacement
+    // to calculate the position along the wall.
+    // --------------------------------------------------
+
+    const bounds: AssetBounds = {
+
+        width,
+
+        height,
+
+        depth: state.wallThickness
+    };
+
+
+    // --------------------------------------------------
+    // Update preview
+    // --------------------------------------------------
+
     useFrame(() => {
-        if (!previewRef.current) return;
+
+        if (!previewRef.current) {
+            return;
+        }
+
+
+        // --------------------------------------------------
+        // Raycast mouse against walls
+        // --------------------------------------------------
 
         buildInteraction.raycaster.setFromCamera(
             buildInteraction.pointer,
             camera
         );
 
-        //--------------------------------------------------
-        // FURNITURE PREVIEW
-        //--------------------------------------------------
-        if (asset.type === BuildTool.Furniture) {
-            const wallList = Array.isArray(state.walls) ? state.walls : [];
-            const furnitureList = Array.isArray(state.furniture) ? state.furniture : [];
-            const floorHit = hitFloorByRaycast(
+
+        const hit =
+            hitWallByRaycast(
                 buildInteraction.raycaster,
-                floorObjects
+                scene.children,
+                state.walls
             );
 
-            if (!floorHit) {
-                if (debugFrameCount.current % 30 === 0) {
-                    console.warn("[Furniture preview debug] No floor raycast hit", {
-                        pointer: {
-                            x: buildInteraction.pointer.x,
-                            y: buildInteraction.pointer.y
-                        },
-                        floorCount: floorObjects.length,
-                        wallCount: wallList.length,
-                        furnitureCount: furnitureList.length,
-                        selectedAsset: asset.id || asset.model,
-                        layoutConfirmed: state.layoutConfirmed
-                    });
-                }
-                debugFrameCount.current += 1;
-                buildInteraction.currentPlacement = null;
-                buildInteraction.currentBounds = null;
-                buildInteraction.currentFurnitureCollision = null;
-                previewRef.current.visible = false;
-                return;
-            }
 
-            // Calculate furniture placement
-            const transform = buildFurniturePlacement(
-                floorHit.point,
+        // --------------------------------------------------
+        // Mouse is not over a wall
+        // --------------------------------------------------
+
+        if (!hit) {
+
+            buildInteraction.currentPlacement =
+                null;
+
+            buildInteraction.currentBounds =
+                null;
+
+            previewRef.current.visible =
+                false;
+
+            return;
+        }
+
+
+        // --------------------------------------------------
+        // Calculate wall placement
+        // --------------------------------------------------
+
+        const transform =
+            buildPlacement(
+                hit.wall,
+                hit.point,
                 asset,
+                state.wallHeight,
                 bounds
             );
 
-            // Collision check
-            const collision = checkFurnitureCollision(
-                transform.position,
-                bounds.width,
-                bounds.depth,
-                wallList,
-                furnitureList,
-                state.wallThickness,
-                0.05
-            );
 
-            // Store interaction data
-            buildInteraction.currentPlacement = transform;
-            buildInteraction.currentBounds = bounds;
-            buildInteraction.currentFurnitureCollision = collision;
+        // --------------------------------------------------
+        // Store placement for BuildInteractionEvents
+        // --------------------------------------------------
 
-            // Move preview
-            previewRef.current.visible = true;
-            previewRef.current.position.copy(transform.position);
-            previewRef.current.rotation.y = transform.rotationY;
+        buildInteraction.currentPlacement =
+            transform;
 
-            if (debugFrameCount.current % 30 === 0) {
-                console.log("[Furniture preview debug] Placement probe", {
-                    asset: asset.id || asset.model,
-                    pointer: {
-                        x: buildInteraction.pointer.x,
-                        y: buildInteraction.pointer.y
-                    },
-                    floorHit: {
-                        x: floorHit.point.x,
-                        y: floorHit.point.y,
-                        z: floorHit.point.z
-                    },
-                    transform: {
-                        x: transform.position.x,
-                        y: transform.position.y,
-                        z: transform.position.z,
-                        rotationY: transform.rotationY
-                    },
-                    collision: {
-                        valid: collision.valid,
-                        reason: collision.reason
-                    },
-                    floorCount: floorObjects.length,
-                    wallCount: wallList.length,
-                    furnitureCount: furnitureList.length,
-                    wallThickness: state.wallThickness
-                });
-            }
-            debugFrameCount.current += 1;
+        buildInteraction.currentBounds =
+            bounds;
 
-            // Change preview color based on collision
-            model.traverse((child) => {
-                if (!(child instanceof Mesh)) return;
-                const material = child.material;
-                if (material instanceof MeshStandardMaterial) {
-                    material.color.set(
-                        collision.valid ? "#4DA3FF" : "#D9534F"
-                    );
-                }
-            });
 
-            return;
-        }
+        // --------------------------------------------------
+        // Show preview
+        // --------------------------------------------------
 
-        //--------------------------------------------------
-        // DOOR / WALL ASSET PREVIEW
-        //--------------------------------------------------
-        const hit = hitWallByRaycast(
-            buildInteraction.raycaster,
-            scene.children,
-            state.walls
+        previewRef.current.visible =
+            true;
+
+
+        // --------------------------------------------------
+        // Position
+        //
+        // buildPlacement gives us the position at
+        // floor level.
+        //
+        // The box itself is centered vertically,
+        // so move the visual preview upward by
+        // half its height.
+        // --------------------------------------------------
+
+        const previewPosition =
+            transform.position.clone();
+
+        previewPosition.y +=
+            height * 0.5;
+
+
+        // --------------------------------------------------
+        // Put the preview slightly ON the wall surface
+        //
+        // wallNormal points away from the wall.
+        //
+        // This prevents the blue rectangle from being
+        // buried inside the wall or floating far away.
+        // --------------------------------------------------
+
+        previewPosition.add(
+            transform.wallNormal.clone()
+                .multiplyScalar(
+                    state.wallThickness * 0.5 +
+                    0.01
+                )
         );
 
-        if (!hit) {
-            buildInteraction.currentPlacement = null;
-            buildInteraction.currentBounds = null;
-            previewRef.current.visible = false;
-            return;
-        }
 
-        previewRef.current.visible = true;
-
-        const transform = buildPlacement(
-            hit.wall,
-            hit.point,
-            asset,
-            state.wallHeight,
-            bounds
+        previewRef.current.position.copy(
+            previewPosition
         );
 
-        // Store the current placement and bounds
-        buildInteraction.currentPlacement = transform;
-        buildInteraction.currentBounds = bounds;
 
-        previewRef.current.position.copy(transform.position);
-        previewRef.current.rotation.y = transform.rotationY;
+        // --------------------------------------------------
+        // IMPORTANT:
+        //
+        // WallPiece uses:
+        //
+        // rotationY = -piece.rotationY
+        //
+        // BuildPlacement's rotation is offset by
+        // 90 degrees, so we compensate here.
+        //
+        // This makes the opening width run along
+        // the wall.
+        // --------------------------------------------------
 
-        // Reset color to default preview color for wall assets
-        model.traverse((child) => {
-            if (!(child instanceof Mesh)) return;
-            const material = child.material;
-            if (material instanceof MeshStandardMaterial) {
-                material.color.set("#4DA3FF");
-            }
-        });
+        previewRef.current.rotation.y =
+            transform.rotationY -
+            Math.PI / 2;
+
     });
 
-    //--------------------------------------------------
-    // Render with appropriate rotation for asset type
-    //--------------------------------------------------
-    const isDoorOrWall = asset.type !== BuildTool.Furniture;
+
+    // ==================================================
+    // RENDER OPENING PREVIEW
+    // ==================================================
 
     return (
+
         <group ref={previewRef}>
-            {isDoorOrWall ? (
-                // Doors/Walls need the extra rotation to align with walls
-                <group rotation={[0, Math.PI / 2, 0]}>
-                    <primitive object={model} />
-                </group>
-            ) : (
-                // Furniture renders directly without extra rotation
-                <primitive object={model} />
-            )}
+
+            <mesh>
+
+                <boxGeometry
+                    args={[
+                        width,
+                        height,
+                        previewDepth
+                    ]}
+                />
+
+                <meshStandardMaterial
+                    color="#4DA3FF"
+                    transparent
+                    opacity={0.55}
+                    depthTest={false}
+                    depthWrite={false}
+                />
+
+            </mesh>
+
         </group>
+
     );
 }
 
-export default function AssetPreview() {
+
+// ==================================================
+// DOOR / WINDOW MODEL PREVIEW
+// ==================================================
+
+function ModelPreview() {
+
     const { state } = useEditor();
 
-    if (!state.layoutConfirmed || !state.selectedAsset) {
+    const { camera, scene } =
+        useThree();
+
+    const previewRef =
+        useRef<Group>(null);
+
+    const asset =
+        state.selectedAsset;
+
+    if (!asset) {
         return null;
     }
 
+
+    // --------------------------------------------------
+    // Load model
+    // --------------------------------------------------
+
+    const {
+        scene: gltfScene
+    } = useGLTF(asset.model);
+
+
+    const model =
+        useMemo(
+            () => gltfScene.clone(),
+            [gltfScene]
+        );
+
+
+    // --------------------------------------------------
+    // Preview material
+    // --------------------------------------------------
+
+    useEffect(() => {
+
+        model.traverse((child) => {
+
+            if (!(child instanceof Mesh)) {
+                return;
+            }
+
+            child.material =
+                new MeshStandardMaterial({
+                    color: "#4DA3FF",
+                    transparent: true,
+                    opacity: 0.55,
+                    depthTest: false
+                });
+
+            child.renderOrder = 1000;
+
+        });
+
+    }, [model]);
+
+
+    // --------------------------------------------------
+    // Model bounds
+    // --------------------------------------------------
+
+    const bounds: AssetBounds =
+        useMemo(() => {
+
+            const box =
+                new Box3()
+                    .setFromObject(model);
+
+            const size =
+                new Vector3();
+
+            box.getSize(size);
+
+            return {
+
+                width: size.x,
+
+                height: size.y,
+
+                depth: size.z
+
+            };
+
+        }, [model]);
+
+
+    // --------------------------------------------------
+    // Update preview
+    // --------------------------------------------------
+
+    useFrame(() => {
+
+        if (!previewRef.current) {
+            return;
+        }
+
+
+        buildInteraction.raycaster.setFromCamera(
+            buildInteraction.pointer,
+            camera
+        );
+
+
+        const hit =
+            hitWallByRaycast(
+                buildInteraction.raycaster,
+                scene.children,
+                state.walls
+            );
+
+
+        if (!hit) {
+
+            buildInteraction.currentPlacement =
+                null;
+
+            buildInteraction.currentBounds =
+                null;
+
+            previewRef.current.visible =
+                false;
+
+            return;
+        }
+
+
+        const transform =
+            buildPlacement(
+                hit.wall,
+                hit.point,
+                asset,
+                state.wallHeight,
+                bounds
+            );
+
+
+        buildInteraction.currentPlacement =
+            transform;
+
+        buildInteraction.currentBounds =
+            bounds;
+
+
+        previewRef.current.visible =
+            true;
+
+
+        previewRef.current.position.copy(
+            transform.position
+        );
+
+
+        previewRef.current.rotation.y =
+            transform.rotationY;
+
+    });
+
+
+    // --------------------------------------------------
+    // Door / Window model orientation
+    // --------------------------------------------------
+
+    const modelRotationY =
+        asset.type === BuildTool.Window
+            ? 0
+            : Math.PI / 2;
+
+
     return (
+
+        <group ref={previewRef}>
+
+            <group
+                rotation={[
+                    0,
+                    modelRotationY,
+                    0
+                ]}
+            >
+
+                <primitive
+                    object={model}
+                />
+
+            </group>
+
+        </group>
+
+    );
+}
+
+
+// ==================================================
+// PREVIEW SWITCH
+// ==================================================
+
+function PreviewModel() {
+
+    const { state } = useEditor();
+
+
+    // --------------------------------------------------
+    // Opening
+    // --------------------------------------------------
+
+    if (
+        state.selectedAsset?.type ===
+        BuildTool.Opening
+    ) {
+
+        return (
+            <OpeningPreview />
+        );
+
+    }
+
+
+    // --------------------------------------------------
+    // Door / Window
+    // --------------------------------------------------
+
+    return (
+        <ModelPreview />
+    );
+}
+
+
+// ==================================================
+// MAIN ASSET PREVIEW
+// ==================================================
+
+export default function AssetPreview() {
+
+    const { state } = useEditor();
+
+
+    if (!state.layoutConfirmed) {
+        return null;
+    }
+
+
+    if (!state.selectedAsset) {
+        return null;
+    }
+
+
+    if (
+        state.buildTool ===
+        BuildTool.None
+    ) {
+        return null;
+    }
+
+
+    if (
+        state.buildTool !==
+        state.selectedAsset.type
+    ) {
+        return null;
+    }
+
+
+    return (
+
         <Suspense fallback={null}>
+
             <PreviewModel />
+
         </Suspense>
+
     );
 }

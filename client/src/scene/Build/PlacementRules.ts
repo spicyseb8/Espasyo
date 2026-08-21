@@ -2,7 +2,8 @@ import type { BuildTool } from "../../context/BuildTool";
 
 export type VerticalAnchor =
     | "bottom"
-    | "center";
+    | "center"
+    | "top";
 
 export interface PlacementRule {
 
@@ -34,6 +35,7 @@ export interface PlacementRule {
 }
 
 export const PlacementRules: Record<BuildTool, PlacementRule> = {
+
     none: {
         anchor: "bottom",
         rotateWithWall: false,

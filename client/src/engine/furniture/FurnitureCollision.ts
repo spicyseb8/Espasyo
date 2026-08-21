@@ -14,194 +14,306 @@ export interface FurnitureCollisionResult {
 }
 
 //--------------------------------------------------
-// Simple 2D footprint
+// Oriented rectangle in X/Z plane
 //--------------------------------------------------
 
-interface Rect2D {
-    minX: number;
-    maxX: number;
-    minZ: number;
-    maxZ: number;
-}
+interface OBB2D {
 
-//--------------------------------------------------
-// Create an axis-aligned footprint
-//--------------------------------------------------
-// Version 1 deliberately ignores rotation.
-// Your furniture is currently placed with rotationY = 0.
-// We'll upgrade this to rotated bounds later.
-//--------------------------------------------------
+    center: Vector3;
 
-function getFurnitureRect(
-    position: Vector3,
-    width: number,
-    depth: number,
-    padding: number
-): Rect2D {
+    halfWidth: number;
+    halfDepth: number;
 
-    const halfWidth =
-        width * 0.5 + padding;
+    rotationY: number;
 
-    const halfDepth =
-        depth * 0.5 + padding;
+    axisX: {
+        x: number;
+        z: number;
+    };
 
-    return {
-        minX: position.x - halfWidth,
-        maxX: position.x + halfWidth,
-        minZ: position.z - halfDepth,
-        maxZ: position.z + halfDepth
+    axisZ: {
+        x: number;
+        z: number;
     };
 }
 
 //--------------------------------------------------
-// Rectangle overlap
+// Create rotated furniture footprint
 //--------------------------------------------------
 
-function rectanglesOverlap(
-    a: Rect2D,
-    b: Rect2D
-): boolean {
+function createOBB(
+    position: Vector3,
+    width: number,
+    depth: number,
+    rotationY: number,
+    padding: number
+): OBB2D {
+
+    return {
+
+        center:
+            position.clone(),
+
+        halfWidth:
+            width * 0.5 + padding,
+
+        halfDepth:
+            depth * 0.5 + padding,
+
+        rotationY,
+
+        axisX: {
+            x: Math.cos(rotationY),
+            z: Math.sin(rotationY)
+        },
+
+        axisZ: {
+            x: -Math.sin(rotationY),
+            z: Math.cos(rotationY)
+        }
+
+    };
+}
+
+//--------------------------------------------------
+// Dot product in X/Z
+//--------------------------------------------------
+
+function dot(
+    ax: number,
+    az: number,
+    bx: number,
+    bz: number
+): number {
 
     return (
-        a.minX < b.maxX &&
-        a.maxX > b.minX &&
-        a.minZ < b.maxZ &&
-        a.maxZ > b.minZ
+        ax * bx +
+        az * bz
     );
 }
 
 //--------------------------------------------------
-// Distance from a point to a line segment in X/Z
+// Projection radius of an OBB onto an axis
 //--------------------------------------------------
 
-function distancePointToSegmentXZ(
-    point: Vector3,
-    start: Vector3,
-    end: Vector3
+function getProjectionRadius(
+    box: OBB2D,
+    axisX: number,
+    axisZ: number
 ): number {
 
-    const sx = start.x;
-    const sz = start.z;
-
-    const ex = end.x;
-    const ez = end.z;
-
-    const px = point.x;
-    const pz = point.z;
-
-    const dx = ex - sx;
-    const dz = ez - sz;
-
-    const lengthSquared =
-        dx * dx + dz * dz;
-
-    if (lengthSquared === 0) {
-        const x = px - sx;
-        const z = pz - sz;
-
-        return Math.sqrt(
-            x * x + z * z
+    const xProjection =
+        Math.abs(
+            dot(
+                box.axisX.x,
+                box.axisX.z,
+                axisX,
+                axisZ
+            )
         );
+
+    const zProjection =
+        Math.abs(
+            dot(
+                box.axisZ.x,
+                box.axisZ.z,
+                axisX,
+                axisZ
+            )
+        );
+
+    return (
+        box.halfWidth *
+            xProjection +
+
+        box.halfDepth *
+            zProjection
+    );
+}
+
+//--------------------------------------------------
+// OBB vs OBB collision
+//--------------------------------------------------
+
+function obbOverlap(
+    a: OBB2D,
+    b: OBB2D
+): boolean {
+
+    const axes = [
+        a.axisX,
+        a.axisZ,
+        b.axisX,
+        b.axisZ
+    ];
+
+    const dx =
+        b.center.x -
+        a.center.x;
+
+    const dz =
+        b.center.z -
+        a.center.z;
+
+    for (const axis of axes) {
+
+        const distance =
+            Math.abs(
+                dot(
+                    dx,
+                    dz,
+                    axis.x,
+                    axis.z
+                )
+            );
+
+        const radiusA =
+            getProjectionRadius(
+                a,
+                axis.x,
+                axis.z
+            );
+
+        const radiusB =
+            getProjectionRadius(
+                b,
+                axis.x,
+                axis.z
+            );
+
+        if (
+            distance >=
+            radiusA + radiusB
+        ) {
+            return false;
+        }
     }
 
-    let t =
-        ((px - sx) * dx +
-            (pz - sz) * dz) /
-        lengthSquared;
-
-    t = Math.max(
-        0,
-        Math.min(1, t)
-    );
-
-    const closestX =
-        sx + dx * t;
-
-    const closestZ =
-        sz + dz * t;
-
-    const differenceX =
-        px - closestX;
-
-    const differenceZ =
-        pz - closestZ;
-
-    return Math.sqrt(
-        differenceX * differenceX +
-        differenceZ * differenceZ
-    );
+    return true;
 }
 
 //--------------------------------------------------
 // Furniture vs wall
-//--------------------------------------------------
-// Version 1:
-// We approximate the furniture footprint with a circle.
-// This is intentionally conservative and works well
-// for preventing furniture from touching walls.
 //--------------------------------------------------
 
 function collidesWithWall(
     position: Vector3,
     width: number,
     depth: number,
+    rotationY: number,
     wall: Wall,
     wallThickness: number,
     padding: number
 ): boolean {
 
-    const furnitureRadius =
+    const start =
+        wall.start.position;
+
+    const end =
+        wall.end.position;
+
+    const dx =
+        end.x - start.x;
+
+    const dz =
+        end.z - start.z;
+
+    const wallLength =
         Math.sqrt(
-            Math.pow(width * 0.5, 2) +
-            Math.pow(depth * 0.5, 2)
+            dx * dx +
+            dz * dz
         );
 
-    const allowedDistance =
-        furnitureRadius +
-        wallThickness * 0.5 +
-        padding;
+    if (wallLength === 0)
+        return false;
 
-    const distance =
-        distancePointToSegmentXZ(
+    //--------------------------------------------------
+    // Wall center
+    //--------------------------------------------------
+
+    const wallCenter =
+        new Vector3(
+            (start.x + end.x) * 0.5,
+            0,
+            (start.z + end.z) * 0.5
+        );
+
+    //--------------------------------------------------
+    // Wall rotation
+    //--------------------------------------------------
+
+    const wallRotation =
+        Math.atan2(
+            dz,
+            dx
+        );
+
+    //--------------------------------------------------
+    // Furniture footprint
+    //--------------------------------------------------
+
+    const furnitureBox =
+        createOBB(
             position,
-            wall.start.position,
-            wall.end.position
+            width,
+            depth,
+            rotationY,
+            padding
         );
 
-    return distance < allowedDistance;
+    //--------------------------------------------------
+    // Wall footprint
+    //--------------------------------------------------
+
+    const wallBox =
+        createOBB(
+            wallCenter,
+            wallLength,
+            wallThickness,
+            wallRotation,
+            padding
+        );
+
+    return obbOverlap(
+        furnitureBox,
+        wallBox
+    );
 }
 
 //--------------------------------------------------
-// Furniture vs existing furniture
+// Furniture vs furniture
 //--------------------------------------------------
 
 function collidesWithFurniture(
     position: Vector3,
     width: number,
     depth: number,
+    rotationY: number,
     existing: Furniture,
     padding: number
 ): boolean {
 
-    const previewRect =
-        getFurnitureRect(
+    const previewBox =
+        createOBB(
             position,
             width,
             depth,
+            rotationY,
             padding
         );
 
-    const existingRect =
-        getFurnitureRect(
+    const existingBox =
+        createOBB(
             existing.position,
             existing.width,
             existing.depth,
+            existing.rotationY,
             padding
         );
 
-    return rectanglesOverlap(
-        previewRect,
-        existingRect
+    return obbOverlap(
+        previewBox,
+        existingBox
     );
 }
 
@@ -213,14 +325,15 @@ export function checkFurnitureCollision(
     position: Vector3,
     width: number,
     depth: number,
+    rotationY: number,
     walls: Wall[],
     furniture: Furniture[],
     wallThickness: number,
-    padding = 0.05
+    padding = 0.01
 ): FurnitureCollisionResult {
 
     //--------------------------------------------------
-    // Check walls
+    // Walls
     //--------------------------------------------------
 
     for (const wall of walls) {
@@ -230,6 +343,7 @@ export function checkFurnitureCollision(
                 position,
                 width,
                 depth,
+                rotationY,
                 wall,
                 wallThickness,
                 padding
@@ -240,20 +354,24 @@ export function checkFurnitureCollision(
                 valid: false,
                 reason: "wall"
             };
+
         }
     }
 
     //--------------------------------------------------
-    // Check existing furniture
+    // Existing furniture
     //--------------------------------------------------
 
-    for (const existing of furniture) {
+    for (
+        const existing of furniture
+    ) {
 
         if (
             collidesWithFurniture(
                 position,
                 width,
                 depth,
+                rotationY,
                 existing,
                 padding
             )
@@ -263,6 +381,7 @@ export function checkFurnitureCollision(
                 valid: false,
                 reason: "furniture"
             };
+
         }
     }
 
