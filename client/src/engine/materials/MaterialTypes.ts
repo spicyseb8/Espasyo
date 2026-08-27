@@ -13,9 +13,12 @@ export interface Material {
     // Cost per square meter
     pricePerSquareMeter: number;
 
-    // Small preview image used by the UI
+    // Image shown in the material selection UI
     thumbnail?: string;
 
-    // Actual texture used by Three.js
+    // Texture used by Three.js
     texture?: string;
+
+    // Solid color used for materials such as paint
+    color?: string;
 }

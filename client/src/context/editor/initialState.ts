@@ -24,5 +24,6 @@ export const initialState: EditorState = {
     openings: [],
     floorFinishes: {},
     draftWallLength: null,
-    showWallMeasurements: false
+    showWallMeasurements: false,
+    wallFinishes: {},
 };

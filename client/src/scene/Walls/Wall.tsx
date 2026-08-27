@@ -1,151 +1,144 @@
-import { memo, useState } from "react";
+import {
+    memo,
+    useMemo
+} from "react";
 
-import useEditor from "../../context/editor/useEditor";
+import useEditor
+    from "../../context/editor/useEditor";
 
-import type { Wall as WallType } from "../../engine/walls";
+import WallPiece
+    from "./WallPiece";
 
-import { buildWallMeshes } from "../../engine/walls/WallMeshBuilder";
+import {
+    buildWallMeshes
+} from "../../engine/walls/WallMeshBuilder";
 
-function WallComponent({
+import {
+    solveRegions
+} from "../../engine/regions/RegionSolver";
 
-    wall,
+import {
+    getWallFinishSides
+} from "./WallFinishUtils";
 
-}: {
+function Walls() {
 
-    wall: WallType;
-
-}) {
-
-    const { state, dispatch } = useEditor();
-
-    const [hovered, setHovered] = useState(false);
-
-    const selected =
-
-        state.selectedWallId === wall.id;
-
-    //--------------------------------------------------
-    // Global Settings
-    //--------------------------------------------------
-
-    const height = state.wallHeight;
-
-    const thickness = state.wallThickness;
+    const {
+        state
+    } = useEditor();
 
     //--------------------------------------------------
-    // Build Wall Pieces
+    // Calculate regions once per layout change
     //--------------------------------------------------
 
-    const pieces = buildWallMeshes(
-    wall,
-    height,
-    thickness,
-    state.doors,
-    state.openings
-);
+    const regions =
+        useMemo(
+            () =>
+                solveRegions(
+                    state.corners,
+                    state.walls
+                ),
+            [
+                state.corners,
+                state.walls
+            ]
+        );
 
     return (
 
         <>
 
             {
+                state.walls.map(
+                    wall => {
 
-                pieces.map((piece, index) => (
+                        //--------------------------------------------------
+                        // Build wall pieces
+                        //--------------------------------------------------
 
-                    <mesh
+                        const pieces =
+                            buildWallMeshes(
 
-                        key={`${wall.id}-${piece.kind}-${index}`}
+                                wall,
 
-                        position={piece.position}
+                                state.wallHeight,
 
-                        rotation={[
+                                state.wallThickness,
 
-                            0,
+                                state.doors
 
-                            -piece.rotationY,
+                            );
 
-                            0
+                        //--------------------------------------------------
+                        // Find material assignments for this wall.
+                        //
+                        // Shared walls may produce two sides.
+                        //--------------------------------------------------
 
-                        ]}
+                        const finishSides =
+                            getWallFinishSides(
 
-                        userData={{
+                                wall,
 
-                            wallId: wall.id
+                                regions,
 
-                        }}
+                                state.wallFinishes
 
-                        onPointerOver={(e) => {
+                            );
 
-                            e.stopPropagation();
+                        //--------------------------------------------------
+                        // Render pieces
+                        //--------------------------------------------------
 
-                            setHovered(true);
+                       return (
 
-                        }}
+    <group
+        key={wall.id}
+    >
 
-                        onPointerOut={() => {
+        {
+            pieces.map(
+                (
+                    piece,
+                    index
+                ) => (
 
-                            setHovered(false);
+                    <WallPiece
 
-                        }}
+                        key={
+                            `${wall.id}-${index}`
+                        }
 
-                        onClick={(e) => {
+                        wallId={
+                            wall.id
+                        }
 
-                            e.stopPropagation();
+                        piece={
+                            piece
+                        }
 
-                            dispatch({
+                        finishSides={
+                            finishSides
+                        }
 
-                                type: "SELECT_WALL",
+                    />
 
-                                payload: wall.id
+                )
+            )
+        }
 
-                            });
+    </group>
 
-                        }}
-
-                    >
-
-                        <boxGeometry
-
-                            args={[
-
-                                piece.width,
-
-                                piece.height,
-
-                                piece.thickness
-
-                            ]}
-
-                        />
-
-                        <meshStandardMaterial
-
-                            color={
-
-                                selected
-
-                                    ? "#2196F3"
-
-                                    : hovered
-
-                                    ? "#8CC8FF"
-
-                                    : "#D9D9D9"
-
-                            }
-
-                        />
-
-                    </mesh>
-
-                ))
-
+);
+                    }
+                )
             }
 
         </>
 
     );
-
 }
 
-export default memo(WallComponent);
+export default memo(
+    Walls
+);

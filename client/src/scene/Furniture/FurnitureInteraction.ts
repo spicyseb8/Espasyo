@@ -50,7 +50,7 @@ class FurnitureInteraction {
     currentCollision:
         FurnitureCollisionResult | null =
         null;
-
+        
     //--------------------------------------------------
     // Pointer-up suppression
     //--------------------------------------------------

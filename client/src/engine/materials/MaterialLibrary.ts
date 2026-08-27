@@ -37,10 +37,6 @@ export const MaterialLibrary: Material[] = [
     },
 
 
-
-   
-
-
     {
         id: "floor-concrete",
 
@@ -58,7 +54,29 @@ export const MaterialLibrary: Material[] = [
     },
 
 
-
-
+    {
+    id: "wall-paint-white",
+    name: "White Paint",
+    category: "wallFinish",
+    pricePerSquareMeter: 300,
+    thumbnail: "/uploads/materials/walls/white-paint.jpg",
+    color: "#F5F5F5"
+},
+{
+    id: "wall-paint-gray",
+    name: "Gray Paint",
+    category: "wallFinish",
+    pricePerSquareMeter: 320,
+    thumbnail: "/uploads/materials/walls/gray-paint.jpg",
+    color: "#494848"
+},
+{
+    id: "wall-paint-beige",
+    name: "Beige Paint",
+    category: "wallFinish",
+    pricePerSquareMeter: 310,
+    thumbnail: "/uploads/materials/walls/beige-paint.jpg",
+    color: "#c9ae64"
+}
 
 ];

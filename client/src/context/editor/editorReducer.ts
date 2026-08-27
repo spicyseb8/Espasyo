@@ -41,6 +41,37 @@ export function editorReducer(
                 ...state,
                 wallThickness: action.payload
             };
+        case "SET_WALL_FINISH": {
+
+    const {
+        regionId,
+        wallId,
+        materialId
+    } = action.payload;
+
+    return {
+
+        ...state,
+
+        wallFinishes: {
+
+            ...state.wallFinishes,
+
+            [regionId]: {
+
+                ...(state.wallFinishes[
+                    regionId
+                ] ?? {}),
+
+                [wallId]:
+                    materialId
+
+            }
+
+        }
+
+    };
+}
         case "SET_GRID_SIZE":
             return {
                 ...state,
@@ -74,6 +105,7 @@ export function editorReducer(
                 ]
             };
         }
+        
         case "REMOVE_CORNER":
             return {
                 ...state,

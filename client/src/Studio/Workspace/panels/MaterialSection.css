@@ -103,10 +103,12 @@
 
 .material-actions {
     display: flex;
-    justify-content: flex-end;
     align-items: center;
+    justify-content: flex-end;
 
-    gap: 7px;
+    flex-wrap: wrap;
+
+    gap: 6px;
 
     margin-top: 10px;
 
@@ -116,55 +118,112 @@
 }
 
 .material-apply-button,
+.material-apply-room-button,
 .material-apply-all-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
 
     min-height: 32px;
 
-    padding: 7px 12px;
+    padding: 7px 11px;
 
     border-radius: 8px;
 
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 600;
 
     cursor: pointer;
 
     transition:
-        opacity 0.15s ease,
-        background 0.15s ease;
+        background 0.15s ease,
+        opacity 0.15s ease;
 }
 
+
+/* -----------------------------------------------
+   APPLY
+   ----------------------------------------------- */
+
 .material-apply-button {
+
+    display: inline-flex;
+
+    align-items: center;
+    justify-content: center;
+
     gap: 5px;
 
     border: none;
 
-    background: #ff963f;
-    color: #ffffff;
+    background:
+        #ff963f;
+
+    color:
+        #ffffff;
 }
 
 .material-apply-button:hover:not(:disabled) {
-    background: #f58a30;
+
+    background:
+        #f58a30;
 }
 
+
+/* -----------------------------------------------
+   APPLY TO ROOM
+   ----------------------------------------------- */
+
+.material-apply-room-button {
+
+    border:
+        1px solid #ff963f;
+
+    background:
+        #ffffff;
+
+    color:
+        #ee882d;
+}
+
+.material-apply-room-button:hover:not(:disabled) {
+
+    background:
+        #fff5eb;
+}
+
+
+/* -----------------------------------------------
+   APPLY TO ALL
+   ----------------------------------------------- */
+
 .material-apply-all-button {
-    border: 1px solid #ff963f;
 
-    background: #ffffff;
+    border:
+        1px solid #d8d8d8;
 
-    color: #ee882d;
+    background:
+        #ffffff;
+
+    color:
+        #666666;
 }
 
 .material-apply-all-button:hover:not(:disabled) {
-    background: #fff5eb;
+
+    background:
+        #f7f7f7;
 }
 
-.material-apply-button:disabled,
-.material-apply-all-button:disabled {
-    opacity: 0.45;
 
-    cursor: not-allowed;
+/* -----------------------------------------------
+   DISABLED
+   ----------------------------------------------- */
+
+.material-apply-button:disabled,
+.material-apply-room-button:disabled,
+.material-apply-all-button:disabled {
+
+    opacity:
+        0.45;
+
+    cursor:
+        not-allowed;
 }

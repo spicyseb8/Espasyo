@@ -1,4 +1,8 @@
-import { useState } from "react";
+import {
+    useEffect,
+    useMemo,
+    useState
+} from "react";
 
 import useEditor
     from "../../../context/editor/useEditor";
@@ -7,12 +11,12 @@ import {
     MaterialLibrary
 } from "../../../engine/materials/MaterialLibrary";
 
-import MaterialSection
-    from "./MaterialSection";
-
 import {
     solveRegions
 } from "../../../engine/regions/RegionSolver";
+
+import MaterialSection
+    from "./MaterialSection";
 
 export default function DesignPanel() {
 
@@ -22,133 +26,409 @@ export default function DesignPanel() {
     } = useEditor();
 
     //--------------------------------------------------
-    // Currently selected material in the UI
+    // Current regions
     //--------------------------------------------------
 
-    const [
-        selectedMaterialId,
-        setSelectedMaterialId
-    ] = useState<string | null>(null);
+    const regions =
+        useMemo(
+            () =>
+                solveRegions(
+                    state.corners,
+                    state.walls
+                ),
+            [
+                state.corners,
+                state.walls
+            ]
+        );
 
     //--------------------------------------------------
-    // Flooring
+    // Materials
     //--------------------------------------------------
 
     const flooringMaterials =
-        MaterialLibrary.filter(
-            material =>
-                material.category ===
-                "flooring"
+        useMemo(
+            () =>
+                MaterialLibrary.filter(
+                    material =>
+                        material.category ===
+                        "flooring"
+                ),
+            []
         );
-
-    //--------------------------------------------------
-    // Wall finishes
-    //--------------------------------------------------
 
     const wallMaterials =
-        MaterialLibrary.filter(
-            material =>
-                material.category ===
-                "wallFinish"
+        useMemo(
+            () =>
+                MaterialLibrary.filter(
+                    material =>
+                        material.category ===
+                        "wallFinish"
+                ),
+            []
         );
 
     //--------------------------------------------------
-    // Apply to selected room
+    // UI-selected floor material
     //--------------------------------------------------
 
-    const handleApplyFloor = () => {
+    const [
+        selectedFloorMaterialId,
+        setSelectedFloorMaterialId
+    ] = useState<string | null>(
+        null
+    );
 
-        if (
-            !state.selectedRegionId ||
-            !selectedMaterialId
-        ) {
-            return;
-        }
+    //--------------------------------------------------
+    // UI-selected wall material
+    //--------------------------------------------------
 
-        const material =
-            flooringMaterials.find(
-                item =>
-                    item.id ===
-                    selectedMaterialId
-            );
+    const [
+        selectedWallMaterialId,
+        setSelectedWallMaterialId
+    ] = useState<string | null>(
+        null
+    );
 
-        if (!material) {
-            return;
-        }
+    //--------------------------------------------------
+    // Selected region
+    //--------------------------------------------------
 
-        dispatch({
-            type: "SET_FLOOR_FINISH",
+    const selectedRegion =
+        regions.find(
+            region =>
+                region.id ===
+                state.selectedRegionId
+        ) ?? null;
 
-            payload: {
-                regionId:
-                    state.selectedRegionId,
+    //--------------------------------------------------
+    // Current floor material
+    //--------------------------------------------------
 
-                materialId:
-                    material.id
+    const currentFloorMaterialId =
+        state.selectedRegionId
+
+            ? state.floorFinishes[
+                state.selectedRegionId
+            ] ?? null
+
+            : null;
+
+    //--------------------------------------------------
+    // Current wall material
+    //
+    // Only available when a specific wall is selected
+    // inside the selected room.
+    //--------------------------------------------------
+
+    const selectedWallBelongsToRoom =
+        Boolean(
+            selectedRegion &&
+            state.selectedWallId &&
+            selectedRegion.walls.some(
+                wall =>
+                    wall.id ===
+                    state.selectedWallId
+            )
+        );
+
+    const currentWallMaterialId =
+        selectedWallBelongsToRoom
+            ? (
+                state.wallFinishes[
+                    state.selectedRegionId!
+                ]?.[
+                    state.selectedWallId!
+                ] ?? null
+            )
+            : null;
+
+    //--------------------------------------------------
+    // Keep UI selection synchronized when switching
+    // rooms/walls.
+    //--------------------------------------------------
+
+    useEffect(() => {
+
+        setSelectedFloorMaterialId(
+            currentFloorMaterialId
+        );
+
+    }, [
+        state.selectedRegionId,
+        currentFloorMaterialId
+    ]);
+
+    useEffect(() => {
+
+        setSelectedWallMaterialId(
+            currentWallMaterialId
+        );
+
+    }, [
+        state.selectedRegionId,
+        state.selectedWallId,
+        currentWallMaterialId
+    ]);
+
+    //--------------------------------------------------
+    // FLOOR
+    //--------------------------------------------------
+
+    const handleApplyFloor =
+        () => {
+
+            if (
+                !state.selectedRegionId ||
+                !selectedFloorMaterialId
+            ) {
+                return;
             }
-        });
-    };
-
-    //--------------------------------------------------
-    // Apply same floor to every room
-    //--------------------------------------------------
-
-    const handleApplyFloorToAll = () => {
-
-        if (!selectedMaterialId) {
-            return;
-        }
-
-        const material =
-            flooringMaterials.find(
-                item =>
-                    item.id ===
-                    selectedMaterialId
-            );
-
-        if (!material) {
-            return;
-        }
-
-        const regions =
-            solveRegions(
-                state.corners,
-                state.walls
-            );
-
-        for (
-            const region of regions
-        ) {
 
             dispatch({
+
                 type:
                     "SET_FLOOR_FINISH",
 
                 payload: {
+
                     regionId:
-                        region.id,
+                        state.selectedRegionId,
 
                     materialId:
-                        material.id
+                        selectedFloorMaterialId
+
                 }
+
             });
-        }
-    };
+
+        };
 
     //--------------------------------------------------
-    // Wall finish
+    // FLOOR → ALL ROOMS
+    //--------------------------------------------------
+
+    const handleApplyFloorToAll =
+        () => {
+
+            if (
+                !selectedFloorMaterialId
+            ) {
+
+                return;
+
+            }
+
+            for (
+                const region
+                of regions
+            ) {
+
+                dispatch({
+
+                    type:
+                        "SET_FLOOR_FINISH",
+
+                    payload: {
+
+                        regionId:
+                            region.id,
+
+                        materialId:
+                            selectedFloorMaterialId
+
+                    }
+
+                });
+
+            }
+
+        };
+
+    //--------------------------------------------------
+    // WALL → ONE WALL
+    //--------------------------------------------------
+
+    const handleApplyWall =
+        () => {
+
+            if (
+                !state.selectedRegionId ||
+                !state.selectedWallId ||
+                !selectedWallMaterialId
+            ) {
+
+                return;
+
+            }
+
+            if (
+                !selectedWallBelongsToRoom
+            ) {
+
+                return;
+
+            }
+
+            dispatch({
+
+                type:
+                    "SET_WALL_FINISH",
+
+                payload: {
+
+                    regionId:
+                        state.selectedRegionId,
+
+                    wallId:
+                        state.selectedWallId,
+
+                    materialId:
+                        selectedWallMaterialId
+
+                }
+
+            });
+
+        };
+
+    //--------------------------------------------------
+    // WALL → ENTIRE ROOM
+    //--------------------------------------------------
+
+    const handleApplyWallToRoom =
+        () => {
+
+            if (
+                !state.selectedRegionId ||
+                !selectedWallMaterialId
+            ) {
+
+                return;
+
+            }
+
+            const region =
+                selectedRegion;
+
+            if (
+                !region
+            ) {
+
+                return;
+
+            }
+
+            //--------------------------------------------------
+            // Prevent duplicate wall IDs.
+            //--------------------------------------------------
+
+            const wallIds =
+                new Set(
+                    region.walls.map(
+                        wall =>
+                            wall.id
+                    )
+                );
+
+            for (
+                const wallId
+                of wallIds
+            ) {
+
+                dispatch({
+
+                    type:
+                        "SET_WALL_FINISH",
+
+                    payload: {
+
+                        regionId:
+                            region.id,
+
+                        wallId,
+
+                        materialId:
+                            selectedWallMaterialId
+
+                    }
+
+                });
+
+            }
+
+        };
+
+    //--------------------------------------------------
+    // WALL → ENTIRE HOUSE
     //
-    // UI is ready, but functionality will be added
-    // when we implement the wall-finish state.
+    // Note that shared walls receive a separate
+    // assignment for each room side.
     //--------------------------------------------------
 
-    const handleApplyWall = () => {
-        // Reserved for the wall-finish implementation.
-    };
+    const handleApplyWallToAll =
+        () => {
+
+            if (
+                !selectedWallMaterialId
+            ) {
+
+                return;
+
+            }
+
+            for (
+                const region
+                of regions
+            ) {
+
+                const wallIds =
+                    new Set(
+                        region.walls.map(
+                            wall =>
+                                wall.id
+                        )
+                    );
+
+                for (
+                    const wallId
+                    of wallIds
+                ) {
+
+                    dispatch({
+
+                        type:
+                            "SET_WALL_FINISH",
+
+                        payload: {
+
+                            regionId:
+                                region.id,
+
+                            wallId,
+
+                            materialId:
+                                selectedWallMaterialId
+
+                        }
+
+                    });
+
+                }
+
+            }
+
+        };
 
     return (
 
-        <div className="design-panel">
+        <div
+            className="design-panel"
+        >
+
+            {/* =========================================
+                FLOOR
+                ========================================= */}
 
             <MaterialSection
 
@@ -159,7 +439,7 @@ export default function DesignPanel() {
                 }
 
                 selectedMaterialId={
-                    selectedMaterialId
+                    selectedFloorMaterialId
                 }
 
                 defaultOpen={
@@ -167,7 +447,7 @@ export default function DesignPanel() {
                 }
 
                 onSelect={
-                    setSelectedMaterialId
+                    setSelectedFloorMaterialId
                 }
 
                 onApply={
@@ -181,18 +461,23 @@ export default function DesignPanel() {
                 canApply={
                     Boolean(
                         state.selectedRegionId &&
-                        selectedMaterialId
+                        selectedFloorMaterialId
                     )
                 }
 
                 canApplyToAll={
                     Boolean(
-                        selectedMaterialId &&
-                        state.corners.length > 0
+                        selectedFloorMaterialId &&
+                        regions.length > 0
                     )
                 }
 
             />
+
+
+            {/* =========================================
+                WALLS
+                ========================================= */}
 
             <MaterialSection
 
@@ -203,7 +488,7 @@ export default function DesignPanel() {
                 }
 
                 selectedMaterialId={
-                    selectedMaterialId
+                    selectedWallMaterialId
                 }
 
                 defaultOpen={
@@ -211,24 +496,42 @@ export default function DesignPanel() {
                 }
 
                 onSelect={
-                    setSelectedMaterialId
+                    setSelectedWallMaterialId
                 }
 
                 onApply={
                     handleApplyWall
                 }
 
+                onApplyToRoom={
+                    handleApplyWallToRoom
+                }
+
+                onApplyToAll={
+                    handleApplyWallToAll
+                }
+
                 canApply={
-                    false
+                    Boolean(
+                        selectedWallBelongsToRoom &&
+                        selectedWallMaterialId
+                    )
+                }
+
+                canApplyToRoom={
+                    Boolean(
+                        state.selectedRegionId &&
+                        selectedWallMaterialId &&
+                        selectedRegion
+                    )
                 }
 
                 canApplyToAll={
-                    false
+                    Boolean(
+                        selectedWallMaterialId &&
+                        regions.length > 0
+                    )
                 }
-
-                applyLabel="Apply"
-
-                applyToAllLabel="Apply to All"
 
             />
 

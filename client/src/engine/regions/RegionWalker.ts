@@ -1,15 +1,49 @@
 import { Vector3 } from "three";
-import type { GraphNode, HalfEdge } from "./RegionTypes";
-import type { Region } from "./Polygon";
-import { pointInPolygon } from "./Polygon";
 
-function createRegionId(points: Vector3[]): string {
-    const normalized = normalizePolygon(points);
+import type {
+    GraphNode,
+    HalfEdge
+} from "./RegionTypes";
+
+import type {
+    Region,
+    RegionPolygon
+} from "./Polygon";
+
+import {
+    pointInPolygon
+} from "./Polygon";
+
+import type {
+    Wall
+} from "../walls/WallTypes";
+
+//==================================================
+// CREATE STABLE REGION ID
+//==================================================
+
+function createRegionId(
+    points: Vector3[]
+): string {
+
+    const normalized =
+        normalizePolygon(points);
+
     return `region-${normalized
         .split("")
-        .map(char => char.charCodeAt(0).toString(16).padStart(2, "0"))
+        .map(
+            char =>
+                char
+                    .charCodeAt(0)
+                    .toString(16)
+                    .padStart(2, "0")
+        )
         .join("")}`;
 }
+
+//==================================================
+// WALK REGIONS
+//==================================================
 
 export function walkRegions(
     graph: Map<string, GraphNode>
@@ -17,89 +51,278 @@ export function walkRegions(
 
     const regions: Region[] = [];
 
-    for (const node of graph.values()) {
+    //==================================================
+    // IMPORTANT FIX
+    //
+    // Build one global lookup of every Wall object.
+    //
+    // Previously, the code tried to find each wall only
+    // from the starting corner's edges. That caused some
+    // walls in a region to disappear from region.walls.
+    //==================================================
 
-        for (const startEdge of node.edges) {
+    const wallById =
+        new Map<string, Wall>();
 
-            if (startEdge.visited)
+    for (
+        const graphNode
+        of graph.values()
+    ) {
+
+        for (
+            const edge
+            of graphNode.edges
+        ) {
+
+            wallById.set(
+                edge.wall.id,
+                edge.wall
+            );
+
+        }
+
+    }
+
+    //==================================================
+    // WALK EVERY HALF EDGE
+    //==================================================
+
+    for (
+        const node
+        of graph.values()
+    ) {
+
+        for (
+            const startEdge
+            of node.edges
+        ) {
+
+            if (
+                startEdge.visited
+            ) {
+
                 continue;
 
-            const polygon: Vector3[] = [];
-            const wallIds = new Set<string>();
+            }
 
-            let edge: HalfEdge | undefined = startEdge;
+            const polygon:
+                Vector3[] = [];
 
-            while (edge) {
+            const wallIds =
+                new Set<string>();
 
-                if (edge.visited)
+            let edge:
+                HalfEdge | undefined =
+                startEdge;
+
+            while (
+                edge
+            ) {
+
+                //--------------------------------------------------
+                // Prevent infinite loops
+                //--------------------------------------------------
+
+                if (
+                    edge.visited
+                ) {
+
                     break;
 
-                edge.visited = true;
+                }
 
-                wallIds.add(edge.wall.id);
+                edge.visited =
+                    true;
 
-                const p = edge.from.position;
-                const last = polygon[polygon.length - 1];
+                //--------------------------------------------------
+                // Store wall ID
+                //--------------------------------------------------
+
+                wallIds.add(
+                    edge.wall.id
+                );
+
+                //--------------------------------------------------
+                // Store polygon point
+                //--------------------------------------------------
+
+                const p =
+                    edge.from.position;
+
+                const last =
+                    polygon[
+                        polygon.length - 1
+                    ];
+
                 if (
                     !last ||
                     !last.equals(p)
                 ) {
+
                     polygon.push(
                         p.clone()
                     );
+
                 }
-                const nextNode = graph.get(edge.to.id);
 
-                if (!nextNode)
-                    break;
+                //--------------------------------------------------
+                // Next graph node
+                //--------------------------------------------------
 
-                const twin = edge.twin!;
-
-                const twinIndex = nextNode.edges.findIndex(
-
-                    e => e === twin
-
-                );
-
-                if (twinIndex === -1)
-                    break;
-
-                const nextIndex = (twinIndex + 1) % nextNode.edges.length;
-                edge = nextNode.edges[nextIndex];
+                const nextNode =
+                    graph.get(
+                        edge.to.id
+                    );
 
                 if (
-                    edge.from.id === startEdge.from.id &&
-                    edge.to.id === startEdge.to.id
+                    !nextNode
                 ) {
 
-                    const walls = Array.from(wallIds)
-                        .map(id => {
-                            return graph.get(node.corner.id)?.edges.find(
-                                halfEdge => halfEdge.wall.id === id
-                            )?.wall;
-                        })
-                        .filter((wall): wall is NonNullable<typeof wall> => Boolean(wall));
+                    break;
 
-                    const area = Math.abs(polygonArea(polygon));
-                    const perimeter = polygonPerimeter(polygon);
+                }
 
-                    const region: Region = {
-                        id: createRegionId(polygon),
-                        corners: polygon,
+                //--------------------------------------------------
+                // Twin
+                //--------------------------------------------------
+
+                const twin =
+                    edge.twin!;
+
+                const twinIndex =
+                    nextNode.edges.findIndex(
+                        e =>
+                            e === twin
+                    );
+
+                if (
+                    twinIndex === -1
+                ) {
+
+                    break;
+
+                }
+
+                //--------------------------------------------------
+                // Walk clockwise around face
+                //--------------------------------------------------
+
+                const nextIndex =
+                    (
+                        twinIndex + 1
+                    ) %
+                    nextNode.edges.length;
+
+                edge =
+                    nextNode.edges[
+                        nextIndex
+                    ];
+
+                //--------------------------------------------------
+                // Completed polygon
+                //--------------------------------------------------
+
+                if (
+                    edge.from.id ===
+                        startEdge.from.id &&
+
+                    edge.to.id ===
+                        startEdge.to.id
+                ) {
+
+                    //--------------------------------------------------
+                    // IMPORTANT:
+                    //
+                    // Get walls from the GLOBAL wall lookup,
+                    // not just the starting node.
+                    //--------------------------------------------------
+
+                    const walls =
+                        Array.from(
+                            wallIds
+                        )
+                        .map(
+                            wallId =>
+                                wallById.get(
+                                    wallId
+                                )
+                        )
+                        .filter(
+                            (
+                                wall
+                            ): wall is Wall =>
+                                Boolean(wall)
+                        );
+
+                    //--------------------------------------------------
+                    // Geometry information
+                    //--------------------------------------------------
+
+                    const area =
+                        Math.abs(
+                            polygonArea(
+                                polygon
+                            )
+                        );
+
+                    const perimeter =
+                        polygonPerimeter(
+                            polygon
+                        );
+
+                    //--------------------------------------------------
+                    // Create region
+                    //--------------------------------------------------
+
+                    const region:
+                        Region = {
+
+                        id:
+                            createRegionId(
+                                polygon
+                            ),
+
+                        corners:
+                            polygon,
+
                         walls,
-                        parentRegionId: null,
-                        childRegionIds: [],
-                        adjacentRegionIds: [],
-                        boundaryLoops: [{
-                            corners: polygon,
-                            wallIds: Array.from(wallIds)
-                        }],
-                        area: area,
-                        perimeter: perimeter,
-                        relationshipSummary: []
+
+                        parentRegionId:
+                            null,
+
+                        childRegionIds:
+                            [],
+
+                        adjacentRegionIds:
+                            [],
+
+                        boundaryLoops: [
+                            {
+
+                                corners:
+                                    polygon,
+
+                                wallIds:
+                                    Array.from(
+                                        wallIds
+                                    )
+
+                            }
+                        ],
+
+                        area,
+
+                        perimeter,
+
+                        relationshipSummary:
+                            []
+
                     };
 
-                    regions.push(region);
+                    regions.push(
+                        region
+                    );
+
                     break;
 
                 }
@@ -110,52 +333,123 @@ export function walkRegions(
 
     }
 
-    return pruneCompositeRegions(removeDuplicateRegions(regions));
-
+    return pruneCompositeRegions(
+        removeDuplicateRegions(
+            regions
+        )
+    );
 }
 
+//==================================================
+// POLYGON AREA
+//==================================================
 
-function polygonArea(points: Vector3[]) {
-    let area = 0;
+function polygonArea(
+    points: Vector3[]
+): number {
 
-    for (let i = 0; i < points.length; i++) {
-        const a = points[i];
-        const b = points[(i + 1) % points.length];
-        area += a.x * b.z - b.x * a.z;
+    let area =
+        0;
+
+    for (
+        let i = 0;
+        i < points.length;
+        i++
+    ) {
+
+        const a =
+            points[i];
+
+        const b =
+            points[
+                (i + 1) %
+                points.length
+            ];
+
+        area +=
+            a.x * b.z -
+            b.x * a.z;
+
     }
 
     return area / 2;
 }
 
-function polygonPerimeter(points: Vector3[]) {
-    if (points.length < 2) {
+//==================================================
+// POLYGON PERIMETER
+//==================================================
+
+function polygonPerimeter(
+    points: Vector3[]
+): number {
+
+    if (
+        points.length < 2
+    ) {
+
         return 0;
+
     }
 
-    let perimeter = 0;
+    let perimeter =
+        0;
 
-    for (let i = 0; i < points.length; i++) {
-        const current = points[i];
-        const next = points[(i + 1) % points.length];
-        perimeter += current.distanceTo(next);
+    for (
+        let i = 0;
+        i < points.length;
+        i++
+    ) {
+
+        const current =
+            points[i];
+
+        const next =
+            points[
+                (i + 1) %
+                points.length
+            ];
+
+        perimeter +=
+            current.distanceTo(
+                next
+            );
+
     }
 
     return perimeter;
 }
 
-function normalizePolygon(points: Vector3[]): string {
+//==================================================
+// NORMALIZE POLYGON
+//==================================================
 
-    const coords = points.map(
-        p => `${p.x},${p.z}`
-    );
+function normalizePolygon(
+    points: Vector3[]
+): string {
 
-    function rotate(list: string[]) {
+    const coords =
+        points.map(
+            p =>
+                `${p.x},${p.z}`
+        );
 
-        let smallest = 0;
+    function rotate(
+        list: string[]
+    ) {
 
-        for (let i = 1; i < list.length; i++) {
+        let smallest =
+            0;
 
-            if (list[i] < list[smallest]) {
+        for (
+            let i = 1;
+            i < list.length;
+            i++
+        ) {
+
+            if (
+                list[i] <
+                list[smallest]
+            ) {
 
                 smallest = i;
 
@@ -165,56 +459,88 @@ function normalizePolygon(points: Vector3[]): string {
 
         return [
 
-            ...list.slice(smallest),
+            ...list.slice(
+                smallest
+            ),
 
-            ...list.slice(0, smallest)
+            ...list.slice(
+                0,
+                smallest
+            )
 
         ];
 
     }
 
-    const clockwise = rotate(coords);
-    const counter = rotate(
-        [...coords].reverse()
-    );
+    const clockwise =
+        rotate(
+            coords
+        );
 
-    const cw = clockwise.join("|");
-    const ccw = counter.join("|");
+    const counter =
+        rotate(
+            [...coords].reverse()
+        );
 
-    return cw < ccw ? cw : ccw;
+    const cw =
+        clockwise.join("|");
 
+    const ccw =
+        counter.join("|");
+
+    return cw < ccw
+        ? cw
+        : ccw;
 }
+
+//==================================================
+// REMOVE DUPLICATES
+//==================================================
 
 function removeDuplicateRegions(
     regions: Region[]
 ): Region[] {
 
-    const unique: Region[] = [];
+    const unique:
+        Region[] = [];
 
-    const seen = new Set<string>();
+    const seen =
+        new Set<string>();
 
-    const removed: { id: string; reason: string }[] = [];
+    for (
+        const region
+        of regions
+    ) {
 
-    for (const region of regions) {
+        const key =
+            normalizePolygon(
+                region.corners
+            );
 
-        const key = normalizePolygon(
-            region.corners
-        );
+        if (
+            seen.has(key)
+        ) {
 
-        if (seen.has(key)) {
-            removed.push({ id: region.id, reason: "Duplicate polygon detected" });
             continue;
+
         }
 
-        seen.add(key);
+        seen.add(
+            key
+        );
 
-        unique.push(region);
+        unique.push(
+            region
+        );
 
     }
 
     return unique;
-
 }
+
+//==================================================
+// POINT ON SEGMENT
+//==================================================
 
 function isPointOnSegment(
     point: Vector3,
@@ -222,117 +548,253 @@ function isPointOnSegment(
     b: Vector3,
     tolerance = 0.0001
 ): boolean {
-    const dx = b.x - a.x;
-    const dz = b.z - a.z;
-    const segmentLengthSquared = dx * dx + dz * dz;
 
-    if (segmentLengthSquared <= tolerance * tolerance) {
-        return point.distanceTo(a) <= tolerance;
+    const dx =
+        b.x - a.x;
+
+    const dz =
+        b.z - a.z;
+
+    const segmentLengthSquared =
+        dx * dx +
+        dz * dz;
+
+    if (
+        segmentLengthSquared <=
+        tolerance * tolerance
+    ) {
+
+        return (
+            point.distanceTo(a) <=
+            tolerance
+        );
+
     }
 
-    const t = ((point.x - a.x) * dx + (point.z - a.z) * dz) / segmentLengthSquared;
-    if (t < 0 || t > 1) {
+    const t =
+        (
+            (point.x - a.x) * dx +
+            (point.z - a.z) * dz
+        ) /
+        segmentLengthSquared;
+
+    if (
+        t < 0 ||
+        t > 1
+    ) {
+
         return false;
+
     }
 
-    const closestX = a.x + t * dx;
-    const closestZ = a.z + t * dz;
-    const distanceToSegment = Math.hypot(point.x - closestX, point.z - closestZ);
+    const closestX =
+        a.x +
+        t * dx;
 
-    return distanceToSegment <= tolerance;
+    const closestZ =
+        a.z +
+        t * dz;
+
+    const distanceToSegment =
+        Math.hypot(
+            point.x - closestX,
+            point.z - closestZ
+        );
+
+    return (
+        distanceToSegment <=
+        tolerance
+    );
 }
+
+//==================================================
+// POINT ON POLYGON BOUNDARY
+//==================================================
 
 function isPointOnPolygonBoundary(
     point: Vector3,
     polygon: Vector3[],
     tolerance = 0.0001
 ): boolean {
-    return polygon.some((corner, index) => {
-        const next = polygon[(index + 1) % polygon.length];
-        return isPointOnSegment(point, corner, next, tolerance);
-    });
+
+    return polygon.some(
+        (
+            corner,
+            index
+        ) => {
+
+            const next =
+                polygon[
+                    (index + 1) %
+                    polygon.length
+                ];
+
+            return isPointOnSegment(
+                point,
+                corner,
+                next,
+                tolerance
+            );
+
+        }
+    );
 }
+
+//==================================================
+// POINT INSIDE OR ON POLYGON
+//==================================================
 
 function pointInOrOnPolygon(
     point: Vector3,
     polygon: Vector3[]
 ): boolean {
-    return pointInPolygon(point, polygon) || isPointOnPolygonBoundary(point, polygon);
+
+    return (
+        pointInPolygon(
+            point,
+            polygon
+        ) ||
+        isPointOnPolygonBoundary(
+            point,
+            polygon
+        )
+    );
 }
+
+//==================================================
+// POLYGON CONTAINMENT
+//==================================================
 
 function isPolygonContained(
     child: Vector3[],
     parent: Vector3[]
 ): boolean {
-    if (child.length < 3 || parent.length < 3) {
+
+    if (
+        child.length < 3 ||
+        parent.length < 3
+    ) {
+
         return false;
+
     }
 
-    return child.every(point => pointInOrOnPolygon(point, parent));
+    return child.every(
+        point =>
+            pointInOrOnPolygon(
+                point,
+                parent
+            )
+    );
 }
+
+//==================================================
+// REDUNDANT COMPOSITE REGION
+//==================================================
 
 function isRedundantCompositeRegion(
     region: Region,
     regions: Region[]
 ): boolean {
-    const contained = regions.filter(
-        other =>
-            other.id !== region.id &&
-            isPolygonContained(
-                other.corners,
-                region.corners
-            )
-    );
 
-    if (contained.length <= 1) {
-        return false;
-    }
-
-    const parentWallIds = new Set(
-        region.walls.map(wall => wall.id)
-    );
-
-    const childWallIds = new Set(
-        contained.flatMap(other =>
-            other.walls.map(wall => wall.id)
-        )
-    );
-
-    const hasExtraBoundary =
-        Array.from(parentWallIds).some(
-            wallId => !childWallIds.has(wallId)
-        );
-
-    return !hasExtraBoundary;
-}
-
-function pruneCompositeRegions(
-    regions: Region[]
-): Region[] {
-    const kept: Region[] = [];
-    const removed: { id: string; reason: string }[] = [];
-
-    for (const region of regions) {
-        const contained = regions.filter(
+    const contained =
+        regions.filter(
             other =>
-                other.id !== region.id &&
+                other.id !==
+                    region.id &&
+
                 isPolygonContained(
                     other.corners,
                     region.corners
                 )
         );
 
-        const isComposite = isRedundantCompositeRegion(region, regions);
+    if (
+        contained.length <= 1
+    ) {
 
-        if (isComposite) {
-            removed.push({ 
-                id: region.id, 
-                reason: `Composite union: contains ${contained.length} smaller regions with no extra boundary walls` 
-            });
+        return false;
+
+    }
+
+    const parentWallIds =
+        new Set(
+            region.walls.map(
+                wall =>
+                    wall.id
+            )
+        );
+
+    const childWallIds =
+        new Set(
+            contained.flatMap(
+                other =>
+                    other.walls.map(
+                        wall =>
+                            wall.id
+                    )
+            )
+        );
+
+    const hasExtraBoundary =
+        Array.from(
+            parentWallIds
+        ).some(
+            wallId =>
+                !childWallIds.has(
+                    wallId
+                )
+        );
+
+    return !hasExtraBoundary;
+}
+
+//==================================================
+// PRUNE COMPOSITE REGIONS
+//==================================================
+
+function pruneCompositeRegions(
+    regions: Region[]
+): Region[] {
+
+    const kept:
+        Region[] = [];
+
+    for (
+        const region
+        of regions
+    ) {
+
+        const contained =
+            regions.filter(
+                other =>
+                    other.id !==
+                        region.id &&
+
+                    isPolygonContained(
+                        other.corners,
+                        region.corners
+                    )
+            );
+
+        const isComposite =
+            isRedundantCompositeRegion(
+                region,
+                regions
+            );
+
+        if (
+            isComposite
+        ) {
+
             continue;
+
         }
 
-        kept.push(region);
+        kept.push(
+            region
+        );
+
     }
 
     return kept;

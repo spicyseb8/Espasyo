@@ -70,6 +70,15 @@ export type EditorAction =
     };
     }
     | {
+    type: "SET_WALL_FINISH";
+
+    payload: {
+        regionId: string;
+        wallId: string;
+        materialId: string;
+    };
+}
+    | {
         type: "SET_FLOOR_FINISH_ALL";
         payload: string;
     }
