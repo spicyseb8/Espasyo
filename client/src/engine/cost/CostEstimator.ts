@@ -19,6 +19,14 @@ import {
     calculateWallFinishCosts
 } from "./WallFinishCostCalculator";
 
+import {
+    calculateDoorCosts
+} from "./DoorCostCalculator";
+
+import {
+    calculateWindowCosts
+} from "./WindowCostCalculator";
+
 export function calculateCostEstimate(
     state: EditorState
 ): CostEstimate {
@@ -57,35 +65,52 @@ export function calculateCostEstimate(
     const wallFinishItems =
         calculateWallFinishCosts({
 
-            corners:
-                state.corners,
+        corners:
+            state.corners,
 
-            walls:
-                state.walls,
+        walls:
+            state.walls,
 
-            wallHeight:
-                state.wallHeight,
+        wallHeight:
+            state.wallHeight,
 
-            wallFinishes:
-                state.wallFinishes
+        doors:
+            state.doors,
 
-        });
+        windows:
+            state.windows,
+
+        openings:
+            state.openings,
+
+        wallFinishes:
+            state.wallFinishes
+
+    });
 
     //--------------------------------------------------
-    // Future categories
+    // Doors
     //--------------------------------------------------
 
-    const doorItems:
-        CostItem[] = [];
-
-    const windowItems:
-        CostItem[] = [];
+    const doorItems =
+        calculateDoorCosts(
+            state.doors
+        );
 
     //--------------------------------------------------
-    // Combine
+    // Windows
     //--------------------------------------------------
 
-    const items = [
+    const windowItems =
+        calculateWindowCosts(
+            state.windows
+        );
+
+    //--------------------------------------------------
+    // Combine everything
+    //--------------------------------------------------
+
+    const items: CostItem[] = [
 
         ...furnitureItems,
 
@@ -100,12 +125,11 @@ export function calculateCostEstimate(
     ];
 
     //--------------------------------------------------
-    // Total
+    // Calculate subtotal
     //--------------------------------------------------
 
     const subtotal =
         items.reduce(
-
             (
                 sum,
                 item
@@ -115,6 +139,10 @@ export function calculateCostEstimate(
 
             0
         );
+
+    //--------------------------------------------------
+    // Total
+    //--------------------------------------------------
 
     return {
 

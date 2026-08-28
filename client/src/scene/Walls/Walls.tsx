@@ -27,9 +27,9 @@ function Walls() {
         state
     } = useEditor();
 
-    //==================================================
-    // Current regions
-    //==================================================
+    //--------------------------------------------------
+    // Regions
+    //--------------------------------------------------
 
     const regions =
         useMemo(
@@ -44,6 +44,10 @@ function Walls() {
             ]
         );
 
+    //--------------------------------------------------
+    // Render walls
+    //--------------------------------------------------
+
     return (
 
         <group>
@@ -52,9 +56,9 @@ function Walls() {
                 state.walls.map(
                     wall => {
 
-                        //==================================================
-                        // Build visible wall pieces
-                        //==================================================
+                        //--------------------------------------------------
+                        // BUILD WALL PIECES
+                        //--------------------------------------------------
 
                         const pieces =
                             buildWallMeshes(
@@ -65,18 +69,17 @@ function Walls() {
 
                                 state.wallThickness,
 
-                                state.doors
+                                state.doors,
+
+                                state.openings,
+
+                                state.windows
 
                             );
 
-                        //==================================================
-                        // Determine wall finishes
-                        //
-                        // A shared wall can have two sides:
-                        //
-                        // Room A → material A
-                        // Room B → material B
-                        //==================================================
+                        //--------------------------------------------------
+                        // WALL FINISH
+                        //--------------------------------------------------
 
                         const finishSides =
                             getWallFinishSides(
@@ -88,6 +91,31 @@ function Walls() {
                                 state.wallFinishes
 
                             );
+
+                        //--------------------------------------------------
+                        // DEBUG:
+                        //
+                        // Count how many pieces this wall currently has.
+                        //
+                        // Normal wall with no cutouts:
+                        //
+                        //      1 piece
+                        //
+                        // Wall with rectangular opening:
+                        //
+                        //      usually 3 pieces
+                        //
+                        //--------------------------------------------------
+
+
+
+                        //--------------------------------------------------
+                        // Temporary visual indication.
+                        //
+                        // Walls with openings/windows become slightly
+                        // blue so we can see whether WallMeshBuilder
+                        // recognizes them.
+                        //--------------------------------------------------
 
                         return (
 
@@ -131,6 +159,7 @@ function Walls() {
                             </group>
 
                         );
+
                     }
                 )
             }

@@ -1,44 +1,41 @@
-import { Object3D, Raycaster, Vector3 } from "three";
+import {
+    Object3D,
+    Raycaster,
+    Vector3
+} from "three";
 
-import type { Wall } from "./WallTypes";
+import type {
+    Wall
+} from "./WallTypes";
 
 import {
-
     closestPointOnWall
-
 } from "./wallSnapping";
 
 //----------------------------------------------------
-// Distance-based hit test (ground point -> nearest wall)
-//----------------------------------------------------
-// Kept for anything else that still wants a "closest wall
-// to a ground point" query (e.g. snapping).
+// Distance-based hit test
 //----------------------------------------------------
 
 export function hitWall(
-
     point: Vector3,
-
     walls: Wall[],
-
     radius = 0.25
-
 ): Wall | null {
 
-    for (const wall of walls) {
+    for (
+        const wall of walls
+    ) {
 
-        const closest = closestPointOnWall(
-
-            point,
-
-            wall
-
-        );
+        const closest =
+            closestPointOnWall(
+                point,
+                wall
+            );
 
         if (
-
-            closest.distanceTo(point) < radius
-
+            closest.distanceTo(
+                point
+            ) < radius
         ) {
 
             return wall;
@@ -48,20 +45,36 @@ export function hitWall(
     }
 
     return null;
-
 }
+function isWallFinishObject(
+    object: Object3D
+): boolean {
 
+    let current:
+        Object3D | null =
+        object;
+
+    while (
+        current
+    ) {
+
+        if (
+            current.userData?.isWallFinish === true
+        ) {
+
+            return true;
+
+        }
+
+        current =
+            current.parent;
+
+    }
+
+    return false;
+}
 //----------------------------------------------------
-// Raycast-based wall hit test
-//----------------------------------------------------
-// The wall mesh itself intercepts the ray -- click anywhere
-// on the wall (top, side, thick or thin) and it counts.
-//
-// Returns both the wall AND the actual 3D point the ray hit
-// on that wall, projected straight down onto the ground
-// (y = 0). That projected point is what should be used as
-// the "click point" everywhere -- Default, Join, and Split
-// modes all consume it the same way.
+// Distance-based wall point hit
 //----------------------------------------------------
 
 export interface WallPointHit {
@@ -73,36 +86,33 @@ export interface WallPointHit {
 }
 
 export function hitWallAtPoint(
-
     point: Vector3,
-
     walls: Wall[],
-
     radius = 0.25
-
 ): WallPointHit | null {
 
-    for (const wall of walls) {
+    for (
+        const wall of walls
+    ) {
 
-        const closest = closestPointOnWall(
-
-            point,
-
-            wall
-
-        );
+        const closest =
+            closestPointOnWall(
+                point,
+                wall
+            );
 
         if (
-
-            closest.distanceTo(point) < radius
-
+            closest.distanceTo(
+                point
+            ) < radius
         ) {
 
             return {
 
                 wall,
 
-                point: closest
+                point:
+                    closest
 
             };
 
@@ -111,8 +121,12 @@ export function hitWallAtPoint(
     }
 
     return null;
-
 }
+
+//----------------------------------------------------
+// Raycast-based wall hit
+//----------------------------------------------------
+
 export interface WallRaycastHit {
 
     wall: Wall;
@@ -131,34 +145,84 @@ export function hitWallByRaycast(
 
 ): WallRaycastHit | null {
 
-    const intersects = raycaster.intersectObjects(
-
-        objects,
-
-        true
-
-    );
-
-    for (const hit of intersects) {
-
-        const wallId = hit.object.userData?.wallId;
-
-        if (!wallId)
-            continue;
-
-        const wall = walls.find(
-
-            w => w.id === wallId
-
+    const intersects =
+        raycaster.intersectObjects(
+            objects,
+            true
         );
 
-        if (!wall)
+    //--------------------------------------------------
+    // Check every intersection in distance order.
+    //
+    // Do NOT immediately accept wall-finish surfaces.
+    //--------------------------------------------------
+
+    for (
+        const hit of intersects
+    ) {
+
+        const object =
+            hit.object;
+
+        //--------------------------------------------------
+        // Ignore wall finish surfaces.
+        //
+        // These are visual material layers and should
+        // never become the target for window/door/opening
+        // placement.
+        //--------------------------------------------------
+
+            if (
+        isWallFinishObject(object)
+            ) {
+                continue;
+            }
+
+        //--------------------------------------------------
+        // Find the wall ID.
+        //--------------------------------------------------
+
+        const wallId =
+            object.userData?.wallId;
+
+        if (
+            !wallId
+        ) {
+
             continue;
 
-        // Project the hit point vertically onto the ground --
-        // we want the (x, z) of where the ray hit the wall,
-        // not the wall's actual height.
-        const point = hit.point.clone();
+        }
+
+        //--------------------------------------------------
+        // Find actual logical wall.
+        //--------------------------------------------------
+
+        const wall =
+            walls.find(
+                w =>
+                    w.id ===
+                    wallId
+            );
+
+        if (
+            !wall
+        ) {
+
+            continue;
+
+        }
+
+        //--------------------------------------------------
+        // Use actual ray hit point.
+        //--------------------------------------------------
+
+        const point =
+            hit.point.clone();
+
+        //--------------------------------------------------
+        // Build placement operates on X/Z ground
+        // coordinates.
+        //--------------------------------------------------
 
         point.y = 0;
 
@@ -173,5 +237,4 @@ export function hitWallByRaycast(
     }
 
     return null;
-
 }

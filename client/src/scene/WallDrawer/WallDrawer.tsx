@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useEditor from "../../context/editor/useEditor";
 import { Tool } from "../../context/editor/tools";
 import type { Wall } from "../../engine/walls/WallTypes";
+import { BuildTool } from "../../context/BuildTool";
 
 import PreviewWall from "../Preview/PreviewWall";
 import WallMeasurement from "../Preview/WallMeasurement";
@@ -423,6 +424,14 @@ export default function WallDrawer() {
     // Mouse Down - Only for drawing, not camera
     //----------------------------------------------------
     const handlePointerDown = useCallback((e: PointerEvent) => {
+
+        if (
+    state.buildTool === BuildTool.Door ||
+    state.buildTool === BuildTool.Window ||
+    state.buildTool === BuildTool.Opening
+) {
+    return;
+}
         mouseDown.current = {
             x: e.clientX,
             y: e.clientY

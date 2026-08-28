@@ -350,6 +350,10 @@ export default function WallFinishSurface({
                     0
                 ]}
 
+                userData={{
+                isWallFinish: true
+                  }}
+
                 material={
                     finishMaterial
                 }
@@ -376,6 +380,10 @@ export default function WallFinishSurface({
                 -piece.rotationY,
                 0
             ]}
+
+            userData={{
+             isWallFinish: true
+            }}
 
             material={
                 finishMaterial
