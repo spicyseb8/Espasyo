@@ -65,15 +65,15 @@ function Walls() {
 
                                 state.wallThickness,
 
-                                state.doors
+                                state.doors,
+
+                                state.openings,
+
+                                state.windows,
 
                             );
 
-                        //--------------------------------------------------
-                        // Find material assignments for this wall.
-                        //
-                        // Shared walls may produce two sides.
-                        //--------------------------------------------------
+                     
 
                         const finishSides =
                             getWallFinishSides(

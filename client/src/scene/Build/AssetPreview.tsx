@@ -10,266 +10,60 @@ import {
     useThree
 } from "@react-three/fiber";
 
-import { useGLTF } from "@react-three/drei";
+import {
+    useGLTF
+} from "@react-three/drei";
 
 import {
     Box3,
     Group,
-    Vector3,
     Mesh,
-    MeshStandardMaterial
+    MeshStandardMaterial,
+    Shape,
+    ShapeGeometry,
+    Vector3
 } from "three";
 
 import useEditor from "../../context/editor/useEditor";
 
-import { buildInteraction } from "./BuildInteraction";
+import {
+    buildInteraction
+} from "./BuildInteraction";
 
-import { hitWallByRaycast } from "../../engine/walls/wallHit";
+import {
+    hitWallByRaycast
+} from "../../engine/walls/wallHit";
 
-import { buildPlacement } from "./BuildPlacement";
+import {
+    buildPlacement
+} from "./BuildPlacement";
 
-import type { AssetBounds } from "./AssetBounds";
+import type {
+    AssetBounds
+} from "./AssetBounds";
 
-import { BuildTool } from "../../context/BuildTool";
+import {
+    BuildTool
+} from "../../context/BuildTool";
+
+import {
+    normalizeWindowModel
+} from "../../engine/windows/normalizeWindowModel";
 
 
-// ==================================================
+// ============================================================
 // OPENING PREVIEW
-// ==================================================
+// ============================================================
 
 function OpeningPreview() {
 
-    const { state } = useEditor();
-
-    const { camera, scene } = useThree();
-
-    const previewRef =
-        useRef<Group>(null);
-
-    const asset =
-        state.selectedAsset;
-
-    if (!asset) {
-        return null;
-    }
-
-
-    // --------------------------------------------------
-    // Opening dimensions
-    // --------------------------------------------------
-
-    const width = 1.0;
-
-    const height = 2.0;
-
-    // Very thin preview surface.
-    // We don't need it to be as thick as the wall.
-    const previewDepth = 0.025;
-
-
-    // --------------------------------------------------
-    // Fake bounds
-    //
-    // These are still used by BuildPlacement
-    // to calculate the position along the wall.
-    // --------------------------------------------------
-
-    const bounds: AssetBounds = {
-
-        width,
-
-        height,
-
-        depth: state.wallThickness
-    };
-
-
-    // --------------------------------------------------
-    // Update preview
-    // --------------------------------------------------
-
-    useFrame(() => {
-
-        if (!previewRef.current) {
-            return;
-        }
-
-
-        // --------------------------------------------------
-        // Raycast mouse against walls
-        // --------------------------------------------------
-
-        buildInteraction.raycaster.setFromCamera(
-            buildInteraction.pointer,
-            camera
-        );
-
-
-        const hit =
-            hitWallByRaycast(
-                buildInteraction.raycaster,
-                scene.children,
-                state.walls
-            );
-
-
-        // --------------------------------------------------
-        // Mouse is not over a wall
-        // --------------------------------------------------
-
-        if (!hit) {
-
-            buildInteraction.currentPlacement =
-                null;
-
-            buildInteraction.currentBounds =
-                null;
-
-            previewRef.current.visible =
-                false;
-
-            return;
-        }
-
-
-        // --------------------------------------------------
-        // Calculate wall placement
-        // --------------------------------------------------
-
-        const transform =
-            buildPlacement(
-                hit.wall,
-                hit.point,
-                asset,
-                state.wallHeight,
-                bounds
-            );
-
-
-        // --------------------------------------------------
-        // Store placement for BuildInteractionEvents
-        // --------------------------------------------------
-
-        buildInteraction.currentPlacement =
-            transform;
-
-        buildInteraction.currentBounds =
-            bounds;
-
-
-        // --------------------------------------------------
-        // Show preview
-        // --------------------------------------------------
-
-        previewRef.current.visible =
-            true;
-
-
-        // --------------------------------------------------
-        // Position
-        //
-        // buildPlacement gives us the position at
-        // floor level.
-        //
-        // The box itself is centered vertically,
-        // so move the visual preview upward by
-        // half its height.
-        // --------------------------------------------------
-
-        const previewPosition =
-            transform.position.clone();
-
-        previewPosition.y +=
-            height * 0.5;
-
-
-        // --------------------------------------------------
-        // Put the preview slightly ON the wall surface
-        //
-        // wallNormal points away from the wall.
-        //
-        // This prevents the blue rectangle from being
-        // buried inside the wall or floating far away.
-        // --------------------------------------------------
-
-        previewPosition.add(
-            transform.wallNormal.clone()
-                .multiplyScalar(
-                    state.wallThickness * 0.5 +
-                    0.01
-                )
-        );
-
-
-        previewRef.current.position.copy(
-            previewPosition
-        );
-
-
-        // --------------------------------------------------
-        // IMPORTANT:
-        //
-        // WallPiece uses:
-        //
-        // rotationY = -piece.rotationY
-        //
-        // BuildPlacement's rotation is offset by
-        // 90 degrees, so we compensate here.
-        //
-        // This makes the opening width run along
-        // the wall.
-        // --------------------------------------------------
-
-        previewRef.current.rotation.y =
-            transform.rotationY -
-            Math.PI / 2;
-
-    });
-
-
-    // ==================================================
-    // RENDER OPENING PREVIEW
-    // ==================================================
-
-    return (
-
-        <group ref={previewRef}>
-
-            <mesh>
-
-                <boxGeometry
-                    args={[
-                        width,
-                        height,
-                        previewDepth
-                    ]}
-                />
-
-                <meshStandardMaterial
-                    color="#4DA3FF"
-                    transparent
-                    opacity={0.55}
-                    depthTest={false}
-                    depthWrite={false}
-                />
-
-            </mesh>
-
-        </group>
-
-    );
-}
-
-
-// ==================================================
-// DOOR / WINDOW MODEL PREVIEW
-// ==================================================
-
-function ModelPreview() {
-
-    const { state } = useEditor();
-
-    const { camera, scene } =
+    const { state } =
+        useEditor();
+
+    const {
+        camera,
+        scene
+    } =
         useThree();
 
     const previewRef =
@@ -283,81 +77,150 @@ function ModelPreview() {
     }
 
 
-    // --------------------------------------------------
-    // Load model
-    // --------------------------------------------------
+    // --------------------------------------------------------
+    // Opening dimensions
+    // --------------------------------------------------------
 
-    const {
-        scene: gltfScene
-    } = useGLTF(asset.model);
+    const width =
+        state.openingWidth;
 
+    const height =
+        state.openingHeight;
 
-    const model =
-        useMemo(
-            () => gltfScene.clone(),
-            [gltfScene]
-        );
+    const archRise =
+        state.archRise;
 
 
-    // --------------------------------------------------
-    // Preview material
-    // --------------------------------------------------
+    // --------------------------------------------------------
+    // Opening bounds
+    // --------------------------------------------------------
 
-    useEffect(() => {
+    const bounds: AssetBounds = {
 
-        model.traverse((child) => {
+        width,
 
-            if (!(child instanceof Mesh)) {
-                return;
-            }
+        height,
 
-            child.material =
-                new MeshStandardMaterial({
-                    color: "#4DA3FF",
-                    transparent: true,
-                    opacity: 0.55,
-                    depthTest: false
-                });
+        depth:
+            state.wallThickness
 
-            child.renderOrder = 1000;
-
-        });
-
-    }, [model]);
+    };
 
 
-    // --------------------------------------------------
-    // Model bounds
-    // --------------------------------------------------
+    // --------------------------------------------------------
+    // Opening geometry
+    // --------------------------------------------------------
 
-    const bounds: AssetBounds =
+    const openingGeometry =
         useMemo(() => {
 
-            const box =
-                new Box3()
-                    .setFromObject(model);
-
-            const size =
-                new Vector3();
-
-            box.getSize(size);
-
-            return {
-
-                width: size.x,
-
-                height: size.y,
-
-                depth: size.z
-
-            };
-
-        }, [model]);
+            const shape =
+                new Shape();
 
 
-    // --------------------------------------------------
-    // Update preview
-    // --------------------------------------------------
+            // =================================================
+            // RECTANGLE
+            // =================================================
+
+            if (
+                asset.openingShape !== "arch"
+            ) {
+
+                shape.moveTo(
+                    -width / 2,
+                    0
+                );
+
+                shape.lineTo(
+                    width / 2,
+                    0
+                );
+
+                shape.lineTo(
+                    width / 2,
+                    height
+                );
+
+                shape.lineTo(
+                    -width / 2,
+                    height
+                );
+
+                shape.closePath();
+
+            }
+
+
+            // =================================================
+            // ARCH
+            // =================================================
+
+            else {
+
+                const rise =
+                    Math.max(
+                        0,
+                        Math.min(
+                            archRise,
+                            height
+                        )
+                    );
+
+                const springHeight =
+                    height - rise;
+
+
+                shape.moveTo(
+                    -width / 2,
+                    0
+                );
+
+                shape.lineTo(
+                    width / 2,
+                    0
+                );
+
+                shape.lineTo(
+                    width / 2,
+                    springHeight
+                );
+
+
+                shape.quadraticCurveTo(
+
+                    0,
+                    height,
+                    -width / 2,
+                    springHeight
+
+                );
+
+
+                shape.lineTo(
+                    -width / 2,
+                    0
+                );
+
+                shape.closePath();
+
+            }
+
+
+            return new ShapeGeometry(
+                shape
+            );
+
+        }, [
+            asset.openingShape,
+            width,
+            height,
+            archRise
+        ]);
+
+
+    // --------------------------------------------------------
+    // Update opening preview
+    // --------------------------------------------------------
 
     useFrame(() => {
 
@@ -392,6 +255,7 @@ function ModelPreview() {
                 false;
 
             return;
+
         }
 
 
@@ -416,10 +280,415 @@ function ModelPreview() {
             true;
 
 
+        // ----------------------------------------------------
+        // Position opening preview
+        // ----------------------------------------------------
+
+        const previewPosition = transform.position.clone();
+
+previewPosition.add(
+    transform.wallNormal.clone()
+        .multiplyScalar(state.wallThickness * 0.5 + 0.01)
+);
+
+previewRef.current.position.copy(previewPosition);
+
+        // ----------------------------------------------------
+        // Align with wall
+        // ----------------------------------------------------
+
+        previewRef.current.rotation.y =
+            transform.rotationY -
+            Math.PI / 2;
+
+    });
+
+
+    return (
+
+        <group
+            ref={previewRef}
+        >
+
+            <mesh
+                geometry={openingGeometry}
+            >
+
+                <meshStandardMaterial
+
+                    color="#4DA3FF"
+
+                    transparent
+
+                    opacity={0.55}
+
+                    depthTest={false}
+
+                    depthWrite={false}
+
+                    side={2}
+
+                />
+
+            </mesh>
+
+        </group>
+
+    );
+
+}
+
+
+// ============================================================
+// MODEL PREVIEW
+// Door / Window
+// ============================================================
+
+function ModelPreview() {
+
+    const { state } =
+        useEditor();
+
+    const {
+        camera,
+        scene
+    } =
+        useThree();
+
+    const previewRef =
+        useRef<Group>(null);
+
+    const asset =
+        state.selectedAsset;
+
+    if (!asset) {
+        return null;
+    }
+
+
+    // --------------------------------------------------------
+    // Load GLB
+    // --------------------------------------------------------
+
+    const {
+        scene: gltfScene
+    } =
+        useGLTF(asset.model);
+
+
+    // ========================================================
+    // WINDOW MODEL
+    // ========================================================
+
+    const normalizedWindow =
+        useMemo(() => {
+
+            if (
+                asset.type !==
+                BuildTool.Window
+            ) {
+                return null;
+            }
+
+
+            return normalizeWindowModel(
+                gltfScene,
+                asset
+            );
+
+        }, [
+            gltfScene,
+            asset
+        ]);
+
+
+    // ========================================================
+    // DOOR MODEL
+    // ========================================================
+
+    const doorModel =
+        useMemo(() => {
+
+            if (
+                asset.type ===
+                BuildTool.Window
+            ) {
+                return null;
+            }
+
+
+            return gltfScene.clone(true);
+
+        }, [
+            gltfScene,
+            asset.type
+        ]);
+
+
+    // ========================================================
+    // Select model
+    // ========================================================
+
+    const model =
+        asset.type === BuildTool.Window
+            ? normalizedWindow?.model ?? null
+            : doorModel;
+
+
+    if (!model) {
+        return null;
+    }
+
+
+    // ========================================================
+    // DOOR BOUNDS
+    // ========================================================
+
+    const doorBounds =
+        useMemo(() => {
+
+            if (
+                asset.type ===
+                BuildTool.Window
+            ) {
+                return null;
+            }
+
+
+            const box =
+                new Box3()
+                    .setFromObject(model);
+
+
+            const size =
+                new Vector3();
+
+
+            box.getSize(size);
+
+
+            return {
+
+                width:
+                    size.x,
+
+                height:
+                    size.y,
+
+                depth:
+                    size.z
+
+            };
+
+        }, [
+            model,
+            asset.type
+        ]);
+
+
+    // ========================================================
+    // PLACEMENT BOUNDS
+    // ========================================================
+
+    const bounds:
+        AssetBounds =
+
+        useMemo(() => {
+
+            // ------------------------------------------------
+            // Window
+            // ------------------------------------------------
+
+            if (
+                asset.type ===
+                BuildTool.Window
+            ) {
+
+                if (
+                    !normalizedWindow
+                ) {
+
+                    return {
+
+                        width: 1,
+
+                        height: 1,
+
+                        depth: 0.1
+
+                    };
+
+                }
+
+
+                return {
+
+                    width:
+                        normalizedWindow.bounds.width,
+
+                    height:
+                        normalizedWindow.bounds.height,
+
+                    depth:
+                        normalizedWindow.bounds.depth
+
+                };
+
+            }
+
+
+            // ------------------------------------------------
+            // Door
+            // ------------------------------------------------
+
+            return {
+
+                width:
+                    doorBounds?.width ?? 1,
+
+                height:
+                    doorBounds?.height ?? 2,
+
+                depth:
+                    doorBounds?.depth ?? 0.1
+
+            };
+
+        }, [
+            asset.type,
+            normalizedWindow,
+            doorBounds
+        ]);
+
+
+    // ========================================================
+    // Preview material
+    // ========================================================
+
+    useEffect(() => {
+
+        model.traverse(
+            (child) => {
+
+                if (
+                    !(child instanceof Mesh)
+                ) {
+                    return;
+                }
+
+
+                child.material =
+                    new MeshStandardMaterial({
+
+                        color:
+                            "#4DA3FF",
+
+                        transparent:
+                            true,
+
+                        opacity:
+                            0.55,
+
+                        depthTest:
+                            false,
+
+                        depthWrite:
+                            false
+
+                    });
+
+
+                child.renderOrder =
+                    1000;
+
+            }
+        );
+
+    }, [model]);
+
+
+    // ========================================================
+    // UPDATE PREVIEW
+    // ========================================================
+
+    useFrame(() => {
+
+        if (!previewRef.current) {
+            return;
+        }
+
+
+        buildInteraction.raycaster.setFromCamera(
+            buildInteraction.pointer,
+            camera
+        );
+
+
+        const hit =
+            hitWallByRaycast(
+                buildInteraction.raycaster,
+                scene.children,
+                state.walls
+            );
+
+
+        // ----------------------------------------------------
+        // No wall
+        // ----------------------------------------------------
+
+        if (!hit) {
+
+            buildInteraction.currentPlacement =
+                null;
+
+            buildInteraction.currentBounds =
+                null;
+
+            previewRef.current.visible =
+                false;
+
+            return;
+
+        }
+
+
+        // ----------------------------------------------------
+        // Calculate placement
+        // ----------------------------------------------------
+
+        const transform =
+            buildPlacement(
+                hit.wall,
+                hit.point,
+                asset,
+                state.wallHeight,
+                bounds
+            );
+
+
+        buildInteraction.currentPlacement =
+            transform;
+
+        buildInteraction.currentBounds =
+            bounds;
+
+
+        previewRef.current.visible =
+            true;
+
+
+        // ----------------------------------------------------
+        // Position
+        // ----------------------------------------------------
+
         previewRef.current.position.copy(
             transform.position
         );
 
+
+        // ----------------------------------------------------
+        // Wall rotation
+        // ----------------------------------------------------
 
         previewRef.current.rotation.y =
             transform.rotationY;
@@ -427,24 +696,28 @@ function ModelPreview() {
     });
 
 
-    // --------------------------------------------------
-    // Door / Window model orientation
-    // --------------------------------------------------
+    // ========================================================
+    // Asset rotation offset
+    // ========================================================
 
-    const modelRotationY =
-        asset.type === BuildTool.Window
-            ? 0
-            : Math.PI / 2;
+    const rotationOffsetY =
+        asset.rotationOffsetY ?? 0;
 
+
+    // ========================================================
+    // Render
+    // ========================================================
 
     return (
 
-        <group ref={previewRef}>
+        <group
+            ref={previewRef}
+        >
 
             <group
                 rotation={[
                     0,
-                    modelRotationY,
+                    rotationOffsetY,
                     0
                 ]}
             >
@@ -458,21 +731,19 @@ function ModelPreview() {
         </group>
 
     );
+
 }
 
 
-// ==================================================
+// ============================================================
 // PREVIEW SWITCH
-// ==================================================
+// ============================================================
 
 function PreviewModel() {
 
-    const { state } = useEditor();
+    const { state } =
+        useEditor();
 
-
-    // --------------------------------------------------
-    // Opening
-    // --------------------------------------------------
 
     if (
         state.selectedAsset?.type ===
@@ -486,31 +757,33 @@ function PreviewModel() {
     }
 
 
-    // --------------------------------------------------
-    // Door / Window
-    // --------------------------------------------------
-
     return (
         <ModelPreview />
     );
+
 }
 
 
-// ==================================================
+// ============================================================
 // MAIN ASSET PREVIEW
-// ==================================================
+// ============================================================
 
 export default function AssetPreview() {
 
-    const { state } = useEditor();
+    const { state } =
+        useEditor();
 
 
-    if (!state.layoutConfirmed) {
+    if (
+        !state.layoutConfirmed
+    ) {
         return null;
     }
 
 
-    if (!state.selectedAsset) {
+    if (
+        !state.selectedAsset
+    ) {
         return null;
     }
 
@@ -533,11 +806,14 @@ export default function AssetPreview() {
 
     return (
 
-        <Suspense fallback={null}>
+        <Suspense
+            fallback={null}
+        >
 
             <PreviewModel />
 
         </Suspense>
 
     );
+
 }

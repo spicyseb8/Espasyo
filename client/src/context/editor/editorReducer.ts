@@ -171,30 +171,24 @@ export function editorReducer(
         ]
     };
 
-case "UPDATE_OPENING":
+case "SET_OPENING_WIDTH":
     return {
         ...state,
-        openings: state.openings.map(
-            opening =>
-                opening.id === action.payload.id
-                    ? action.payload
-                    : opening
-        )
+        openingWidth: action.payload
+
     };
 
-case "REMOVE_OPENING":
+case "SET_OPENING_HEIGHT":
     return {
         ...state,
-        openings: state.openings.filter(
-            opening =>
-                opening.id !== action.payload
-        )
-    };
+        openingHeight: action.payload
 
-case "SELECT_OPENING":
+    };
+    case "SET_ARCH_RISE":
+
     return {
         ...state,
-        selectedOpeningId: action.payload
+        archRise: action.payload
     };
         
         case "ADD_FURNITURE":

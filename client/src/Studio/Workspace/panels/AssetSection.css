@@ -80,7 +80,7 @@
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 10px;
-    padding: 4px 14px 16px;
+    padding: 4px 14px 14px;
 }
 
 .asset-empty {
@@ -91,11 +91,133 @@
 }
 
 /* ========================= */
+/* Divider                    */
+/* separates the asset grid   */
+/* from the settings toggle   */
+/* ========================= */
+
+.asset-divider {
+    height: 1px;
+    margin: 0 14px;
+    background: var(--ws-border);
+}
+
+/* ========================= */
+/* Settings toggle             */
+/* small nested collapse,      */
+/* no background of its own -  */
+/* just a text row + chevron   */
+/* ========================= */
+
+.asset-settings-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+
+    padding: 10px 14px;
+
+    border: none;
+    background: transparent;
+
+    color: var(--ws-text-muted);
+    font-size: 12px;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition: color .15s ease;
+}
+
+.asset-settings-toggle:hover {
+    color: var(--ws-text);
+}
+
+.asset-settings-toggle span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.asset-settings-collapse {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows .2s ease;
+}
+
+.asset-settings-collapse.open {
+    grid-template-rows: 1fr;
+}
+
+.asset-settings-collapse-inner {
+    overflow: hidden;
+}
+
+/* ========================= */
+/* Field grid / inputs        */
+/* matches FloorPlanPanel.css */
+/* so both panels share scale */
+/* ========================= */
+
+.field-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+
+    padding: 0 14px 14px;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.field label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ws-text-muted);
+}
+
+.field-input {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.field-input input {
+    width: 100%;
+
+    padding: 10px 30px 10px 12px;
+
+    border-radius: 10px;
+    border: 1px solid var(--ws-border);
+
+    background: var(--ws-input-bg);
+    color: var(--ws-text);
+
+    font-size: 13px;
+
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.field-input input:focus {
+    outline: none;
+    border-color: var(--ws-accent);
+    box-shadow: 0 0 0 3px var(--ws-accent-soft);
+}
+
+.field-unit {
+    position: absolute;
+    right: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ws-text-muted);
+    pointer-events: none;
+}
+
+/* ========================= */
 /* Apply button                */
-/* sits bottom-left inside the */
-/* collapsible content, below  */
-/* the grid, flush with its    */
-/* horizontal padding          */
 /* ========================= */
 
 .asset-apply-row {
@@ -147,32 +269,9 @@
 
 @media (prefers-reduced-motion: reduce) {
     .asset-collapse,
+    .asset-settings-collapse,
     .asset-chevron,
     .asset-apply-button {
         transition: none;
     }
-}
-.asset-grid-scroll {
-    max-height: 390px;
-    overflow-y: auto;
-
-    padding: 2px 4px 6px 2px;
-}
-
-/* Optional: make the scrollbar less distracting */
-.asset-grid-scroll::-webkit-scrollbar {
-    width: 5px;
-}
-
-.asset-grid-scroll::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.asset-grid-scroll::-webkit-scrollbar-thumb {
-    background: #d8d8d8;
-    border-radius: 10px;
-}
-
-.asset-grid-scroll::-webkit-scrollbar-thumb:hover {
-    background: #bcbcbc;
 }

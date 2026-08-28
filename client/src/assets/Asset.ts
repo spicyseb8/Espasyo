@@ -29,4 +29,10 @@ export interface Asset {
     furnitureCategory?: FurnitureCategory;
 
     furnitureDimensions?: FurnitureDimensions;
+
+   rotationOffsetY?: number;
+
+    scale?: number;
+
+    depthOffset?: number;
 }

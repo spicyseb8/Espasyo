@@ -6,8 +6,8 @@ import type {
 } from "./RegionTypes";
 
 import type {
-    Region,
-    RegionPolygon
+    Region
+    
 } from "./Polygon";
 
 import {
@@ -761,41 +761,28 @@ function pruneCompositeRegions(
         Region[] = [];
 
     for (
-        const region
-        of regions
-    ) {
+    const region
+    of regions
+) {
 
-        const contained =
-            regions.filter(
-                other =>
-                    other.id !==
-                        region.id &&
-
-                    isPolygonContained(
-                        other.corners,
-                        region.corners
-                    )
-            );
-
-        const isComposite =
-            isRedundantCompositeRegion(
-                region,
-                regions
-            );
-
-        if (
-            isComposite
-        ) {
-
-            continue;
-
-        }
-
-        kept.push(
-            region
+    const isComposite =
+        isRedundantCompositeRegion(
+            region,
+            regions
         );
 
+    if (
+        isComposite
+    ) {
+
+        continue;
+
     }
+
+    kept.push(
+        region
+    );
+}
 
     return kept;
 }

@@ -31,6 +31,8 @@ export interface EditorState {
     floorFinishes: Record<string, string>;
     draftWallLength: number | null;
     showWallMeasurements: boolean;
-    wallFinishes: Record< string, Record<string, string>
->;
+    wallFinishes: Record< string, Record<string, string>>;
+    archRise: number;
+    openingWidth: number;
+    openingHeight: number;
 }

@@ -3,23 +3,13 @@ import "./AssetSection.css";
 import { useState } from "react";
 import type { ReactNode } from "react";
 
-import {
-    ChevronDown,
-    Check
-} from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 import AssetCard from "./AssetCard";
 
 import useEditor from "../../../context/editor/useEditor";
 import type { Asset } from "../../../assets/Asset";
-
-import {
-    BuildTool
-} from "../../../context/BuildTool";
-
-import {
-    furnitureInteraction
-} from "../../../scene/Furniture/FurnitureInteraction";
+import { BuildTool } from "../../../context/BuildTool";
 
 
 interface Props {
@@ -30,6 +20,7 @@ interface Props {
     forceOpen?: boolean;
 }
 
+
 export default function AssetSection({
     title,
     assets,
@@ -38,146 +29,70 @@ export default function AssetSection({
     forceOpen
 }: Props) {
 
-    const {
-        state,
-        dispatch
-    } = useEditor();
+    const { state, dispatch } = useEditor();
 
-    const [
-        open,
-        setOpen
-    ] = useState(defaultOpen);
+    const [open, setOpen] = useState(defaultOpen);
+    const [settingsOpen, setSettingsOpen] = useState(false);
 
-    const isOpen =
-        forceOpen ?? open;
+    const isOpen = forceOpen ?? open;
 
-    //--------------------------------------------------
-    // Selected asset
-    //--------------------------------------------------
 
-    const pendingAsset =
-        state.selectedAsset ?? null;
+    // --------------------------------------------------
+    // Pending asset
+    // --------------------------------------------------
 
-    //--------------------------------------------------
-    // Is selected asset inside this section?
-    //--------------------------------------------------
+    const pendingAsset = state.selectedAsset ?? null;
 
-    const pendingInThisSection =
-        pendingAsset
-            ? assets.some(
-                asset =>
-                    asset.id ===
-                    pendingAsset.id
-            )
-            : false;
+    const pendingInThisSection = pendingAsset
+        ? assets.some(asset => asset.id === pendingAsset.id)
+        : false;
 
-    //--------------------------------------------------
-    // Is this section currently placing furniture?
-    //--------------------------------------------------
 
-    const isPlacingFurniture =
-        state.buildTool ===
-        BuildTool.Furniture;
-
-    //--------------------------------------------------
+    // --------------------------------------------------
     // Apply
-    //--------------------------------------------------
+    // --------------------------------------------------
 
     const handleApply = () => {
 
-        if (
-            !pendingAsset ||
-            !pendingInThisSection
-        ) {
-            return;
-        }
-
-        //--------------------------------------------------
-        // Furniture
-        //--------------------------------------------------
-
-        if (
-            pendingAsset.type ===
-            BuildTool.Furniture
-        ) {
-
-            //--------------------------------------------------
-            // Start each new placement at 0°
-            //--------------------------------------------------
-
-            furnitureInteraction
-                .resetRotation();
-
-            //--------------------------------------------------
-            // Activate furniture placement
-            //--------------------------------------------------
-
-            dispatch({
-                type:
-                    "SET_BUILD_TOOL",
-
-                payload:
-                    BuildTool.Furniture
-            });
-
-            return;
-        }
-
-        //--------------------------------------------------
-        // Other build assets
-        //
-        // Keep existing behavior for them.
-        //--------------------------------------------------
+        if (!pendingAsset) return;
 
         dispatch({
-            type:
-                "SET_BUILD_TOOL",
-
-            payload:
-                pendingAsset.type
-        });
-
-        dispatch({
-            type:
-                "SET_SELECTED_ASSET",
-
-            payload:
-                null
+            type: "APPLY_SELECTED_ASSET"
         });
 
     };
 
+
+    // --------------------------------------------------
+    // Opening settings?
+    // --------------------------------------------------
+
+    const showOpeningSettings =
+        title === "Openings" &&
+        pendingAsset?.type === BuildTool.Opening;
+
+
+    // --------------------------------------------------
+    // Render
+    // --------------------------------------------------
+
     return (
 
-        <section
-            className="asset-section"
-        >
-
-            {/* -------------------------------------- */}
-            {/* Header                                 */}
-            {/* -------------------------------------- */}
+        <section className="asset-section">
 
             <button
                 className="asset-section-header"
-                onClick={() =>
-                    setOpen(
-                        o => !o
-                    )
-                }
+                onClick={() => setOpen(o => !o)}
                 aria-expanded={isOpen}
             >
 
-                <span
-                    className="asset-section-title"
-                >
+                <span className="asset-section-title">
 
                     {icon}
 
                     {title}
 
-                    <span
-                        className="asset-count"
-                    >
+                    <span className="asset-count">
                         {assets.length}
                     </span>
 
@@ -185,92 +100,252 @@ export default function AssetSection({
 
                 <ChevronDown
                     size={16}
-                    className={
-                        `asset-chevron ${
-                            isOpen
-                                ? "open"
-                                : ""
-                        }`
-                    }
+                    className={`asset-chevron ${
+                        isOpen ? "open" : ""
+                    }`}
                 />
 
             </button>
 
-            {/* -------------------------------------- */}
-            {/* Content                                */}
-            {/* -------------------------------------- */}
 
             <div
-                className={
-                    `asset-collapse ${
-                        isOpen
-                            ? "open"
-                            : ""
-                    }`
-                }
+                className={`asset-collapse ${
+                    isOpen ? "open" : ""
+                }`}
             >
 
                 <div className="asset-collapse-inner">
 
-    {
-        assets.length > 0 ? (
-
-            <div className="asset-grid-scroll">
-
-                <div className="asset-grid">
+                    {/* -------------------------------- */}
+                    {/* Asset cards */}
+                    {/* -------------------------------- */}
 
                     {
-                        assets.map(asset => (
-                            <AssetCard
-                                key={asset.id}
-                                asset={asset}
-                            />
-                        ))
+                        assets.length > 0 ? (
+
+                            <div className="asset-grid">
+
+                                {
+                                    assets.map(asset => (
+
+                                        <AssetCard
+                                            key={asset.id}
+                                            asset={asset}
+                                        />
+
+                                    ))
+                                }
+
+                            </div>
+
+                        ) : (
+
+                            <p className="asset-empty">
+                                No matches in this category.
+                            </p>
+
+                        )
                     }
 
-                </div>
 
-            </div>
+                    {/* -------------------------------- */}
+                    {/* Opening settings (collapsible) */}
+                    {/* -------------------------------- */}
 
-        ) : (
-            <p className="asset-empty">
-                No matches in this category.
-            </p>
-        )
-    }
+                    {
+                        showOpeningSettings && pendingAsset && (
 
-    <div className="asset-apply-row">
+                            <>
+
+                                <div className="asset-divider" />
+
+                                <button
+                                    type="button"
+                                    className="asset-settings-toggle"
+                                    onClick={() => setSettingsOpen(s => !s)}
+                                    aria-expanded={settingsOpen}
+                                >
+
+                                    <span>
+                                    
+                                        Settings
+                                    </span>
+
+                                    <ChevronDown
+                                        size={14}
+                                        className={`asset-chevron ${
+                                            settingsOpen ? "open" : ""
+                                        }`}
+                                    />
+
+                                </button>
+
+                                <div
+                                    className={`asset-settings-collapse ${
+                                        settingsOpen ? "open" : ""
+                                    }`}
+                                >
+
+                                    <div className="asset-settings-collapse-inner">
+
+                                        <div className="field-grid">
+
+                                            {/* Width */}
+
+                                            <div className="field">
+
+                                                <label htmlFor="opening-width">
+                                                    Width
+                                                </label>
+
+                                                <div className="field-input">
+
+                                                    <input
+                                                        id="opening-width"
+                                                        type="number"
+                                                        min="0.1"
+                                                        max="20"
+                                                        step="0.05"
+                                                        value={state.openingWidth}
+                                                        onChange={(e) => {
+
+                                                            const value =
+                                                                Number(e.target.value);
+
+                                                            if (value <= 0) return;
+
+                                                            dispatch({
+                                                                type:
+                                                                    "SET_OPENING_WIDTH",
+                                                                payload: value
+                                                            });
+
+                                                        }}
+                                                    />
+
+                                                    <span className="field-unit">
+                                                        m
+                                                    </span>
+
+                                                </div>
+
+                                            </div>
+
+
+                                            {/* Height */}
+
+                                            <div className="field">
+
+                                                <label htmlFor="opening-height">
+                                                    Height
+                                                </label>
+
+                                                <div className="field-input">
+
+                                                    <input
+                                                        id="opening-height"
+                                                        type="number"
+                                                        min="0.1"
+                                                        max="20"
+                                                        step="0.05"
+                                                        value={state.openingHeight}
+                                                        onChange={(e) => {
+
+                                                            const value =
+                                                                Number(e.target.value);
+
+                                                            if (value <= 0) return;
+
+                                                            dispatch({
+                                                                type:
+                                                                    "SET_OPENING_HEIGHT",
+                                                                payload: value
+                                                            });
+
+                                                        }}
+                                                    />
+
+                                                    <span className="field-unit">
+                                                        m
+                                                    </span>
+
+                                                </div>
+
+                                            </div>
+
+
+                                            {/* Arch Rise (arch openings only) */}
+
+                                            {
+                                                pendingAsset.openingShape === "arch" && (
+
+                                                    <div className="field">
+
+                                                        <label htmlFor="arch-rise">
+                                                            Arch Rise
+                                                        </label>
+
+                                                        <div className="field-input">
+
+                                                            <input
+                                                                id="arch-rise"
+                                                                type="number"
+                                                                min="0.05"
+                                                                max={state.openingHeight}
+                                                                step="0.05"
+                                                                value={state.archRise}
+                                                                onChange={(e) => {
+
+                                                                    const value =
+                                                                        Number(e.target.value);
+
+                                                                    if (value <= 0) return;
+
+                                                                    dispatch({
+                                                                        type:
+                                                                            "SET_ARCH_RISE",
+                                                                        payload: value
+                                                                    });
+
+                                                                }}
+                                                            />
+
+                                                            <span className="field-unit">
+                                                                m
+                                                            </span>
+
+                                                        </div>
+
+                                                    </div>
+
+                                                )
+                                            }
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </>
+
+                        )
+                    }
+
+
+                    {/* -------------------------------- */}
+                    {/* Apply */}
+                    {/* -------------------------------- */}
+
+                    <div className="asset-apply-row">
 
                         <button
                             type="button"
                             className="asset-apply-button"
-                            disabled={
-                                !pendingInThisSection ||
-                                (
-                                    pendingAsset
-                                        ?.type ===
-                                    BuildTool.Furniture &&
-                                    isPlacingFurniture
-                                )
-                            }
-                            onClick={
-                                handleApply
-                            }
+                            disabled={!pendingInThisSection}
+                            onClick={handleApply}
                         >
-
-                            <Check
-                                size={16}
-                            />
-
-                            {
-                                pendingAsset
-                                    ?.type ===
-                                    BuildTool.Furniture &&
-                                isPlacingFurniture
-                                    ? "Placing..."
-                                    : "Apply"
-                            }
-
+                            Apply
                         </button>
 
                     </div>
@@ -280,5 +355,6 @@ export default function AssetSection({
             </div>
 
         </section>
+
     );
 }

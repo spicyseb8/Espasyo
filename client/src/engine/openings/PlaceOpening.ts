@@ -1,11 +1,15 @@
 import type { AssetBounds } from "../../scene/Build/AssetBounds";
 import type { PlacementTransform } from "../../scene/Build/BuildPlacement";
-import type { OpeningShape, Opening } from "./OpeningTypes";
+import type {
+    OpeningShape,
+    Opening
+} from "./OpeningTypes";
 
 export function placeOpening(
     transform: PlacementTransform,
     bounds: AssetBounds,
-    shape: OpeningShape
+    shape: OpeningShape,
+    archRise: number
 ): Opening {
 
     return {
@@ -22,6 +26,12 @@ export function placeOpening(
 
         height: bounds.height,
 
-        depth: bounds.depth
+        depth: bounds.depth,
+
+        archRise:
+            shape === "arch"
+                ? archRise
+                : undefined
+
     };
 }

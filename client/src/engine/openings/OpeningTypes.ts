@@ -20,4 +20,6 @@ export interface Opening {
 
     depth: number;
 
+    archRise?: number;
+
 }

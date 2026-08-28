@@ -4,11 +4,44 @@ import type { AssetBounds } from "../../scene/Build/AssetBounds";
 
 import type { Window } from "./WindowTypes";
 
+function getOccupiedDimensions(
+    bounds: AssetBounds,
+    rotationOffsetY: number
+) {
+    const width = bounds.width;
+    const depth = bounds.depth;
+
+    const cos = Math.abs(Math.cos(rotationOffsetY));
+    const sin = Math.abs(Math.sin(rotationOffsetY));
+
+    const occupiedWidth =
+        width * cos +
+        depth * sin;
+
+    const occupiedDepth =
+        width * sin +
+        depth * cos;
+
+    return {
+        width: occupiedWidth,
+        depth: occupiedDepth
+    };
+}
+
 export function placeWindow(
     asset: Asset,
     transform: PlacementTransform,
     bounds: AssetBounds
 ): Window {
+
+    const rotationOffsetY =
+        asset.rotationOffsetY ?? 0;
+
+    const occupiedDimensions =
+        getOccupiedDimensions(
+            bounds,
+            rotationOffsetY
+        );
 
     return {
         id: crypto.randomUUID(),
@@ -21,10 +54,10 @@ export function placeWindow(
 
         rotationY: transform.rotationY,
 
-        width: bounds.width,
+        width: occupiedDimensions.width,
 
         height: bounds.height,
 
-        depth: bounds.depth
+        depth: occupiedDimensions.depth
     };
 }

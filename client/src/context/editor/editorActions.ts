@@ -114,16 +114,16 @@ export type EditorAction =
     payload: Opening;
 }
 | {
-    type: "UPDATE_OPENING";
-    payload: Opening;
+    type: "SET_OPENING_WIDTH";
+    payload: number;
 }
 | {
-    type: "REMOVE_OPENING";
-    payload: string;
+    type: "SET_OPENING_HEIGHT";
+    payload: number;
 }
 | {
-    type: "SELECT_OPENING";
-    payload: string | null;
+    type: "SET_ARCH_RISE";
+    payload: number;
 }
     | {
           type: "SET_DRAFT_WALL_LENGTH";

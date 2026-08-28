@@ -10,27 +10,51 @@ export const AssetLibrary = {
             thumbnail: "/uploads/doors/single-door.png",
             model: "/uploads/doors/single-door.glb",
             type: BuildTool.Door,
+            rotationOffsetY: Math.PI / 2,
             price: 5000
         }
     ] satisfies Asset[],
 
     windows: [
-         {
-            id: "w-sw01",
-            name: "Modern Sliding Window",
-            thumbnail: "/uploads/doors/single-door.png",
-            model: "/uploads/windows/sliding_window_scaled.glb",
-            type: BuildTool.Window,
-            price: 500
-        },
-         {
-            id: "w-sw02",
-            name: "Slim Intersection Sliding Window",
-            thumbnail: "/uploads/doors/single-door.png",
-            model: "/uploads/windows/slim_Intersection_i.glb",
-            type: BuildTool.Window,
-            price: 600
-        }
+       {
+        id: "w-sw01",
+        name: "Modern Sliding Window",
+        thumbnail: "/uploads/doors/single-door.png",
+        model: "/uploads/windows/sliding_window.glb",
+        type: BuildTool.Window,
+        price: 500,
+
+        rotationOffsetY: Math.PI / 2,
+        scale: 0.5,
+        
+    },
+
+    {
+        id: "w-sw02",
+        name: "Slim Intersection Sliding Window",
+        thumbnail: "/uploads/doors/single-door.png",
+        model: "/uploads/windows/slim_Intersection_i.glb",
+        type: BuildTool.Window,
+        price: 600,
+
+        rotationOffsetY: Math.PI / 2,
+        scale: 0.6,
+        
+    },
+
+    {
+        id: "w-sw03",
+        name: "Glass Window",
+        thumbnail: "/uploads/doors/single-door.png",
+        model: "/uploads/windows/glass_window.glb",
+        type: BuildTool.Window,
+        price: 500,
+
+        rotationOffsetY: 0,
+        scale: 0.6,
+        
+    }
+
     ] as Asset[],
 
     openings: [

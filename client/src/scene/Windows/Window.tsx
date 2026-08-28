@@ -1,6 +1,10 @@
-import { useMemo } from "react";
+import {
+    useMemo
+} from "react";
 
-import { useGLTF } from "@react-three/drei";
+import {
+    useGLTF
+} from "@react-three/drei";
 
 import type {
     Window as WindowType
@@ -10,51 +14,97 @@ import {
     findAsset
 } from "../../assets/AssetLibrary";
 
+import {
+    normalizeWindowModel
+} from "../../engine/windows/normalizeWindowModel";
+
+
 interface Props {
     window: WindowType;
 }
+
 
 export default function Window({
     window
 }: Props) {
 
+    // --------------------------------------------------
+    // Find asset
+    // --------------------------------------------------
+
     const asset =
         findAsset(window.assetId);
 
-    if (!asset)
+    if (!asset) {
         return null;
+    }
+
+
+    // --------------------------------------------------
+    // Load GLB
+    // --------------------------------------------------
 
     const { scene } =
         useGLTF(asset.model);
 
-    const model =
+
+    // --------------------------------------------------
+    // Normalize model
+    // --------------------------------------------------
+
+    const normalized =
         useMemo(
-            () => scene.clone(),
-            [scene]
+            () =>
+                normalizeWindowModel(
+                    scene,
+                    asset
+                ),
+            [
+                scene,
+                asset
+            ]
         );
 
-   return (
-    <group
-        position={[
-            window.position.x,
-            window.position.y,
-            window.position.z
-        ]}
-        rotation={[
-            0,
-            window.rotationY,
-            0
-        ]}
-    >
+
+    // --------------------------------------------------
+    // Final rotation
+    //
+    // window.rotationY = wall orientation
+    // asset.rotationOffsetY = GLB correction
+    // --------------------------------------------------
+
+    const finalRotationY =
+        window.rotationY +
+        (asset.rotationOffsetY ?? 0);
+
+
+    // --------------------------------------------------
+    // Render
+    // --------------------------------------------------
+
+    return (
+
         <group
+
+            position={[
+                window.position.x,
+                window.position.y,
+                window.position.z
+            ]}
+
             rotation={[
                 0,
-                -Math.PI / 2,
+                finalRotationY,
                 0
             ]}
+
         >
-            <primitive object={model} />
+
+            <primitive
+                object={normalized.model}
+            />
+
         </group>
-    </group>
-);
+
+    );
 }

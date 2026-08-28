@@ -1,16 +1,13 @@
 import { Vector3 } from "three";
 
 import type { Wall } from "./WallTypes";
-
 import type { Door } from "../doors/DoorTypes";
-
 import type { Opening } from "../openings/OpeningTypes";
-
+import type { Window } from "../windows/WindowTypes";
 import type { WallPiece } from "./WallPiece";
 
 
 interface WallCutout {
-
     position: Vector3;
 
     width: number;
@@ -21,31 +18,35 @@ interface WallCutout {
 
     openingEnd: number;
 
-    type: "door" | "opening";
+    openingBottom: number;
 
-    shape?: "rectangle" | "arch";
+    openingTop: number;
 
+    type:
+        | "door"
+        | "opening"
+        | "window";
+
+    shape?:
+        | "rectangle"
+        | "arch";
 }
 
 
 export function buildWallMeshes(
-
     wall: Wall,
-
     wallHeight: number,
-
     wallThickness: number,
-
     doors: Door[] = [],
-
-    openings: Opening[] = []
-
+    openings: Opening[] = [],
+    windows: Window[] = []
 ): WallPiece[] {
 
-
-    // ==================================================
-    // WALL DIRECTION
-    // ==================================================
+    /*
+     * ==================================================
+     * WALL DIRECTION
+     * ==================================================
+     */
 
     const direction =
         new Vector3()
@@ -53,7 +54,6 @@ export function buildWallMeshes(
                 wall.end.position,
                 wall.start.position
             );
-
 
     const wallLength =
         direction.length();
@@ -67,10 +67,6 @@ export function buildWallMeshes(
     direction.normalize();
 
 
-    // ==================================================
-    // WALL ROTATION
-    // ==================================================
-
     const rotationY =
         Math.atan2(
             direction.z,
@@ -78,16 +74,14 @@ export function buildWallMeshes(
         );
 
 
-    // ==================================================
-    // COLLECT CUTOUTS
-    // ==================================================
-
     const cutouts: WallCutout[] = [];
 
 
-    // ==================================================
-    // DOORS
-    // ==================================================
+    /*
+     * ==================================================
+     * DOORS
+     * ==================================================
+     */
 
     for (const door of doors) {
 
@@ -103,23 +97,37 @@ export function buildWallMeshes(
                 .dot(direction);
 
 
+        const halfWidth =
+            door.width * 0.5;
+
+
         const openingStart =
             Math.max(
                 0,
-                distance - door.width * 0.5
+                distance - halfWidth
             );
 
 
         const openingEnd =
             Math.min(
                 wallLength,
-                distance + door.width * 0.5
+                distance + halfWidth
             );
 
 
-        if (openingEnd <= openingStart) {
+        if (
+            openingEnd <=
+            openingStart
+        ) {
             continue;
         }
+
+
+        const height =
+            Math.min(
+                door.height,
+                wallHeight
+            );
 
 
         cutouts.push({
@@ -128,25 +136,30 @@ export function buildWallMeshes(
                 door.position.clone(),
 
             width:
-                openingEnd - openingStart,
+                openingEnd -
+                openingStart,
 
-            height:
-                door.height,
+            height,
 
             openingStart,
 
             openingEnd,
 
+            openingBottom: 0,
+
+            openingTop: height,
+
             type: "door"
 
         });
-
     }
 
 
-    // ==================================================
-    // OPENINGS
-    // ==================================================
+    /*
+     * ==================================================
+     * NORMAL / ARCH OPENINGS
+     * ==================================================
+     */
 
     for (const opening of openings) {
 
@@ -162,23 +175,37 @@ export function buildWallMeshes(
                 .dot(direction);
 
 
+        const halfWidth =
+            opening.width * 0.5;
+
+
         const openingStart =
             Math.max(
                 0,
-                distance - opening.width * 0.5
+                distance - halfWidth
             );
 
 
         const openingEnd =
             Math.min(
                 wallLength,
-                distance + opening.width * 0.5
+                distance + halfWidth
             );
 
 
-        if (openingEnd <= openingStart) {
+        if (
+            openingEnd <=
+            openingStart
+        ) {
             continue;
         }
+
+
+        const height =
+            Math.min(
+                opening.height,
+                wallHeight
+            );
 
 
         cutouts.push({
@@ -187,14 +214,18 @@ export function buildWallMeshes(
                 opening.position.clone(),
 
             width:
-                openingEnd - openingStart,
+                openingEnd -
+                openingStart,
 
-            height:
-                opening.height,
+            height,
 
             openingStart,
 
             openingEnd,
+
+            openingBottom: 0,
+
+            openingTop: height,
 
             type: "opening",
 
@@ -202,15 +233,201 @@ export function buildWallMeshes(
                 opening.shape
 
         });
-
     }
 
 
-    // ==================================================
-    // NO CUTOUTS
-    // ==================================================
+    /*
+     * ==================================================
+     * WINDOWS
+     * ==================================================
+     *
+     * IMPORTANT:
+     *
+     * The window's width/depth are local GLB dimensions.
+     *
+     * We determine which dimension runs along the wall
+     * based on the FINAL window rotation.
+     *
+     * This prevents a GLB modeled differently from
+     * producing a tiny or oversized wall cut.
+     * ==================================================
+     */
 
-    if (cutouts.length === 0) {
+    for (const window of windows) {
+
+        if (window.wallId !== wall.id) {
+            continue;
+        }
+
+
+        /*
+         * ----------------------------------------------
+         * WINDOW CENTER ALONG WALL
+         * ----------------------------------------------
+         */
+
+        const distance =
+            window.position
+                .clone()
+                .sub(wall.start.position)
+                .dot(direction);
+
+
+        /*
+         * ----------------------------------------------
+         * DETERMINE WINDOW WIDTH ALONG WALL
+         * ----------------------------------------------
+         *
+         * The window has two horizontal local axes:
+         *
+         * X = window.width
+         * Z = window.depth
+         *
+         * After rotation, both can contribute to the
+         * window's projected size along the wall.
+         *
+         * This is more reliable than simply using
+         * window.width.
+         */
+
+        const cos =
+            Math.abs(
+                Math.cos(
+                    window.rotationY -
+                    rotationY
+                )
+            );
+
+        const sin =
+            Math.abs(
+                Math.sin(
+                    window.rotationY -
+                    rotationY
+                )
+            );
+
+
+        const widthAlongWall =
+            (
+                window.width * cos
+            ) +
+            (
+                window.depth * sin
+            );
+
+
+        /*
+         * Safety fallback.
+         */
+
+        const actualWidth =
+            Math.max(
+                widthAlongWall,
+                0.001
+            );
+
+
+        const halfWidth =
+            actualWidth * 0.5;
+
+
+        /*
+         * ----------------------------------------------
+         * HORIZONTAL CUT
+         * ----------------------------------------------
+         */
+
+        const openingStart =
+            Math.max(
+                0,
+                distance - halfWidth
+            );
+
+
+        const openingEnd =
+            Math.min(
+                wallLength,
+                distance + halfWidth
+            );
+
+
+        if (
+            openingEnd <=
+            openingStart
+        ) {
+            continue;
+        }
+
+
+        /*
+         * ----------------------------------------------
+         * VERTICAL CUT
+         * ----------------------------------------------
+         *
+         * Window.position.y is treated as the CENTER
+         * of the window.
+         */
+
+        const openingBottom =
+            Math.max(
+                0,
+                window.position.y -
+                window.height * 0.5
+            );
+
+
+        const openingTop =
+            Math.min(
+                wallHeight,
+                window.position.y +
+                window.height * 0.5
+            );
+
+
+        if (
+            openingTop <=
+            openingBottom
+        ) {
+            continue;
+        }
+
+
+        cutouts.push({
+
+            position:
+                window.position.clone(),
+
+            width:
+                openingEnd -
+                openingStart,
+
+            height:
+                openingTop -
+                openingBottom,
+
+            openingStart,
+
+            openingEnd,
+
+            openingBottom,
+
+            openingTop,
+
+            type: "window"
+
+        });
+    }
+
+
+    /*
+     * ==================================================
+     * NO CUTOUTS
+     * ==================================================
+     */
+
+    if (
+        cutouts.length === 0
+    ) {
 
         const center =
             new Vector3(
@@ -218,51 +435,46 @@ export function buildWallMeshes(
                 (
                     wall.start.position.x +
                     wall.end.position.x
-                ) / 2,
+                ) * 0.5,
 
                 wallHeight * 0.5,
 
                 (
                     wall.start.position.z +
                     wall.end.position.z
-                ) / 2
+                ) * 0.5
 
             );
 
 
-        return [
+        return [{
 
-            {
+            position: center,
 
-                position: center,
+            rotationY,
 
-                rotationY,
+            width: wallLength,
 
-                width: wallLength,
+            height: wallHeight,
 
-                height: wallHeight,
+            thickness: wallThickness,
 
-                thickness: wallThickness,
+            kind: "full"
 
-                kind: "full"
-
-            }
-
-        ];
-
+        }];
     }
 
 
-    // ==================================================
-    // SORT CUTOUTS
-    // ==================================================
+    /*
+     * ==================================================
+     * SORT CUTOUTS
+     * ==================================================
+     */
 
     cutouts.sort(
-
         (a, b) =>
             a.openingStart -
             b.openingStart
-
     );
 
 
@@ -272,24 +484,82 @@ export function buildWallMeshes(
     let cursor = 0;
 
 
-    // ==================================================
-    // BUILD WALL AROUND CUTOUTS
-    // ==================================================
+    /*
+     * ==================================================
+     * ADD WALL PIECE
+     * ==================================================
+     */
+
+    function addPiece(
+        start: number,
+        width: number,
+        bottom: number,
+        height: number,
+        kind: WallPiece["kind"]
+    ) {
+
+        if (
+            width <= 0.001 ||
+            height <= 0.001
+        ) {
+            return;
+        }
+
+
+        const center =
+            wall.start.position
+                .clone()
+                .add(
+                    direction
+                        .clone()
+                        .multiplyScalar(
+                            start +
+                            width * 0.5
+                        )
+                );
+
+
+        center.y =
+            bottom +
+            height * 0.5;
+
+
+        pieces.push({
+
+            position: center,
+
+            rotationY,
+
+            width,
+
+            height,
+
+            thickness: wallThickness,
+
+            kind
+
+        });
+    }
+
+
+    /*
+     * ==================================================
+     * BUILD WALL AROUND CUTOUTS
+     * ==================================================
+     */
 
     for (const cutout of cutouts) {
 
-
-        // --------------------------------------------------
-        // Ignore overlapping cutouts
-        // --------------------------------------------------
+        /*
+         * Ignore cutouts that are already behind
+         * the current cursor.
+         */
 
         if (
             cutout.openingEnd <=
             cursor
         ) {
-
             continue;
-
         }
 
 
@@ -300,212 +570,321 @@ export function buildWallMeshes(
             );
 
 
-        // --------------------------------------------------
-        // WALL BEFORE OPENING
-        // --------------------------------------------------
+        const cutoutWidth =
+            cutout.openingEnd -
+            cutoutStart;
 
-        const segmentWidth =
+
+        /*
+         * ----------------------------------------------
+         * WALL BEFORE CUTOUT
+         * ----------------------------------------------
+         */
+
+        const leftWidth =
             cutoutStart -
             cursor;
 
 
-        if (segmentWidth > 0.001) {
+        if (
+            leftWidth >
+            0.001
+        ) {
 
-            const segmentCenter =
-                wall.start.position
-                    .clone()
-                    .add(
+            addPiece(
 
-                        direction.clone()
-                            .multiplyScalar(
+                cursor,
 
-                                cursor +
-                                segmentWidth * 0.5
+                leftWidth,
 
-                            )
+                0,
 
-                    );
+                wallHeight,
 
+                "left"
 
-            segmentCenter.y =
-                wallHeight * 0.5;
-
-
-            pieces.push({
-
-                position:
-                    segmentCenter,
-
-                rotationY,
-
-                width:
-                    segmentWidth,
-
-                height:
-                    wallHeight,
-
-                thickness:
-                    wallThickness,
-
-                kind: "left"
-
-            });
-
+            );
         }
 
 
-        // ==================================================
-        // ARCH OPENING
-        // ==================================================
+        /*
+         * ----------------------------------------------
+         * ARCH
+         * ----------------------------------------------
+         */
 
         if (
             cutout.type === "opening" &&
             cutout.shape === "arch"
         ) {
 
-            /*
-             * The arch geometry itself will be rendered
-             * by WallPiece.tsx.
-             *
-             * Here we only tell WallPiece where the
-             * arch section belongs and how large it is.
-             */
+            buildArchPieces(
 
+                cutoutStart,
 
-            const archWidth =
-                cutout.openingEnd -
-                cutoutStart;
+                cutoutWidth,
 
+                cutout.height,
 
-            const archCenter =
-                wall.start.position
-                    .clone()
-                    .add(
+                wallHeight,
 
-                        direction.clone()
-                            .multiplyScalar(
+                wallThickness,
 
-                                cutoutStart +
-                                archWidth * 0.5
+                direction,
 
-                            )
-
-                    );
-
-
-            /*
-             * IMPORTANT:
-             *
-             * WallPiece's arch geometry is centered
-             * vertically around its position.
-             *
-             * The position therefore represents
-             * the center of the wall section.
-             */
-
-            archCenter.y =
-                wallHeight * 0.5;
-
-
-            pieces.push({
-
-                position:
-                    archCenter,
+                wall,
 
                 rotationY,
 
-                width:
-                    archWidth,
+                pieces
 
-                height:
-                    wallHeight,
-
-                thickness:
-                    wallThickness,
-
-                kind: "arch",
-
-                arch: {
-
-                    openingWidth:
-                        archWidth,
-
-                    openingHeight:
-                        cutout.height
-
-                }
-
-            });
-
-
-            // --------------------------------------------------
-            // Move past arch
-            // --------------------------------------------------
-
-            cursor =
-                Math.max(
-                    cursor,
-                    cutout.openingEnd
-                );
-
-
-            continue;
-
+            );
         }
 
 
-        // ==================================================
-        // NORMAL RECTANGLE / DOOR
-        // ==================================================
+        /*
+         * ----------------------------------------------
+         * WINDOW
+         * ----------------------------------------------
+         */
 
-        const cutoutWidth =
-            cutout.openingEnd -
-            cutoutStart;
+        else if (
+            cutout.type === "window"
+        ) {
 
+            /*
+             * WALL BELOW WINDOW
+             */
+
+            const bottomHeight =
+                cutout.openingBottom;
+
+
+            if (
+                bottomHeight >
+                0.001
+            ) {
+
+                addPiece(
+
+                    cutoutStart,
+
+                    cutoutWidth,
+
+                    0,
+
+                    bottomHeight,
+
+                    "header"
+
+                );
+            }
+
+
+            /*
+             * WALL ABOVE WINDOW
+             */
+
+            const topHeight =
+                wallHeight -
+                cutout.openingTop;
+
+
+            if (
+                topHeight >
+                0.001
+            ) {
+
+                addPiece(
+
+                    cutoutStart,
+
+                    cutoutWidth,
+
+                    cutout.openingTop,
+
+                    topHeight,
+
+                    "header"
+
+                );
+            }
+        }
+
+
+        /*
+         * ----------------------------------------------
+         * DOOR / RECTANGLE OPENING
+         * ----------------------------------------------
+         */
+
+        else {
+
+            const headerHeight =
+                wallHeight -
+                cutout.openingTop;
+
+
+            if (
+                headerHeight >
+                0.001
+            ) {
+
+                addPiece(
+
+                    cutoutStart,
+
+                    cutoutWidth,
+
+                    cutout.openingTop,
+
+                    headerHeight,
+
+                    "header"
+
+                );
+            }
+        }
+
+
+        /*
+         * Move cursor past cutout.
+         */
+
+        cursor =
+            Math.max(
+                cursor,
+                cutout.openingEnd
+            );
+    }
+
+
+    /*
+     * ==================================================
+     * WALL AFTER FINAL CUTOUT
+     * ==================================================
+     */
+
+    const finalWidth =
+        wallLength -
+        cursor;
+
+
+    if (
+        finalWidth >
+        0.001
+    ) {
+
+        addPiece(
+
+            cursor,
+
+            finalWidth,
+
+            0,
+
+            wallHeight,
+
+            "right"
+
+        );
+    }
+
+
+    return pieces;
+}
+
+
+/*
+ * ======================================================
+ * ARCH WALL CUT
+ * ======================================================
+ */
+
+function buildArchPieces(
+
+    openingStart: number,
+
+    openingWidth: number,
+
+    openingHeight: number,
+
+    wallHeight: number,
+
+    wallThickness: number,
+
+    direction: Vector3,
+
+    wall: Wall,
+
+    rotationY: number,
+
+    pieces: WallPiece[]
+
+) {
+
+    const radius =
+        openingWidth * 0.5;
+
+
+    const springHeight =
+        openingHeight -
+        radius;
+
+
+    const archHeight =
+        Math.max(
+            0,
+            openingHeight -
+            springHeight
+        );
+
+
+    /*
+     * No arch curve.
+     */
+
+    if (
+        archHeight <=
+        0.001
+    ) {
 
         const headerHeight =
-            Math.max(
-
-                0,
-
-                wallHeight -
-                cutout.height
-
-            );
+            wallHeight -
+            openingHeight;
 
 
-        if (headerHeight > 0.001) {
+        if (
+            headerHeight >
+            0.001
+        ) {
 
-            const headerCenter =
+            const center =
                 wall.start.position
                     .clone()
                     .add(
-
-                        direction.clone()
+                        direction
+                            .clone()
                             .multiplyScalar(
-
-                                cutoutStart +
-                                cutoutWidth * 0.5
-
+                                openingStart +
+                                openingWidth * 0.5
                             )
-
                     );
 
 
-            headerCenter.y =
-                cutout.height +
+            center.y =
+                openingHeight +
                 headerHeight * 0.5;
 
 
             pieces.push({
 
-                position:
-                    headerCenter,
+                position: center,
 
                 rotationY,
 
                 width:
-                    cutoutWidth,
+                    openingWidth,
 
                 height:
                     headerHeight,
@@ -516,77 +895,221 @@ export function buildWallMeshes(
                 kind: "header"
 
             });
-
         }
 
 
-        // --------------------------------------------------
-        // Move past rectangle
-        // --------------------------------------------------
-
-        cursor =
-            Math.max(
-                cursor,
-                cutout.openingEnd
-            );
-
+        return;
     }
 
 
-    // ==================================================
-    // WALL AFTER FINAL CUTOUT
-    // ==================================================
+    /*
+     * Number of horizontal slices used to
+     * approximate the arch.
+     */
 
-    const finalWidth =
-        wallLength -
-        cursor;
+    const steps = 16;
 
 
-    if (finalWidth > 0.001) {
+    const stripHeight =
+        archHeight /
+        steps;
 
-        const finalCenter =
+
+    for (
+        let i = 0;
+        i < steps;
+        i++
+    ) {
+
+        const y0 =
+            springHeight +
+            i * stripHeight;
+
+
+        const y1 =
+            y0 +
+            stripHeight;
+
+
+        const centerY =
+            (
+                y0 +
+                y1
+            ) * 0.5;
+
+
+        const relativeY =
+            centerY -
+            springHeight;
+
+
+        const halfOpeningWidth =
+            Math.sqrt(
+
+                Math.max(
+                    0,
+                    radius * radius -
+                    relativeY * relativeY
+                )
+
+            );
+
+
+        const sideWidth =
+            Math.max(
+                0,
+                radius -
+                halfOpeningWidth
+            );
+
+
+        if (
+            sideWidth <=
+            0.001
+        ) {
+            continue;
+        }
+
+
+        /*
+         * LEFT SIDE
+         */
+
+        const leftCenter =
             wall.start.position
                 .clone()
                 .add(
-
-                    direction.clone()
+                    direction
+                        .clone()
                         .multiplyScalar(
-
-                            cursor +
-                            finalWidth * 0.5
-
+                            openingStart +
+                            sideWidth * 0.5
                         )
-
                 );
 
 
-        finalCenter.y =
-            wallHeight * 0.5;
+        leftCenter.y =
+            centerY;
 
 
         pieces.push({
 
             position:
-                finalCenter,
+                leftCenter,
 
             rotationY,
 
             width:
-                finalWidth,
+                sideWidth,
 
             height:
-                wallHeight,
+                stripHeight,
 
             thickness:
                 wallThickness,
 
-            kind: "right"
+            kind:
+                "header"
 
         });
 
+
+        /*
+         * RIGHT SIDE
+         */
+
+        const rightCenter =
+            wall.start.position
+                .clone()
+                .add(
+                    direction
+                        .clone()
+                        .multiplyScalar(
+                            openingStart +
+                            openingWidth -
+                            sideWidth * 0.5
+                        )
+                );
+
+
+        rightCenter.y =
+            centerY;
+
+
+        pieces.push({
+
+            position:
+                rightCenter,
+
+            rotationY,
+
+            width:
+                sideWidth,
+
+            height:
+                stripHeight,
+
+            thickness:
+                wallThickness,
+
+            kind:
+                "header"
+
+        });
     }
 
 
-    return pieces;
+    /*
+     * WALL ABOVE ARCH
+     */
 
+    const topHeight =
+        wallHeight -
+        openingHeight;
+
+
+    if (
+        topHeight >
+        0.001
+    ) {
+
+        const center =
+            wall.start.position
+                .clone()
+                .add(
+                    direction
+                        .clone()
+                        .multiplyScalar(
+                            openingStart +
+                            openingWidth * 0.5
+                        )
+                );
+
+
+        center.y =
+            openingHeight +
+            topHeight * 0.5;
+
+
+        pieces.push({
+
+            position:
+                center,
+
+            rotationY,
+
+            width:
+                openingWidth,
+
+            height:
+                topHeight,
+
+            thickness:
+                wallThickness,
+
+            kind:
+                "header"
+
+        });
+    }
 }
