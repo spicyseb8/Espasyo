@@ -7,6 +7,9 @@ import type { Door } from "../../engine/doors/DoorTypes";
 import type { Furniture } from "../../engine/furniture/FurnitureTypes";
 import type { Window } from "../../engine/windows/WindowTypes";
 import type { Opening } from "../../engine/openings/OpeningTypes";
+import type {
+    BlueprintState
+} from "../../engine/blueprint/BlueprintTypes";
 
 export interface EditorState {
     activeTab: string;
@@ -35,4 +38,5 @@ export interface EditorState {
     archRise: number;
     openingWidth: number;
     openingHeight: number;
+    blueprint: BlueprintState | null;
 }

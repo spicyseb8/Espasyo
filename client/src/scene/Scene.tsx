@@ -19,7 +19,8 @@ import Windows from "./Windows/Windows";
 import FurnitureScene from "./Furniture/FurnitureScene";
 import FurniturePreview
     from "./Furniture/FurniturePreview";
-
+import BlueprintScene
+    from "./Blueprint/BlueprintScene";
 import FurnitureInteractionEvents
     from "./Furniture/FurnitureInteractionEvents";
 export default function Scene() {
@@ -36,6 +37,8 @@ export default function Scene() {
         <Lights />
 
         <Grid />
+
+        <BlueprintScene />
 
         <Camera />
 

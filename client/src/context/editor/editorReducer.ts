@@ -212,6 +212,144 @@ case "SET_OPENING_HEIGHT":
                 ...state,
                 buildTool: state.selectedAsset.type
             };
+            case "SET_BLUEPRINT":
+    return {
+        ...state,
+        blueprint: action.payload
+    };
+
+case "SET_BLUEPRINT":
+
+    return {
+        ...state,
+
+        blueprint:
+            action.payload
+    };
+
+
+case "REMOVE_BLUEPRINT":
+
+    return {
+        ...state,
+
+        blueprint:
+            null
+    };
+
+
+case "HIDE_BLUEPRINT":
+
+    if (!state.blueprint) {
+        return state;
+    }
+
+    return {
+        ...state,
+
+        blueprint: {
+            ...state.blueprint,
+
+            selected:
+                false
+        }
+    };
+
+
+case "SHOW_BLUEPRINT":
+
+    if (!state.blueprint) {
+        return state;
+    }
+
+    return {
+        ...state,
+
+        blueprint: {
+            ...state.blueprint,
+
+            selected:
+                true
+        }
+    };
+
+
+case "UPDATE_BLUEPRINT":
+
+    if (!state.blueprint) {
+        return state;
+    }
+
+    return {
+        ...state,
+
+        blueprint: {
+            ...state.blueprint,
+
+            ...action.payload
+        }
+    };
+
+
+case "SET_BLUEPRINT_LOCKED":
+
+    if (!state.blueprint) {
+        return state;
+    }
+
+    return {
+        ...state,
+
+        blueprint: {
+            ...state.blueprint,
+
+            locked:
+                action.payload
+        }
+    };
+
+
+case "SET_BLUEPRINT_OPACITY":
+
+    if (!state.blueprint) {
+        return state;
+    }
+
+    return {
+        ...state,
+
+        blueprint: {
+            ...state.blueprint,
+
+            opacity:
+                Math.max(
+                    0,
+                    Math.min(
+                        1,
+                        action.payload
+                    )
+                )
+        }
+    };
+
+
+case "SET_BLUEPRINT_SELECTED":
+
+    if (!state.blueprint) {
+        return state;
+    }
+
+    return {
+        ...state,
+
+        blueprint: {
+
+            ...state.blueprint,
+
+            selected:
+                action.payload
+        }
+    };
         default:
             return state;
     }

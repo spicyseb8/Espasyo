@@ -29,4 +29,5 @@ export const initialState: EditorState = {
     draftWallLength: null,
     showWallMeasurements: false,
     wallFinishes: {},
+    blueprint: null
 };

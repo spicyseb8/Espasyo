@@ -1,478 +1,1071 @@
+/* ==========================================================
+   PANEL
+   ========================================================== */
+
 .panel {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
+    width: 100%;
 
-    padding: 20px;
-
-    color: var(--ws-text);
+    box-sizing: border-box;
 }
 
-.panel-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-}
 
-.panel h2 {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--ws-text);
-}
-
-.locked-badge {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--ws-accent);
-    background: var(--ws-accent-soft);
-    border: 1px solid rgba(250, 129, 18, 0.25);
-    border-radius: 20px;
-    padding: 5px 10px;
-}
-
-/* ========================= */
-/* Grouped section card      */
-/* one bordered container    */
-/* holds its label + controls*/
-/* ========================= */
+/* ==========================================================
+   PANEL GROUP
+   ========================================================== */
 
 .panel-group {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
+    width: 100%;
+
+    box-sizing: border-box;
+
+    margin-bottom: 14px;
 
     padding: 14px;
 
-    background: var(--ws-surface);
-    border: 1px solid var(--ws-border);
+    background: #ffffff;
+
+    border:
+        1px solid #e6e6e6;
+
     border-radius: 14px;
-    box-shadow: var(--ws-shadow-sm);
 }
+
+
+/* Locked sections stay visually normal but their controls
+   are disabled by the JSX. */
+
+.panel-group-locked {
+    opacity: 0.85;
+}
+
+
+/* ==========================================================
+   SECTION TITLE
+   ========================================================== */
 
 .panel-group h3 {
-    margin: 0;
-    font-size: 11px;
+    margin:
+        0 0 12px;
+
+    font-size: 12px;
+
     font-weight: 700;
-    letter-spacing: 0.04em;
+
     text-transform: uppercase;
-    color: var(--ws-text-muted);
+
+    letter-spacing: 0.08em;
+
+    color: #707070;
 }
 
-/* ========================= */
-/* Measurement display        */
-/* small, single-row, sits    */
-/* flush inside panel-group   */
-/* ========================= */
 
-.measurement-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-}
-
-.measurement-caption {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--ws-text-muted);
-}
-
-.measurement-value {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--ws-text);
-}
-
-.live-dot {
-    width: 6px;
-    height: 6px;
-    flex-shrink: 0;
-    border-radius: 50%;
-    background: var(--ws-accent);
-    animation: pulse 1.4s ease-in-out infinite;
-}
-
-.measurement-empty {
-    font-size: 12px;
-    color: var(--ws-text-muted);
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .live-dot {
-        animation: none;
-    }
-}
-
-/* ========================= */
-/* Tool switcher              */
-/* sits flush inside the      */
-/* panel-group, no own border */
-/* ========================= */
+/* ==========================================================
+   TOOLS
+   ========================================================== */
 
 .tool-switcher {
-    display: flex;
-    gap: 6px;
+    width: 100%;
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(3, 1fr);
+
+    gap: 5px;
 }
 
 .tool-switch-button {
-    flex: 1;
+    min-height: 62px;
 
     display: flex;
+
     flex-direction: column;
+
     align-items: center;
+
     justify-content: center;
+
     gap: 6px;
 
-    height: 60px;
-    padding: 8px 4px;
+    border: 0;
 
-    border: none;
     border-radius: 10px;
 
-    background: var(--ws-input-bg);
-    color: var(--ws-text-muted);
+    background: #fafafa;
+
+    color: #5f5f5f;
 
     font-size: 11px;
-    font-weight: 600;
-    line-height: 1;
 
     cursor: pointer;
 
-    transition: background .16s ease, color .16s ease, transform .12s ease;
+    transition:
+        background 0.15s ease,
+        color 0.15s ease;
 }
 
-.tool-switch-button:hover:not(:disabled):not(.active) {
-    background: var(--ws-surface-hover);
-    color: var(--ws-text);
-}
-
-.tool-switch-button:active:not(:disabled) {
-    transform: scale(.96);
+.tool-switch-button:hover {
+    background:
+        #f3f3f3;
 }
 
 .tool-switch-button.active {
-    background: var(--ws-accent-soft);
-    color: var(--ws-accent);
-}
+    background:
+        #fff0e3;
 
-.tool-switch-button.active svg {
-    color: inherit;
+    color:
+        #ff8c32;
 }
 
 .tool-switch-button:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
+    opacity:
+        0.45;
+
+    cursor:
+        not-allowed;
 }
 
-.tool-button {
+
+/* ==========================================================
+   BLUEPRINT SECTION
+   ========================================================== */
+
+.blueprint-panel-group {
+    padding:
+        0;
+
+    overflow:
+        hidden;
+}
+
+.blueprint-section-header {
+    width:
+        100%;
+
+    min-height:
+        44px;
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        space-between;
+
+    padding:
+        0 14px;
+
+    border:
+        0;
+
+    background:
+        #ffffff;
+
+    color:
+        #222;
+
+    font-size:
+        13px;
+
+    font-weight:
+        600;
+
+    cursor:
+        pointer;
+}
+
+.blueprint-section-header:hover {
+    background:
+        #fafafa;
+}
+
+.blueprint-chevron {
+    transition:
+        transform 0.18s ease;
+}
+
+.blueprint-chevron.open {
+    transform:
+        rotate(180deg);
+}
+
+.blueprint-section-content {
+    padding:
+        0 14px 12px;
+}
+
+
+/* ==========================================================
+   UPLOAD
+   ========================================================== */
+
+.blueprint-upload-button {
+    width:
+        100%;
+
+    min-height:
+        38px;
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        center;
+
+    gap:
+        7px;
+
+    border:
+        1px dashed #d7d7d7;
+
+    border-radius:
+        9px;
+
+    background:
+        #fafafa;
+
+    color:
+        #555;
+
+    font-size:
+        11px;
+
+    font-weight:
+        600;
+
+    cursor:
+        pointer;
+
+    box-sizing:
+        border-box;
+}
+
+.blueprint-upload-button:hover {
+    background:
+        #f5f5f5;
+}
+
+
+/* ==========================================================
+   FILE ROW
+   ========================================================== */
+
+.blueprint-file {
+    width:
+        100%;
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    gap:
+        7px;
+
+    padding:
+        7px;
+
+    box-sizing:
+        border-box;
+
+    border:
+        1px solid #e7e7e7;
+
+    border-radius:
+        9px;
+
+    background:
+        #fafafa;
+
+    transition:
+        border-color 0.15s ease,
+        background 0.15s ease;
+}
+
+.blueprint-file.selected {
+    border-color:
+        #ff9a45;
+
+    background:
+        #fff8f2;
+}
+
+
+/* ==========================================================
+   FILE MAIN AREA
+   ========================================================== */
+
+.blueprint-file-main {
+    flex:
+        1;
+
+    min-width:
+        0;
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    gap:
+        8px;
+
+    padding:
+        0;
+
+    border:
+        0;
+
+    background:
+        transparent;
+
+    color:
+        inherit;
+
+    text-align:
+        left;
+
+    cursor:
+        pointer;
+}
+
+.blueprint-file-main:hover {
+    opacity:
+        0.85;
+}
+
+
+/* ==========================================================
+   THUMBNAIL
+   ========================================================== */
+
+.blueprint-file-thumbnail {
+    width:
+        44px;
+
+    height:
+        44px;
+
+    flex:
+        0 0 44px;
+
+    overflow:
+        hidden;
+
+    border-radius:
+        50%;
+
+    border:
+        1px solid #dedede;
+
+    background:
+        #f1f1f1;
+}
+
+.blueprint-file-thumbnail img {
+    display:
+        block;
+
+    width:
+        100%;
+
+    height:
+        100%;
+
+    object-fit:
+        cover;
+}
+
+
+/* ==========================================================
+   FILE INFO
+   ========================================================== */
+
+.blueprint-file-info {
+    min-width:
+        0;
+
+    display:
+        flex;
+
+    flex-direction:
+        column;
+
+    gap:
+        2px;
+}
+
+.blueprint-file-info strong {
+    overflow:
+        hidden;
+
+    white-space:
+        nowrap;
+
+    text-overflow:
+        ellipsis;
+
+    font-size:
+        11px;
+
+    font-weight:
+        600;
+}
+
+.blueprint-file-info span {
+    font-size:
+        9px;
+
+    color:
+        #888;
+}
+
+
+/* ==========================================================
+   REMOVE UPLOADED FILE ICON
+   ========================================================== */
+
+.blueprint-remove-icon {
+    width:
+        28px;
+
+    height:
+        28px;
+
+    flex:
+        0 0 28px;
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        center;
+
+    padding:
+        0;
+
+    border:
+        0;
+
+    border-radius:
+        7px;
+
+    background:
+        #f4f4f4;
+
+    color:
+        #b3261e;
+
+    cursor:
+        pointer;
+}
+
+.blueprint-remove-icon:hover {
+    background:
+        #eaeaea;
+}
+
+
+/* ==========================================================
+   SIZE CONTROL
+   ========================================================== */
+
+.blueprint-control {
+    margin-top:
+        10px;
+}
+
+.blueprint-control-row {
+    width:
+        100%;
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        space-between;
+
+    margin-bottom:
+        4px;
+
+    font-size:
+        10px;
+}
+
+.blueprint-control-row strong {
+    font-size:
+        10px;
+}
+
+
+/* ==========================================================
+   RANGE SLIDERS
+   ========================================================== */
+
+.blueprint-control input[type="range"],
+.blueprint-opacity-control input[type="range"] {
+
+    width:
+        80%;
+
+    height:
+        4px;
+
+    display:
+        block;
+
+    cursor:
+        pointer;
+}
+
+
+/* ==========================================================
+   OPACITY
+   ========================================================== */
+
+.blueprint-opacity-control {
+    margin-top:
+        10px;
+}
+
+.blueprint-opacity-header {
+    width:
+        100%;
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        space-between;
+
+    margin-bottom:
+        4px;
+
+    font-size:
+        10px;
+}
+
+.blueprint-opacity-right {
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    gap:
+        6px;
+}
+
+.blueprint-opacity-right strong {
+    font-size:
+        10px;
+}
+
+
+/* ==========================================================
+   LOCK BUTTON
+   ========================================================== */
+
+.blueprint-lock-toggle {
+    width:
+        25px;
+
+    height:
+        25px;
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        center;
+
+    padding:
+        0;
+
+    border:
+        1px solid #dddddd;
+
+    border-radius:
+        6px;
+
+    background:
+        #f5f5f5;
+
+    color:
+        #555;
+
+    cursor:
+        pointer;
+}
+
+.blueprint-lock-toggle:hover {
+    background:
+        #eeeeee;
+}
+
+.blueprint-lock-toggle.locked {
+    background:
+        #222;
+
+    border-color:
+        #222;
+
+    color:
+        #ffffff;
+}
+
+
+/* ==========================================================
+   SNAP TO GRID
+   ========================================================== */
+
+.blueprint-option {
     width: 100%;
 
-    padding: 12px 14px;
+    min-height: 36px;
 
-    border: 1.5px solid var(--ws-border);
+    margin-top: 11px;
 
-    border-radius: 12px;
-
-    background: var(--ws-surface);
-
-    color: var(--ws-text);
-
-    cursor: pointer;
-
-    text-align: left;
-
-    font-size: 13px;
-    font-weight: 500;
-
-    box-shadow: var(--ws-shadow-sm);
-
-    transition: background .18s ease, border-color .18s ease, color .18s ease, transform .12s ease;
-}
-
-.tool-button:hover {
-    background: var(--ws-surface-hover);
-    transform: translateY(-1px);
-}
-
-.tool-button.active {
-    background: var(--ws-accent-soft);
-    border-color: var(--ws-accent);
-    color: var(--ws-accent);
-}
-
-.wall-actions {
-    display: flex;
-    gap: 10px;
-}
-
-.wall-icon-button {
-    flex: 1;
-
-    height: 60px;
+    padding: 0 12px;
 
     display: flex;
-    flex-direction: column;
+
     align-items: center;
+
     justify-content: center;
-    gap: 5px;
 
-    border: 1.5px solid var(--ws-border);
-    border-radius: 12px;
+    border: 0;
 
-    background: var(--ws-surface);
-    color: var(--ws-text-muted);
+    border-radius: 8px;
+
+    background: #fff0e3;
+
+    color: #e97822;
 
     font-size: 11px;
+
     font-weight: 600;
 
     cursor: pointer;
-
-    box-shadow: var(--ws-shadow-sm);
-
-    transition: background .18s ease, border-color .18s ease, color .18s ease, transform .12s ease;
 }
 
-.wall-icon-button:hover:not(:disabled) {
-    background: var(--ws-surface-hover);
-    color: var(--ws-text);
-    transform: translateY(-1px);
+.blueprint-option:hover {
+    background: #ffead8;
 }
 
-.wall-icon-button:active:not(:disabled) {
-    transform: scale(.96);
+.blueprint-option:not(.active) {
+    background: #f3f3f3;
+
+    color: #555;
 }
 
-.wall-icon-button.active {
-    background: var(--ws-accent-soft);
-    border-color: var(--ws-accent);
-    color: var(--ws-accent);
-}
+.blueprint-option:disabled {
+    opacity: 0.5;
 
-.wall-icon-button:disabled {
-    opacity: 0.4;
     cursor: not-allowed;
 }
 
+
+/* ==========================================================
+   REMOVE FROM SCENE
+   ========================================================== */
+
+.blueprint-scene-button {
+    width: 100%;
+
+    min-height: 36px;
+
+    margin-top: 9px;
+
+    padding: 0 12px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    border: 1px solid #e5e5e5;
+
+    border-radius: 8px;
+
+    background: #ffffff;
+
+    color: #777;
+
+    font-size: 11px;
+
+    font-weight: 600;
+
+    cursor: pointer;
+}
+
+.blueprint-scene-button:hover {
+    background: #f7f7f7;
+
+    color: #555;
+}
+
+.blueprint-scene-button:disabled {
+    opacity: 0.45;
+
+    cursor: not-allowed;
+}
+
+
+/* ==========================================================
+   WALL SETTINGS
+   ========================================================== */
+
 .field-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
+    display:
+        grid;
+
+    grid-template-columns:
+        repeat(2, 1fr);
+
+    gap:
+        10px;
 }
 
 .field {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
+    min-width:
+        0;
 }
 
 .field label {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--ws-text-muted);
+    display:
+        block;
+
+    margin:
+        0 0 6px;
+
+    font-size:
+        11px;
+
+    color:
+        #707070;
 }
 
 .field-input {
-    position: relative;
-    display: flex;
-    align-items: center;
+    position:
+        relative;
+
+    display:
+        flex;
+
+    align-items:
+        center;
 }
 
-input {
-    width: 100%;
+.field-input input {
+    width:
+        100%;
 
-    padding: 10px 30px 10px 12px;
+    height:
+        38px;
 
-    border-radius: 10px;
+    padding:
+        0 32px 0 10px;
 
-    border: 1px solid var(--ws-border);
+    box-sizing:
+        border-box;
 
-    background: var(--ws-input-bg);
+    border:
+        1px solid #e1e1e1;
 
-    color: var(--ws-text);
+    border-radius:
+        9px;
 
-    font-size: 13px;
+    background:
+        #ffffff;
 
-    transition: border-color .15s ease, box-shadow .15s ease;
+    font-size:
+        12px;
+
+    outline:
+        none;
 }
 
-input:focus {
-    outline: none;
-    border-color: var(--ws-accent);
-    box-shadow: 0 0 0 3px var(--ws-accent-soft);
+.field-input input:focus {
+    border-color:
+        #ff9a45;
 }
 
-input:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+.field-input input:disabled {
+    background:
+        #f7f7f7;
+
+    color:
+        #888;
+
+    cursor:
+        not-allowed;
 }
 
 .field-unit {
-    position: absolute;
-    right: 12px;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--ws-text-muted);
-    pointer-events: none;
+    position:
+        absolute;
+
+    right:
+        10px;
+
+    color:
+        #888;
+
+    font-size:
+        11px;
+
+    pointer-events:
+        none;
 }
 
-/* ========================= */
-/* Toggle row / switch        */
-/* flush inside panel-group,  */
-/* separated by a hairline    */
-/* ========================= */
+
+/* ==========================================================
+   TOGGLE
+   ========================================================== */
 
 .toggle-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
+    display:
+        flex;
 
-    padding-top: 12px;
+    align-items:
+        center;
 
-    border-top: 1px solid var(--ws-border);
+    justify-content:
+        space-between;
+
+    margin-top:
+        14px;
+
+    padding-top:
+        13px;
+
+    border-top:
+        1px solid #ededed;
 }
 
 .toggle-row-label {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--ws-text);
+    font-size:
+        11px;
+
+    color:
+        #444;
 }
 
 .toggle-switch {
-    position: relative;
+    position:
+        relative;
 
-    flex-shrink: 0;
+    width:
+        38px;
 
-    width: 38px;
-    height: 22px;
+    height:
+        22px;
 
-    padding: 0;
-    border: none;
-    border-radius: 999px;
+    padding:
+        0;
 
-    background: var(--ws-border);
+    border:
+        0;
 
-    cursor: pointer;
+    border-radius:
+        999px;
 
-    transition: background .18s ease;
+    background:
+        #e7e7e7;
+
+    cursor:
+        pointer;
+
+    transition:
+        background 0.15s ease;
 }
 
 .toggle-switch::after {
-    content: "";
+    content:
+        "";
 
-    position: absolute;
-    top: 2px;
-    left: 2px;
+    position:
+        absolute;
 
-    width: 18px;
-    height: 18px;
+    top:
+        3px;
 
-    border-radius: 50%;
+    left:
+        3px;
 
-    background: #FFFFFF;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    width:
+        16px;
 
-    transition: transform .18s ease;
+    height:
+        16px;
+
+    border-radius:
+        50%;
+
+    background:
+        #ffffff;
+
+    transition:
+        transform 0.15s ease;
 }
 
 .toggle-switch.on {
-    background: var(--ws-accent);
+    background:
+        #ff9a45;
 }
 
 .toggle-switch.on::after {
-    transform: translateX(16px);
+    transform:
+        translateX(16px);
 }
 
 .toggle-switch:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
+    opacity:
+        0.45;
+
+    cursor:
+        not-allowed;
 }
 
-.checkbox {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+
+/* ==========================================================
+   MEASUREMENT
+   ========================================================== */
+
+.measurement-row {
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        space-between;
+
+    min-height:
+        32px;
 }
+
+.measurement-caption {
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    gap:
+        6px;
+
+    font-size:
+        11px;
+
+    color:
+        #777;
+}
+
+.measurement-value {
+    font-size:
+        12px;
+
+    font-weight:
+        600;
+
+    color:
+        #333;
+}
+
+.measurement-empty {
+    font-size:
+        11px;
+
+    color:
+        #888;
+
+    line-height:
+        1.5;
+}
+
+.live-dot {
+    width:
+        6px;
+
+    height:
+        6px;
+
+    border-radius:
+        50%;
+
+    background:
+        #ff9a45;
+}
+
+
+/* ==========================================================
+   CONFIRM LAYOUT
+   ========================================================== */
 
 .start-button {
-    position: relative;
+    width:
+        100%;
 
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
+    min-height:
+        44px;
 
-    padding: 14px;
+    margin-top:
+        2px;
 
-    border: none;
+    border:
+        0;
 
-    border-radius: 12px;
+    border-radius:
+        11px;
 
-    background: var(--ws-surface-active);
+    background:
+        #ff9a45;
 
-    color: var(--ws-accent-ink);
+    color:
+        #ffffff;
 
-    font-weight: 700;
-    font-size: 14px;
+    font-size:
+        13px;
 
-    cursor: pointer;
+    font-weight:
+        700;
 
-    box-shadow: var(--ws-shadow-accent);
+    cursor:
+        pointer;
 
-    transition: transform .12s ease, box-shadow .18s ease, background .18s ease;
+    box-shadow:
+        0 5px 14px rgba(
+            255,
+            154,
+            69,
+            0.18
+        );
 }
 
-.start-button:hover:not(:disabled) {
-    transform: translateY(-1px);
-}
-
-.start-button:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-    box-shadow: none;
-}
-
-.start-button.stop {
-    background: #FFFFFF;
-    border: 1.5px solid #E2542D;
-    color: #E2542D;
-    box-shadow: var(--ws-shadow-sm);
-}
-
-.pulse-dot {
-    position: absolute;
-    right: 14px;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #E2542D;
-    animation: pulse 1.4s ease-in-out infinite;
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: .35; transform: scale(1.35); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .pulse-dot {
-        animation: none;
-    }
-    .start-button,
-    .wall-icon-button,
-    .tool-button,
-    .tool-switch-button,
-    .toggle-switch,
-    .toggle-switch::after {
-        transition: none;
-    }
+.start-button:hover {
+    filter:
+        brightness(0.98);
 }

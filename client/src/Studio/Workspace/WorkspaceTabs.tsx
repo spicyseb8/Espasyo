@@ -5,24 +5,26 @@ import {
     Hammer,
     Sofa,
     Paintbrush,
-    Lightbulb,
-    FolderOpen,
-    Lock
+    FolderOpen
 } from "lucide-react";
 
 interface Props {
 
     activeTab: string;
+
     layoutConfirmed: boolean;
 
-    onTabChange: (tab: string) => void;
+    onTabChange: (
+        tab: string
+    ) => void;
 
 }
 
 export default function WorkspaceTabs({
 
     activeTab,
-    layoutConfirmed,
+
+   
 
     onTabChange
 
@@ -30,57 +32,131 @@ export default function WorkspaceTabs({
 
     const tabs = [
 
-        { id: "floorplan", label: "Floor Plan", icon: DraftingCompass },
-        { id: "build", label: "Build", icon: Hammer },
-        { id: "furniture", label: "Furniture", icon: Sofa },
-        { id: "design", label: "Design", icon: Paintbrush },
-        { id: "lighting", label: "Lighting", icon: Lightbulb },
-        { id: "project", label: "Project", icon: FolderOpen }
+        {
+            id:
+                "floorplan",
+
+            label:
+                "Floor Plan",
+
+            icon:
+                DraftingCompass
+        },
+
+        {
+            id:
+                "build",
+
+            label:
+                "Build",
+
+            icon:
+                Hammer
+        },
+
+        {
+            id:
+                "furniture",
+
+            label:
+                "Furniture",
+
+            icon:
+                Sofa
+        },
+
+        {
+            id:
+                "design",
+
+            label:
+                "Design",
+
+            icon:
+                Paintbrush
+        },
+
+        {
+            id:
+                "project",
+
+            label:
+                "Project",
+
+            icon:
+                FolderOpen
+        }
 
     ];
 
     return (
 
-        <div className="workspace-tabs">
+        <div
+            className="workspace-tabs"
+        >
 
-            {tabs.map((tab) => {
+            {
+                tabs.map(
+                    (
+                        tab
+                    ) => {
 
-                const Icon = tab.icon;
+                        const Icon =
+                            tab.icon;
 
-                const disabled =
-                    layoutConfirmed &&
-                    tab.id === "floorplan";
+                        return (
 
-                return (
+                            <button
 
-                    <button
+                                key={
+                                    tab.id
+                                }
 
-                        key={tab.id}
+                                type="button"
 
-                        disabled={disabled}
-                        aria-label={tab.label}
+                                aria-label={
+                                    tab.label
+                                }
 
-                        className={
-                            `${activeTab === tab.id ? "tab active" : "tab"} ${
-                                disabled ? "disabled" : ""
-                            }`
-                        }
+                                className={
+                                    activeTab ===
+                                    tab.id
+                                        ? "tab active"
+                                        : "tab"
+                                }
 
-                        onClick={() => onTabChange(tab.id)}
+                                onClick={() =>
+                                    onTabChange(
+                                        tab.id
+                                    )
+                                }
 
-                    >
+                            >
 
-                        <Icon size={20} />
-                        {disabled && <Lock size={10} className="tab-lock" />}
-                        <span className="tab-tooltip">{tab.label}</span>
+                                <Icon
+                                    size={20}
+                                />
 
-                    </button>
+                                <span
+                                    className=
+                                        "tab-tooltip"
+                                >
 
-                );
-            })}
+                                    {
+                                        tab.label
+                                    }
+
+                                </span>
+
+                            </button>
+
+                        );
+
+                    }
+                )
+            }
 
         </div>
 
     );
-
 }

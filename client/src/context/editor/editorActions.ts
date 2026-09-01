@@ -8,6 +8,7 @@ import type { Door } from "../../engine/doors/DoorTypes";
 import type { Furniture } from "../../engine/furniture/FurnitureTypes";
 import type { Window } from "../../engine/windows/WindowTypes";
 import type { Opening } from "../../engine/openings/OpeningTypes";
+import type { BlueprintState} from "../../engine/blueprint/BlueprintTypes";
 
 export type EditorAction =
     | {
@@ -112,6 +113,42 @@ export type EditorAction =
         | {
     type: "ADD_OPENING";
     payload: Opening;
+}
+| {
+    type: "SET_BLUEPRINT";
+    payload: BlueprintState;
+}
+
+| {
+    type: "REMOVE_BLUEPRINT";
+}
+
+| {
+    type: "HIDE_BLUEPRINT";
+}
+
+| {
+    type: "SHOW_BLUEPRINT";
+}
+
+| {
+    type: "UPDATE_BLUEPRINT";
+    payload: Partial<BlueprintState>;
+}
+
+| {
+    type: "SET_BLUEPRINT_LOCKED";
+    payload: boolean;
+}
+
+| {
+    type: "SET_BLUEPRINT_OPACITY";
+    payload: number;
+}
+
+| {
+    type: "SET_BLUEPRINT_SELECTED";
+    payload: boolean;
 }
 | {
     type: "SET_OPENING_WIDTH";
