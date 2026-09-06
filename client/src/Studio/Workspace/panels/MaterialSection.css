@@ -1,87 +1,179 @@
+/* ==========================================================
+   MATERIAL SECTION
+   ========================================================== */
+
 .material-section {
     width: 100%;
 
-    background: #ffffff;
+    background: var(--ws-surface);
 
-    border-bottom: 1px solid #e8e8e8;
+    border: 1px solid var(--ws-border);
+
+    border-radius: 12px;
+
+    overflow: hidden;
+
+    box-shadow: var(--ws-shadow-sm);
 }
+
+
+/* ==========================================================
+   HEADER
+   ========================================================== */
 
 .material-section-header {
     width: 100%;
 
+    min-height: 46px;
+
     display: flex;
+
     align-items: center;
+
     justify-content: space-between;
 
-    padding: 11px 14px;
+    padding: 0 14px;
 
     border: none;
 
-    background: #ffffff;
+    background: var(--ws-surface);
+
+    color: var(--ws-text);
 
     cursor: pointer;
 
     text-align: left;
+
+    transition:
+        background 0.15s ease;
 }
+
+.material-section-header:hover {
+    background:
+        var(--ws-surface-hover);
+}
+
+
+/* ==========================================================
+   TITLE
+   ========================================================== */
 
 .material-section-title {
     display: flex;
+
     align-items: center;
+
     gap: 7px;
 
     font-size: 13px;
+
     font-weight: 600;
 
-    color: #272727;
+    color: var(--ws-text);
 }
+
+
+/* ==========================================================
+   COUNT
+   ========================================================== */
 
 .material-section-count {
     min-width: 20px;
+
     height: 18px;
 
     padding: 0 6px;
 
     display: inline-flex;
+
     align-items: center;
+
     justify-content: center;
 
-    border-radius: 9px;
+    border-radius: 999px;
 
-    background: #fff0e4;
-    color: #ec8a36;
+    background: var(--ws-accent-soft);
+
+    color: var(--ws-accent);
 
     font-size: 10px;
+
     font-weight: 700;
 }
 
-.material-section-chevron {
-    transition: transform 0.2s ease;
 
-    color: #777777;
+/* ==========================================================
+   CHEVRON
+   ========================================================== */
+
+.material-section-chevron {
+    color:
+        var(--ws-text-muted);
+
+    transition:
+        transform 0.2s ease,
+        color 0.2s ease;
 }
 
 .material-section-chevron.open {
-    transform: rotate(180deg);
+    transform:
+        rotate(180deg);
+
+    color:
+        var(--ws-accent);
 }
 
+
+/* ==========================================================
+   DROPDOWN / COLLAPSE
+   ========================================================== */
+
+/*
+   Using max-height here instead of the previous
+   grid-template-rows approach.
+
+   This prevents the material cards from being clipped
+   into a very small strip.
+*/
+
 .material-section-collapse {
-    display: grid;
-    grid-template-rows: 0fr;
+    max-height: 0;
+
+    overflow: hidden;
+
+    opacity: 0;
 
     transition:
-        grid-template-rows 0.22s ease;
+        max-height 0.25s ease,
+        opacity 0.18s ease;
 }
 
 .material-section-collapse.open {
-    grid-template-rows: 1fr;
+    max-height: 1000px;
+
+    opacity: 1;
 }
+
+
+/* ==========================================================
+   INNER CONTENT
+   ========================================================== */
 
 .material-section-inner {
-    min-height: 0;
-    overflow: hidden;
+    width: 100%;
 
-    padding: 0 10px 10px;
+    box-sizing: border-box;
+
+    padding:
+        4px 10px 12px;
+
+    overflow: visible;
 }
+
+
+/* ==========================================================
+   MATERIAL GRID
+   ========================================================== */
 
 .material-grid {
     display: grid;
@@ -90,140 +182,220 @@
         repeat(3, minmax(0, 1fr));
 
     gap: 8px;
+
+    width: 100%;
 }
+
+
+/* ==========================================================
+   EMPTY
+   ========================================================== */
 
 .material-empty {
-    margin: 12px 4px;
+    margin:
+        10px 4px;
 
-    text-align: center;
+    text-align:
+        center;
 
-    font-size: 11px;
-    color: #999999;
+    font-size:
+        11px;
+
+    color:
+        var(--ws-text-muted);
 }
+
+
+/* ==========================================================
+   ACTIONS
+   ========================================================== */
 
 .material-actions {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
+    display:
+        flex;
 
-    flex-wrap: wrap;
+    align-items:
+        center;
 
-    gap: 6px;
+    justify-content:
+        flex-end;
 
-    margin-top: 10px;
+    flex-wrap:
+        wrap;
 
-    padding-top: 8px;
+    gap:
+        6px;
 
-    border-top: 1px solid #eeeeee;
+    margin-top:
+        10px;
+
+    padding-top:
+        9px;
+
+    border-top:
+        1px solid var(--ws-border);
 }
+
+
+/* ==========================================================
+   BUTTONS
+   ========================================================== */
 
 .material-apply-button,
 .material-apply-room-button,
 .material-apply-all-button {
+    min-height:
+        32px;
 
-    min-height: 32px;
+    padding:
+        7px 11px;
 
-    padding: 7px 11px;
+    border-radius:
+        9px;
 
-    border-radius: 8px;
+    font-size:
+        10px;
 
-    font-size: 10px;
-    font-weight: 600;
+    font-weight:
+        600;
 
-    cursor: pointer;
+    cursor:
+        pointer;
 
     transition:
         background 0.15s ease,
-        opacity 0.15s ease;
+        border-color 0.15s ease,
+        color 0.15s ease,
+        opacity 0.15s ease,
+        transform 0.1s ease;
+}
+
+.material-apply-button:hover:not(:disabled),
+.material-apply-room-button:hover:not(:disabled),
+.material-apply-all-button:hover:not(:disabled) {
+    transform:
+        translateY(-1px);
+}
+
+.material-apply-button:active:not(:disabled),
+.material-apply-room-button:active:not(:disabled),
+.material-apply-all-button:active:not(:disabled) {
+    transform:
+        translateY(0);
 }
 
 
-/* -----------------------------------------------
+/* ==========================================================
    APPLY
-   ----------------------------------------------- */
+   ========================================================== */
 
 .material-apply-button {
+    display:
+        inline-flex;
 
-    display: inline-flex;
+    align-items:
+        center;
 
-    align-items: center;
-    justify-content: center;
+    justify-content:
+        center;
 
-    gap: 5px;
+    gap:
+        5px;
 
-    border: none;
+    border:
+        1px solid var(--ws-accent);
 
     background:
-        #ff963f;
+        var(--ws-accent);
 
     color:
         #ffffff;
+
+    box-shadow:
+        var(--ws-shadow-accent);
 }
 
 .material-apply-button:hover:not(:disabled) {
-
     background:
         #f58a30;
 }
 
 
-/* -----------------------------------------------
+/* ==========================================================
    APPLY TO ROOM
-   ----------------------------------------------- */
+   ========================================================== */
 
 .material-apply-room-button {
-
     border:
-        1px solid #ff963f;
+        1px solid var(--ws-accent);
 
     background:
         #ffffff;
 
     color:
-        #ee882d;
+        var(--ws-accent);
 }
 
 .material-apply-room-button:hover:not(:disabled) {
-
     background:
-        #fff5eb;
+        var(--ws-accent-soft);
 }
 
 
-/* -----------------------------------------------
+/* ==========================================================
    APPLY TO ALL
-   ----------------------------------------------- */
+   ========================================================== */
 
 .material-apply-all-button {
-
     border:
-        1px solid #d8d8d8;
+        1px solid var(--ws-border);
 
     background:
         #ffffff;
 
     color:
-        #666666;
+        var(--ws-text-muted);
 }
 
 .material-apply-all-button:hover:not(:disabled) {
-
     background:
-        #f7f7f7;
+        var(--ws-surface-hover);
+
+    color:
+        var(--ws-text);
 }
 
 
-/* -----------------------------------------------
+/* ==========================================================
    DISABLED
-   ----------------------------------------------- */
+   ========================================================== */
 
 .material-apply-button:disabled,
 .material-apply-room-button:disabled,
 .material-apply-all-button:disabled {
-
     opacity:
         0.45;
 
     cursor:
         not-allowed;
+
+    transform:
+        none;
+}
+
+
+/* ==========================================================
+   REDUCED MOTION
+   ========================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .material-section-collapse,
+    .material-section-chevron,
+    .material-apply-button,
+    .material-apply-room-button,
+    .material-apply-all-button {
+        transition: none;
+    }
+
 }

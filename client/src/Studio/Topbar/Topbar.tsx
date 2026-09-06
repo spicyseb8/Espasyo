@@ -2,7 +2,8 @@ import "./Topbar.css";
 
 import {
     ChevronDown,
-    Receipt
+    Receipt,
+    PersonStanding
 } from "lucide-react";
 
 import {
@@ -27,37 +28,52 @@ import type {
     CostCategory
 } from "../../engine/cost/CostTypes";
 
+
 export default function Topbar() {
 
-    const { state } =
-        useEditor();
+    const {
+        state,
+        dispatch
+    } = useEditor();
 
-    const [open, setOpen] =
-        useState(false);
+
+    const [
+        open,
+        setOpen
+    ] = useState(false);
+
 
     const dropdownRef =
         useRef<HTMLDivElement>(null);
 
-    //--------------------------------------------------
-    // Project title
-    //--------------------------------------------------
 
-    const [projectName, setProjectName] =
-        useState<string>(() => {
+    //==================================================
+    // PROJECT TITLE
+    //==================================================
 
-            if (
-                typeof window ===
-                "undefined"
-            ) {
-                return "";
-            }
+    const [
+        projectName,
+        setProjectName
+    ] = useState<string>(() => {
 
-            return (
-                localStorage.getItem(
-                    "espasyo_project_name"
-                ) || ""
-            );
-        });
+        if (
+            typeof window ===
+            "undefined"
+        ) {
+
+            return "";
+
+        }
+
+
+        return (
+            localStorage.getItem(
+                "espasyo_project_name"
+            ) || ""
+        );
+
+    });
+
 
     useEffect(() => {
 
@@ -66,7 +82,10 @@ export default function Topbar() {
             projectName
         );
 
-    }, [projectName]);
+    }, [
+        projectName
+    ]);
+
 
     function handleProjectNameChange(
         event: ChangeEvent<HTMLInputElement>
@@ -75,11 +94,13 @@ export default function Topbar() {
         setProjectName(
             event.target.value
         );
+
     }
 
-    //--------------------------------------------------
-    // Calculate complete estimate
-    //--------------------------------------------------
+
+    //==================================================
+    // COST ESTIMATION
+    //==================================================
 
     const estimate =
         useMemo(
@@ -87,61 +108,79 @@ export default function Topbar() {
                 calculateCostEstimate(
                     state
                 ),
-            [state]
+            [
+                state
+            ]
         );
 
-    //--------------------------------------------------
-    // Format currency
-    //--------------------------------------------------
+
+    //==================================================
+    // FORMAT CURRENCY
+    //==================================================
 
     const formatCurrency =
-        (amount: number) => {
+        (
+            amount: number
+        ) => {
 
             return new Intl.NumberFormat(
                 "en-PH",
                 {
-                    style: "currency",
-                    currency: "PHP",
-                    minimumFractionDigits: 2
+                    style:
+                        "currency",
+
+                    currency:
+                        "PHP",
+
+                    minimumFractionDigits:
+                        2
                 }
-            ).format(amount);
+            ).format(
+                amount
+            );
+
         };
 
-    //--------------------------------------------------
-    // Category label
-    //--------------------------------------------------
+
+    //==================================================
+    // CATEGORY LABELS
+    //==================================================
 
     const categoryLabels:
-        Record<CostCategory, string> = {
+        Record<
+            CostCategory,
+            string
+        > = {
 
-        furniture:
-            "Furniture",
+            furniture:
+                "Furniture",
 
-        flooring:
-            "Flooring",
+            flooring:
+                "Flooring",
 
-        wallFinish:
-            "Wall Finish",
+            wallFinish:
+                "Wall Finish",
 
-        doors:
-            "Doors",
+            doors:
+                "Doors",
 
-        windows:
-            "Windows"
-    };
+            windows:
+                "Windows"
 
-    //--------------------------------------------------
-    // Count placed furniture
-    //
-    // Only used for the summary text.
-    //--------------------------------------------------
+        };
+
+
+    //==================================================
+    // FURNITURE COUNT
+    //==================================================
 
     const furnitureCount =
         state.furniture.length;
 
-    //--------------------------------------------------
-    // Close dropdown when clicking outside
-    //--------------------------------------------------
+
+    //==================================================
+    // CLOSE DROPDOWN WHEN CLICKING OUTSIDE
+    //==================================================
 
     useEffect(() => {
 
@@ -157,13 +196,17 @@ export default function Topbar() {
             ) {
 
                 setOpen(false);
+
             }
+
         }
+
 
         document.addEventListener(
             "mousedown",
             handleOutsideClick
         );
+
 
         return () => {
 
@@ -171,13 +214,15 @@ export default function Topbar() {
                 "mousedown",
                 handleOutsideClick
             );
+
         };
 
     }, []);
 
-    //--------------------------------------------------
-    // Group cost items by category
-    //--------------------------------------------------
+
+    //==================================================
+    // GROUP COST ITEMS BY CATEGORY
+    //==================================================
 
     const groupedItems =
         useMemo(() => {
@@ -188,12 +233,18 @@ export default function Topbar() {
                     typeof estimate.items
                 > = {
 
-                furniture: [],
-                flooring: [],
-                wallFinish: [],
-                doors: [],
-                windows: []
-            };
+                    furniture: [],
+
+                    flooring: [],
+
+                    wallFinish: [],
+
+                    doors: [],
+
+                    windows: []
+
+                };
+
 
             for (
                 const item of
@@ -202,310 +253,501 @@ export default function Topbar() {
 
                 groups[
                     item.category
-                ].push(item);
+                ].push(
+                    item
+                );
+
             }
+
 
             return groups;
 
-        }, [estimate.items]);
+        }, [
+            estimate.items
+        ]);
 
-    //--------------------------------------------------
-    // Render
-    //--------------------------------------------------
+
+    //==================================================
+    // WALKTHROUGH
+    //==================================================
+
+    function handleWalkthrough() {
+
+        if (
+            !state.walkthroughMode &&
+            state.walls.length < 4
+        ) {
+
+            alert(
+                "Create a room first before entering Walkthrough."
+            );
+
+            return;
+
+        }
+
+
+        dispatch({
+            type:
+                "TOGGLE_WALKTHROUGH"
+        });
+
+    }
+
+
+    //==================================================
+    // RENDER
+    //==================================================
 
     return (
 
-        <header className="topbar">
+       <header className="topbar">
 
-            {/* -------------------------------------- */}
-            {/* Brand                                  */}
-            {/* -------------------------------------- */}
+    {/* LEFT */}
+    <div className="topbar-left">
+        <div className="topbar-brand">
+            ESPASYO
+        </div>
+    </div>
 
-            <div className="topbar-brand">
-                ESPASYO
-            </div>
 
-            {/* -------------------------------------- */}
-            {/* Project title                          */}
-            {/* -------------------------------------- */}
+    {/* CENTER */}
+    <div className="topbar-center">
 
-            <input
-                type="text"
-                className="project-title-input"
-                placeholder="Type your project name or whatever"
-                value={projectName}
-                onChange={
-                    handleProjectNameChange
-                }
-                aria-label="Project name"
-            />
+        <input
+            type="text"
+            className="project-title-input"
+            placeholder="Project name"
+            value={projectName}
+            onChange={
+                handleProjectNameChange
+            }
+            aria-label="Project name"
+        />
 
-            {/* -------------------------------------- */}
-            {/* Cost estimation                        */}
-            {/* -------------------------------------- */}
+    </div>
+
+
+            {/*==================================================
+                RIGHT ACTIONS
+            ==================================================*/}
 
             <div
-                className="cost-estimator"
-                ref={dropdownRef}
+                className="topbar-actions"
             >
 
+                {/*----------------------------------------------
+                    WALKTHROUGH
+                ----------------------------------------------*/}
+
                 <button
+
                     type="button"
-                    className="cost-estimator-button"
-                    onClick={() =>
-                        setOpen(
-                            value =>
-                                !value
-                        )
+
+                    className={
+                        state.walkthroughMode
+                            ? "walkthrough-button active"
+                            : "walkthrough-button"
                     }
-                    aria-expanded={open}
+
+                    onClick={
+                        handleWalkthrough
+                    }
+
+                    aria-pressed={
+                        state.walkthroughMode
+                    }
+
                 >
 
-                    <Receipt size={17} />
+                    <PersonStanding
+                        size={16}
+                    />
 
                     <span>
-                        Cost Estimation
-                    </span>
 
-                    <ChevronDown
-                        size={16}
-                        className={
-                            open
-                                ? "cost-chevron open"
-                                : "cost-chevron"
+                        {
+                            state.walkthroughMode
+                                ? "Exit Walkthrough"
+                                : "Walkthrough"
                         }
-                    />
+
+                    </span>
 
                 </button>
 
-                {open && (
 
-                    <div
-                        className="cost-estimator-dropdown"
+                {/*----------------------------------------------
+                    COST ESTIMATOR
+                ----------------------------------------------*/}
+
+                <div
+
+                    className=
+                        "cost-estimator"
+
+                    ref={
+                        dropdownRef
+                    }
+
+                >
+
+                    <button
+
+                        type="button"
+
+                        className=
+                            "cost-estimator-button"
+
+                        onClick={() =>
+                            setOpen(
+                                value =>
+                                    !value
+                            )
+                        }
+
+                        aria-expanded={
+                            open
+                        }
+
                     >
 
-                        {/* ---------------------------------- */}
-                        {/* Header                             */}
-                        {/* ---------------------------------- */}
+                        <Receipt
+                            size={17}
+                        />
 
-                        <div
-                            className="cost-estimator-header"
-                        >
+                        <span>
+                            Cost Estimation
+                        </span>
 
-                            <div>
+                        <ChevronDown
 
-                                <strong>
-                                    Cost Estimation
-                                </strong>
+                            size={16}
 
-                                <span>
-                                    {furnitureCount} furniture
-                                    {furnitureCount !== 1
-                                        ? " items"
-                                        : " item"}
-                                    {" · "}
-                                    {estimate.items.length}
-                                    {" "}
-                                    cost item
-                                    {estimate.items.length !== 1
-                                        ? "s"
-                                        : ""}
-                                </span>
+                            className={
+                                open
+                                    ? "cost-chevron open"
+                                    : "cost-chevron"
+                            }
 
-                            </div>
+                        />
 
-                        </div>
+                    </button>
 
-                        {/* ---------------------------------- */}
-                        {/* Items                              */}
-                        {/* ---------------------------------- */}
 
-                        <div
-                            className="cost-estimator-list"
-                        >
+                    {/*==========================================
+                        COST DROPDOWN
+                    ==========================================*/}
 
-                            {estimate.items.length === 0 ? (
+                    {
+                        open && (
+
+                            <div
+                                className=
+                                    "cost-estimator-dropdown"
+                            >
+
+                                {/*----------------------------------
+                                    HEADER
+                                ----------------------------------*/}
 
                                 <div
-                                    className="cost-empty"
+                                    className=
+                                        "cost-estimator-header"
                                 >
-                                    No cost items yet.
+
+                                    <div>
+
+                                        <strong>
+                                            Cost Estimation
+                                        </strong>
+
+                                        <span>
+
+                                            {
+                                                furnitureCount
+                                            }
+
+                                            {" "}
+
+                                            furniture
+
+                                            {
+                                                furnitureCount !== 1
+                                                    ? " items"
+                                                    : " item"
+                                            }
+
+                                            {" · "}
+
+                                            {
+                                                estimate.items.length
+                                            }
+
+                                            {" "}
+
+                                            cost item
+
+                                            {
+                                                estimate.items.length !== 1
+                                                    ? "s"
+                                                    : ""
+                                            }
+
+                                        </span>
+
+                                    </div>
+
                                 </div>
 
-                            ) : (
 
-                                (
-                                    Object.keys(
-                                        groupedItems
-                                    ) as CostCategory[]
-                                ).map(
-                                    category => {
+                                {/*----------------------------------
+                                    ITEMS
+                                ----------------------------------*/}
 
-                                        const items =
-                                            groupedItems[
-                                                category
-                                            ];
+                                <div
+                                    className=
+                                        "cost-estimator-list"
+                                >
 
-                                        if (
-                                            items.length === 0
-                                        ) {
-                                            return null;
-                                        }
-
-                                        const categoryTotal =
-                                            items.reduce(
-                                                (
-                                                    sum,
-                                                    item
-                                                ) =>
-                                                    sum +
-                                                    item.subtotal,
-                                                0
-                                            );
-
-                                        return (
-
-                                            <div
-                                                key={
-                                                    category
-                                                }
-                                                className="cost-category"
-                                            >
-
-                                                {/* Category heading */}
+                                    {
+                                        estimate.items.length === 0
+                                            ? (
 
                                                 <div
-                                                    className="cost-category-header"
+                                                    className=
+                                                        "cost-empty"
                                                 >
-
-                                                    <span>
-                                                        {
-                                                            categoryLabels[
-                                                                category
-                                                            ]
-                                                        }
-                                                    </span>
-
-                                                    <strong>
-                                                        {
-                                                            formatCurrency(
-                                                                categoryTotal
-                                                            )
-                                                        }
-                                                    </strong>
-
+                                                    No cost items yet.
                                                 </div>
 
-                                                {/* Category items */}
+                                            )
+                                            : (
 
-                                                {
-                                                    items.map(
-                                                        (
-                                                            item,
-                                                            index
-                                                        ) => (
+                                                (
+                                                    Object.keys(
+                                                        groupedItems
+                                                    ) as CostCategory[]
+                                                ).map(
+                                                    category => {
+
+                                                        const items =
+                                                            groupedItems[
+                                                                category
+                                                            ];
+
+
+                                                        if (
+                                                            items.length ===
+                                                            0
+                                                        ) {
+
+                                                            return null;
+
+                                                        }
+
+
+                                                        const categoryTotal =
+                                                            items.reduce(
+                                                                (
+                                                                    sum,
+                                                                    item
+                                                                ) =>
+                                                                    sum +
+                                                                    item.subtotal,
+                                                                0
+                                                            );
+
+
+                                                        return (
 
                                                             <div
+
                                                                 key={
-                                                                    `${item.name}-${index}`
+                                                                    category
                                                                 }
-                                                                className="cost-item"
+
+                                                                className=
+                                                                    "cost-category"
+
                                                             >
 
+                                                                {/*----------------------------------
+                                                                    CATEGORY HEADER
+                                                                ----------------------------------*/}
+
                                                                 <div
-                                                                    className="cost-item-info"
+                                                                    className=
+                                                                        "cost-category-header"
                                                                 >
 
-                                                                    <span
-                                                                        className="cost-item-name"
-                                                                    >
+                                                                    <span>
+
                                                                         {
-                                                                            item.name
+                                                                            categoryLabels[
+                                                                                category
+                                                                            ]
                                                                         }
+
                                                                     </span>
 
-                                                                    <span
-                                                                        className="cost-item-quantity"
-                                                                    >
-                                                                        {
-                                                                            item.quantity.toFixed(
-                                                                                item.unit ===
-                                                                                    "m²"
-                                                                                    ? 2
-                                                                                    : 0
-                                                                            )
-                                                                        }{" "}
-                                                                        {
-                                                                            item.unit
-                                                                        }
-
-                                                                        {" × "}
+                                                                    <strong>
 
                                                                         {
                                                                             formatCurrency(
-                                                                                item.rate
+                                                                                categoryTotal
                                                                             )
                                                                         }
 
-                                                                        /{
-                                                                            item.unit
-                                                                        }
-                                                                    </span>
+                                                                    </strong>
 
                                                                 </div>
 
-                                                                <span
-                                                                    className="cost-item-total"
-                                                                >
-                                                                    {
-                                                                        formatCurrency(
-                                                                            item.subtotal
+
+                                                                {/*----------------------------------
+                                                                    ITEMS
+                                                                ----------------------------------*/}
+
+                                                                {
+                                                                    items.map(
+                                                                        (
+                                                                            item,
+                                                                            index
+                                                                        ) => (
+
+                                                                            <div
+
+                                                                                key={
+                                                                                    `${item.name}-${index}`
+                                                                                }
+
+                                                                                className=
+                                                                                    "cost-item"
+
+                                                                            >
+
+                                                                                <div
+                                                                                    className=
+                                                                                        "cost-item-info"
+                                                                                >
+
+                                                                                    <span
+                                                                                        className=
+                                                                                            "cost-item-name"
+                                                                                    >
+
+                                                                                        {
+                                                                                            item.name
+                                                                                        }
+
+                                                                                    </span>
+
+
+                                                                                    <span
+                                                                                        className=
+                                                                                            "cost-item-quantity"
+                                                                                    >
+
+                                                                                        {
+                                                                                            item.quantity.toFixed(
+                                                                                                item.unit ===
+                                                                                                    "m²"
+                                                                                                    ? 2
+                                                                                                    : 0
+                                                                                            )
+                                                                                        }
+
+                                                                                        {" "}
+
+                                                                                        {
+                                                                                            item.unit
+                                                                                        }
+
+                                                                                        {" × "}
+
+                                                                                        {
+                                                                                            formatCurrency(
+                                                                                                item.rate
+                                                                                            )
+                                                                                        }
+
+                                                                                        /{
+                                                                                            item.unit
+                                                                                        }
+
+                                                                                    </span>
+
+                                                                                </div>
+
+
+                                                                                <span
+                                                                                    className=
+                                                                                        "cost-item-total"
+                                                                                >
+
+                                                                                    {
+                                                                                        formatCurrency(
+                                                                                            item.subtotal
+                                                                                        )
+                                                                                    }
+
+                                                                                </span>
+
+                                                                            </div>
+
                                                                         )
-                                                                    }
-                                                                </span>
+                                                                    )
+                                                                }
 
                                                             </div>
 
-                                                        )
-                                                    )
-                                                }
+                                                        );
 
-                                            </div>
-                                        );
+                                                    }
+                                                )
+
+                                            )
                                     }
-                                )
-                            )}
 
-                        </div>
+                                </div>
 
-                        {/* ---------------------------------- */}
-                        {/* Total                             */}
-                        {/* ---------------------------------- */}
 
-                        <div
-                            className="cost-estimator-total"
-                        >
+                                {/*----------------------------------
+                                    TOTAL
+                                ----------------------------------*/}
 
-                            <span>
-                                Estimated Total
-                            </span>
+                                <div
+                                    className=
+                                        "cost-estimator-total"
+                                >
 
-                            <strong>
-                                {
-                                    formatCurrency(
-                                        estimate.total
-                                    )
-                                }
-                            </strong>
+                                    <span>
+                                        Estimated Total
+                                    </span>
 
-                        </div>
+                                    <strong>
 
-                    </div>
+                                        {
+                                            formatCurrency(
+                                                estimate.total
+                                            )
+                                        }
 
-                )}
+                                    </strong>
+
+                                </div>
+
+                            </div>
+
+                        )
+                    }
+
+                </div>
 
             </div>
 
         </header>
+
     );
+
 }

@@ -1,96 +1,306 @@
+/* ==========================================================
+   ASSET CARD
+   ========================================================== */
+
 .asset-card {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    border: 1.5px solid var(--ws-border);
-    background: var(--ws-surface);
-    border-radius: 14px;
-    padding: 10px 10px 12px;
-    cursor: pointer;
-    box-shadow: var(--ws-shadow-sm);
-    transition: background .15s ease, border-color .15s ease, transform .15s ease, box-shadow .15s ease;
+    position:
+        relative;
+
+    width:
+        100%;
+
+    min-width:
+        0;
+
+    display:
+        flex;
+
+    flex-direction:
+        column;
+
+    align-items:
+        center;
+
+    gap:
+        7px;
+
+    padding:
+        8px;
+
+    box-sizing:
+        border-box;
+
+    border:
+        1px solid var(--ws-border);
+
+    border-radius:
+        11px;
+
+    background:
+        var(--ws-surface);
+
+    color:
+        var(--ws-text);
+
+    cursor:
+        pointer;
+
+    box-shadow:
+        var(--ws-shadow-sm);
+
+    transition:
+        background .15s ease,
+        border-color .15s ease,
+        transform .15s ease,
+        box-shadow .15s ease;
 }
 
 .asset-card:hover {
-    background: var(--ws-surface-hover);
-    transform: translateY(-2px);
-    box-shadow: var(--ws-shadow-md);
+    background:
+        var(--ws-surface-hover);
+
+    border-color:
+        #d5d5d5;
+
+    transform:
+        translateY(-1px);
+
+    box-shadow:
+        var(--ws-shadow-md);
 }
 
 .asset-card:active {
-    transform: translateY(0);
+    transform:
+        translateY(0);
 }
 
 .asset-card:focus-visible {
-    outline: 2px solid var(--ws-accent);
-    outline-offset: 2px;
+    outline:
+        2px solid var(--ws-accent);
+
+    outline-offset:
+        2px;
 }
 
+
+/* ==========================================================
+   SELECTED
+   ========================================================== */
+
+.asset-card.selected {
+    background:
+        var(--ws-accent-soft);
+
+    border-color:
+        var(--ws-accent);
+
+    box-shadow:
+        0 0 0 1px
+        var(--ws-accent);
+}
+
+
+/* ==========================================================
+   THUMBNAIL
+   ========================================================== */
+
 .asset-thumb {
-    position: relative;
-    width: 100%;
-    border-radius: 10px;
-    transition: background .15s ease;
+    position:
+        relative;
+
+    width:
+        100%;
+
+    aspect-ratio:
+        1 / 1;
+
+    overflow:
+        hidden;
+
+    border-radius:
+        9px;
+
+    background:
+        #f7f7f7;
 }
 
 .asset-card img {
-    width: 100%;
-    aspect-ratio: 1;
-    object-fit: contain;
-    display: block;
+    display:
+        block;
+
+    width:
+        100%;
+
+    height:
+        100%;
+
+    object-fit:
+        contain;
 }
 
-.asset-card span {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--ws-text-muted);
-    text-align: center;
-    line-height: 1.3;
-    transition: color .15s ease;
+
+/* ==========================================================
+   TEXT AREA
+   ========================================================== */
+
+.asset-card > div:last-child {
+    width:
+        100%;
+
+    min-width:
+        0;
+
+    display:
+        flex;
+
+    flex-direction:
+        column;
+
+    align-items:
+        center;
+
+    gap:
+        2px;
 }
 
-.asset-card.selected {
-    background: var(--ws-accent-soft);
-    border-color: var(--ws-accent);
+.asset-card > div:last-child span {
+    width:
+        100%;
+
+    overflow:
+        hidden;
+
+    white-space:
+        nowrap;
+
+    text-overflow:
+        ellipsis;
+
+    font-size:
+        11px;
+
+    font-weight:
+        600;
+
+    color:
+        var(--ws-text-muted);
+
+    text-align:
+        center;
 }
 
-.asset-card.selected span {
-    color: var(--ws-accent);
+.asset-card.selected > div:last-child span {
+    color:
+        var(--ws-accent);
 }
+
+.asset-card > div:last-child small {
+    font-size:
+        10px;
+
+    font-weight:
+        600;
+
+    color:
+        #4f8765;
+}
+
+
+/* ==========================================================
+   SELECTED BADGE
+   ========================================================== */
 
 .selected-badge {
-    position: absolute;
-    top: -6px;
-    right: -6px;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: #FFFFFF;
-    color: var(--ws-accent);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 6px rgba(28, 28, 30, 0.25);
-    transform: scale(0);
-    animation: badge-pop .25s cubic-bezier(.34, 1.56, .64, 1) forwards;
+    position:
+        absolute;
+
+    top:
+        5px;
+
+    right:
+        5px;
+
+    width:
+        20px;
+
+    height:
+        20px;
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        center;
+
+    border-radius:
+        50%;
+
+    background:
+        #ffffff;
+
+    color:
+        var(--ws-accent);
+
+    box-shadow:
+        0 2px 6px
+        rgba(
+            28,
+            28,
+            30,
+            0.18
+        );
+
+    animation:
+        badge-pop .2s
+        cubic-bezier(
+            .34,
+            1.56,
+            .64,
+            1
+        );
 }
 
 @keyframes badge-pop {
-    to {
-        transform: scale(1);
+
+    from {
+        transform:
+            scale(.65);
+
+        opacity:
+            0;
     }
+
+    to {
+        transform:
+            scale(1);
+
+        opacity:
+            1;
+    }
+
 }
 
+
+/* ==========================================================
+   REDUCED MOTION
+   ========================================================== */
+
 @media (prefers-reduced-motion: reduce) {
+
     .asset-card {
-        transition: none;
-        transform: none !important;
+        transition:
+            none;
+
+        transform:
+            none !important;
     }
 
     .selected-badge {
-        animation: none;
-        transform: scale(1);
+        animation:
+            none;
     }
+
 }

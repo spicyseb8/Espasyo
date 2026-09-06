@@ -1,3 +1,11 @@
+/* ==================================================
+   TOPBAR
+   ================================================== */
+
+/* ==================================================
+   TOPBAR
+   ================================================== */
+
 .topbar {
     position: relative;
 
@@ -6,64 +14,199 @@
 
     display: flex;
     align-items: center;
-    justify-content: space-between;
 
-    padding: 0 22px;
+    padding: 0 20px;
 
     background: #ffffff;
 
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid #e9eaec;
 
     box-sizing: border-box;
 
     z-index: 1000;
 }
 
-.topbar-brand {
-    font-size: 18px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
+
+/* ==================================================
+   LEFT
+   ================================================== */
+
+.topbar-left {
+    display: flex;
+    align-items: center;
+
+    width: 220px;
+
+    flex-shrink: 0;
 }
 
+
+/* ==================================================
+   BRAND
+   ================================================== */
+
+.topbar-brand {
+    font-size: 17px;
+    font-weight: 800;
+
+    letter-spacing: 0.12em;
+
+    color: #202124;
+
+    user-select: none;
+}
+
+
+/* ==================================================
+   CENTER
+   ================================================== */
+
+.topbar-center {
+    position: absolute;
+
+    left: 50%;
+
+    transform: translateX(-50%);
+
+    display: flex;
+    align-items: center;
+
+    justify-content: center;
+
+    width: 340px;
+}
+
+
+/* ==================================================
+   PROJECT NAME
+   ================================================== */
+
 .project-title-input {
-    flex: 1;
+    width: 340px;
 
-    max-width: 320px;
-
-    margin: 0 22px;
-
-    padding: 7px 10px;
+    padding: 9px 12px;
 
     border: 1px solid transparent;
-    border-radius: 8px;
+
+    border-radius: 9px;
 
     background: transparent;
 
-    font-size: 14px;
+    box-sizing: border-box;
+
+    font-size: 13px;
     font-weight: 500;
-    color: #1f2328;
+
+    color: #252525;
+
+    text-align: center;
 
     outline: none;
 
     transition:
         background 0.15s ease,
-        border-color 0.15s ease;
+        border-color 0.15s ease,
+        box-shadow 0.15s ease;
 }
 
 .project-title-input::placeholder {
-    color: #9a9ea3;
+    color: #a3a5a8;
+
     font-weight: 400;
 }
 
 .project-title-input:hover {
-    background: #f7f7f7;
-    border-color: #e5e7eb;
+    background: #f8f8f9;
+
+    border-color: #e7e8ea;
 }
 
 .project-title-input:focus {
     background: #ffffff;
-    border-color: #dcdfe4;
+
+    border-color: #d9dadd;
+
+    box-shadow:
+        0 0 0 3px rgba(0, 0, 0, 0.04);
 }
+
+
+/* ==================================================
+   RIGHT ACTIONS
+   ================================================== */
+
+.topbar-actions {
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    margin-left: auto;
+}
+
+
+/* ==================================================
+   WALKTHROUGH BUTTON
+   ================================================== */
+
+.walkthrough-button {
+    height: 38px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 7px;
+
+    padding: 0 13px;
+
+    border: 1px solid #e1e2e4;
+
+    border-radius: 9px;
+
+    background: #ffffff;
+
+    color: #303236;
+
+    font-size: 12px;
+    font-weight: 600;
+
+    white-space: nowrap;
+
+    cursor: pointer;
+
+    box-sizing: border-box;
+
+    transition:
+        background 0.15s ease,
+        border-color 0.15s ease,
+        color 0.15s ease,
+        box-shadow 0.15s ease,
+        transform 0.1s ease;
+}
+
+.walkthrough-button:hover {
+    background: #f8f9fa;
+
+    border-color: #d6d8db;
+}
+
+.walkthrough-button:active {
+    transform: translateY(1px);
+}
+
+.walkthrough-button.active {
+    background: #f1f7f3;
+
+    border-color: #b8d9c2;
+
+    color: #397252;
+
+    box-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
 
 /* ==================================================
    COST ESTIMATOR
@@ -73,38 +216,74 @@
     position: relative;
 }
 
+
+/* --------------------------------------------------
+   BUTTON
+   -------------------------------------------------- */
+
 .cost-estimator-button {
-    display: flex;
+    height: 38px;
+
+    display: inline-flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
 
-    height: 40px;
-    padding: 0 14px;
+    gap: 7px;
 
-    border: 1px solid #dedede;
-    border-radius: 10px;
+    padding: 0 13px;
+
+    border: 1px solid #e1e2e4;
+
+    border-radius: 9px;
 
     background: #ffffff;
-    color: #202020;
 
-    font-size: 13px;
+    color: #303236;
+
+    font-size: 12px;
     font-weight: 600;
+
+    white-space: nowrap;
 
     cursor: pointer;
 
+    box-sizing: border-box;
+
     transition:
-        border-color 0.15s ease,
         background 0.15s ease,
+        border-color 0.15s ease,
         box-shadow 0.15s ease;
 }
 
 .cost-estimator-button:hover {
-    border-color: #ff963f;
-    background: #fffaf5;
+    background: #fafafa;
+
+    border-color: #d5d7da;
+
+    box-shadow:
+        0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
+.cost-estimator-button:focus-visible,
+.walkthrough-button:focus-visible {
+    outline: none;
+
+    box-shadow:
+        0 0 0 3px rgba(0, 0, 0, 0.06);
+}
+
+
+/* ==================================================
+   COST CHEVRON
+   ================================================== */
+
 .cost-chevron {
-    transition: transform 0.2s ease;
+    flex-shrink: 0;
+
+    color: #85878b;
+
+    transition:
+        transform 0.2s ease;
 }
 
 .cost-chevron.open {
@@ -113,16 +292,18 @@
 
 
 /* ==================================================
-   DROPDOWN
+   COST DROPDOWN
    ================================================== */
 
 .cost-estimator-dropdown {
     position: absolute;
 
-    top: calc(100% + 9px);
+    top: calc(100% + 10px);
+
     right: 0;
 
     width: 350px;
+
     max-height: 520px;
 
     display: flex;
@@ -130,70 +311,70 @@
 
     background: #ffffff;
 
-    border: 1px solid #e7e7e7;
+    border: 1px solid #e7e8ea;
+
     border-radius: 14px;
 
     box-shadow:
-        0 12px 35px rgba(0, 0, 0, 0.12),
-        0 3px 10px rgba(0, 0, 0, 0.05);
+        0 18px 45px rgba(0, 0, 0, 0.10),
+        0 4px 12px rgba(0, 0, 0, 0.04);
 
     overflow: hidden;
 
-    z-index: 1000;
+    z-index: 1001;
 }
 
 
 /* ==================================================
-   HEADER
+   COST HEADER
    ================================================== */
 
 .cost-estimator-header {
     padding: 16px 18px 14px;
 
-    border-bottom: 1px solid #eeeeee;
+    background: #ffffff;
 
-    background:
-        linear-gradient(
-            180deg,
-            #ffffff 0%,
-            #fffaf6 100%
-        );
+    border-bottom: 1px solid #eeeeef;
 }
 
 .cost-estimator-header > div {
     display: flex;
     flex-direction: column;
+
     gap: 3px;
 }
 
 .cost-estimator-header strong {
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 700;
 
-    color: #222222;
+    color: #232427;
 }
 
 .cost-estimator-header span {
     font-size: 11px;
-    color: #8b8b8b;
+
+    color: #929498;
 }
 
 
 /* ==================================================
-   LIST
+   COST LIST
    ================================================== */
 
 .cost-estimator-list {
     flex: 1;
 
-    padding: 6px 10px;
+    padding: 7px 10px;
 
     overflow-y: auto;
+
+    scrollbar-width: thin;
 }
 
 
 /* ==================================================
-   CATEGORY
+   COST CATEGORY
    ================================================== */
 
 .cost-category {
@@ -201,7 +382,8 @@
 
     padding: 10px 10px 8px;
 
-    border: 1px solid #eeeeee;
+    border: 1px solid #eeeeef;
+
     border-radius: 10px;
 
     background: #ffffff;
@@ -209,12 +391,14 @@
 
 .cost-category-header {
     display: flex;
+
     align-items: center;
+
     justify-content: space-between;
 
     padding-bottom: 7px;
 
-    border-bottom: 1px solid #f1f1f1;
+    border-bottom: 1px solid #f1f1f2;
 }
 
 .cost-category-header span {
@@ -222,9 +406,10 @@
     font-weight: 700;
 
     letter-spacing: 0.08em;
+
     text-transform: uppercase;
 
-    color: #7d7d7d;
+    color: #85878a;
 }
 
 .cost-category-header strong {
@@ -236,12 +421,14 @@
 
 
 /* ==================================================
-   ITEM
+   COST ITEM
    ================================================== */
 
 .cost-item {
     display: flex;
+
     align-items: center;
+
     justify-content: space-between;
 
     gap: 12px;
@@ -254,6 +441,7 @@
 
     display: flex;
     flex-direction: column;
+
     gap: 3px;
 }
 
@@ -261,18 +449,19 @@
     overflow: hidden;
 
     white-space: nowrap;
+
     text-overflow: ellipsis;
 
     font-size: 12px;
     font-weight: 600;
 
-    color: #292929;
+    color: #292a2d;
 }
 
 .cost-item-quantity {
     font-size: 10px;
 
-    color: #999999;
+    color: #999b9f;
 }
 
 .cost-item-total {
@@ -286,7 +475,7 @@
 
 
 /* ==================================================
-   EMPTY
+   EMPTY STATE
    ================================================== */
 
 .cost-empty {
@@ -296,7 +485,7 @@
 
     font-size: 12px;
 
-    color: #9a9a9a;
+    color: #9b9da1;
 }
 
 
@@ -306,12 +495,14 @@
 
 .cost-estimator-total {
     display: flex;
+
     align-items: center;
+
     justify-content: space-between;
 
-    padding: 15px 18px;
+    padding: 14px 18px;
 
-    border-top: 1px solid #e8e8e8;
+    border-top: 1px solid #e8e9eb;
 
     background: #fafafa;
 }
@@ -320,7 +511,7 @@
     font-size: 12px;
     font-weight: 600;
 
-    color: #555555;
+    color: #5b5d61;
 }
 
 .cost-estimator-total strong {
@@ -328,4 +519,48 @@
     font-weight: 800;
 
     color: #4f8765;
+}
+
+
+/* ==================================================
+   WALKTHROUGH / EDITOR STATE
+   ================================================== */
+
+.walkthrough-button.active svg {
+    stroke-width: 2.2;
+}
+
+
+/* ==================================================
+   RESPONSIVE
+   ================================================== */
+
+@media (max-width: 800px) {
+
+    .topbar {
+        padding: 0 14px;
+    }
+
+    .project-title-input {
+        max-width: 220px;
+
+        margin-left: 16px;
+    }
+
+    .walkthrough-button span,
+    .cost-estimator-button span {
+        display: none;
+    }
+
+    .walkthrough-button,
+    .cost-estimator-button {
+        width: 38px;
+
+        padding: 0;
+    }
+
+    .cost-estimator-dropdown {
+        width: 320px;
+    }
+
 }

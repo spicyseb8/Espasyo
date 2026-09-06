@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import {
+    useEffect,
     useState
 } from "react";
 
@@ -29,6 +30,19 @@ import {
 import {
     solveRegions
 } from "../../../engine/regions/RegionSolver";
+
+//==========================================================
+// BLUEPRINT EVENTS
+//==========================================================
+
+const START_CALIBRATION_EVENT =
+    "espasyo-start-blueprint-calibration";
+
+const CANCEL_CALIBRATION_EVENT =
+    "espasyo-cancel-blueprint-calibration";
+
+const CALIBRATION_POINT_EVENT =
+    "espasyo-blueprint-calibration-point";
 
 //==========================================================
 // TOOLS
@@ -95,6 +109,160 @@ export default function FloorPlanPanel() {
 
     const blueprint =
         state.blueprint;
+
+    //------------------------------------------------------
+    // Blueprint calibration state
+    //
+    // The calibration interface lives ONLY in this panel.
+    //------------------------------------------------------
+
+    const [
+        calibrationStep,
+        setCalibrationStep
+    ] = useState<
+        "idle" |
+        "first-point" |
+        "second-point" |
+        "enter-measurement"
+    >("idle");
+
+    const [
+        measuredBlueprintLength,
+        setMeasuredBlueprintLength
+    ] = useState<number | null>(
+        null
+    );
+
+    const [
+        actualBlueprintLength,
+        setActualBlueprintLength
+    ] = useState("");
+
+    const [
+        calibrationReference,
+        setCalibrationReference
+    ] = useState<number | null>(
+        null
+    );
+
+    //------------------------------------------------------
+    // Listen for calibration clicks from BlueprintScene.
+    //------------------------------------------------------
+
+    useEffect(() => {
+
+        function handleCalibrationPoint(
+            event: Event
+        ) {
+
+            const customEvent =
+                event as CustomEvent<{
+                    type:
+                        | "started"
+                        | "first-point"
+                        | "second-point";
+
+                    measuredLength?:
+                        number;
+                }>;
+
+            const detail =
+                customEvent.detail;
+
+            if (!detail) {
+                return;
+            }
+
+            if (
+                detail.type ===
+                "started"
+            ) {
+
+                setCalibrationStep(
+                    "first-point"
+                );
+
+                setMeasuredBlueprintLength(
+                    null
+                );
+
+                setActualBlueprintLength(
+                    ""
+                );
+
+                return;
+            }
+
+            if (
+                detail.type ===
+                "first-point"
+            ) {
+
+                setCalibrationStep(
+                    "second-point"
+                );
+
+                return;
+            }
+
+            if (
+                detail.type ===
+                "second-point"
+            ) {
+
+                const measured =
+                    detail.measuredLength ??
+                    0;
+
+                setMeasuredBlueprintLength(
+                    measured
+                );
+
+                setCalibrationStep(
+                    "enter-measurement"
+                );
+            }
+        }
+
+        window.addEventListener(
+            CALIBRATION_POINT_EVENT,
+            handleCalibrationPoint
+        );
+
+        return () => {
+
+            window.removeEventListener(
+                CALIBRATION_POINT_EVENT,
+                handleCalibrationPoint
+            );
+        };
+
+    }, []);
+
+    //------------------------------------------------------
+    // Reset calibration whenever blueprint is removed.
+    //------------------------------------------------------
+
+    useEffect(() => {
+
+        if (!blueprint) {
+
+            setCalibrationStep(
+                "idle"
+            );
+
+            setMeasuredBlueprintLength(
+                null
+            );
+
+            setActualBlueprintLength(
+                ""
+            );
+        }
+
+    }, [
+        blueprint
+    ]);
 
     //======================================================
     // MEASUREMENT
@@ -183,7 +351,6 @@ export default function FloorPlanPanel() {
 
         measurementValue =
             `${selectedRegionArea.toFixed(2)} m²`;
-
     }
 
     //======================================================
@@ -273,12 +440,10 @@ export default function FloorPlanPanel() {
                 image.height;
 
             dispatch({
-
                 type:
                     "SET_BLUEPRINT",
 
                 payload: {
-
                     id:
                         "blueprint",
 
@@ -337,13 +502,30 @@ export default function FloorPlanPanel() {
                     //--------------------------------------------------
                     // Uploading does NOT automatically show it
                     //--------------------------------------------------
+                    calibrated: false,
 
+                    calibrationReferenceLength: null,
+                    
                     selected:
                         false
-
                 }
-
             });
+
+            setCalibrationStep(
+                "idle"
+            );
+
+            setMeasuredBlueprintLength(
+                null
+            );
+
+            setActualBlueprintLength(
+                ""
+            );
+
+            setCalibrationReference(
+                null
+            );
         };
 
         image.onerror = () => {
@@ -379,10 +561,8 @@ export default function FloorPlanPanel() {
         }
 
         dispatch({
-
             type:
                 "SHOW_BLUEPRINT"
-
         });
     };
 
@@ -398,11 +578,31 @@ export default function FloorPlanPanel() {
             return;
         }
 
-        dispatch({
+        //--------------------------------------------------
+        // Cancel calibration before hiding.
+        //--------------------------------------------------
 
+        window.dispatchEvent(
+            new Event(
+                CANCEL_CALIBRATION_EVENT
+            )
+        );
+
+        setCalibrationStep(
+            "idle"
+        );
+
+        setMeasuredBlueprintLength(
+            null
+        );
+
+        setActualBlueprintLength(
+            ""
+        );
+
+        dispatch({
             type:
                 "HIDE_BLUEPRINT"
-
         });
     };
 
@@ -421,11 +621,31 @@ export default function FloorPlanPanel() {
         const url =
             blueprint.url;
 
-        dispatch({
+        window.dispatchEvent(
+            new Event(
+                CANCEL_CALIBRATION_EVENT
+            )
+        );
 
+        setCalibrationStep(
+            "idle"
+        );
+
+        setMeasuredBlueprintLength(
+            null
+        );
+
+        setActualBlueprintLength(
+            ""
+        );
+
+        setCalibrationReference(
+            null
+        );
+
+        dispatch({
             type:
                 "REMOVE_BLUEPRINT"
-
         });
 
         //--------------------------------------------------
@@ -438,32 +658,182 @@ export default function FloorPlanPanel() {
     };
 
     //======================================================
-    // BLUEPRINT SIZE
+    // START BLUEPRINT CALIBRATION
     //======================================================
 
-    const handleBlueprintSizeChange = (
-        event: ChangeEvent<HTMLInputElement>
-    ) => {
+    const handleStartCalibration = () => {
 
         if (!blueprint) {
             return;
         }
 
-        dispatch({
+        if (blueprint.locked) {
+            return;
+        }
 
+        //--------------------------------------------------
+        // Make the blueprint visible first.
+        //--------------------------------------------------
+
+        if (!blueprint.selected) {
+
+            dispatch({
+                type:
+                    "SHOW_BLUEPRINT"
+            });
+        }
+
+        setCalibrationStep(
+            "first-point"
+        );
+
+        setMeasuredBlueprintLength(
+            null
+        );
+
+        setActualBlueprintLength(
+            ""
+        );
+
+        //--------------------------------------------------
+        // Tell BlueprintScene to enter calibration mode.
+        //--------------------------------------------------
+
+        window.dispatchEvent(
+            new Event(
+                START_CALIBRATION_EVENT
+            )
+        );
+    };
+
+    //======================================================
+    // CANCEL BLUEPRINT CALIBRATION
+    //======================================================
+
+    const handleCancelCalibration = () => {
+
+        window.dispatchEvent(
+            new Event(
+                CANCEL_CALIBRATION_EVENT
+            )
+        );
+
+        setCalibrationStep(
+            "idle"
+        );
+
+        setMeasuredBlueprintLength(
+            null
+        );
+
+        setActualBlueprintLength(
+            ""
+        );
+    };
+
+    //======================================================
+    // APPLY BLUEPRINT CALIBRATION
+    //======================================================
+
+    const handleApplyCalibration = () => {
+
+        if (!blueprint) {
+            return;
+        }
+
+        if (
+            measuredBlueprintLength === null ||
+            measuredBlueprintLength <= 0
+        ) {
+
+            window.alert(
+                "Please select two different points on the blueprint first."
+            );
+
+            return;
+        }
+
+        const actualLength =
+            Number(
+                actualBlueprintLength
+            );
+
+        if (
+            !Number.isFinite(
+                actualLength
+            ) ||
+            actualLength <= 0
+        ) {
+
+            window.alert(
+                "Please enter a valid actual measurement greater than 0."
+            );
+
+            return;
+        }
+
+        //--------------------------------------------------
+        // Uniform scaling
+        //
+        // newWidth =
+        // currentWidth *
+        // actualLength /
+        // measuredLength
+        //--------------------------------------------------
+
+        const scaleFactor =
+            actualLength /
+            measuredBlueprintLength;
+
+        const newWidth =
+            blueprint.width *
+            scaleFactor;
+
+        if (
+            !Number.isFinite(
+                newWidth
+            ) ||
+            newWidth <= 0
+        ) {
+
+            window.alert(
+                "Unable to calculate the blueprint size."
+            );
+
+            return;
+        }
+
+        dispatch({
             type:
                 "UPDATE_BLUEPRINT",
 
             payload: {
-
                 width:
-                    Number(
-                        event.target.value
-                    )
-
+                    newWidth
             }
-
         });
+
+        setCalibrationReference(
+            actualLength
+        );
+
+        setCalibrationStep(
+            "idle"
+        );
+
+        setMeasuredBlueprintLength(
+            null
+        );
+
+        setActualBlueprintLength(
+            ""
+        );
+
+        window.dispatchEvent(
+            new Event(
+                CANCEL_CALIBRATION_EVENT
+            )
+        );
     };
 
     //======================================================
@@ -475,7 +845,6 @@ export default function FloorPlanPanel() {
     ) => {
 
         dispatch({
-
             type:
                 "SET_BLUEPRINT_OPACITY",
 
@@ -483,7 +852,6 @@ export default function FloorPlanPanel() {
                 Number(
                     event.target.value
                 )
-
         });
     };
 
@@ -497,39 +865,21 @@ export default function FloorPlanPanel() {
             return;
         }
 
-        dispatch({
+        //--------------------------------------------------
+        // Do not leave calibration active while locking.
+        //--------------------------------------------------
 
+        if (!blueprint.locked) {
+
+            handleCancelCalibration();
+        }
+
+        dispatch({
             type:
                 "SET_BLUEPRINT_LOCKED",
 
             payload:
                 !blueprint.locked
-
-        });
-    };
-
-    //======================================================
-    // BLUEPRINT SNAP
-    //======================================================
-
-    const handleBlueprintSnapToggle = () => {
-
-        if (!blueprint) {
-            return;
-        }
-
-        dispatch({
-
-            type:
-                "UPDATE_BLUEPRINT",
-
-            payload: {
-
-                snapEnabled:
-                    !blueprint.snapEnabled
-
-            }
-
         });
     };
 
@@ -549,21 +899,56 @@ export default function FloorPlanPanel() {
         }
 
         dispatch({
-
             type:
                 "CONFIRM_LAYOUT"
-
         });
 
         dispatch({
-
             type:
                 "SET_ACTIVE_TOOL",
 
             payload:
                 Tool.None
-
         });
+    };
+
+    //======================================================
+    // CALIBRATION TEXT
+    //======================================================
+
+    const getCalibrationInstruction = () => {
+
+        if (
+            calibrationStep ===
+            "first-point"
+        ) {
+
+            return (
+                "Click the first point of a known dimension on the blueprint."
+            );
+        }
+
+        if (
+            calibrationStep ===
+            "second-point"
+        ) {
+
+            return (
+                "First point selected. Click the second point of the same dimension."
+            );
+        }
+
+        if (
+            calibrationStep ===
+            "enter-measurement"
+        ) {
+
+            return (
+                "Enter the real-world measurement of the selected distance."
+            );
+        }
+
+        return "";
     };
 
     //======================================================
@@ -571,7 +956,6 @@ export default function FloorPlanPanel() {
     //======================================================
 
     return (
-
         <div className="panel">
 
             {/* ==================================================
@@ -587,7 +971,6 @@ export default function FloorPlanPanel() {
                     }`
                 }
             >
-
                 <h3>
                     Tools
                 </h3>
@@ -597,7 +980,6 @@ export default function FloorPlanPanel() {
                     role="group"
                     aria-label="Drawing tools"
                 >
-
                     {
                         TOOLS.map(
                             ({
@@ -607,7 +989,6 @@ export default function FloorPlanPanel() {
                             }) => (
 
                                 <button
-
                                     key={
                                         label
                                     }
@@ -634,18 +1015,14 @@ export default function FloorPlanPanel() {
 
                                     onClick={() =>
                                         dispatch({
-
                                             type:
                                                 "SET_ACTIVE_TOOL",
 
                                             payload:
                                                 tool
-
                                         })
                                     }
-
                                 >
-
                                     <Icon
                                         size={18}
                                     />
@@ -655,15 +1032,11 @@ export default function FloorPlanPanel() {
                                     }
 
                                 </button>
-
                             )
                         )
                     }
-
                 </div>
-
             </div>
-
 
             {/* ==================================================
                 BLUEPRINT
@@ -675,7 +1048,6 @@ export default function FloorPlanPanel() {
             >
 
                 <button
-
                     type="button"
 
                     className=
@@ -691,7 +1063,6 @@ export default function FloorPlanPanel() {
                     aria-expanded={
                         blueprintOpen
                     }
-
                 >
 
                     <span>
@@ -700,6 +1071,7 @@ export default function FloorPlanPanel() {
 
                     <ChevronDown
                         size={16}
+
                         className={
                             blueprintOpen
                                 ? "blueprint-chevron open"
@@ -708,7 +1080,6 @@ export default function FloorPlanPanel() {
                     />
 
                 </button>
-
 
                 {
                     blueprintOpen && (
@@ -739,7 +1110,6 @@ export default function FloorPlanPanel() {
                                         </span>
 
                                         <input
-
                                             type="file"
 
                                             accept="
@@ -755,14 +1125,11 @@ export default function FloorPlanPanel() {
                                             }
 
                                             hidden
-
                                         />
 
                                     </label>
-
                                 )
                             }
-
 
                             {
                                 blueprint && (
@@ -782,7 +1149,6 @@ export default function FloorPlanPanel() {
                                         >
 
                                             <button
-
                                                 type="button"
 
                                                 className=
@@ -797,7 +1163,6 @@ export default function FloorPlanPanel() {
                                                         ? "Blueprint is active"
                                                         : "Show blueprint"
                                                 }
-
                                             >
 
                                                 <div
@@ -806,7 +1171,6 @@ export default function FloorPlanPanel() {
                                                 >
 
                                                     <img
-
                                                         src={
                                                             blueprint.url
                                                         }
@@ -814,11 +1178,9 @@ export default function FloorPlanPanel() {
                                                         alt={
                                                             blueprint.name
                                                         }
-
                                                     />
 
                                                 </div>
-
 
                                                 <div
                                                     className=
@@ -843,13 +1205,11 @@ export default function FloorPlanPanel() {
 
                                             </button>
 
-
                                             {/* ------------------------------------------
                                                 Permanently delete upload
                                                ------------------------------------------ */}
 
                                             <button
-
                                                 type="button"
 
                                                 className=
@@ -862,7 +1222,6 @@ export default function FloorPlanPanel() {
                                                 aria-label="Remove uploaded blueprint"
 
                                                 title="Delete uploaded blueprint"
-
                                             >
 
                                                 <Trash2
@@ -873,64 +1232,274 @@ export default function FloorPlanPanel() {
 
                                         </div>
 
-
                                         {/* ==================================================
-                                            SIZE
+                                            CALIBRATION
                                            ================================================== */}
 
                                         <div
-                                            className=
-                                                "blueprint-control"
+                                            className="blueprint-calibration-control"
+                                            style={{
+                                                marginTop:
+                                                    "10px",
+                                                padding:
+                                                    "10px",
+                                                border:
+                                                    "1px solid rgba(0,0,0,0.10)",
+                                                borderRadius:
+                                                    "8px"
+                                            }}
                                         >
 
                                             <div
-                                                className=
-                                                    "blueprint-control-row"
+                                                className="blueprint-control-row"
                                             >
 
                                                 <span>
-                                                    Size
+                                                    Calibration
                                                 </span>
 
-                                                <strong>
-                                                    {
-                                                        blueprint.width.toFixed(
-                                                            2
+                                                {
+                                                    calibrationReference !== null
+                                                        ? (
+                                                            <strong>
+                                                                Calibrated
+                                                            </strong>
                                                         )
-                                                    }
-                                                    {" "}
-                                                    m
-                                                </strong>
+                                                        : (
+                                                            <strong>
+                                                                Not calibrated
+                                                            </strong>
+                                                        )
+                                                }
 
                                             </div>
 
+                                            {
+                                                calibrationReference !== null && (
 
-                                            <input
+                                                    <div
+                                                        style={{
+                                                            fontSize:
+                                                                "12px",
+                                                            marginTop:
+                                                                "4px",
+                                                            opacity:
+                                                                0.7
+                                                        }}
+                                                    >
+                                                        Reference:{" "}
+                                                        {
+                                                            calibrationReference.toFixed(
+                                                                2
+                                                            )
+                                                        }{" "}
+                                                        m
+                                                    </div>
+                                                )
+                                            }
 
-                                                type="range"
+                                            {
+                                                calibrationStep ===
+                                                "idle"
+                                                    ? (
 
-                                                min="1"
+                                                        <button
+                                                            type="button"
 
-                                                max="50"
+                                                            className="blueprint-scene-button"
 
-                                                step="0.25"
+                                                            onClick={
+                                                                handleStartCalibration
+                                                            }
 
-                                                value={
-                                                    blueprint.width
-                                                }
+                                                            disabled={
+                                                                blueprint.locked
+                                                            }
 
-                                                onChange={
-                                                    handleBlueprintSizeChange
-                                                }
+                                                            style={{
+                                                                width:
+                                                                    "100%",
+                                                                marginTop:
+                                                                    "8px"
+                                                            }}
+                                                        >
+                                                            {
+                                                                calibrationReference !==
+                                                                null
+                                                                    ? "Recalibrate Blueprint"
+                                                                    : "Calibrate Blueprint"
+                                                            }
+                                                        </button>
 
-                                                disabled={
-                                                    blueprint.locked
-                                                }
+                                                    )
+                                                    : (
 
-                                            />
+                                                        <>
+
+                                                            <div
+                                                                style={{
+                                                                    fontSize:
+                                                                        "12px",
+                                                                    lineHeight:
+                                                                        1.45,
+                                                                    marginTop:
+                                                                        "8px"
+                                                                }}
+                                                            >
+                                                                {
+                                                                    getCalibrationInstruction()
+                                                                }
+                                                            </div>
+
+                                                            {
+                                                                calibrationStep ===
+                                                                "enter-measurement" &&
+                                                                measuredBlueprintLength !==
+                                                                null && (
+
+                                                                    <div
+                                                                        style={{
+                                                                            marginTop:
+                                                                                "10px"
+                                                                        }}
+                                                                    >
+
+                                                                        <div
+                                                                            style={{
+                                                                                fontSize:
+                                                                                    "12px",
+                                                                                marginBottom:
+                                                                                    "5px"
+                                                                            }}
+                                                                        >
+                                                                            Measured distance:{" "}
+                                                                            <strong>
+                                                                                {
+                                                                                    measuredBlueprintLength.toFixed(
+                                                                                        2
+                                                                                    )
+                                                                                }{" "}
+                                                                                m
+                                                                            </strong>
+                                                                        </div>
+
+                                                                        <div
+                                                                            className="field-input"
+                                                                        >
+
+                                                                            <input
+                                                                                type="number"
+
+                                                                                min="0.01"
+
+                                                                                step="0.01"
+
+                                                                                placeholder="e.g. 5.00"
+
+                                                                                value={
+                                                                                    actualBlueprintLength
+                                                                                }
+
+                                                                                onChange={
+                                                                                    e =>
+                                                                                        setActualBlueprintLength(
+                                                                                            e.target.value
+                                                                                        )
+                                                                                }
+
+                                                                                autoFocus
+                                                                            />
+
+                                                                            <span
+                                                                                className="field-unit"
+                                                                            >
+                                                                                m
+                                                                            </span>
+
+                                                                        </div>
+
+                                                                        <div
+                                                                            style={{
+                                                                                display:
+                                                                                    "flex",
+                                                                                gap:
+                                                                                    "6px",
+                                                                                marginTop:
+                                                                                    "8px"
+                                                                            }}
+                                                                        >
+
+                                                                            <button
+                                                                                type="button"
+
+                                                                                className="blueprint-scene-button"
+
+                                                                                onClick={
+                                                                                    handleApplyCalibration
+                                                                                }
+
+                                                                                style={{
+                                                                                    flex:
+                                                                                        1
+                                                                                }}
+                                                                            >
+                                                                                Apply Calibration
+                                                                            </button>
+
+                                                                            <button
+                                                                                type="button"
+
+                                                                                className="blueprint-scene-button"
+
+                                                                                onClick={
+                                                                                    handleCancelCalibration
+                                                                                }
+
+                                                                                style={{
+                                                                                    flex:
+                                                                                        1
+                                                                                }}
+                                                                            >
+                                                                                Cancel
+                                                                            </button>
+
+                                                                        </div>
+
+                                                                    </div>
+                                                                )
+                                                            }
+
+                                                            {
+                                                                calibrationStep !==
+                                                                "enter-measurement" && (
+
+                                                                    <button
+                                                                        type="button"
+
+                                                                        className="blueprint-scene-button"
+
+                                                                        onClick={
+                                                                            handleCancelCalibration
+                                                                        }
+
+                                                                        style={{
+                                                                            width:
+                                                                                "100%",
+                                                                            marginTop:
+                                                                                "8px"
+                                                                        }}
+                                                                    >
+                                                                        Cancel Calibration
+                                                                    </button>
+
+                                                                )
+                                                            }
+
+                                                        </>
+                                                    )
+                                            }
 
                                         </div>
-
 
                                         {/* ==================================================
                                             OPACITY + LOCK
@@ -950,7 +1519,6 @@ export default function FloorPlanPanel() {
                                                     Opacity
                                                 </span>
 
-
                                                 <div
                                                     className=
                                                         "blueprint-opacity-right"
@@ -965,9 +1533,7 @@ export default function FloorPlanPanel() {
                                                         }%
                                                     </strong>
 
-
                                                     <button
-
                                                         type="button"
 
                                                         className={
@@ -991,7 +1557,6 @@ export default function FloorPlanPanel() {
                                                                 ? "Unlock blueprint"
                                                                 : "Lock blueprint"
                                                         }
-
                                                     >
 
                                                         {
@@ -1014,9 +1579,7 @@ export default function FloorPlanPanel() {
 
                                             </div>
 
-
                                             <input
-
                                                 type="range"
 
                                                 min="0.1"
@@ -1032,82 +1595,41 @@ export default function FloorPlanPanel() {
                                                 onChange={
                                                     handleBlueprintOpacityChange
                                                 }
-
                                             />
 
                                         </div>
 
-
                                         {/* ==================================================
-                                            SNAP
+                                            SHOW / HIDE
                                            ================================================== */}
 
                                         <button
-
                                             type="button"
 
-                                            className={
-                                                blueprint.snapEnabled
-                                                    ? "blueprint-option active"
-                                                    : "blueprint-option"
-                                            }
+                                            className="blueprint-scene-button"
 
                                             onClick={
-                                                handleBlueprintSnapToggle
+                                                blueprint.selected
+                                                    ? handleHideBlueprint
+                                                    : handleSelectBlueprint
                                             }
-
-                                            disabled={
-                                                blueprint.locked
-                                            }
-
                                         >
-
                                             {
-                                                blueprint.snapEnabled
-                                                    ? "Snap: On"
-                                                    : "Snap: Off"
+                                                blueprint.selected
+                                                    ? "Hide Blueprint"
+                                                    : "Show Blueprint"
                                             }
-
-                                        </button>
-
-
-                                        {/* ==================================================
-                                            REMOVE FROM SCENE
-                                           ================================================== */}
-
-                                        <button
-
-                                            type="button"
-
-                                            className=
-                                                "blueprint-scene-button"
-
-                                            onClick={
-                                                handleHideBlueprint
-                                            }
-
-                                            disabled={
-                                                !blueprint.selected
-                                            }
-
-                                        >
-
-                                            Remove from Scene
-
                                         </button>
 
                                     </>
-
                                 )
                             }
 
                         </div>
-
                     )
                 }
 
             </div>
-
 
             {/* ==================================================
                 WALL SETTINGS
@@ -1142,7 +1664,6 @@ export default function FloorPlanPanel() {
                         >
 
                             <input
-
                                 id="wall-height"
 
                                 disabled={
@@ -1160,7 +1681,6 @@ export default function FloorPlanPanel() {
                                 onChange={
                                     e =>
                                         dispatch({
-
                                             type:
                                                 "SET_WALL_HEIGHT",
 
@@ -1168,10 +1688,8 @@ export default function FloorPlanPanel() {
                                                 Number(
                                                     e.target.value
                                                 )
-
                                         })
                                 }
-
                             />
 
                             <span
@@ -1184,7 +1702,6 @@ export default function FloorPlanPanel() {
                         </div>
 
                     </div>
-
 
                     <div className="field">
 
@@ -1199,7 +1716,6 @@ export default function FloorPlanPanel() {
                         >
 
                             <input
-
                                 id="wall-thickness"
 
                                 disabled={
@@ -1217,7 +1733,6 @@ export default function FloorPlanPanel() {
                                 onChange={
                                     e =>
                                         dispatch({
-
                                             type:
                                                 "SET_WALL_THICKNESS",
 
@@ -1225,10 +1740,8 @@ export default function FloorPlanPanel() {
                                                 Number(
                                                     e.target.value
                                                 )
-
                                         })
                                 }
-
                             />
 
                             <span
@@ -1243,7 +1756,6 @@ export default function FloorPlanPanel() {
                     </div>
 
                 </div>
-
 
                 {/* ----------------------------------------------
                     Wall measurements
@@ -1261,9 +1773,7 @@ export default function FloorPlanPanel() {
                         Show Wall Measurements
                     </span>
 
-
                     <button
-
                         type="button"
 
                         role="switch"
@@ -1285,26 +1795,22 @@ export default function FloorPlanPanel() {
 
                         onClick={() =>
                             dispatch({
-
                                 type:
                                     "SET_SHOW_WALL_MEASUREMENTS",
 
                                 payload:
                                     !state.showWallMeasurements
-
                             })
                         }
 
                         disabled={
                             layoutConfirmed
                         }
-
                     />
 
                 </div>
 
             </div>
-
 
             {/* ==================================================
                 MEASUREMENT
@@ -1359,17 +1865,14 @@ export default function FloorPlanPanel() {
                                     className=
                                         "measurement-value"
                                 >
-
                                     {
                                         measurementValue
                                     }
-
                                 </span>
 
                             </div>
 
                         )
-
                         : (
 
                             <div
@@ -1384,12 +1887,10 @@ export default function FloorPlanPanel() {
                                 }
 
                             </div>
-
                         )
                 }
 
             </div>
-
 
             {/* ==================================================
                 CONFIRM LAYOUT
@@ -1399,7 +1900,6 @@ export default function FloorPlanPanel() {
                 !layoutConfirmed && (
 
                     <button
-
                         type="button"
 
                         className=
@@ -1408,13 +1908,9 @@ export default function FloorPlanPanel() {
                         onClick={
                             handleConfirmLayout
                         }
-
                     >
-
                         Confirm Layout
-
                     </button>
-
                 )
             }
 

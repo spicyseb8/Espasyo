@@ -26,6 +26,15 @@ import {
     snapBlueprintPosition
 } from "../../engine/blueprint/BlueprintSnapping";
 
+const START_CALIBRATION_EVENT =
+    "espasyo-start-blueprint-calibration";
+
+const CANCEL_CALIBRATION_EVENT =
+    "espasyo-cancel-blueprint-calibration";
+
+const CALIBRATION_POINT_EVENT =
+    "espasyo-blueprint-calibration-point";
+
 export default function BlueprintScene() {
 
     const {
@@ -58,6 +67,19 @@ export default function BlueprintScene() {
             x: 0,
             z: 0
         });
+
+    //--------------------------------------------------
+    // Calibration
+    //
+    // Calibration UI stays completely inside
+    // FloorPlanPanel. Nothing is drawn in the scene.
+    //--------------------------------------------------
+
+    const calibrationActive =
+        useRef(false);
+
+    const calibrationStart =
+        useRef<Vector3 | null>(null);
 
     //--------------------------------------------------
     // Raycaster
@@ -102,12 +124,10 @@ export default function BlueprintScene() {
                     previous?.dispose();
 
                     return null;
-
                 }
             );
 
             return;
-
         }
 
         const loader =
@@ -117,9 +137,7 @@ export default function BlueprintScene() {
             false;
 
         loader.load(
-
             blueprint.url,
-
             loadedTexture => {
 
                 if (cancelled) {
@@ -127,7 +145,6 @@ export default function BlueprintScene() {
                     loadedTexture.dispose();
 
                     return;
-
                 }
 
                 loadedTexture.needsUpdate =
@@ -139,22 +156,102 @@ export default function BlueprintScene() {
                         previous?.dispose();
 
                         return loadedTexture;
-
                     }
                 );
-
             }
-
         );
 
         return () => {
 
             cancelled = true;
-
         };
 
     }, [
         blueprint?.url
+    ]);
+
+    //--------------------------------------------------
+    // Start / cancel calibration events
+    //--------------------------------------------------
+
+    useEffect(() => {
+
+        function handleStartCalibration() {
+
+            if (!blueprint) {
+                return;
+            }
+
+            if (blueprint.locked) {
+                return;
+            }
+
+            calibrationActive.current =
+                true;
+
+            calibrationStart.current =
+                null;
+
+            //--------------------------------------------------
+            // Make sure the blueprint is visible.
+            //--------------------------------------------------
+
+            if (!blueprint.selected) {
+
+                dispatch({
+                    type:
+                        "SHOW_BLUEPRINT"
+                });
+            }
+
+            window.dispatchEvent(
+                new CustomEvent(
+                    CALIBRATION_POINT_EVENT,
+                    {
+                        detail: {
+                            type:
+                                "started"
+                        }
+                    }
+                )
+            );
+        }
+
+        function handleCancelCalibration() {
+
+            calibrationActive.current =
+                false;
+
+            calibrationStart.current =
+                null;
+        }
+
+        window.addEventListener(
+            START_CALIBRATION_EVENT,
+            handleStartCalibration
+        );
+
+        window.addEventListener(
+            CANCEL_CALIBRATION_EVENT,
+            handleCancelCalibration
+        );
+
+        return () => {
+
+            window.removeEventListener(
+                START_CALIBRATION_EVENT,
+                handleStartCalibration
+            );
+
+            window.removeEventListener(
+                CANCEL_CALIBRATION_EVENT,
+                handleCancelCalibration
+            );
+        };
+
+    }, [
+        blueprint,
+        dispatch
     ]);
 
     //--------------------------------------------------
@@ -183,9 +280,7 @@ export default function BlueprintScene() {
             rect.width === 0 ||
             rect.height === 0
         ) {
-
             return null;
-
         }
 
         const ndcX =
@@ -245,9 +340,7 @@ export default function BlueprintScene() {
             blueprint.locked ||
             !blueprint.selected
         ) {
-
             return;
-
         }
 
         const point =
@@ -257,43 +350,29 @@ export default function BlueprintScene() {
             );
 
         if (!point) {
-
             return;
-
         }
 
         const snapped =
             snapBlueprintPosition(
-
                 point.x -
                     dragOffset.current.x,
-
                 point.z -
                     dragOffset.current.z,
-
                 state.gridSize,
-
                 blueprint.snapEnabled
-
             );
 
         dispatch({
-
             type:
                 "UPDATE_BLUEPRINT",
-
             payload: {
-
                 x:
                     snapped.x,
-
                 z:
                     snapped.z
-
             }
-
         });
-
     }
 
     //--------------------------------------------------
@@ -314,26 +393,110 @@ export default function BlueprintScene() {
             "pointerup",
             handleWindowPointerUp
         );
-
     }
 
     //--------------------------------------------------
-    // Select + start dragging
+    // Select / drag / calibrate
     //--------------------------------------------------
 
     function handlePointerDown(
         event: any
     ) {
 
-        if (
-            !blueprint
-        ) {
-
+        if (!blueprint) {
             return;
-
         }
 
         event.stopPropagation();
+
+        //--------------------------------------------------
+        // Calibration mode
+        //
+        // Only the clicked 3D point is sent back to the
+        // FloorPlanPanel. No ruler, HTML, label, or form
+        // is rendered in the scene.
+        //--------------------------------------------------
+
+        if (
+            calibrationActive.current
+        ) {
+
+            if (blueprint.locked) {
+                return;
+            }
+
+            const point =
+                event.point instanceof Vector3
+                    ? event.point.clone()
+                    : new Vector3(
+                        event.point.x,
+                        0,
+                        event.point.z
+                    );
+
+            if (
+                !calibrationStart.current
+            ) {
+
+                calibrationStart.current =
+                    point;
+
+                window.dispatchEvent(
+                    new CustomEvent(
+                        CALIBRATION_POINT_EVENT,
+                        {
+                            detail: {
+                                type:
+                                    "first-point"
+                            }
+                        }
+                    )
+                );
+
+                return;
+            }
+
+            const start =
+                calibrationStart.current;
+
+            const end =
+                point;
+
+            const dx =
+                end.x -
+                start.x;
+
+            const dz =
+                end.z -
+                start.z;
+
+            const measuredLength =
+                Math.sqrt(
+                    dx * dx +
+                    dz * dz
+                );
+
+            calibrationActive.current =
+                false;
+
+            calibrationStart.current =
+                null;
+
+            window.dispatchEvent(
+                new CustomEvent(
+                    CALIBRATION_POINT_EVENT,
+                    {
+                        detail: {
+                            type:
+                                "second-point",
+                            measuredLength
+                        }
+                    }
+                )
+            );
+
+            return;
+        }
 
         //--------------------------------------------------
         // If somehow clicked while not selected,
@@ -345,17 +508,13 @@ export default function BlueprintScene() {
         ) {
 
             dispatch({
-
                 type:
                     "SET_BLUEPRINT_SELECTED",
-
                 payload:
                     true
-
             });
 
             return;
-
         }
 
         //--------------------------------------------------
@@ -365,9 +524,7 @@ export default function BlueprintScene() {
         if (
             blueprint.locked
         ) {
-
             return;
-
         }
 
         //--------------------------------------------------
@@ -378,7 +535,6 @@ export default function BlueprintScene() {
             event.point;
 
         dragOffset.current = {
-
             x:
                 point.x -
                 blueprint.x,
@@ -386,7 +542,6 @@ export default function BlueprintScene() {
             z:
                 point.z -
                 blueprint.z
-
         };
 
         dragging.current =
@@ -401,7 +556,6 @@ export default function BlueprintScene() {
             "pointerup",
             handleWindowPointerUp
         );
-
     }
 
     //--------------------------------------------------
@@ -412,6 +566,15 @@ export default function BlueprintScene() {
 
         return () => {
 
+            dragging.current =
+                false;
+
+            calibrationActive.current =
+                false;
+
+            calibrationStart.current =
+                null;
+
             window.removeEventListener(
                 "pointermove",
                 handleWindowPointerMove
@@ -421,7 +584,6 @@ export default function BlueprintScene() {
                 "pointerup",
                 handleWindowPointerUp
             );
-
         };
 
     }, []);
@@ -432,6 +594,28 @@ export default function BlueprintScene() {
 
     useEffect(() => {
 
+        function isTypingTarget(
+            target: EventTarget | null
+        ) {
+
+            const element =
+                target as HTMLElement | null;
+
+            if (!element) {
+                return false;
+            }
+
+            const tagName =
+                element.tagName?.toLowerCase();
+
+            return (
+                tagName === "input" ||
+                tagName === "textarea" ||
+                tagName === "select" ||
+                element.isContentEditable
+            );
+        }
+
         function handleKeyDown(
             event: KeyboardEvent
         ) {
@@ -440,9 +624,21 @@ export default function BlueprintScene() {
                 event.key.toLowerCase() !==
                 "r"
             ) {
-
                 return;
+            }
 
+            if (
+                isTypingTarget(
+                    event.target
+                )
+            ) {
+                return;
+            }
+
+            if (
+                calibrationActive.current
+            ) {
+                return;
             }
 
             if (
@@ -450,42 +646,18 @@ export default function BlueprintScene() {
                 !blueprint.selected ||
                 blueprint.locked
             ) {
-
                 return;
-
-            }
-
-            const target =
-                event.target as HTMLElement | null;
-
-            //--------------------------------------------------
-            // Don't rotate while typing.
-            //--------------------------------------------------
-
-            if (
-                target?.tagName === "INPUT" ||
-                target?.tagName === "TEXTAREA"
-            ) {
-
-                return;
-
             }
 
             dispatch({
-
                 type:
                     "UPDATE_BLUEPRINT",
-
                 payload: {
-
                     rotationY:
                         blueprint.rotationY +
                         Math.PI / 2
-
                 }
-
             });
-
         }
 
         window.addEventListener(
@@ -499,7 +671,6 @@ export default function BlueprintScene() {
                 "keydown",
                 handleKeyDown
             );
-
         };
 
     }, [
@@ -508,12 +679,7 @@ export default function BlueprintScene() {
     ]);
 
     //--------------------------------------------------
-    // IMPORTANT:
-    //
-    // Blueprint exists in state but has NOT been
-    // activated yet.
-    //
-    // Therefore it should NOT appear in the scene.
+    // Blueprint only appears when selected.
     //--------------------------------------------------
 
     if (
@@ -523,7 +689,6 @@ export default function BlueprintScene() {
     ) {
 
         return null;
-
     }
 
     //--------------------------------------------------
@@ -540,30 +705,16 @@ export default function BlueprintScene() {
         );
 
     //--------------------------------------------------
-    // Render
+    // Render blueprint
     //--------------------------------------------------
 
     return (
-
         <mesh
-
             position={[
                 blueprint.x,
-
-                // Slightly above the floor
                 0.006,
-
                 blueprint.z
             ]}
-
-            //--------------------------------------------------
-            // IMPORTANT:
-            //
-            // planeGeometry starts vertical on XY.
-            //
-            // Rotate -90° around X so it lies horizontally
-            // on the XZ floor plane.
-            //--------------------------------------------------
 
             rotation={[
                 -Math.PI / 2,
@@ -575,10 +726,6 @@ export default function BlueprintScene() {
                 handlePointerDown
             }
 
-            //--------------------------------------------------
-            // Locked blueprint should not intercept clicks.
-            //--------------------------------------------------
-
             raycast={
                 blueprint.locked
                     ? () => null
@@ -588,7 +735,6 @@ export default function BlueprintScene() {
             renderOrder={
                 -10
             }
-
         >
 
             <planeGeometry
@@ -599,28 +745,21 @@ export default function BlueprintScene() {
             />
 
             <meshBasicMaterial
-
                 map={
                     texture
                 }
-
                 transparent
-
                 opacity={
                     opacity
                 }
-
                 depthWrite={
                     false
                 }
-
                 side={
                     DoubleSide
                 }
-
             />
 
         </mesh>
-
     );
 }

@@ -14,6 +14,8 @@ interface Props {
 
     layoutConfirmed: boolean;
 
+    walkthroughMode: boolean;
+
     onTabChange: (
         tab: string
     ) => void;
@@ -24,7 +26,9 @@ export default function WorkspaceTabs({
 
     activeTab,
 
-   
+    layoutConfirmed,
+
+    walkthroughMode,
 
     onTabChange
 
@@ -89,10 +93,15 @@ export default function WorkspaceTabs({
 
     ];
 
+
     return (
 
         <div
-            className="workspace-tabs"
+            className={
+                walkthroughMode
+                    ? "workspace-tabs walkthrough-locked"
+                    : "workspace-tabs"
+            }
         >
 
             {
@@ -103,6 +112,7 @@ export default function WorkspaceTabs({
 
                         const Icon =
                             tab.icon;
+
 
                         return (
 
@@ -118,11 +128,19 @@ export default function WorkspaceTabs({
                                     tab.label
                                 }
 
+                                disabled={
+                                    walkthroughMode
+                                }
+
                                 className={
+
                                     activeTab ===
                                     tab.id
+
                                         ? "tab active"
+
                                         : "tab"
+
                                 }
 
                                 onClick={() =>
@@ -138,8 +156,7 @@ export default function WorkspaceTabs({
                                 />
 
                                 <span
-                                    className=
-                                        "tab-tooltip"
+                                    className="tab-tooltip"
                                 >
 
                                     {

@@ -1,16 +1,25 @@
 /* ==========================================================
-   PANEL
+   FLOOR PLAN PANEL
+   Matches BuildPanel spacing / visual style
    ========================================================== */
 
 .panel {
-    width: 100%;
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 12px;
+
+    padding: 20px;
 
     box-sizing: border-box;
+
+    width: 100%;
 }
 
 
 /* ==========================================================
-   PANEL GROUP
+   PANEL GROUPS
    ========================================================== */
 
 .panel-group {
@@ -18,34 +27,33 @@
 
     box-sizing: border-box;
 
-    margin-bottom: 14px;
+    margin: 0;
 
     padding: 14px;
 
     background: #ffffff;
 
-    border:
-        1px solid #e6e6e6;
+    border: 1px solid var(--ws-border);
 
-    border-radius: 14px;
+    border-radius: 12px;
+
+    box-shadow: var(--ws-shadow-sm);
 }
 
 
-/* Locked sections stay visually normal but their controls
-   are disabled by the JSX. */
+/* Locked sections keep the same layout but look disabled */
 
 .panel-group-locked {
-    opacity: 0.85;
+    opacity: 0.72;
 }
 
 
 /* ==========================================================
-   SECTION TITLE
+   SECTION TITLES
    ========================================================== */
 
 .panel-group h3 {
-    margin:
-        0 0 12px;
+    margin: 0 0 12px;
 
     font-size: 12px;
 
@@ -53,9 +61,9 @@
 
     text-transform: uppercase;
 
-    letter-spacing: 0.08em;
+    letter-spacing: 0.07em;
 
-    color: #707070;
+    color: var(--ws-text-muted);
 }
 
 
@@ -64,14 +72,14 @@
    ========================================================== */
 
 .tool-switcher {
-    width: 100%;
-
     display: grid;
 
     grid-template-columns:
         repeat(3, 1fr);
 
-    gap: 5px;
+    gap: 8px;
+
+    width: 100%;
 }
 
 .tool-switch-button {
@@ -87,42 +95,48 @@
 
     gap: 6px;
 
+    padding: 8px;
+
     border: 0;
 
     border-radius: 10px;
 
-    background: #fafafa;
+    background: var(--ws-input-bg);
 
-    color: #5f5f5f;
+    color: var(--ws-text);
 
     font-size: 11px;
 
     cursor: pointer;
 
     transition:
-        background 0.15s ease,
-        color 0.15s ease;
+        background .15s ease,
+        color .15s ease,
+        box-shadow .15s ease;
 }
 
-.tool-switch-button:hover {
-    background:
-        #f3f3f3;
+.tool-switch-button:hover:not(:disabled) {
+    background: #f2f2f2;
 }
 
 .tool-switch-button.active {
-    background:
-        #fff0e3;
+    background: var(--ws-accent-soft);
 
-    color:
-        #ff8c32;
+    color: var(--ws-accent);
+
+    box-shadow:
+        inset 0 0 0 1px rgba(
+            255,
+            150,
+            63,
+            0.12
+        );
 }
 
 .tool-switch-button:disabled {
-    opacity:
-        0.45;
+    opacity: 0.45;
 
-    cursor:
-        not-allowed;
+    cursor: not-allowed;
 }
 
 
@@ -131,59 +145,48 @@
    ========================================================== */
 
 .blueprint-panel-group {
-    padding:
-        0;
+    padding: 0;
 
-    overflow:
-        hidden;
+    overflow: hidden;
 }
 
 .blueprint-section-header {
-    width:
-        100%;
+    width: 100%;
 
-    min-height:
-        44px;
+    min-height: 46px;
 
-    display:
-        flex;
+    display: flex;
 
-    align-items:
-        center;
+    align-items: center;
 
-    justify-content:
-        space-between;
+    justify-content: space-between;
 
-    padding:
-        0 14px;
+    padding: 0 14px;
 
-    border:
-        0;
+    border: 0;
 
-    background:
-        #ffffff;
+    background: #ffffff;
 
-    color:
-        #222;
+    color: var(--ws-text);
 
-    font-size:
-        13px;
+    font-size: 13px;
 
-    font-weight:
-        600;
+    font-weight: 600;
 
-    cursor:
-        pointer;
+    cursor: pointer;
+
+    text-align: left;
 }
 
 .blueprint-section-header:hover {
-    background:
-        #fafafa;
+    background: #fafafa;
 }
 
 .blueprint-chevron {
+    color: var(--ws-text-muted);
+
     transition:
-        transform 0.18s ease;
+        transform .15s ease;
 }
 
 .blueprint-chevron.open {
@@ -193,441 +196,359 @@
 
 .blueprint-section-content {
     padding:
-        0 14px 12px;
+        0 14px 14px;
 }
 
 
 /* ==========================================================
-   UPLOAD
+   BLUEPRINT UPLOAD
    ========================================================== */
 
 .blueprint-upload-button {
-    width:
-        100%;
+    width: 100%;
 
-    min-height:
-        38px;
+    min-height: 40px;
 
-    display:
-        flex;
+    display: flex;
 
-    align-items:
-        center;
+    align-items: center;
 
-    justify-content:
-        center;
+    justify-content: center;
 
-    gap:
-        7px;
+    gap: 7px;
 
-    border:
-        1px dashed #d7d7d7;
+    padding: 10px;
 
-    border-radius:
-        9px;
+    box-sizing: border-box;
 
-    background:
-        #fafafa;
+    border: 1px dashed var(--ws-border);
 
-    color:
-        #555;
+    border-radius: 10px;
 
-    font-size:
-        11px;
+    background: var(--ws-input-bg);
 
-    font-weight:
-        600;
+    color: var(--ws-text);
 
-    cursor:
-        pointer;
+    font-size: 12px;
 
-    box-sizing:
-        border-box;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition:
+        background .15s ease,
+        border-color .15s ease;
 }
 
 .blueprint-upload-button:hover {
-    background:
-        #f5f5f5;
+    background: #f4f4f4;
+
+    border-color: #d4d4d4;
 }
 
 
 /* ==========================================================
-   FILE ROW
+   BLUEPRINT FILE
    ========================================================== */
 
 .blueprint-file {
-    width:
-        100%;
+    width: 100%;
 
-    display:
-        flex;
+    display: flex;
 
-    align-items:
-        center;
+    align-items: center;
 
-    gap:
-        7px;
+    gap: 8px;
 
-    padding:
-        7px;
+    padding: 8px;
 
-    box-sizing:
-        border-box;
+    box-sizing: border-box;
 
-    border:
-        1px solid #e7e7e7;
+    border: 1px solid var(--ws-border);
 
-    border-radius:
-        9px;
+    border-radius: 10px;
 
-    background:
-        #fafafa;
+    background: var(--ws-input-bg);
 
     transition:
-        border-color 0.15s ease,
-        background 0.15s ease;
+        border-color .15s ease,
+        background .15s ease;
 }
 
 .blueprint-file.selected {
-    border-color:
-        #ff9a45;
+    background: var(--ws-accent-soft);
 
-    background:
-        #fff8f2;
+    border-color: var(--ws-accent);
 }
 
 
 /* ==========================================================
-   FILE MAIN AREA
+   BLUEPRINT FILE BUTTON
    ========================================================== */
 
 .blueprint-file-main {
-    flex:
-        1;
+    flex: 1;
 
-    min-width:
-        0;
+    min-width: 0;
 
-    display:
-        flex;
+    display: flex;
 
-    align-items:
-        center;
+    align-items: center;
 
-    gap:
-        8px;
+    gap: 9px;
 
-    padding:
-        0;
+    padding: 0;
 
-    border:
-        0;
+    border: 0;
 
-    background:
-        transparent;
+    background: transparent;
 
-    color:
-        inherit;
+    color: inherit;
 
-    text-align:
-        left;
+    text-align: left;
 
-    cursor:
-        pointer;
+    cursor: pointer;
 }
 
 .blueprint-file-main:hover {
-    opacity:
-        0.85;
+    opacity: 0.85;
 }
 
 
 /* ==========================================================
-   THUMBNAIL
+   BLUEPRINT THUMBNAIL
    ========================================================== */
 
 .blueprint-file-thumbnail {
-    width:
-        44px;
+    width: 42px;
 
-    height:
-        44px;
+    height: 42px;
 
-    flex:
-        0 0 44px;
+    flex: 0 0 42px;
 
-    overflow:
-        hidden;
+    overflow: hidden;
 
-    border-radius:
-        50%;
+    border-radius: 50%;
 
-    border:
-        1px solid #dedede;
+    border: 1px solid #dedede;
 
-    background:
-        #f1f1f1;
+    background: #ffffff;
 }
 
 .blueprint-file-thumbnail img {
-    display:
-        block;
+    display: block;
 
-    width:
-        100%;
+    width: 100%;
 
-    height:
-        100%;
+    height: 100%;
 
-    object-fit:
-        cover;
+    object-fit: cover;
 }
 
 
 /* ==========================================================
-   FILE INFO
+   BLUEPRINT FILE INFO
    ========================================================== */
 
 .blueprint-file-info {
-    min-width:
-        0;
+    min-width: 0;
 
-    display:
-        flex;
+    display: flex;
 
-    flex-direction:
-        column;
+    flex-direction: column;
 
-    gap:
-        2px;
+    gap: 3px;
 }
 
 .blueprint-file-info strong {
-    overflow:
-        hidden;
+    overflow: hidden;
 
-    white-space:
-        nowrap;
+    white-space: nowrap;
 
-    text-overflow:
-        ellipsis;
+    text-overflow: ellipsis;
 
-    font-size:
-        11px;
+    font-size: 11px;
 
-    font-weight:
-        600;
+    font-weight: 600;
+
+    color: var(--ws-text);
 }
 
 .blueprint-file-info span {
-    font-size:
-        9px;
+    font-size: 9px;
 
-    color:
-        #888;
+    color: var(--ws-text-muted);
 }
 
 
 /* ==========================================================
-   REMOVE UPLOADED FILE ICON
+   DELETE UPLOADED BLUEPRINT
    ========================================================== */
 
 .blueprint-remove-icon {
-    width:
-        28px;
+    width: 30px;
 
-    height:
-        28px;
+    height: 30px;
 
-    flex:
-        0 0 28px;
+    flex: 0 0 30px;
 
-    display:
-        flex;
+    display: flex;
 
-    align-items:
-        center;
+    align-items: center;
 
-    justify-content:
-        center;
+    justify-content: center;
 
-    padding:
-        0;
+    padding: 0;
 
-    border:
-        0;
+    border: 0;
 
-    border-radius:
-        7px;
+    border-radius: 8px;
 
-    background:
-        #f4f4f4;
+    background: #f2f2f2;
 
-    color:
-        #b3261e;
+    color: #c0392b;
 
-    cursor:
-        pointer;
+    cursor: pointer;
+
+    transition:
+        background .15s ease;
 }
 
 .blueprint-remove-icon:hover {
-    background:
-        #eaeaea;
+    background: #e8e8e8;
 }
 
 
 /* ==========================================================
-   SIZE CONTROL
+   BLUEPRINT SIZE
    ========================================================== */
 
 .blueprint-control {
-    margin-top:
-        10px;
+    margin-top: 12px;
 }
 
 .blueprint-control-row {
-    width:
-        100%;
+    width: 100%;
 
-    display:
-        flex;
+    display: flex;
 
-    align-items:
-        center;
+    align-items: center;
 
-    justify-content:
-        space-between;
+    justify-content: space-between;
 
-    margin-bottom:
-        4px;
+    margin-bottom: 6px;
 
-    font-size:
-        10px;
+    font-size: 11px;
+
+    color: var(--ws-text);
 }
 
 .blueprint-control-row strong {
-    font-size:
-        10px;
+    font-size: 11px;
 }
 
 
 /* ==========================================================
-   RANGE SLIDERS
+   SLIDERS
    ========================================================== */
 
 .blueprint-control input[type="range"],
 .blueprint-opacity-control input[type="range"] {
+    width: 80%;
 
-    width:
-        80%;
+    height: 4px;
 
-    height:
-        4px;
+    display: block;
 
-    display:
-        block;
+    margin: 0;
 
-    cursor:
-        pointer;
+    cursor: pointer;
+
+    accent-color: var(--ws-accent);
 }
 
 
 /* ==========================================================
-   OPACITY
+   BLUEPRINT OPACITY
    ========================================================== */
 
 .blueprint-opacity-control {
-    margin-top:
-        10px;
+    margin-top: 13px;
 }
 
 .blueprint-opacity-header {
-    width:
-        100%;
+    width: 100%;
 
-    display:
-        flex;
+    display: flex;
 
-    align-items:
-        center;
+    align-items: center;
 
-    justify-content:
-        space-between;
+    justify-content: space-between;
 
-    margin-bottom:
-        4px;
+    margin-bottom: 6px;
 
-    font-size:
-        10px;
+    font-size: 11px;
+
+    color: var(--ws-text);
 }
 
 .blueprint-opacity-right {
-    display:
-        flex;
+    display: flex;
 
-    align-items:
-        center;
+    align-items: center;
 
-    gap:
-        6px;
+    gap: 7px;
 }
 
 .blueprint-opacity-right strong {
-    font-size:
-        10px;
+    font-size: 11px;
 }
 
 
 /* ==========================================================
-   LOCK BUTTON
+   BLUEPRINT LOCK
    ========================================================== */
 
 .blueprint-lock-toggle {
-    width:
-        25px;
+    width: 28px;
 
-    height:
-        25px;
+    height: 28px;
 
-    display:
-        flex;
+    display: flex;
 
-    align-items:
-        center;
+    align-items: center;
 
-    justify-content:
-        center;
+    justify-content: center;
 
-    padding:
-        0;
+    padding: 0;
 
     border:
-        1px solid #dddddd;
+        1px solid var(--ws-border);
 
-    border-radius:
-        6px;
+    border-radius: 8px;
 
-    background:
-        #f5f5f5;
+    background: var(--ws-input-bg);
 
-    color:
-        #555;
+    color: var(--ws-text-muted);
 
-    cursor:
-        pointer;
+    cursor: pointer;
+
+    transition:
+        background .15s ease,
+        color .15s ease,
+        border-color .15s ease;
 }
 
 .blueprint-lock-toggle:hover {
-    background:
-        #eeeeee;
+    background: #f0f0f0;
 }
 
 .blueprint-lock-toggle.locked {
     background:
-        #222;
+        var(--ws-text);
 
     border-color:
-        #222;
+        var(--ws-text);
 
     color:
         #ffffff;
@@ -638,51 +559,84 @@
    SNAP TO GRID
    ========================================================== */
 
-.blueprint-option {
-    width: 100%;
+/* ==========================================================
+   SHOW / HIDE BLUEPRINT
+   ========================================================== */
 
-    min-height: 36px;
+.blueprint-scene-button {
+    width:
+        100%;
 
-    margin-top: 11px;
+    min-height:
+        36px;
 
-    padding: 0 12px;
+    display:
+        flex;
 
-    display: flex;
+    align-items:
+        center;
 
-    align-items: center;
+    justify-content:
+        center;
 
-    justify-content: center;
+    margin-top:
+        10px;
 
-    border: 0;
+    padding:
+        0 12px;
 
-    border-radius: 8px;
+    border:
+        1px solid var(--ws-border);
 
-    background: #fff0e3;
+    border-radius:
+        10px;
 
-    color: #e97822;
+    background:
+        #ffffff;
 
-    font-size: 11px;
+    color:
+        var(--ws-text);
 
-    font-weight: 600;
+    font-size:
+        11px;
 
-    cursor: pointer;
+    font-weight:
+        600;
+
+    cursor:
+        pointer;
+
+    transition:
+        background .15s ease,
+        border-color .15s ease,
+        color .15s ease;
 }
 
-.blueprint-option:hover {
-    background: #ffead8;
+.blueprint-scene-button:hover {
+    background:
+        var(--ws-surface-hover);
+
+    border-color:
+        var(--ws-accent);
+
+    color:
+        var(--ws-accent);
+}
+
+.blueprint-option:hover:not(:disabled) {
+    background:
+        #ffead8;
 }
 
 .blueprint-option:not(.active) {
-    background: #f3f3f3;
+    background:
+        var(--ws-input-bg);
 
-    color: #555;
+    color:
+        var(--ws-text-muted);
 }
 
-.blueprint-option:disabled {
-    opacity: 0.5;
 
-    cursor: not-allowed;
-}
 
 
 /* ==========================================================
@@ -694,129 +648,141 @@
 
     min-height: 36px;
 
-    margin-top: 9px;
-
-    padding: 0 12px;
-
     display: flex;
 
     align-items: center;
 
     justify-content: center;
 
-    border: 1px solid #e5e5e5;
+    margin-top: 8px;
 
-    border-radius: 8px;
+    padding: 0 12px;
 
-    background: #ffffff;
+    border:
+        1px solid var(--ws-border);
 
-    color: #777;
-
-    font-size: 11px;
-
-    font-weight: 600;
-
-    cursor: pointer;
-}
-
-.blueprint-scene-button:hover {
-    background: #f7f7f7;
-
-    color: #555;
-}
-
-.blueprint-scene-button:disabled {
-    opacity: 0.45;
-
-    cursor: not-allowed;
-}
-
-
-/* ==========================================================
-   WALL SETTINGS
-   ========================================================== */
-
-.field-grid {
-    display:
-        grid;
-
-    grid-template-columns:
-        repeat(2, 1fr);
-
-    gap:
+    border-radius:
         10px;
-}
 
-.field {
-    min-width:
-        0;
-}
+    background:
+        #ffffff;
 
-.field label {
-    display:
-        block;
-
-    margin:
-        0 0 6px;
+    color:
+        var(--ws-text-muted);
 
     font-size:
         11px;
 
+    font-weight:
+        600;
+
+    cursor:
+        pointer;
+
+    transition:
+        background .15s ease,
+        color .15s ease;
+}
+
+.blueprint-scene-button:hover:not(:disabled) {
+    background:
+        #f5f5f5;
+
     color:
-        #707070;
+        var(--ws-text);
+}
+
+.blueprint-scene-button:disabled {
+    opacity:
+        0.45;
+
+    cursor:
+        not-allowed;
+}
+
+
+/* ==========================================================
+   FIELD GRID
+   ========================================================== */
+
+.field-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, 1fr);
+
+    gap: 10px;
+}
+
+.field {
+    min-width: 0;
+}
+
+.field label {
+    display: block;
+
+    margin: 0 0 6px;
+
+    font-size: 11px;
+
+    color: var(--ws-text-muted);
 }
 
 .field-input {
-    position:
-        relative;
+    position: relative;
 
-    display:
-        flex;
+    display: flex;
 
-    align-items:
-        center;
+    align-items: center;
 }
 
 .field-input input {
-    width:
-        100%;
+    width: 100%;
 
-    height:
-        38px;
+    height: 38px;
 
     padding:
         0 32px 0 10px;
 
-    box-sizing:
-        border-box;
+    box-sizing: border-box;
 
     border:
-        1px solid #e1e1e1;
+        1px solid var(--ws-border);
 
-    border-radius:
-        9px;
+    border-radius: 10px;
 
     background:
-        #ffffff;
+        var(--ws-input-bg);
+
+    color:
+        var(--ws-text);
 
     font-size:
         12px;
 
     outline:
         none;
+
+    transition:
+        border-color .15s ease,
+        box-shadow .15s ease;
 }
 
 .field-input input:focus {
     border-color:
-        #ff9a45;
+        var(--ws-accent);
+
+    box-shadow:
+        0 0 0 3px
+        var(--ws-accent-soft);
 }
 
 .field-input input:disabled {
     background:
-        #f7f7f7;
+        #f5f5f5;
 
     color:
-        #888;
+        var(--ws-text-muted);
 
     cursor:
         not-allowed;
@@ -830,7 +796,7 @@
         10px;
 
     color:
-        #888;
+        var(--ws-text-muted);
 
     font-size:
         11px;
@@ -841,27 +807,22 @@
 
 
 /* ==========================================================
-   TOGGLE
+   WALL MEASUREMENTS TOGGLE
    ========================================================== */
 
 .toggle-row {
-    display:
-        flex;
+    display: flex;
 
-    align-items:
-        center;
+    align-items: center;
 
-    justify-content:
-        space-between;
+    justify-content: space-between;
 
-    margin-top:
-        14px;
+    margin-top: 14px;
 
-    padding-top:
-        13px;
+    padding-top: 13px;
 
     border-top:
-        1px solid #ededed;
+        1px solid var(--ws-border);
 }
 
 .toggle-row-label {
@@ -869,70 +830,67 @@
         11px;
 
     color:
-        #444;
+        var(--ws-text);
 }
 
+
+/* ==========================================================
+   TOGGLE SWITCH
+   ========================================================== */
+
 .toggle-switch {
-    position:
-        relative;
+    position: relative;
 
-    width:
-        38px;
+    width: 38px;
 
-    height:
-        22px;
+    height: 22px;
 
-    padding:
-        0;
+    padding: 0;
 
-    border:
-        0;
+    border: 0;
 
-    border-radius:
-        999px;
+    border-radius: 999px;
 
-    background:
-        #e7e7e7;
+    background: #dedede;
 
-    cursor:
-        pointer;
+    cursor: pointer;
 
     transition:
-        background 0.15s ease;
+        background .15s ease;
 }
 
 .toggle-switch::after {
-    content:
-        "";
+    content: "";
 
-    position:
-        absolute;
+    position: absolute;
 
-    top:
-        3px;
+    top: 3px;
 
-    left:
-        3px;
+    left: 3px;
 
-    width:
-        16px;
+    width: 16px;
 
-    height:
-        16px;
+    height: 16px;
 
-    border-radius:
-        50%;
+    border-radius: 50%;
 
-    background:
-        #ffffff;
+    background: #ffffff;
+
+    box-shadow:
+        0 1px 3px rgba(
+            0,
+            0,
+            0,
+            0.12
+        );
 
     transition:
-        transform 0.15s ease;
+        transform .15s ease;
 }
 
 .toggle-switch.on {
     background:
-        #ff9a45;
+        var(--ws-accent);
 }
 
 .toggle-switch.on::after {
@@ -981,7 +939,7 @@
         11px;
 
     color:
-        #777;
+        var(--ws-text-muted);
 }
 
 .measurement-value {
@@ -992,7 +950,7 @@
         600;
 
     color:
-        #333;
+        var(--ws-text);
 }
 
 .measurement-empty {
@@ -1000,7 +958,7 @@
         11px;
 
     color:
-        #888;
+        var(--ws-text-muted);
 
     line-height:
         1.5;
@@ -1017,7 +975,7 @@
         50%;
 
     background:
-        #ff9a45;
+        var(--ws-accent);
 }
 
 
@@ -1030,25 +988,28 @@
         100%;
 
     min-height:
-        44px;
+        42px;
 
-    margin-top:
-        2px;
+    margin:
+        0;
+
+    padding:
+        0 14px;
 
     border:
         0;
 
     border-radius:
-        11px;
+        10px;
 
     background:
-        #ff9a45;
+        var(--ws-accent);
 
     color:
         #ffffff;
 
     font-size:
-        13px;
+        12px;
 
     font-weight:
         700;
@@ -1057,15 +1018,19 @@
         pointer;
 
     box-shadow:
-        0 5px 14px rgba(
-            255,
-            154,
-            69,
-            0.18
-        );
+        var(--ws-shadow-sm);
+
+    transition:
+        background .15s ease,
+        transform .05s ease;
 }
 
 .start-button:hover {
-    filter:
-        brightness(0.98);
+    background:
+        #f58a30;
+}
+
+.start-button:active {
+    transform:
+        translateY(1px);
 }

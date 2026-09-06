@@ -8,7 +8,8 @@ import {
     Shape
 } from "three";
 
-import useEditor from "../../context/editor/useEditor";
+import useEditor
+    from "../../context/editor/useEditor";
 
 import type {
     WallPiece as WallPieceType
@@ -21,6 +22,7 @@ import type {
     WallFinishSide
 } from "./WallFinishUtils";
 
+
 interface Props {
 
     wallId: string;
@@ -28,7 +30,9 @@ interface Props {
     piece: WallPieceType;
 
     finishSides?: WallFinishSide[];
+
 }
+
 
 function WallPiece({
 
@@ -45,13 +49,41 @@ function WallPiece({
         dispatch
     } = useEditor();
 
+
     const [
         hovered,
         setHovered
     ] = useState(false);
 
+
     const selected =
         state.selectedWallId === wallId;
+
+
+    //--------------------------------------------------
+    // Walkthrough state
+    //--------------------------------------------------
+
+    const walkthroughMode =
+        state.walkthroughMode;
+
+
+    //--------------------------------------------------
+    // During walkthrough:
+    //
+    // - Ignore hover
+    // - Ignore selection
+    // - Show normal wall color
+    //--------------------------------------------------
+
+    const showHovered =
+        hovered &&
+        !walkthroughMode;
+
+
+    const showSelected =
+        selected &&
+        !walkthroughMode;
 
 
     // ==================================================
@@ -71,33 +103,42 @@ function WallPiece({
 
         } = piece.arch;
 
+
         const radius =
             openingWidth * 0.5;
 
+
         const shape =
             new Shape();
+
 
         shape.moveTo(
             -openingWidth * 0.5,
             openingHeight
         );
 
+
         shape.lineTo(
             -openingWidth * 0.5,
             piece.height
         );
 
+
         shape.lineTo(
             openingWidth * 0.5,
             piece.height
         );
+
 
         shape.lineTo(
             openingWidth * 0.5,
             openingHeight
         );
 
-        const segments = 24;
+
+        const segments =
+            24;
+
 
         for (
             let i = segments;
@@ -109,27 +150,34 @@ function WallPiece({
                 Math.PI *
                 (i / segments);
 
+
             const x =
                 Math.cos(angle) *
                 radius;
+
 
             const y =
                 openingHeight +
                 Math.sin(angle) *
                 radius;
 
+
             shape.lineTo(
                 x,
                 y
             );
+
         }
 
+
         shape.closePath();
+
 
         const geometry =
             new ExtrudeGeometry(
                 shape,
                 {
+
                     depth:
                         piece.thickness,
 
@@ -138,10 +186,13 @@ function WallPiece({
 
                     steps:
                         1
+
                 }
             );
 
+
         geometry.center();
+
 
         return (
 
@@ -149,7 +200,7 @@ function WallPiece({
 
                 {/* ------------------------------------------
                     Actual wall
-                   ------------------------------------------ */}
+                ------------------------------------------ */}
 
                 <mesh
 
@@ -172,37 +223,49 @@ function WallPiece({
                     }}
 
                     onPointerOver={
-                        (e) => {
+                        walkthroughMode
+                            ? undefined
+                            : (e) => {
 
-                            e.stopPropagation();
+                                e.stopPropagation();
 
-                            setHovered(true);
+                                setHovered(
+                                    true
+                                );
 
-                        }
+                            }
                     }
 
-                    onPointerOut={() => {
+                    onPointerOut={
+                        walkthroughMode
+                            ? undefined
+                            : () => {
 
-                        setHovered(false);
+                                setHovered(
+                                    false
+                                );
 
-                    }}
+                            }
+                    }
 
                     onClick={
-                        (e) => {
+                        walkthroughMode
+                            ? undefined
+                            : (e) => {
 
-                            e.stopPropagation();
+                                e.stopPropagation();
 
-                            dispatch({
+                                dispatch({
 
-                                type:
-                                    "SELECT_WALL",
+                                    type:
+                                        "SELECT_WALL",
 
-                                payload:
-                                    wallId
+                                    payload:
+                                        wallId
 
-                            });
+                                });
 
-                        }
+                            }
                     }
 
                 >
@@ -211,11 +274,11 @@ function WallPiece({
 
                         color={
 
-                            selected
+                            showSelected
 
                                 ? "#2196F3"
 
-                                : hovered
+                                : showHovered
 
                                 ? "#8CC8FF"
 
@@ -230,7 +293,7 @@ function WallPiece({
 
                 {/* ------------------------------------------
                     Interior wall finish
-                   ------------------------------------------ */}
+                ------------------------------------------ */}
 
                 {
                     finishSides.map(
@@ -259,6 +322,7 @@ function WallPiece({
             </group>
 
         );
+
     }
 
 
@@ -272,7 +336,7 @@ function WallPiece({
 
             {/* ------------------------------------------
                 Actual wall
-               ------------------------------------------ */}
+            ------------------------------------------ */}
 
             <mesh
 
@@ -291,37 +355,49 @@ function WallPiece({
                 }}
 
                 onPointerOver={
-                    (e) => {
+                    walkthroughMode
+                        ? undefined
+                        : (e) => {
 
-                        e.stopPropagation();
+                            e.stopPropagation();
 
-                        setHovered(true);
+                            setHovered(
+                                true
+                            );
 
-                    }
+                        }
                 }
 
-                onPointerOut={() => {
+                onPointerOut={
+                    walkthroughMode
+                        ? undefined
+                        : () => {
 
-                    setHovered(false);
+                            setHovered(
+                                false
+                            );
 
-                }}
+                        }
+                }
 
                 onClick={
-                    (e) => {
+                    walkthroughMode
+                        ? undefined
+                        : (e) => {
 
-                        e.stopPropagation();
+                            e.stopPropagation();
 
-                        dispatch({
+                            dispatch({
 
-                            type:
-                                "SELECT_WALL",
+                                type:
+                                    "SELECT_WALL",
 
-                            payload:
-                                wallId
+                                payload:
+                                    wallId
 
-                        });
+                            });
 
-                    }
+                        }
                 }
 
             >
@@ -336,15 +412,16 @@ function WallPiece({
 
                 />
 
+
                 <meshStandardMaterial
 
                     color={
 
-                        selected
+                        showSelected
 
                             ? "#2196F3"
 
-                            : hovered
+                            : showHovered
 
                             ? "#8CC8FF"
 
@@ -359,7 +436,7 @@ function WallPiece({
 
             {/* ------------------------------------------
                 Interior wall finish
-               ------------------------------------------ */}
+            ------------------------------------------ */}
 
             {
                 finishSides.map(
@@ -388,7 +465,9 @@ function WallPiece({
         </group>
 
     );
+
 }
+
 
 export default memo(
     WallPiece

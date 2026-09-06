@@ -1,56 +1,253 @@
+/* ==========================================================
+   DESIGN PANEL
+   Matches Build / Floor Plan visual style
+   ========================================================== */
+
 .design-panel {
     display: flex;
+
     flex-direction: column;
+
     gap: 12px;
+
     padding: 20px;
+
+    box-sizing: border-box;
+
+    width: 100%;
 }
+
+
+/* ==========================================================
+   DESIGN TABS
+   ========================================================== */
 
 .design-panel-tabs {
     display: flex;
+
     gap: 8px;
+
+    width: 100%;
 }
 
 .design-panel-tabs button {
     flex: 1;
+
+    min-height: 38px;
+
     padding: 8px 12px;
+
+    border:
+        1px solid var(--ws-border);
+
     border-radius: 10px;
-    border: 1px solid var(--ws-border);
-    background: var(--ws-input-bg);
-    color: var(--ws-text-muted);
-    font-size: 13px;
-    cursor: pointer;
-    transition: border-color .15s ease, color .15s ease, background .15s ease;
+
+    background:
+        var(--ws-input-bg);
+
+    color:
+        var(--ws-text-muted);
+
+    font-size:
+        12px;
+
+    font-weight:
+        600;
+
+    cursor:
+        pointer;
+
+    transition:
+        border-color .15s ease,
+        color .15s ease,
+        background .15s ease;
+}
+
+.design-panel-tabs button:hover {
+    background:
+        #f5f5f5;
+
+    color:
+        var(--ws-text);
 }
 
 .design-panel-tabs button.active {
-    border-color: var(--ws-accent);
-    color: var(--ws-text);
-    background: var(--ws-accent-soft);
+    border-color:
+        var(--ws-accent);
+
+    color:
+        var(--ws-accent);
+
+    background:
+        var(--ws-accent-soft);
 }
+
+
+/* ==========================================================
+   DESIGN GROUP / CARD
+   ========================================================== */
+
+.design-panel-group {
+    width: 100%;
+
+    box-sizing: border-box;
+
+    padding: 14px;
+
+    border:
+        1px solid var(--ws-border);
+
+    border-radius: 12px;
+
+    background:
+        #ffffff;
+
+    box-shadow:
+        var(--ws-shadow-sm);
+}
+
+
+/* ==========================================================
+   DESIGN SECTION TITLE
+   ========================================================== */
+
+.design-panel-group h3 {
+    margin:
+        0 0 12px;
+
+    font-size:
+        12px;
+
+    font-weight:
+        700;
+
+    text-transform:
+        uppercase;
+
+    letter-spacing:
+        .07em;
+
+    color:
+        var(--ws-text-muted);
+}
+
+
+/* ==========================================================
+   APPLY ALL
+   ========================================================== */
 
 .design-panel-apply-all {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    color: var(--ws-text-muted);
-    cursor: pointer;
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    gap:
+        8px;
+
+    padding:
+        4px 0;
+
+    font-size:
+        12px;
+
+    color:
+        var(--ws-text-muted);
+
+    cursor:
+        pointer;
 }
 
+.design-panel-apply-all:hover {
+    color:
+        var(--ws-text);
+}
+
+
+/* ==========================================================
+   APPLY BUTTON
+   ========================================================== */
+
 .design-panel-apply-btn {
-    padding: 10px 14px;
-    border-radius: 12px;
-    border: none;
-    background: var(--ws-accent);
-    color: white;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    box-shadow: var(--ws-shadow-sm);
-    transition: opacity .15s ease;
+    width:
+        100%;
+
+    min-height:
+        40px;
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        center;
+
+    padding:
+        0 14px;
+
+    border:
+        0;
+
+    border-radius:
+        10px;
+
+    background:
+        var(--ws-accent);
+
+    color:
+        #ffffff;
+
+    font-size:
+        12px;
+
+    font-weight:
+        700;
+
+    cursor:
+        pointer;
+
+    box-shadow:
+        var(--ws-shadow-sm);
+
+    transition:
+        background .15s ease,
+        opacity .15s ease,
+        transform .05s ease;
+}
+
+.design-panel-apply-btn:hover:not(:disabled) {
+    background:
+        #f58a30;
+}
+
+.design-panel-apply-btn:active:not(:disabled) {
+    transform:
+        translateY(1px);
 }
 
 .design-panel-apply-btn:disabled {
-    opacity: .5;
-    cursor: not-allowed;
+    opacity:
+        .5;
+
+    cursor:
+        not-allowed;
+}
+
+
+/* ==========================================================
+   DISABLED DESIGN CONTENT
+   ========================================================== */
+
+.design-panel input:disabled,
+.design-panel button:disabled {
+    cursor:
+        not-allowed;
+}
+
+.design-panel input:disabled {
+    opacity:
+        .55;
 }

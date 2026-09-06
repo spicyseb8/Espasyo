@@ -1103,9 +1103,7 @@ export default function WallDrawer() {
     // This is tracing mode.
     //--------------------------------------------------
 
-    const blueprintTracingMode =
-        state.blueprint?.selected === true &&
-        state.blueprint?.locked === true;
+
 
     //--------------------------------------------------
     // Clear live drawing state whenever blueprint

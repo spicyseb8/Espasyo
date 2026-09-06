@@ -90,3 +90,11 @@
         transition: none;
     }
 }
+.workspace-tabs.walkthrough-locked {
+    pointer-events: none;
+    opacity: 0.55;
+}
+
+.workspace-tabs.walkthrough-locked .tab {
+    cursor: default;
+}

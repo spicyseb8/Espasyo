@@ -1,277 +1,621 @@
+/* ==========================================================
+   ASSET SECTION
+   Furniture / Doors / Windows / Openings
+   ========================================================== */
+
 .asset-section {
     display: flex;
+
     flex-direction: column;
-    border-radius: 14px;
-    overflow: hidden;
+
+    width: 100%;
+
     background: var(--ws-surface);
-    border: 1px solid var(--ws-border);
-    box-shadow: var(--ws-shadow-sm);
+
+    border:
+        1px solid var(--ws-border);
+
+    border-radius:
+        12px;
+
+    overflow:
+        hidden;
+
+    box-shadow:
+        var(--ws-shadow-sm);
 }
 
+
+/* ==========================================================
+   HEADER
+   ========================================================== */
+
 .asset-section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
     width: 100%;
-    padding: 12px 14px;
+
+    min-height: 46px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    padding:
+        0 14px;
+
     border: none;
-    background: transparent;
-    color: var(--ws-text);
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 700;
-    transition: background .15s ease;
+
+    background:
+        var(--ws-surface);
+
+    color:
+        var(--ws-text);
+
+    cursor:
+        pointer;
+
+    font-size:
+        13px;
+
+    font-weight:
+        600;
+
+    text-align:
+        left;
+
+    transition:
+        background .15s ease;
 }
 
 .asset-section-header:hover {
-    background: rgba(0, 0, 0, 0.03);
+    background:
+        var(--ws-surface-hover);
 }
 
 .asset-section-header:focus-visible {
-    outline: 2px solid var(--ws-accent);
-    outline-offset: -2px;
+    outline:
+        2px solid var(--ws-accent);
+
+    outline-offset:
+        -2px;
 }
 
+
+/* ==========================================================
+   SECTION TITLE
+   ========================================================== */
+
 .asset-section-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--ws-text);
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    gap:
+        7px;
+
+    color:
+        var(--ws-text);
 }
 
 .asset-section-title svg {
-    color: var(--ws-accent);
+    color:
+        var(--ws-accent);
 }
+
+
+/* ==========================================================
+   COUNT
+   ========================================================== */
 
 .asset-count {
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--ws-accent);
-    background: var(--ws-accent-soft);
-    border-radius: 20px;
-    padding: 1px 8px;
+    min-width:
+        20px;
+
+    height:
+        18px;
+
+    padding:
+        0 6px;
+
+    display:
+        inline-flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        center;
+
+    border-radius:
+        999px;
+
+    background:
+        var(--ws-accent-soft);
+
+    color:
+        var(--ws-accent);
+
+    font-size:
+        10px;
+
+    font-weight:
+        700;
 }
 
+
+/* ==========================================================
+   CHEVRON
+   ========================================================== */
+
 .asset-chevron {
-    color: var(--ws-text-muted);
-    transition: transform .2s ease;
+    color:
+        var(--ws-text-muted);
+
+    transition:
+        transform .2s ease,
+        color .2s ease;
 }
 
 .asset-chevron.open {
-    transform: rotate(180deg);
-    color: var(--ws-accent);
+    transform:
+        rotate(180deg);
+
+    color:
+        var(--ws-accent);
 }
 
+
+/* ==========================================================
+   COLLAPSE
+   ========================================================== */
+
 .asset-collapse {
-    display: grid;
-    grid-template-rows: 0fr;
-    transition: grid-template-rows .25s ease;
+    display:
+        grid;
+
+    grid-template-rows:
+        0fr;
+
+    transition:
+        grid-template-rows .22s ease;
 }
 
 .asset-collapse.open {
-    grid-template-rows: 1fr;
+    grid-template-rows:
+        1fr;
 }
 
 .asset-collapse-inner {
-    overflow: hidden;
+    min-height:
+        0;
+
+    overflow:
+        hidden;
 }
+
+
+/* ==========================================================
+   ASSET GRID
+   ========================================================== */
 
 .asset-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-    padding: 4px 14px 16    px;
+    display:
+        grid;
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+    gap:
+        10px;
+
+    padding:
+        4px 14px 14px;
 }
+
+
+/* ==========================================================
+   SCROLLABLE GRID
+   ========================================================== */
+
+/*
+   Allows larger categories to stay compact.
+
+   With two columns, this gives approximately four
+   visible furniture cards at a time before scrolling.
+*/
+
+.asset-section:has(.asset-card) .asset-grid {
+    max-height:
+        390px;
+
+    overflow-y:
+        auto;
+
+    scrollbar-width:
+        thin;
+}
+
+.asset-section:has(.asset-card) .asset-grid::-webkit-scrollbar {
+    width:
+        5px;
+}
+
+.asset-section:has(.asset-card) .asset-grid::-webkit-scrollbar-thumb {
+    background:
+        #d7d7d7;
+
+    border-radius:
+        999px;
+}
+
+
+/* ==========================================================
+   EMPTY
+   ========================================================== */
 
 .asset-empty {
-    margin: 0;
-    padding: 4px 14px 16px;
-    font-size: 12px;
-    color: var(--ws-text-muted);
+    margin:
+        0;
+
+    padding:
+        8px 14px 14px;
+
+    font-size:
+        11px;
+
+    color:
+        var(--ws-text-muted);
+
+    text-align:
+        center;
 }
 
-/* ========================= */
-/* Divider                    */
-/* separates the asset grid   */
-/* from the settings toggle   */
-/* ========================= */
+
+/* ==========================================================
+   DIVIDER
+   ========================================================== */
 
 .asset-divider {
-    height: 1px;
-    margin: 0 14px;
-    background: var(--ws-border);
+    height:
+        1px;
+
+    margin:
+        0 14px;
+
+    background:
+        var(--ws-border);
 }
 
-/* ========================= */
-/* Settings toggle             */
-/* small nested collapse,      */
-/* no background of its own -  */
-/* just a text row + chevron   */
-/* ========================= */
+
+/* ==========================================================
+   SETTINGS TOGGLE
+   ========================================================== */
 
 .asset-settings-toggle {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
+    width:
+        100%;
 
-    padding: 10px 14px;
+    min-height:
+        38px;
 
-    border: none;
-    background: transparent;
+    display:
+        flex;
 
-    color: var(--ws-text-muted);
-    font-size: 12px;
-    font-weight: 600;
+    align-items:
+        center;
 
-    cursor: pointer;
+    justify-content:
+        space-between;
 
-    transition: color .15s ease;
+    padding:
+        0 14px;
+
+    border:
+        none;
+
+    background:
+        transparent;
+
+    color:
+        var(--ws-text-muted);
+
+    font-size:
+        11px;
+
+    font-weight:
+        600;
+
+    cursor:
+        pointer;
+
+    transition:
+        color .15s ease,
+        background .15s ease;
 }
 
 .asset-settings-toggle:hover {
-    color: var(--ws-text);
+    color:
+        var(--ws-text);
+
+    background:
+        var(--ws-surface-hover);
 }
 
 .asset-settings-toggle span {
-    display: flex;
-    align-items: center;
-    gap: 6px;
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    gap:
+        6px;
 }
 
+
+/* ==========================================================
+   SETTINGS COLLAPSE
+   ========================================================== */
+
 .asset-settings-collapse {
-    display: grid;
-    grid-template-rows: 0fr;
-    transition: grid-template-rows .2s ease;
+    display:
+        grid;
+
+    grid-template-rows:
+        0fr;
+
+    transition:
+        grid-template-rows .2s ease;
 }
 
 .asset-settings-collapse.open {
-    grid-template-rows: 1fr;
+    grid-template-rows:
+        1fr;
 }
 
 .asset-settings-collapse-inner {
-    overflow: hidden;
+    min-height:
+        0;
+
+    overflow:
+        hidden;
 }
 
-/* ========================= */
-/* Field grid / inputs        */
-/* matches FloorPlanPanel.css */
-/* so both panels share scale */
-/* ========================= */
 
-.field-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
+/* ==========================================================
+   SETTINGS FIELDS
+   Scoped to AssetSection so they don't interfere with
+   other panels.
+   ========================================================== */
 
-    padding: 0 14px 14px;
+.asset-section .field-grid {
+    display:
+        grid;
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+    gap:
+        10px;
+
+    padding:
+        0 14px 14px;
 }
 
-.field {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
+.asset-section .field {
+    display:
+        flex;
+
+    flex-direction:
+        column;
+
+    gap:
+        5px;
 }
 
-.field label {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--ws-text-muted);
+.asset-section .field label {
+    font-size:
+        11px;
+
+    font-weight:
+        500;
+
+    color:
+        var(--ws-text-muted);
 }
 
-.field-input {
-    position: relative;
-    display: flex;
-    align-items: center;
+.asset-section .field-input {
+    position:
+        relative;
+
+    display:
+        flex;
+
+    align-items:
+        center;
 }
 
-.field-input input {
-    width: 100%;
+.asset-section .field-input input {
+    width:
+        100%;
 
-    padding: 10px 30px 10px 12px;
+    height:
+        36px;
 
-    border-radius: 10px;
-    border: 1px solid var(--ws-border);
+    padding:
+        0 30px 0 10px;
 
-    background: var(--ws-input-bg);
-    color: var(--ws-text);
+    box-sizing:
+        border-box;
 
-    font-size: 13px;
+    border:
+        1px solid var(--ws-border);
 
-    transition: border-color .15s ease, box-shadow .15s ease;
+    border-radius:
+        9px;
+
+    background:
+        var(--ws-input-bg);
+
+    color:
+        var(--ws-text);
+
+    font-size:
+        12px;
+
+    outline:
+        none;
+
+    transition:
+        border-color .15s ease,
+        box-shadow .15s ease;
 }
 
-.field-input input:focus {
-    outline: none;
-    border-color: var(--ws-accent);
-    box-shadow: 0 0 0 3px var(--ws-accent-soft);
+.asset-section .field-input input:focus {
+    border-color:
+        var(--ws-accent);
+
+    box-shadow:
+        0 0 0 3px
+        var(--ws-accent-soft);
 }
 
-.field-unit {
-    position: absolute;
-    right: 12px;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--ws-text-muted);
-    pointer-events: none;
+.asset-section .field-unit {
+    position:
+        absolute;
+
+    right:
+        10px;
+
+    color:
+        var(--ws-text-muted);
+
+    font-size:
+        10px;
+
+    pointer-events:
+        none;
 }
 
-/* ========================= */
-/* Apply button                */
-/* ========================= */
+
+/* ==========================================================
+   APPLY AREA
+   ========================================================== */
 
 .asset-apply-row {
-    display: flex;
-    justify-content: flex-end;
+    display:
+        flex;
 
-    padding: 10px 14px 16px;
+    justify-content:
+        flex-end;
 
-    border-top: 1px solid var(--ws-border);
+    padding:
+        10px 14px 12px;
+
+    border-top:
+        1px solid var(--ws-border);
+
+    background:
+        var(--ws-surface);
 }
 
+
+/* ==========================================================
+   APPLY BUTTON
+   ========================================================== */
+
 .asset-apply-button {
-    display: flex;
-    align-items: center;
-    gap: 6px;
+    display:
+        inline-flex;
 
-    padding: 9px 16px;
+    align-items:
+        center;
 
-    border: none;
-    border-radius: 10px;
+    justify-content:
+        center;
 
-    background: var(--ws-surface-active);
+    gap:
+        6px;
 
-    color: var(--ws-accent-ink);
+    min-height:
+        34px;
 
-    font-size: 12px;
-    font-weight: 700;
+    min-width:
+        78px;
 
-    cursor: pointer;
+    padding:
+        7px 15px;
 
-    box-shadow: var(--ws-shadow-accent);
+    border:
+        none;
 
-    transition: transform .12s ease, box-shadow .18s ease, background .18s ease, opacity .18s ease;
+    border-radius:
+        10px;
+
+    background:
+        var(--ws-accent);
+
+    color:
+        #ffffff;
+
+    font-size:
+        11px;
+
+    font-weight:
+        600;
+
+    cursor:
+        pointer;
+
+    box-shadow:
+        var(--ws-shadow-accent);
+
+    transition:
+        background .15s ease,
+        opacity .15s ease,
+        transform .1s ease;
 }
 
 .asset-apply-button:hover:not(:disabled) {
-    transform: translateY(-1px);
+    background:
+        #f58a30;
+
+    transform:
+        translateY(-1px);
 }
 
 .asset-apply-button:active:not(:disabled) {
-    transform: scale(.97);
+    transform:
+        translateY(0);
 }
 
 .asset-apply-button:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-    box-shadow: none;
+    opacity:
+        .45;
+
+    cursor:
+        not-allowed;
+
+    box-shadow:
+        none;
 }
 
+
+/* ==========================================================
+   REDUCED MOTION
+   ========================================================== */
+
 @media (prefers-reduced-motion: reduce) {
+
     .asset-collapse,
     .asset-settings-collapse,
     .asset-chevron,
     .asset-apply-button {
-        transition: none;
+        transition:
+            none;
     }
+
 }
