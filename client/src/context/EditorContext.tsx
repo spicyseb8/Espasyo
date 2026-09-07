@@ -1,17 +1,53 @@
-import { createContext } from "react";
+import {
+    createContext
+} from "react";
 
-import type { EditorState } from "./editor/types";
+import type {
+    EditorAction
+} from "./editor/editorActions";
 
-import type { EditorAction } from "./editor/editorActions";
+import type {
+    EditorState
+} from "./editor/types";
 
-export interface EditorContextType {
+//==================================================
+// EDITOR CONTEXT TYPE
+//==================================================
 
-    state: EditorState;
+export interface EditorContextValue {
 
-    dispatch: React.Dispatch<EditorAction>;
+    state:
+        EditorState;
 
+    dispatch:
+        (action: EditorAction) => void;
+
+    //--------------------------------------------------
+    // Undo / Redo
+    //--------------------------------------------------
+
+    undo:
+        () => void;
+
+    redo:
+        () => void;
+
+    //--------------------------------------------------
+    // Used by Topbar later to enable/disable buttons.
+    //--------------------------------------------------
+
+    canUndo:
+        boolean;
+
+    canRedo:
+        boolean;
 }
 
-export const EditorContext =
+//==================================================
+// CONTEXT
+//==================================================
 
-    createContext<EditorContextType | null>(null);
+export const EditorContext =
+    createContext<
+        EditorContextValue | null
+    >(null);

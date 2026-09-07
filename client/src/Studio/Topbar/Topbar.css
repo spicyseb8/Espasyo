@@ -564,3 +564,30 @@
     }
 
 }
+.history-button {
+    width: 36px;
+    height: 36px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: none;
+    border-radius: 8px;
+
+    background: transparent;
+    cursor: pointer;
+
+    transition:
+        background 0.15s ease,
+        opacity 0.15s ease;
+}
+
+.history-button:hover:not(:disabled) {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.history-button:disabled {
+    opacity: 0.35;
+    cursor: default;
+}

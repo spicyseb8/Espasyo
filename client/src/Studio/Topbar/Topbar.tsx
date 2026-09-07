@@ -3,7 +3,9 @@ import "./Topbar.css";
 import {
     ChevronDown,
     Receipt,
-    PersonStanding
+    PersonStanding,
+    Undo2,
+    Redo2
 } from "lucide-react";
 
 import {
@@ -33,7 +35,11 @@ export default function Topbar() {
 
     const {
         state,
-        dispatch
+        dispatch,
+        undo,
+        redo,
+        canUndo,
+        canRedo
     } = useEditor();
 
 
@@ -335,7 +341,36 @@ export default function Topbar() {
             <div
                 className="topbar-actions"
             >
+                {/*----------------------------------------------
+    UNDO
+----------------------------------------------*/}
 
+<button
+    type="button"
+    className="history-button"
+    onClick={undo}
+    disabled={!canUndo}
+    title="Undo"
+    aria-label="Undo"
+>
+    <Undo2 size={18} />
+</button>
+
+
+{/*----------------------------------------------
+    REDO
+----------------------------------------------*/}
+
+<button
+    type="button"
+    className="history-button"
+    onClick={redo}
+    disabled={!canRedo}
+    title="Redo"
+    aria-label="Redo"
+>
+    <Redo2 size={18} />
+</button>
                 {/*----------------------------------------------
                     WALKTHROUGH
                 ----------------------------------------------*/}
