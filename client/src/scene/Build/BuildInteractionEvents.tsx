@@ -1,374 +1,458 @@
-import { useThree } from "@react-three/fiber";
-import { useEffect } from "react";
+import {
+    useThree
+} from "@react-three/fiber";
 
-import useEditor from "../../context/editor/useEditor";
+import {
+    useEffect
+} from "react";
 
-import { placeOpening } from "../../engine/openings/PlaceOpening";
-import type { OpeningShape } from "../../engine/openings/OpeningTypes";
+import useEditor
+    from "../../context/editor/useEditor";
 
-import { buildInteraction } from "./BuildInteraction";
+import {
+    buildInteraction
+} from "./BuildInteraction";
 
-import { placeDoor } from "../../engine/doors/PlaceDoor";
-import { placeWindow } from "../../engine/windows/PlaceWindow";
+import {
+    placeDoor
+} from "../../engine/doors/PlaceDoor";
 
-import { BuildTool } from "../../context/BuildTool";
+import {
+    placeWindow
+} from "../../engine/windows/PlaceWindow";
 
-import type { AssetBounds } from "./AssetBounds";
+import {
+    placeOpening
+} from "../../engine/openings/PlaceOpening";
+
+import {
+    BuildTool
+} from "../../context/BuildTool";
 
 export default function BuildInteractionEvents() {
 
-    const { gl } = useThree();
+    const {
+        gl
+    } = useThree();
 
     const {
         state,
         dispatch
     } = useEditor();
 
-    useEffect(() => {
+    useEffect(
+        () => {
 
-        const canvas =
-            gl.domElement;
+            const canvas =
+                gl.domElement;
 
-        //==================================================
-        // POINTER MOVE
-        //==================================================
+            //==================================================
+            // POINTER MOVE
+            //==================================================
 
-        function onPointerMove(
-            e: PointerEvent
-        ) {
-
-            buildInteraction.updatePointer(
-                e,
-                canvas
-            );
-
-        }
-
-        //==================================================
-        // POINTER DOWN
-        //==================================================
-
-        function onPointerDown(
-            e: PointerEvent
-        ) {
-
-            if (
-                e.button !== 0
+            function onPointerMove(
+                event: PointerEvent
             ) {
-                return;
+
+                buildInteraction.updatePointer(
+                    event,
+                    canvas
+                );
             }
 
-            //--------------------------------------------------
-            // Only handle wall-based build objects here.
-            //--------------------------------------------------
+            //==================================================
+            // POINTER DOWN
+            //==================================================
 
-            const buildTool =
-                state.buildTool;
-
-            if (
-                buildTool !== BuildTool.Door &&
-                buildTool !== BuildTool.Window &&
-                buildTool !== BuildTool.Opening
+            function onPointerDown(
+                event: PointerEvent
             ) {
 
-                return;
+                //--------------------------------------------------
+                // Left click only
+                //--------------------------------------------------
 
-            }
+                if (
+                    event.button !==
+                    0
+                ) {
+                    return;
+                }
 
-            //--------------------------------------------------
-            // Must have an asset.
-            //--------------------------------------------------
+                //--------------------------------------------------
+                // Only Door / Window / Opening.
+                //
+                // Furniture uses FurnitureInteractionEvents.
+                //--------------------------------------------------
 
-            const asset =
-                state.selectedAsset;
+                if (
+                    state.buildTool !==
+                        BuildTool.Door &&
 
-            if (
-                !asset
-            ) {
+                    state.buildTool !==
+                        BuildTool.Window &&
 
-                return;
+                    state.buildTool !==
+                        BuildTool.Opening
+                ) {
+                    return;
+                }
 
-            }
+                //--------------------------------------------------
+                // Canvas bounds
+                //--------------------------------------------------
 
-            //--------------------------------------------------
-            // Make sure asset and active tool agree.
-            //--------------------------------------------------
+                const rect =
+                    canvas.getBoundingClientRect();
 
-            if (
-                asset.type !==
-                buildTool
-            ) {
+                const insideCanvas =
+                    event.clientX >=
+                        rect.left &&
 
-                return;
+                    event.clientX <=
+                        rect.right &&
 
-            }
+                    event.clientY >=
+                        rect.top &&
 
-            //--------------------------------------------------
-            // IMPORTANT:
-            //
-            // Stop other interaction systems from treating
-            // this click as a wall/room drawing click.
-            //--------------------------------------------------
+                    event.clientY <=
+                        rect.bottom;
 
-            e.preventDefault();
-            e.stopPropagation();
+                if (
+                    !insideCanvas
+                ) {
+                    return;
+                }
 
-            buildInteraction
-                .suppressPointerUp();
+                //--------------------------------------------------
+                // Own this click.
+                //--------------------------------------------------
 
-            //--------------------------------------------------
-            // Refresh pointer position immediately.
-            //--------------------------------------------------
+                event.preventDefault();
+                event.stopPropagation();
 
-            buildInteraction.updatePointer(
-                e,
-                canvas
-            );
+                buildInteraction
+                    .suppressPointerUp();
 
-            //--------------------------------------------------
-            // Get the placement that AssetPreview calculated.
-            //--------------------------------------------------
+                //--------------------------------------------------
+                // IMPORTANT:
+                //
+                // Update the pointer at the exact click
+                // position before reading the preview.
+                //--------------------------------------------------
 
-            const result =
-                buildInteraction.pointerDown();
-
-            if (
-                !result
-            ) {
-
-                console.warn(
-                    "Build placement unavailable."
+                buildInteraction.updatePointer(
+                    event,
+                    canvas
                 );
 
-                return;
+                //--------------------------------------------------
+                // Selected asset
+                //--------------------------------------------------
 
-            }
+                const activeAsset =
+                    state.selectedAsset;
 
-            //--------------------------------------------------
-            // Only wall placement is valid here.
-            //--------------------------------------------------
+                if (!activeAsset) {
+                    return;
+                }
 
-            if (
-                result.transform.kind !==
-                "wall"
-            ) {
+                //--------------------------------------------------
+                // Tool and selected asset must match.
+                //--------------------------------------------------
 
-                return;
+                if (
+                    state.buildTool !==
+                    activeAsset.type
+                ) {
+                    return;
+                }
 
-            }
+                //--------------------------------------------------
+                // Current preview
+                //--------------------------------------------------
 
-            //==================================================
-            // DOOR
-            //==================================================
+                const result =
+                    buildInteraction
+                        .pointerDown();
 
-            if (
-                asset.type ===
-                BuildTool.Door
-            ) {
+                if (!result) {
+                    return;
+                }
 
-                const door =
-                    placeDoor(
-                        asset,
-                        result.transform,
-                        result.bounds
+                //--------------------------------------------------
+                // Must be wall placement.
+                //--------------------------------------------------
+
+                if (
+                    result.transform.kind !==
+                    "wall"
+                ) {
+                    return;
+                }
+
+                //==================================================
+                // COLLISION
+                //==================================================
+                //
+                // Do not allow an invalid preview to be placed.
+                //==================================================
+
+                if (
+                    !result.collision ||
+                    !result.collision.valid
+                ) {
+
+                    console.log(
+                        "Build placement blocked:",
+                        result.collision?.reason
                     );
 
-                dispatch({
+                    return;
+                }
 
-                    type:
-                        "ADD_DOOR",
+                //==================================================
+                // DOOR
+                //==================================================
 
-                    payload:
-                        door
+                if (
+                    activeAsset.type ===
+                    BuildTool.Door
+                ) {
 
-                });
+                    const door =
+                        placeDoor(
+                            activeAsset,
+                            result.transform,
+                            result.bounds
+                        );
 
+                    dispatch({
+                        type:
+                            "ADD_DOOR",
+
+                        payload:
+                            door
+                    });
+
+                    //--------------------------------------------------
+                    // Placement finished.
+                    //
+                    // User must press Apply again for another door.
+                    //--------------------------------------------------
+
+                    dispatch({
+                        type:
+                            "SET_BUILD_TOOL",
+
+                        payload:
+                            BuildTool.None
+                    });
+
+                    dispatch({
+                        type:
+                            "SET_SELECTED_ASSET",
+
+                        payload:
+                            null
+                    });
+
+                    buildInteraction.clear();
+
+                    return;
+                }
+
+                //==================================================
+                // WINDOW
+                //==================================================
+
+                if (
+                    activeAsset.type ===
+                    BuildTool.Window
+                ) {
+
+                    const window =
+                        placeWindow(
+                            activeAsset,
+                            result.transform,
+                            result.bounds
+                        );
+
+                    dispatch({
+                        type:
+                            "ADD_WINDOW",
+
+                        payload:
+                            window
+                    });
+
+                    //--------------------------------------------------
+                    // Placement finished.
+                    //--------------------------------------------------
+
+                    dispatch({
+                        type:
+                            "SET_BUILD_TOOL",
+
+                        payload:
+                            BuildTool.None
+                    });
+
+                    dispatch({
+                        type:
+                            "SET_SELECTED_ASSET",
+
+                        payload:
+                            null
+                    });
+
+                    buildInteraction.clear();
+
+                    return;
+                }
+
+                //==================================================
+                // OPENING
+                //==================================================
+
+                if (
+                    activeAsset.type ===
+                    BuildTool.Opening
+                ) {
+
+                    const shape =
+                        activeAsset.openingShape ===
+                            "arch"
+
+                            ? "arch"
+
+                            : "rectangle";
+
+                    const opening =
+                        placeOpening(
+                            result.transform,
+                            result.bounds,
+                            shape,
+                            state.archRise
+                        );
+
+                    dispatch({
+                        type:
+                            "ADD_OPENING",
+
+                        payload:
+                            opening
+                    });
+
+                    //--------------------------------------------------
+                    // Placement finished.
+                    //--------------------------------------------------
+
+                    dispatch({
+                        type:
+                            "SET_BUILD_TOOL",
+
+                        payload:
+                            BuildTool.None
+                    });
+
+                    dispatch({
+                        type:
+                            "SET_SELECTED_ASSET",
+
+                        payload:
+                            null
+                    });
+
+                    buildInteraction.clear();
+
+                    return;
+                }
             }
 
             //==================================================
-            // WINDOW
+            // POINTER UP
             //==================================================
 
-            else if (
-                asset.type ===
-                BuildTool.Window
+            function onPointerUp(
+                event: PointerEvent
             ) {
 
-                const window =
-                    placeWindow(
-                        asset,
-                        result.transform,
-                        result.bounds
-                    );
+                if (
+                    !buildInteraction
+                        .consumePointerUpSuppression()
+                ) {
+                    return;
+                }
 
-                dispatch({
-
-                    type:
-                        "ADD_WINDOW",
-
-                    payload:
-                        window
-
-                });
-
+                event.preventDefault();
+                event.stopPropagation();
             }
 
             //==================================================
-            // OPENING
+            // REGISTER
             //==================================================
 
-            else if (
-                asset.type ===
-                BuildTool.Opening
-            ) {
-
-                const shape:
-                    OpeningShape =
-                    asset.openingShape ??
-                    "rectangle";
-
-                const openingBounds:
-                    AssetBounds = {
-
-                    width:
-                        state.openingWidth,
-
-                    height:
-                        state.openingHeight,
-
-                    depth:
-                        state.wallThickness +
-                        0.02
-
-                };
-
-                const opening =
-                    placeOpening(
-
-                        result.transform,
-
-                        openingBounds,
-
-                        shape,
-
-                        state.archRise
-
-                    );
-
-                dispatch({
-
-                    type:
-                        "ADD_OPENING",
-
-                    payload:
-                        opening
-
-                });
-
-            }
-
-            //--------------------------------------------------
-            // Exit build mode
-            //--------------------------------------------------
-
-            dispatch({
-
-                type:
-                    "SET_BUILD_TOOL",
-
-                payload:
-                    BuildTool.None
-
-            });
-
-            dispatch({
-
-                type:
-                    "SET_SELECTED_ASSET",
-
-                payload:
-                    null
-
-            });
-
-        }
-
-        //==================================================
-        // POINTER UP
-        //==================================================
-
-        function onPointerUp(
-            e: PointerEvent
-        ) {
-
-            if (
-                !buildInteraction
-                    .consumePointerUpSuppression()
-            ) {
-
-                return;
-
-            }
-
-            e.preventDefault();
-            e.stopPropagation();
-
-        }
-
-        //==================================================
-        // EVENTS
-        //==================================================
-
-        canvas.addEventListener(
-            "pointermove",
-            onPointerMove
-        );
-
-        canvas.addEventListener(
-            "pointerdown",
-            onPointerDown
-        );
-
-        window.addEventListener(
-            "pointerup",
-            onPointerUp,
-            true
-        );
-
-        //==================================================
-        // CLEANUP
-        //==================================================
-
-        return () => {
-
-            canvas.removeEventListener(
+            canvas.addEventListener(
                 "pointermove",
                 onPointerMove
             );
 
-            canvas.removeEventListener(
+            canvas.addEventListener(
                 "pointerdown",
                 onPointerDown
             );
 
-            window.removeEventListener(
+            window.addEventListener(
                 "pointerup",
                 onPointerUp,
                 true
             );
 
-        };
+            //==================================================
+            // CLEANUP
+            //==================================================
 
-    }, [
-        gl,
-        state.selectedAsset,
-        state.buildTool,
-        state.openingWidth,
-        state.openingHeight,
-        state.archRise,
-        state.wallThickness,
-        dispatch
-    ]);
+            return () => {
+
+                canvas.removeEventListener(
+                    "pointermove",
+                    onPointerMove
+                );
+
+                canvas.removeEventListener(
+                    "pointerdown",
+                    onPointerDown
+                );
+
+                window.removeEventListener(
+                    "pointerup",
+                    onPointerUp,
+                    true
+                );
+            };
+
+        },
+        [
+            gl,
+
+            state.buildTool,
+
+            state.selectedAsset,
+
+            state.walls,
+
+            state.doors,
+
+            state.windows,
+
+            state.openings,
+
+            state.archRise,
+
+            dispatch
+        ]
+    );
 
     return null;
 }

@@ -1,15 +1,24 @@
-import { Raycaster, Vector2 } from "three";
+import {
+    Raycaster,
+    Vector2
+} from "three";
 
-import type { PlacementTransform } from "./BuildPlacement";
-import type { AssetBounds } from "./AssetBounds";
 import type {
-    FurnitureCollisionResult
-} from "../../engine/furniture/FurnitureCollision";
+    PlacementTransform
+} from "./BuildPlacement";
+
+import type {
+    AssetBounds
+} from "./AssetBounds";
+
+import type {
+    BuildElementCollisionResult
+} from "./BuildElementCollision";
 
 class BuildInteraction {
 
     //--------------------------------------------------
-    // Shared raycaster for wall-based build objects
+    // Shared raycaster
     //--------------------------------------------------
 
     readonly raycaster =
@@ -23,30 +32,39 @@ class BuildInteraction {
         new Vector2();
 
     //--------------------------------------------------
-    // Current wall/door placement
+    // Prevent preview from using camera center
+    // before the mouse actually enters the canvas.
+    //--------------------------------------------------
+
+    hasPointer =
+        false;
+
+    //--------------------------------------------------
+    // Current preview placement
     //--------------------------------------------------
 
     currentPlacement:
         | PlacementTransform
-        | null = null;
+        | null =
+        null;
 
     //--------------------------------------------------
     // Current bounds
     //--------------------------------------------------
 
     currentBounds:
-        AssetBounds | null = null;
+        | AssetBounds
+        | null =
+        null;
 
     //--------------------------------------------------
     // Current collision
-    //
-    // Kept here for compatibility with the existing
-    // generic build system. Furniture now uses its own
-    // FurnitureInteraction.
     //--------------------------------------------------
 
-    currentFurnitureCollision:
-        FurnitureCollisionResult | null = null;
+    currentCollision:
+        | BuildElementCollisionResult
+        | null =
+        null;
 
     //--------------------------------------------------
     // Pointer-up suppression
@@ -68,23 +86,80 @@ class BuildInteraction {
             canvas.getBoundingClientRect();
 
         if (
-            rect.width === 0 ||
-            rect.height === 0
+            rect.width <= 0 ||
+            rect.height <= 0
         ) {
             return;
         }
 
+        const x =
+            event.clientX;
+
+        const y =
+            event.clientY;
+
+        const insideCanvas =
+            x >= rect.left &&
+            x <= rect.right &&
+            y >= rect.top &&
+            y <= rect.bottom;
+
+        //--------------------------------------------------
+        // Ignore pointer movement outside the canvas.
+        //--------------------------------------------------
+
+        if (!insideCanvas) {
+
+            this.hasPointer =
+                false;
+
+            return;
+        }
+
+        //--------------------------------------------------
+        // Convert screen coordinates to NDC.
+        //--------------------------------------------------
+
         this.pointer.x =
             (
-                (event.clientX - rect.left) /
+                (
+                    x -
+                    rect.left
+                ) /
                 rect.width
-            ) * 2 - 1;
+            ) *
+            2 -
+            1;
 
         this.pointer.y =
             -(
-                (event.clientY - rect.top) /
+                (
+                    y -
+                    rect.top
+                ) /
                 rect.height
-            ) * 2 + 1;
+            ) *
+            2 +
+            1;
+
+        this.hasPointer =
+            true;
+    }
+
+    //--------------------------------------------------
+    // Clear current preview data
+    //--------------------------------------------------
+
+    clear() {
+
+        this.currentPlacement =
+            null;
+
+        this.currentBounds =
+            null;
+
+        this.currentCollision =
+            null;
     }
 
     //--------------------------------------------------
@@ -101,7 +176,8 @@ class BuildInteraction {
     // Consume pointerup suppression
     //--------------------------------------------------
 
-    consumePointerUpSuppression(): boolean {
+    consumePointerUpSuppression():
+        boolean {
 
         if (
             !this.suppressNextPointerUp
@@ -116,7 +192,7 @@ class BuildInteraction {
     }
 
     //--------------------------------------------------
-    // Get current wall/door placement
+    // Get current preview result
     //--------------------------------------------------
 
     pointerDown() {
@@ -142,8 +218,7 @@ class BuildInteraction {
                 this.currentBounds,
 
             collision:
-                this.currentFurnitureCollision
-
+                this.currentCollision
         };
     }
 }

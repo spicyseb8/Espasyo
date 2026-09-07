@@ -41,8 +41,11 @@ function getXAxis(
 ): Axis2D {
 
     return {
-        x: Math.cos(rotationY),
-        z: Math.sin(rotationY)
+        x:
+            Math.cos(rotationY),
+
+        z:
+            Math.sin(rotationY)
     };
 }
 
@@ -55,13 +58,16 @@ function getZAxis(
 ): Axis2D {
 
     return {
-        x: -Math.sin(rotationY),
-        z: Math.cos(rotationY)
+        x:
+            -Math.sin(rotationY),
+
+        z:
+            Math.cos(rotationY)
     };
 }
 
 //--------------------------------------------------
-// Dot
+// Dot product
 //--------------------------------------------------
 
 function dot(
@@ -129,10 +135,14 @@ function getFurnitureExtent(
 ): number {
 
     const localX =
-        getXAxis(rotationY);
+        getXAxis(
+            rotationY
+        );
 
     const localZ =
-        getZAxis(rotationY);
+        getZAxis(
+            rotationY
+        );
 
     return (
         width * 0.5 *
@@ -154,6 +164,187 @@ function getFurnitureExtent(
 }
 
 //==================================================
+// WALL CONNECTION HELPERS
+//==================================================
+
+//--------------------------------------------------
+// Check whether two walls share a corner
+//--------------------------------------------------
+
+function wallsShareCorner(
+    a: Wall,
+    b: Wall
+): boolean {
+
+    return (
+        a.start.id === b.start.id ||
+        a.start.id === b.end.id ||
+        a.end.id === b.start.id ||
+        a.end.id === b.end.id
+    );
+}
+
+//--------------------------------------------------
+// Get connected wall component
+//
+// This is important when there are multiple rooms.
+// We only calculate the inside side using walls
+// connected to the current wall.
+//--------------------------------------------------
+
+function getConnectedWalls(
+    source: Wall,
+    walls: Wall[]
+): Wall[] {
+
+    const result: Wall[] = [];
+
+    const visited =
+        new Set<string>();
+
+    const queue: Wall[] = [
+        source
+    ];
+
+    while (
+        queue.length > 0
+    ) {
+
+        const current =
+            queue.shift();
+
+        if (!current) {
+            continue;
+        }
+
+        if (
+            visited.has(
+                current.id
+            )
+        ) {
+            continue;
+        }
+
+        visited.add(
+            current.id
+        );
+
+        result.push(
+            current
+        );
+
+        for (
+            const candidate of walls
+        ) {
+
+            if (
+                visited.has(
+                    candidate.id
+                )
+            ) {
+                continue;
+            }
+
+            if (
+                wallsShareCorner(
+                    current,
+                    candidate
+                )
+            ) {
+
+                queue.push(
+                    candidate
+                );
+            }
+        }
+    }
+
+    return result;
+}
+
+//--------------------------------------------------
+// Get center of connected room
+//
+// For normal closed rectangular / polygon rooms,
+// the average of all unique corners gives a reliable
+// inside reference point.
+//
+// This is done per connected component so another
+// separated room cannot affect the result.
+//--------------------------------------------------
+
+function getRoomReferencePoint(
+    sourceWall: Wall,
+    walls: Wall[]
+): Vector3 | null {
+
+    const connectedWalls =
+        getConnectedWalls(
+            sourceWall,
+            walls
+        );
+
+    if (
+        connectedWalls.length === 0
+    ) {
+        return null;
+    }
+
+    const uniqueCorners =
+        new Map<
+            string,
+            Vector3
+        >();
+
+    for (
+        const wall of connectedWalls
+    ) {
+
+        uniqueCorners.set(
+            wall.start.id,
+            wall.start.position
+        );
+
+        uniqueCorners.set(
+            wall.end.id,
+            wall.end.position
+        );
+    }
+
+    if (
+        uniqueCorners.size === 0
+    ) {
+        return null;
+    }
+
+    const center =
+        new Vector3();
+
+    for (
+        const position of
+        uniqueCorners.values()
+    ) {
+
+        center.x +=
+            position.x;
+
+        center.z +=
+            position.z;
+    }
+
+    center.x /=
+        uniqueCorners.size;
+
+    center.z /=
+        uniqueCorners.size;
+
+    center.y =
+        0;
+
+    return center;
+}
+
+//==================================================
 // WALL SNAP
 //==================================================
 
@@ -162,6 +353,7 @@ function getWallSnapCandidate(
     bounds: AssetBounds,
     rotationY: number,
     wall: Wall,
+    walls: Wall[],
     wallThickness: number
 ): SnapCandidate | null {
 
@@ -194,21 +386,95 @@ function getWallSnapCandidate(
     //--------------------------------------------------
 
     const tangent: Axis2D = {
-        x: dx / wallLength,
-        z: dz / wallLength
+        x:
+            dx / wallLength,
+
+        z:
+            dz / wallLength
     };
 
     //--------------------------------------------------
     // Wall normal
+    //
+    // This is the LEFT normal of the wall direction.
     //--------------------------------------------------
 
-    const normal: Axis2D = {
-        x: -tangent.z,
-        z: tangent.x
+    const leftNormal: Axis2D = {
+        x:
+            -tangent.z,
+
+        z:
+            tangent.x
     };
 
     //--------------------------------------------------
-    // Which side is the mouse on?
+    // Find the connected room reference point
+    //--------------------------------------------------
+
+    const roomCenter =
+        getRoomReferencePoint(
+            wall,
+            walls
+        );
+
+    //--------------------------------------------------
+    // Decide which side is INSIDE
+    //
+    // We do NOT use the mouse side.
+    //
+    // This prevents the furniture from snapping
+    // through the wall when the mouse crosses it.
+    //--------------------------------------------------
+
+    let interiorNormal =
+        leftNormal;
+
+    if (
+        roomCenter
+    ) {
+
+        const wallToCenterX =
+            roomCenter.x -
+            (
+                start.x +
+                end.x
+            ) * 0.5;
+
+        const wallToCenterZ =
+            roomCenter.z -
+            (
+                start.z +
+                end.z
+            ) * 0.5;
+
+        const sideValue =
+            wallToCenterX *
+                leftNormal.x +
+
+            wallToCenterZ *
+                leftNormal.z;
+
+        //--------------------------------------------------
+        // If the room center is on the opposite side,
+        // use the opposite normal.
+        //--------------------------------------------------
+
+        if (
+            sideValue < 0
+        ) {
+
+            interiorNormal = {
+                x:
+                    -leftNormal.x,
+
+                z:
+                    -leftNormal.z
+            };
+        }
+    }
+
+    //--------------------------------------------------
+    // Closest point on wall
     //--------------------------------------------------
 
     const closest =
@@ -218,25 +484,11 @@ function getWallSnapCandidate(
             end
         );
 
-    const sideX =
-        floorPoint.x -
-        closest.x;
-
-    const sideZ =
-        floorPoint.z -
-        closest.z;
-
-    const sideValue =
-        sideX * normal.x +
-        sideZ * normal.z;
-
-    const sideSign =
-        sideValue >= 0
-            ? 1
-            : -1;
-
     //--------------------------------------------------
-    // Furniture extents based on ITS CURRENT rotation
+    // Furniture extents
+    //
+    // Rotation is READ ONLY.
+    // Nothing below changes rotationY.
     //--------------------------------------------------
 
     const normalExtent =
@@ -244,7 +496,7 @@ function getWallSnapCandidate(
             bounds.width,
             bounds.depth,
             rotationY,
-            normal
+            interiorNormal
         );
 
     const tangentExtent =
@@ -268,21 +520,39 @@ function getWallSnapCandidate(
         start.z;
 
     let alongWall =
-        relativeX * tangent.x +
-        relativeZ * tangent.z;
+        relativeX *
+            tangent.x +
+
+        relativeZ *
+            tangent.z;
+
+    //--------------------------------------------------
+    // Prevent the furniture from extending
+    // past either end of the wall.
+    //--------------------------------------------------
+
+    if (
+        wallLength <
+        tangentExtent * 2
+    ) {
+
+        return null;
+    }
 
     alongWall =
         Math.max(
             tangentExtent,
+
             Math.min(
                 wallLength -
                     tangentExtent,
+
                 alongWall
             )
         );
 
     //--------------------------------------------------
-    // Center on wall line
+    // Point on the wall center line
     //--------------------------------------------------
 
     const wallPoint =
@@ -293,22 +563,32 @@ function getWallSnapCandidate(
         );
 
     //--------------------------------------------------
-    // Push furniture outside wall
+    // Push furniture INTO the room
     //
-    // Current rotation is preserved.
+    // wallThickness / 2
+    //     moves from wall center to wall face
+    //
+    // normalExtent
+    //     moves furniture center outside its own half
+    //     footprint
+    //
+    // gap
+    //     keeps a tiny separation from the wall
     //--------------------------------------------------
 
     const targetPosition =
         offset(
             wallPoint,
-            normal,
-            sideSign *
-                (
-                    wallThickness * 0.5 +
-                    normalExtent +
-                    FURNITURE_WALL_SNAP_GAP
-                )
+            interiorNormal,
+
+            wallThickness * 0.5 +
+            normalExtent +
+            FURNITURE_WALL_SNAP_GAP
         );
+
+    //--------------------------------------------------
+    // Check how close the mouse is to the snap target
+    //--------------------------------------------------
 
     const distance =
         distanceXZ(
@@ -320,6 +600,7 @@ function getWallSnapCandidate(
         distance >
         FURNITURE_SNAP_DISTANCE
     ) {
+
         return null;
     }
 
@@ -329,7 +610,6 @@ function getWallSnapCandidate(
             targetPosition,
 
         distance
-
     };
 }
 
@@ -364,10 +644,12 @@ function getFurnitureSnapCandidate(
 
     //--------------------------------------------------
     // If cursor is almost exactly at center,
-    // use the preview's current X axis.
+    // use preview's current X axis.
     //--------------------------------------------------
 
-    if (length < 0.0001) {
+    if (
+        length < 0.0001
+    ) {
 
         const axis =
             getXAxis(
@@ -380,15 +662,22 @@ function getFurnitureSnapCandidate(
         dz =
             axis.z;
 
-        length = 1;
+        length =
+            1;
     }
 
-    dx /= length;
-    dz /= length;
+    dx /=
+        length;
+
+    dz /=
+        length;
 
     const direction: Axis2D = {
-        x: dx,
-        z: dz
+        x:
+            dx,
+
+        z:
+            dz
     };
 
     //--------------------------------------------------
@@ -408,8 +697,11 @@ function getFurnitureSnapCandidate(
     //--------------------------------------------------
 
     const oppositeDirection: Axis2D = {
-        x: -direction.x,
-        z: -direction.z
+        x:
+            -direction.x,
+
+        z:
+            -direction.z
     };
 
     const previewExtent =
@@ -421,7 +713,7 @@ function getFurnitureSnapCandidate(
         );
 
     //--------------------------------------------------
-    // Place edges beside one another
+    // Separation
     //--------------------------------------------------
 
     const separation =
@@ -429,8 +721,13 @@ function getFurnitureSnapCandidate(
         previewExtent +
         FURNITURE_FURNITURE_SNAP_GAP;
 
+    //--------------------------------------------------
+    // Target position
+    //--------------------------------------------------
+
     const targetPosition =
         new Vector3(
+
             existing.position.x +
                 direction.x *
                 separation,
@@ -442,6 +739,10 @@ function getFurnitureSnapCandidate(
                 separation
         );
 
+    //--------------------------------------------------
+    // Distance from cursor
+    //--------------------------------------------------
+
     const distance =
         distanceXZ(
             floorPoint,
@@ -452,6 +753,7 @@ function getFurnitureSnapCandidate(
         distance >
         FURNITURE_SNAP_DISTANCE
     ) {
+
         return null;
     }
 
@@ -461,7 +763,6 @@ function getFurnitureSnapCandidate(
             targetPosition,
 
         distance
-
     };
 }
 
@@ -476,10 +777,12 @@ function getClosestPointOnWall(
 ): Vector3 {
 
     const dx =
-        end.x - start.x;
+        end.x -
+        start.x;
 
     const dz =
-        end.z - start.z;
+        end.z -
+        start.z;
 
     const lengthSquared =
         dx * dx +
@@ -489,26 +792,42 @@ function getClosestPointOnWall(
         lengthSquared <=
         0.000001
     ) {
+
         return start.clone();
     }
 
     let t =
         (
-            (point.x - start.x) * dx +
-            (point.z - start.z) * dz
+            (
+                point.x -
+                start.x
+            ) * dx +
+
+            (
+                point.z -
+                start.z
+            ) * dz
         ) /
         lengthSquared;
 
     t =
         Math.max(
             0,
-            Math.min(1, t)
+            Math.min(
+                1,
+                t
+            )
         );
 
     return new Vector3(
-        start.x + dx * t,
+
+        start.x +
+            dx * t,
+
         0,
-        start.z + dz * t
+
+        start.z +
+            dz * t
     );
 }
 
@@ -540,8 +859,17 @@ export function snapFurniturePlacement(
             getWallSnapCandidate(
                 floorPoint,
                 bounds,
+
+                //--------------------------------------------------
+                // IMPORTANT:
+                // Pass rotation only.
+                // This function NEVER changes it.
+                //--------------------------------------------------
+
                 placement.rotationY,
+
                 wall,
+                walls,
                 wallThickness
             );
 
@@ -578,7 +906,7 @@ export function snapFurniturePlacement(
     }
 
     //--------------------------------------------------
-    // Nothing to snap to
+    // No snap
     //--------------------------------------------------
 
     if (
@@ -589,7 +917,7 @@ export function snapFurniturePlacement(
     }
 
     //--------------------------------------------------
-    // Closest candidate wins
+    // Closest snap wins
     //--------------------------------------------------
 
     candidates.sort(
@@ -602,10 +930,12 @@ export function snapFurniturePlacement(
         candidates[0];
 
     //--------------------------------------------------
-    // IMPORTANT:
+    // IMPORTANT
     //
-    // Position changes.
-    // Rotation DOES NOT change.
+    // ONLY POSITION CHANGES.
+    //
+    // The existing furniture rotation is preserved.
+    // No automatic rotation happens here.
     //--------------------------------------------------
 
     return {
@@ -613,7 +943,9 @@ export function snapFurniturePlacement(
         ...placement,
 
         position:
-            best.position
+            best.position,
 
+        rotationY:
+            placement.rotationY
     };
 }

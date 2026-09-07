@@ -17,12 +17,15 @@ import {
 import {
     Box3,
     Group,
-    Vector3,
     Mesh,
-    MeshStandardMaterial
+    MeshStandardMaterial,
+    Plane,
+    Raycaster,
+    Vector3
 } from "three";
 
-import useEditor from "../../context/editor/useEditor";
+import useEditor
+    from "../../context/editor/useEditor";
 
 import {
     getFurnitureScale
@@ -41,11 +44,6 @@ import type {
 } from "../Build/AssetBounds";
 
 import {
-    hitFloorByRaycast,
-    getFloorObjects
-} from "../../engine/floors/floorHit";
-
-import {
     buildFurniturePlacement
 } from "./FurniturePlacement";
 
@@ -57,14 +55,19 @@ import {
     BuildTool
 } from "../../context/BuildTool";
 
+import {
+    hitWallByRaycast
+} from "../../engine/walls/wallHit";
+
 //==================================================
 // Actual furniture preview model
 //==================================================
 
 function FurniturePreviewModel() {
 
-    const { state } =
-        useEditor();
+    const {
+        state
+    } = useEditor();
 
     const {
         camera,
@@ -72,26 +75,51 @@ function FurniturePreviewModel() {
     } = useThree();
 
     //--------------------------------------------------
-    // At this point asset is guaranteed to exist
-    // because the parent component only renders us
-    // when a furniture asset is selected.
+    // Selected asset
     //--------------------------------------------------
 
     const asset =
         state.selectedAsset!;
 
+    //--------------------------------------------------
+    // Preview group
+    //--------------------------------------------------
+
     const previewRef =
         useRef<Group>(null);
 
     //--------------------------------------------------
-    // Floor objects
+    // Raycaster
     //--------------------------------------------------
 
-    const floorObjects =
+    const raycaster =
         useMemo(
             () =>
-                getFloorObjects(scene),
-            [scene]
+                new Raycaster(),
+            []
+        );
+
+    //--------------------------------------------------
+    // Ground plane
+    //
+    // This is intentionally NOT based on floor meshes.
+    //
+    // We always calculate the mouse's X/Z position
+    // against the actual ground plane.
+    //--------------------------------------------------
+
+    const groundPlane =
+        useMemo(
+            () =>
+                new Plane(
+                    new Vector3(
+                        0,
+                        1,
+                        0
+                    ),
+                    0
+                ),
+            []
         );
 
     //--------------------------------------------------
@@ -105,81 +133,107 @@ function FurniturePreviewModel() {
     );
 
     //--------------------------------------------------
-    // Clone once
+    // Clone and size model
     //--------------------------------------------------
 
     const model =
-    useMemo(
-        () => {
+        useMemo(
+            () => {
 
-            const clone =
-                gltfScene.clone();
+                const clone =
+                    gltfScene.clone();
 
-            //--------------------------------------------------
-            // Apply real-world furniture dimensions
-            //--------------------------------------------------
+                //--------------------------------------------------
+                // Apply real-world dimensions
+                //--------------------------------------------------
 
-            if (
-                asset.furnitureDimensions
-            ) {
+                if (
+                    asset.furnitureDimensions
+                ) {
 
-                const scale =
-                    getFurnitureScale(
-                        clone,
-                        asset.furnitureDimensions
+                    const scale =
+                        getFurnitureScale(
+                            clone,
+                            asset.furnitureDimensions
+                        );
+
+                    clone.scale.copy(
+                        scale
                     );
+                }
 
-                clone.scale.copy(
-                    scale
-                );
-            }
+                return clone;
 
-            return clone;
-
-        },
-        [
-            gltfScene,
-            asset.furnitureDimensions
-        ]
-    );
+            },
+            [
+                gltfScene,
+                asset.furnitureDimensions
+            ]
+        );
 
     //--------------------------------------------------
     // Preview material
     //--------------------------------------------------
 
-    useEffect(() => {
+    useEffect(
+        () => {
 
-        model.traverse(
-            (child) => {
+            model.traverse(
+                child => {
 
-                if (
-                    !(child instanceof Mesh)
-                ) {
-                    return;
+                    if (
+                        !(child instanceof Mesh)
+                    ) {
+                        return;
+                    }
+
+                    child.material =
+                        new MeshStandardMaterial({
+
+                            color:
+                                "#4DA3FF",
+
+                            transparent:
+                                true,
+
+                            opacity:
+                                0.55,
+
+                            //--------------------------------------------------
+                            // Normal preview respects walls.
+                            //--------------------------------------------------
+
+                            depthTest:
+                                true,
+
+                            //--------------------------------------------------
+                            // Transparent preview does not write depth.
+                            //--------------------------------------------------
+
+                            depthWrite:
+                                false,
+
+                            roughness:
+                                0.75,
+
+                            metalness:
+                                0
+                        });
+
+                    //--------------------------------------------------
+                    // Normal render order.
+                    //--------------------------------------------------
+
+                    child.renderOrder =
+                        0;
                 }
+            );
 
-                child.material =
-                    new MeshStandardMaterial({
-                        color:
-                            "#4DA3FF",
-
-                        transparent:
-                            true,
-
-                        opacity:
-                            0.55,
-
-                        depthTest:
-                            false
-                    });
-
-                child.renderOrder =
-                    1000;
-
-            }
-        );
-
-    }, [model]);
+        },
+        [
+            model
+        ]
+    );
 
     //--------------------------------------------------
     // Measure model
@@ -187,189 +241,397 @@ function FurniturePreviewModel() {
 
     const bounds:
         AssetBounds =
-        useMemo(() => {
+        useMemo(
+            () => {
 
-            const box =
-                new Box3()
-                    .setFromObject(
-                        model
-                    );
+                const box =
+                    new Box3()
+                        .setFromObject(
+                            model
+                        );
 
-            const size =
-                new Vector3();
+                const size =
+                    new Vector3();
 
-            box.getSize(size);
+                box.getSize(
+                    size
+                );
 
-            return {
+                return {
 
-                width:
-                    size.x,
+                    width:
+                        size.x,
 
-                height:
-                    size.y,
+                    height:
+                        size.y,
 
-                depth:
-                    size.z
+                    depth:
+                        size.z
+                };
 
-            };
-
-        }, [model]);
+            },
+            [
+                model
+            ]
+        );
 
     //--------------------------------------------------
     // Live preview
     //--------------------------------------------------
 
-    useFrame(() => {
+    useFrame(
+        () => {
 
-        if (
-            !previewRef.current
-        ) {
-            return;
-        }
+            if (
+                !previewRef.current
+            ) {
+                return;
+            }
 
-        //--------------------------------------------------
-        // Raycast against floor
-        //--------------------------------------------------
+            //==================================================
+            // GET MOUSE RAY
+            //==================================================
 
-        furnitureInteraction
-            .raycaster
-            .setFromCamera(
+            raycaster.setFromCamera(
                 furnitureInteraction.pointer,
                 camera
             );
 
-        const floorHit =
-            hitFloorByRaycast(
-                furnitureInteraction.raycaster,
-                floorObjects
-            );
+            //==================================================
+            // CHECK WALL UNDER MOUSE
+            //==================================================
+            //
+            // This is separate from furniture snapping.
+            //
+            // When the mouse is actually over a wall:
+            //
+            //     - DO NOT wall-snap
+            //     - DO NOT alter dimensions
+            //     - DO NOT alter rotation
+            //     - show collision
+            //
+            // The wall hit is only used to identify that
+            // the cursor is on a wall.
+            //==================================================
 
-        //--------------------------------------------------
-        // No floor hit
-        //--------------------------------------------------
+            const wallHit =
+                hitWallByRaycast(
+                    raycaster,
+                    scene.children,
+                    state.walls
+                );
 
-        if (!floorHit) {
+            const hoveringWall =
+                Boolean(
+                    wallHit
+                );
 
-            furnitureInteraction
-                .clearPreview();
+            //==================================================
+            // MOUSE → FLOOR POSITION
+            //==================================================
 
-            previewRef.current.visible =
+            const floorPoint =
+                new Vector3();
+
+            let floorHit =
                 false;
 
-            return;
-        }
-        //--------------------------------------------------
-        // Base furniture placement
-        //--------------------------------------------------
+            //--------------------------------------------------
+            // Mouse is directly over a wall
+            //--------------------------------------------------
 
+            if (
+                wallHit
+            ) {
 
-     //--------------------------------------------------
-// Base placement
-//--------------------------------------------------
+                //--------------------------------------------------
+                // Use the wall hit X/Z position.
+                //
+                // Y is ALWAYS the floor.
+                //--------------------------------------------------
 
-const transform =
-    buildFurniturePlacement(
-        floorHit.point,
-        asset,
-        bounds,
-        furnitureInteraction.rotationY
-    );
+                floorPoint.set(
+                    wallHit.point.x,
+                    0,
+                    wallHit.point.z
+                );
 
-//--------------------------------------------------
-// Snap position
-//
-// Rotation is preserved.
-//--------------------------------------------------
-
-const snappedTransform =
-    snapFurniturePlacement(
-        floorHit.point,
-        transform,
-        bounds,
-        state.walls,
-        state.furniture,
-        state.wallThickness
-    );
-
-//--------------------------------------------------
-// Collision AFTER snapping
-//--------------------------------------------------
-
-const collision =
-    checkFurnitureCollision(
-        snappedTransform.position,
-        bounds.width,
-        bounds.depth,
-        snappedTransform.rotationY,
-        state.walls,
-        state.furniture,
-        state.wallThickness,
-        0.01
-    );
-
-//--------------------------------------------------
-// Store
-//--------------------------------------------------
-
-furnitureInteraction.currentPlacement =
-    snappedTransform;
-
-furnitureInteraction.currentBounds =
-    bounds;
-
-furnitureInteraction.currentCollision =
-    collision;
-
-//--------------------------------------------------
-// Preview position
-//--------------------------------------------------
-
-previewRef.current.visible =
-    true;
-
-previewRef.current.position.copy(
-    snappedTransform.position
-);
-
-previewRef.current.rotation.y =
-    snappedTransform.rotationY;
-
-        //--------------------------------------------------
-        // Blue / Red
-        //--------------------------------------------------
-
-        model.traverse(
-            (child) => {
-
-                if (
-                    !(child instanceof Mesh)
-                ) {
-                    return;
-                }
-
-                if (
-                    child.material
-                        instanceof
-                    MeshStandardMaterial
-                ) {
-
-                    child.material.color.set(
-                        collision.valid
-                            ? "#4DA3FF"
-                            : "#D9534F"
-                    );
-                }
+                floorHit =
+                    true;
             }
-        );
 
-    });
+            //--------------------------------------------------
+            // Mouse is not over a wall
+            //--------------------------------------------------
+
+            else {
+
+                floorHit =
+                    Boolean(
+                        raycaster.ray.intersectPlane(
+                            groundPlane,
+                            floorPoint
+                        )
+                    );
+            }
+
+            //==================================================
+            // NO FLOOR POSITION
+            //==================================================
+
+            if (
+                !floorHit
+            ) {
+
+                furnitureInteraction
+                    .clearPreview();
+
+                previewRef.current.visible =
+                    false;
+
+                return;
+            }
+
+            //==================================================
+            // BASE PLACEMENT
+            //==================================================
+            //
+            // This keeps:
+            //
+            //     original dimensions
+            //     original rotation
+            //     correct model offset
+            //
+            // Nothing is resized here.
+            //==================================================
+
+            const transform =
+                buildFurniturePlacement(
+                    floorPoint,
+                    asset,
+                    bounds,
+                    furnitureInteraction.rotationY
+                );
+
+            //==================================================
+            // FINAL PLACEMENT
+            //==================================================
+
+            let finalTransform =
+                transform;
+
+            //--------------------------------------------------
+            // MOUSE IS DIRECTLY ON WALL
+            //
+            // IMPORTANT:
+            //
+            // Do NOT call snapFurniturePlacement().
+            //
+            // This prevents the preview from being pushed,
+            // repositioned, or visually distorted by wall snap.
+            //
+            // The furniture remains at its original dimensions
+            // and original rotation.
+            //--------------------------------------------------
+
+            if (
+                !hoveringWall
+            ) {
+
+                finalTransform =
+                    snapFurniturePlacement(
+                        floorPoint,
+                        transform,
+                        bounds,
+                        state.walls,
+                        state.furniture,
+                        state.wallThickness
+                    );
+            }
+
+            //==================================================
+            // COLLISION
+            //==================================================
+
+            let collision;
+
+            //--------------------------------------------------
+            // Direct wall hover
+            //
+            // Force the preview into collision state.
+            //--------------------------------------------------
+
+            if (
+                hoveringWall
+            ) {
+
+                collision = {
+                    valid:
+                        false,
+
+                    reason:
+                        "wall" as const
+                };
+
+            }
+
+            //--------------------------------------------------
+            // Normal placement
+            //--------------------------------------------------
+
+            else {
+
+                collision =
+                    checkFurnitureCollision(
+                        finalTransform.position,
+                        bounds.width,
+                        bounds.depth,
+                        finalTransform.rotationY,
+                        state.walls,
+                        state.furniture,
+                        state.wallThickness,
+                        0.01
+                    );
+            }
+
+            //==================================================
+            // STORE PREVIEW
+            //==================================================
+
+            furnitureInteraction.currentPlacement =
+                finalTransform;
+
+            furnitureInteraction.currentBounds =
+                bounds;
+
+            furnitureInteraction.currentCollision =
+                collision;
+
+            //==================================================
+            // SHOW PREVIEW
+            //==================================================
+
+            previewRef.current.visible =
+                true;
+
+            //==================================================
+            // POSITION
+            //==================================================
+
+            previewRef.current.position.copy(
+                finalTransform.position
+            );
+
+            //--------------------------------------------------
+            // IMPORTANT:
+            //
+            // buildFurniturePlacement already gives us:
+            //
+            //     modelOffset.y = bounds.height / 2
+            //
+            // Apply it here so the preview sits at the
+            // exact same vertical level as placed furniture.
+            //--------------------------------------------------
+
+            previewRef.current.position.y +=
+                finalTransform.modelOffset.y;
+
+            //==================================================
+            // ROTATION
+            //==================================================
+            //
+            // Never change rotation during snapping.
+            //==================================================
+
+            previewRef.current.rotation.y =
+                finalTransform.rotationY;
+
+            //==================================================
+            // PREVIEW MATERIAL
+            //==================================================
+
+            model.traverse(
+                child => {
+
+                    if (
+                        !(child instanceof Mesh)
+                    ) {
+                        return;
+                    }
+
+                    if (
+                        child.material
+                            instanceof
+                        MeshStandardMaterial
+                    ) {
+
+                        //--------------------------------------------------
+                        // Blue = valid placement
+                        // Red = collision
+                        //--------------------------------------------------
+
+                        child.material.color.set(
+                            collision.valid
+                                ? "#4DA3FF"
+                                : "#D9534F"
+                        );
+
+                        //--------------------------------------------------
+                        // Normal:
+                        //     respect wall depth
+                        //
+                        // Direct wall hover:
+                        //     show the complete collision preview
+                        //     even if the wall is in front of it.
+                        //--------------------------------------------------
+
+                        child.material.depthTest =
+                            !hoveringWall;
+
+                        //--------------------------------------------------
+                        // Keep transparent preview from writing depth.
+                        //--------------------------------------------------
+
+                        child.material.depthWrite =
+                            false;
+
+                        //--------------------------------------------------
+                        // When directly hovering a wall, make the
+                        // collision preview render above it so the
+                        // user can see the full furniture footprint.
+                        //--------------------------------------------------
+
+                        child.renderOrder =
+                            hoveringWall
+                                ? 1000
+                                : 0;
+                    }
+
+                }
+            );
+        }
+    );
+
+    //==================================================
+    // RENDER
+    //==================================================
 
     return (
-        <group ref={previewRef}>
 
-            <primitive object={model} />
+        <group
+            ref={
+                previewRef
+            }
+        >
+
+            <primitive
+                object={
+                    model
+                }
+            />
 
         </group>
+
     );
 }
 
@@ -379,12 +641,12 @@ previewRef.current.rotation.y =
 
 export default function FurniturePreview() {
 
-    const { state } =
-        useEditor();
+    const {
+        state
+    } = useEditor();
 
     //--------------------------------------------------
-    // Conditions are checked BEFORE rendering the
-    // component that contains the hooks.
+    // Layout must be confirmed
     //--------------------------------------------------
 
     if (
@@ -393,11 +655,19 @@ export default function FurniturePreview() {
         return null;
     }
 
+    //--------------------------------------------------
+    // Asset must exist
+    //--------------------------------------------------
+
     if (
         !state.selectedAsset
     ) {
         return null;
     }
+
+    //--------------------------------------------------
+    // Must be furniture
+    //--------------------------------------------------
 
     if (
         state.selectedAsset.type !==
@@ -405,6 +675,10 @@ export default function FurniturePreview() {
     ) {
         return null;
     }
+
+    //--------------------------------------------------
+    // Furniture build tool must be active
+    //--------------------------------------------------
 
     if (
         state.buildTool !==
@@ -415,7 +689,11 @@ export default function FurniturePreview() {
 
     return (
 
-        <Suspense fallback={null}>
+        <Suspense
+            fallback={
+                null
+            }
+        >
 
             <FurniturePreviewModel />
 
