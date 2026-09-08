@@ -16,7 +16,7 @@ export default function Workspace() {
 
         <aside className="workspace">
 
-            <WorkspaceTabs
+                        <WorkspaceTabs
 
                 activeTab={
                     state.activeTab
@@ -26,29 +26,22 @@ export default function Workspace() {
                     state.layoutConfirmed
                 }
 
+                walkthroughMode={
+                    state.walkthroughMode
+                }
+
                 onTabChange={(
                     tab
                 ) => {
 
-                    //--------------------------------------------------
-                    // Floor Plan remains accessible after confirmation.
-                    //
-                    // The FloorPlanPanel itself handles which controls
-                    // are locked.
-                    //--------------------------------------------------
-
                     dispatch({
-
                         type:
                             "SET_ACTIVE_TAB",
-
                         payload:
                             tab
-
                     });
 
                 }}
-
             />
 
             <div

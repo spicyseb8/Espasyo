@@ -3,6 +3,11 @@ import { Vector3 } from "three";
 import type { Asset } from "../../assets/Asset";
 import type { AssetBounds } from "../Build/AssetBounds";
 
+export type FurniturePlacementMode =
+    | "floor"
+    | "wall"
+    | "surface";
+
 export interface FurniturePlacement {
 
     kind: "furniture";
@@ -20,6 +25,34 @@ export interface FurniturePlacement {
     depth: number;
 
     height: number;
+
+    //--------------------------------------------------
+    // Placement mode
+    //--------------------------------------------------
+
+    placementMode?:
+        FurniturePlacementMode;
+
+    //--------------------------------------------------
+    // Furniture supporting this object
+    //--------------------------------------------------
+
+    parentFurnitureId:
+        string | null;
+
+    //--------------------------------------------------
+    // Wall supporting this object
+    //--------------------------------------------------
+
+    wallId:
+        string | null;
+
+    //--------------------------------------------------
+    // Surface normal
+    //--------------------------------------------------
+
+    surfaceNormal:
+        Vector3 | null;
 }
 
 export function buildFurniturePlacement(
@@ -59,6 +92,18 @@ export function buildFurniturePlacement(
             bounds.depth,
 
         height:
-            bounds.height
+            bounds.height,
+
+        placementMode:
+            "floor",
+
+        parentFurnitureId:
+            null,
+
+        wallId:
+            null,
+
+        surfaceNormal:
+            null
     };
 }

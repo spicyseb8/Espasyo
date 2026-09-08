@@ -1,4 +1,6 @@
-import { useMemo } from "react";
+import {
+    useMemo
+} from "react";
 
 import {
     useGLTF
@@ -20,31 +22,26 @@ import {
 } from "./FurnitureSizing";
 
 function FurnitureItem({
+    id,
     assetId,
     position,
     rotationY,
     modelOffset
 }: {
+    id: string;
     assetId: string;
     position: Vector3;
     rotationY: number;
     modelOffset: Vector3;
 }) {
-
     const asset =
-        findAsset(assetId);
-
-    //--------------------------------------------------
-    // Don't render missing assets
-    //--------------------------------------------------
+        findAsset(
+            assetId
+        );
 
     if (!asset) {
         return null;
     }
-
-    //--------------------------------------------------
-    // Load model
-    //--------------------------------------------------
 
     const {
         scene
@@ -52,25 +49,15 @@ function FurnitureItem({
         asset.model
     );
 
-    //--------------------------------------------------
-    // Clone and scale model
-    //--------------------------------------------------
-
     const model =
         useMemo(
             () => {
-
                 const clone =
                     scene.clone();
-
-                //--------------------------------------------------
-                // Apply real-world furniture dimensions
-                //--------------------------------------------------
 
                 if (
                     asset.furnitureDimensions
                 ) {
-
                     const scale =
                         getFurnitureScale(
                             clone,
@@ -82,44 +69,57 @@ function FurnitureItem({
                     );
                 }
 
-                return clone;
+                //--------------------------------------------------
+                // Mark the complete furniture hierarchy
+                //--------------------------------------------------
 
+                clone.traverse(
+                    child => {
+                        child.userData.furnitureId =
+                            id;
+                    }
+                );
+
+                return clone;
             },
             [
                 scene,
-                asset.furnitureDimensions
+                asset.furnitureDimensions,
+                id
             ]
         );
 
-    //--------------------------------------------------
-    // Render
-    //--------------------------------------------------
-
     return (
-
         <group
-            position={position}
+            position={
+                position
+            }
             rotation={[
                 0,
                 rotationY,
                 0
             ]}
+            userData={{
+                furnitureId:
+                    id
+            }}
         >
-
             <primitive
-                object={model}
-                position={modelOffset}
+                object={
+                    model
+                }
+                position={
+                    modelOffset
+                }
             />
-
         </group>
-
     );
 }
 
 export default function FurnitureScene() {
-
-    const { state } =
-        useEditor();
+    const {
+        state
+    } = useEditor();
 
     const furnitureList =
         Array.isArray(
@@ -129,41 +129,31 @@ export default function FurnitureScene() {
             : [];
 
     return (
-
         <group>
-
-            {
-                furnitureList.map(
-                    furniture => (
-
-                        <FurnitureItem
-
-                            key={
-                                furniture.id
-                            }
-
-                            assetId={
-                                furniture.assetId
-                            }
-
-                            position={
-                                furniture.position
-                            }
-
-                            rotationY={
-                                furniture.rotationY
-                            }
-
-                            modelOffset={
-                                furniture.modelOffset
-                            }
-
-                        />
-
-                    )
+            {furnitureList.map(
+                furniture => (
+                    <FurnitureItem
+                        key={
+                            furniture.id
+                        }
+                        id={
+                            furniture.id
+                        }
+                        assetId={
+                            furniture.assetId
+                        }
+                        position={
+                            furniture.position
+                        }
+                        rotationY={
+                            furniture.rotationY
+                        }
+                        modelOffset={
+                            furniture.modelOffset
+                        }
+                    />
                 )
-            }
-
+            )}
         </group>
     );
 }

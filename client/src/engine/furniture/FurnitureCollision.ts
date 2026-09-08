@@ -13,177 +13,252 @@ export interface FurnitureCollisionResult {
     reason: FurnitureCollisionReason;
 }
 
-//--------------------------------------------------
-// Oriented rectangle in X/Z plane
-//--------------------------------------------------
+//==================================================
+// Axis
+//==================================================
 
-interface OBB2D {
+interface Axis2D {
+    x: number;
+    z: number;
+}
 
-    center: Vector3;
+//==================================================
+// Get local X axis
+//==================================================
 
-    halfWidth: number;
-    halfDepth: number;
-
-    rotationY: number;
-
-    axisX: {
-        x: number;
-        z: number;
-    };
-
-    axisZ: {
-        x: number;
-        z: number;
+function getXAxis(
+    rotationY: number
+): Axis2D {
+    return {
+        x: Math.cos(rotationY),
+        z: Math.sin(rotationY)
     };
 }
 
-//--------------------------------------------------
-// Create rotated furniture footprint
-//--------------------------------------------------
+//==================================================
+// Get local Z axis
+//==================================================
 
-function createOBB(
-    position: Vector3,
+function getZAxis(
+    rotationY: number
+): Axis2D {
+    return {
+        x: -Math.sin(rotationY),
+        z: Math.cos(rotationY)
+    };
+}
+
+//==================================================
+// Get OBB corners
+//==================================================
+
+function getCorners(
+    center: Vector3,
     width: number,
     depth: number,
-    rotationY: number,
-    padding: number
-): OBB2D {
+    rotationY: number
+): Vector3[] {
+    const xAxis =
+        getXAxis(
+            rotationY
+        );
+
+    const zAxis =
+        getZAxis(
+            rotationY
+        );
+
+    const halfWidth =
+        width * 0.5;
+
+    const halfDepth =
+        depth * 0.5;
+
+    return [
+        new Vector3(
+            center.x +
+                xAxis.x * halfWidth +
+                zAxis.x * halfDepth,
+
+            center.y,
+
+            center.z +
+                xAxis.z * halfWidth +
+                zAxis.z * halfDepth
+        ),
+
+        new Vector3(
+            center.x +
+                xAxis.x * halfWidth -
+                zAxis.x * halfDepth,
+
+            center.y,
+
+            center.z +
+                xAxis.z * halfWidth -
+                zAxis.z * halfDepth
+        ),
+
+        new Vector3(
+            center.x -
+                xAxis.x * halfWidth +
+                zAxis.x * halfDepth,
+
+            center.y,
+
+            center.z -
+                xAxis.z * halfWidth +
+                zAxis.z * halfDepth
+        ),
+
+        new Vector3(
+            center.x -
+                xAxis.x * halfWidth -
+                zAxis.x * halfDepth,
+
+            center.y,
+
+            center.z -
+                xAxis.z * halfWidth -
+                zAxis.z * halfDepth
+        )
+    ];
+}
+
+//==================================================
+// Project corners onto axis
+//==================================================
+
+function projectCorners(
+    corners: Vector3[],
+    axis: Axis2D
+): {
+    min: number;
+    max: number;
+} {
+    let min =
+        Number.POSITIVE_INFINITY;
+
+    let max =
+        Number.NEGATIVE_INFINITY;
+
+    for (
+        const corner of corners
+    ) {
+        const value =
+            corner.x * axis.x +
+            corner.z * axis.z;
+
+        min =
+            Math.min(
+                min,
+                value
+            );
+
+        max =
+            Math.max(
+                max,
+                value
+            );
+    }
 
     return {
-
-        center:
-            position.clone(),
-
-        halfWidth:
-            width * 0.5 + padding,
-
-        halfDepth:
-            depth * 0.5 + padding,
-
-        rotationY,
-
-        axisX: {
-            x: Math.cos(rotationY),
-            z: Math.sin(rotationY)
-        },
-
-        axisZ: {
-            x: -Math.sin(rotationY),
-            z: Math.cos(rotationY)
-        }
-
+        min,
+        max
     };
 }
 
-//--------------------------------------------------
-// Dot product in X/Z
-//--------------------------------------------------
+//==================================================
+// 2D interval overlap
+//==================================================
 
-function dot(
-    ax: number,
-    az: number,
-    bx: number,
-    bz: number
-): number {
-
-    return (
-        ax * bx +
-        az * bz
+function intervalsOverlap(
+    aMin: number,
+    aMax: number,
+    bMin: number,
+    bMax: number,
+    padding: number
+): boolean {
+    return !(
+        aMax + padding < bMin ||
+        bMax + padding < aMin
     );
 }
 
-//--------------------------------------------------
-// Projection radius of an OBB onto an axis
-//--------------------------------------------------
-
-function getProjectionRadius(
-    box: OBB2D,
-    axisX: number,
-    axisZ: number
-): number {
-
-    const xProjection =
-        Math.abs(
-            dot(
-                box.axisX.x,
-                box.axisX.z,
-                axisX,
-                axisZ
-            )
-        );
-
-    const zProjection =
-        Math.abs(
-            dot(
-                box.axisZ.x,
-                box.axisZ.z,
-                axisX,
-                axisZ
-            )
-        );
-
-    return (
-        box.halfWidth *
-            xProjection +
-
-        box.halfDepth *
-            zProjection
-    );
-}
-
-//--------------------------------------------------
-// OBB vs OBB collision
-//--------------------------------------------------
+//==================================================
+// OBB overlap
+//==================================================
 
 function obbOverlap(
-    a: OBB2D,
-    b: OBB2D
-): boolean {
+    aPosition: Vector3,
+    aWidth: number,
+    aDepth: number,
+    aRotationY: number,
 
-    const axes = [
-        a.axisX,
-        a.axisZ,
-        b.axisX,
-        b.axisZ
+    bPosition: Vector3,
+    bWidth: number,
+    bDepth: number,
+    bRotationY: number,
+
+    padding: number
+): boolean {
+    const aCorners =
+        getCorners(
+            aPosition,
+            aWidth,
+            aDepth,
+            aRotationY
+        );
+
+    const bCorners =
+        getCorners(
+            bPosition,
+            bWidth,
+            bDepth,
+            bRotationY
+        );
+
+    const axes: Axis2D[] = [
+        getXAxis(
+            aRotationY
+        ),
+
+        getZAxis(
+            aRotationY
+        ),
+
+        getXAxis(
+            bRotationY
+        ),
+
+        getZAxis(
+            bRotationY
+        )
     ];
 
-    const dx =
-        b.center.x -
-        a.center.x;
-
-    const dz =
-        b.center.z -
-        a.center.z;
-
-    for (const axis of axes) {
-
-        const distance =
-            Math.abs(
-                dot(
-                    dx,
-                    dz,
-                    axis.x,
-                    axis.z
-                )
+    for (
+        const axis of axes
+    ) {
+        const aProjection =
+            projectCorners(
+                aCorners,
+                axis
             );
 
-        const radiusA =
-            getProjectionRadius(
-                a,
-                axis.x,
-                axis.z
-            );
-
-        const radiusB =
-            getProjectionRadius(
-                b,
-                axis.x,
-                axis.z
+        const bProjection =
+            projectCorners(
+                bCorners,
+                axis
             );
 
         if (
-            distance >=
-            radiusA + radiusB
+            !intervalsOverlap(
+                aProjection.min,
+                aProjection.max,
+                bProjection.min,
+                bProjection.max,
+                padding
+            )
         ) {
             return false;
         }
@@ -192,9 +267,34 @@ function obbOverlap(
     return true;
 }
 
-//--------------------------------------------------
-// Furniture vs wall
-//--------------------------------------------------
+//==================================================
+// Vertical overlap
+//==================================================
+
+function verticalOverlap(
+    aBottom: number,
+    aHeight: number,
+    bBottom: number,
+    bHeight: number,
+    padding: number
+): boolean {
+    const aTop =
+        aBottom +
+        aHeight;
+
+    const bTop =
+        bBottom +
+        bHeight;
+
+    return !(
+        aTop + padding < bBottom ||
+        bTop + padding < aBottom
+    );
+}
+
+//==================================================
+// Wall collision
+//==================================================
 
 function collidesWithWall(
     position: Vector3,
@@ -205,7 +305,6 @@ function collidesWithWall(
     wallThickness: number,
     padding: number
 ): boolean {
-
     const start =
         wall.start.position;
 
@@ -213,10 +312,12 @@ function collidesWithWall(
         wall.end.position;
 
     const dx =
-        end.x - start.x;
+        end.x -
+        start.x;
 
     const dz =
-        end.z - start.z;
+        end.z -
+        start.z;
 
     const wallLength =
         Math.sqrt(
@@ -224,23 +325,26 @@ function collidesWithWall(
             dz * dz
         );
 
-    if (wallLength === 0)
+    if (
+        wallLength <= 0.001
+    ) {
         return false;
-
-    //--------------------------------------------------
-    // Wall center
-    //--------------------------------------------------
+    }
 
     const wallCenter =
         new Vector3(
-            (start.x + end.x) * 0.5,
-            0,
-            (start.z + end.z) * 0.5
-        );
+            (
+                start.x +
+                end.x
+            ) * 0.5,
 
-    //--------------------------------------------------
-    // Wall rotation
-    //--------------------------------------------------
+            0,
+
+            (
+                start.z +
+                end.z
+            ) * 0.5
+        );
 
     const wallRotation =
         Math.atan2(
@@ -248,78 +352,64 @@ function collidesWithWall(
             dx
         );
 
-    //--------------------------------------------------
-    // Furniture footprint
-    //--------------------------------------------------
-
-    const furnitureBox =
-        createOBB(
-            position,
-            width,
-            depth,
-            rotationY,
-            padding
-        );
-
-    //--------------------------------------------------
-    // Wall footprint
-    //--------------------------------------------------
-
-    const wallBox =
-        createOBB(
-            wallCenter,
-            wallLength,
-            wallThickness,
-            wallRotation,
-            padding
-        );
-
     return obbOverlap(
-        furnitureBox,
-        wallBox
+        position,
+        width,
+        depth,
+        rotationY,
+
+        wallCenter,
+        wallLength,
+        wallThickness,
+        wallRotation,
+
+        padding
     );
 }
 
-//--------------------------------------------------
-// Furniture vs furniture
-//--------------------------------------------------
+//==================================================
+// Furniture collision
+//==================================================
 
 function collidesWithFurniture(
     position: Vector3,
     width: number,
     depth: number,
+    height: number,
     rotationY: number,
-    existing: Furniture,
+    furniture: Furniture,
     padding: number
 ): boolean {
-
-    const previewBox =
-        createOBB(
-            position,
-            width,
-            depth,
-            rotationY,
+    if (
+        !verticalOverlap(
+            position.y,
+            height,
+            furniture.position.y,
+            furniture.height,
             padding
-        );
-
-    const existingBox =
-        createOBB(
-            existing.position,
-            existing.width,
-            existing.depth,
-            existing.rotationY,
-            padding
-        );
+        )
+    ) {
+        return false;
+    }
 
     return obbOverlap(
-        previewBox,
-        existingBox
+        position,
+        width,
+        depth,
+        rotationY,
+
+        furniture.position,
+        furniture.width,
+        furniture.depth,
+        furniture.rotationY,
+
+        padding
     );
 }
 
-//--------------------------------------------------
+//==================================================
 // Main collision check
-//--------------------------------------------------
+//==================================================
 
 export function checkFurnitureCollision(
     position: Vector3,
@@ -329,14 +419,30 @@ export function checkFurnitureCollision(
     walls: Wall[],
     furniture: Furniture[],
     wallThickness: number,
-    padding = 0.01
+    padding = 0.01,
+    options?: {
+        height?: number;
+        ignoreWallId?: string | null;
+        ignoreFurnitureId?: string | null;
+    }
 ): FurnitureCollisionResult {
+    const height =
+        options?.height ?? 0;
 
     //--------------------------------------------------
-    // Walls
+    // Check walls
     //--------------------------------------------------
 
-    for (const wall of walls) {
+    for (
+        const wall of walls
+    ) {
+        if (
+            options?.ignoreWallId &&
+            wall.id ===
+                options.ignoreWallId
+        ) {
+            continue;
+        }
 
         if (
             collidesWithWall(
@@ -349,39 +455,43 @@ export function checkFurnitureCollision(
                 padding
             )
         ) {
-
             return {
                 valid: false,
                 reason: "wall"
             };
-
         }
     }
 
     //--------------------------------------------------
-    // Existing furniture
+    // Check furniture
     //--------------------------------------------------
 
     for (
         const existing of furniture
     ) {
+        if (
+            options?.ignoreFurnitureId &&
+            existing.id ===
+                options.ignoreFurnitureId
+        ) {
+            continue;
+        }
 
         if (
             collidesWithFurniture(
                 position,
                 width,
                 depth,
+                height,
                 rotationY,
                 existing,
                 padding
             )
         ) {
-
             return {
                 valid: false,
                 reason: "furniture"
             };
-
         }
     }
 

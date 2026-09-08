@@ -26,8 +26,6 @@ export default function WorkspaceTabs({
 
     activeTab,
 
-    layoutConfirmed,
-
     walkthroughMode,
 
     onTabChange

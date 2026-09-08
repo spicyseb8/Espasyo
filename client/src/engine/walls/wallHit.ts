@@ -8,232 +8,239 @@ import type {
     Wall
 } from "./WallTypes";
 
-import {
-    closestPointOnWall
-} from "./wallSnapping";
-
-//----------------------------------------------------
-// Distance-based hit test
-//----------------------------------------------------
-
-export function hitWall(
-    point: Vector3,
-    walls: Wall[],
-    radius = 0.25
-): Wall | null {
-
-    for (
-        const wall of walls
-    ) {
-
-        const closest =
-            closestPointOnWall(
-                point,
-                wall
-            );
-
-        if (
-            closest.distanceTo(
-                point
-            ) < radius
-        ) {
-
-            return wall;
-
-        }
-
-    }
-
-    return null;
-}
-function isWallFinishObject(
-    object: Object3D
-): boolean {
-
-    let current:
-        Object3D | null =
-        object;
-
-    while (
-        current
-    ) {
-
-        if (
-            current.userData?.isWallFinish === true
-        ) {
-
-            return true;
-
-        }
-
-        current =
-            current.parent;
-
-    }
-
-    return false;
-}
-//----------------------------------------------------
-// Distance-based wall point hit
-//----------------------------------------------------
-
 export interface WallPointHit {
-
     wall: Wall;
-
     point: Vector3;
+}
 
+export interface WallRaycastHit {
+    wall: Wall;
+    point: Vector3;
+    surfacePoint: Vector3;
 }
 
 export function hitWallAtPoint(
     point: Vector3,
     walls: Wall[],
-    radius = 0.25
+    radius = 0.15
 ): WallPointHit | null {
+    return hitWall(
+        point,
+        walls,
+        radius
+    );
+}
+    /*
+     * Existing callers can continue using this.
+     * It always uses Y = 0.
+     */
+    point: Vector3;
+
+    /*
+     * Actual 3D wall hit.
+     * Furniture mounting uses this.
+     */
+    surfacePoint: Vector3;
+
+
+//==================================================
+// Logical wall hit
+//==================================================
+
+export function hitWall(
+    point: Vector3,
+    walls: Wall[],
+    radius = 0.15
+): WallPointHit | null {
+    let closest:
+        WallPointHit | null = null;
+
+    let closestDistance =
+        Number.POSITIVE_INFINITY;
 
     for (
         const wall of walls
     ) {
+        const start =
+            wall.start.position;
 
-        const closest =
-            closestPointOnWall(
-                point,
-                wall
+        const end =
+            wall.end.position;
+
+        const dx =
+            end.x -
+            start.x;
+
+        const dz =
+            end.z -
+            start.z;
+
+        const lengthSquared =
+            dx * dx +
+            dz * dz;
+
+        if (
+            lengthSquared <=
+            0.000001
+        ) {
+            continue;
+        }
+
+        let t =
+            (
+                (
+                    point.x -
+                    start.x
+                ) * dx +
+
+                (
+                    point.z -
+                    start.z
+                ) * dz
+            ) /
+            lengthSquared;
+
+        t =
+            Math.max(
+                0,
+                Math.min(
+                    1,
+                    t
+                )
+            );
+
+        const nearest =
+            new Vector3(
+                start.x +
+                    dx * t,
+
+                0,
+
+                start.z +
+                    dz * t
+            );
+
+        const distance =
+            nearest.distanceTo(
+                new Vector3(
+                    point.x,
+                    0,
+                    point.z
+                )
             );
 
         if (
-            closest.distanceTo(
-                point
-            ) < radius
+            distance <= radius &&
+            distance < closestDistance
         ) {
+            closestDistance =
+                distance;
 
-            return {
-
+            closest = {
                 wall,
-
-                point:
-                    closest
-
+                point: nearest
             };
+        }
+    }
 
+    return closest;
+}
+
+//==================================================
+// Walk object hierarchy
+//==================================================
+
+function findWallId(
+    object: Object3D
+): string | null {
+    let current:
+        Object3D | null =
+        object;
+
+    while (current) {
+        const wallId =
+            current.userData
+                ?.wallId;
+
+        if (
+            typeof wallId ===
+            "string"
+        ) {
+            return wallId;
         }
 
+        current =
+            current.parent;
     }
 
     return null;
 }
 
-//----------------------------------------------------
-// Raycast-based wall hit
-//----------------------------------------------------
-
-export interface WallRaycastHit {
-
-    wall: Wall;
-
-    point: Vector3;
-
-}
+//==================================================
+// Raycast wall
+//==================================================
 
 export function hitWallByRaycast(
-
     raycaster: Raycaster,
-
     objects: Object3D[],
-
     walls: Wall[]
-
 ): WallRaycastHit | null {
-
-    const intersects =
+    const hits =
         raycaster.intersectObjects(
             objects,
             true
         );
 
-    //--------------------------------------------------
-    // Check every intersection in distance order.
-    //
-    // Do NOT immediately accept wall-finish surfaces.
-    //--------------------------------------------------
-
     for (
-        const hit of intersects
+        const hit of hits
     ) {
-
-        const object =
-            hit.object;
-
-        //--------------------------------------------------
-        // Ignore wall finish surfaces.
-        //
-        // These are visual material layers and should
-        // never become the target for window/door/opening
-        // placement.
-        //--------------------------------------------------
-
-            if (
-        isWallFinishObject(object)
-            ) {
-                continue;
-            }
-
-        //--------------------------------------------------
-        // Find the wall ID.
-        //--------------------------------------------------
-
-        const wallId =
-            object.userData?.wallId;
-
+        /*
+         * Ignore wall finish objects.
+         */
         if (
-            !wallId
+            hit.object.userData
+                ?.isWallFinish === true
         ) {
-
             continue;
-
         }
 
-        //--------------------------------------------------
-        // Find actual logical wall.
-        //--------------------------------------------------
+        const wallId =
+            findWallId(
+                hit.object
+            );
+
+        if (!wallId) {
+            continue;
+        }
 
         const wall =
             walls.find(
-                w =>
-                    w.id ===
+                candidate =>
+                    candidate.id ===
                     wallId
             );
 
-        if (
-            !wall
-        ) {
-
+        if (!wall) {
             continue;
-
         }
 
-        //--------------------------------------------------
-        // Use actual ray hit point.
-        //--------------------------------------------------
-
-        const point =
+        const surfacePoint =
             hit.point.clone();
 
-        //--------------------------------------------------
-        // Build placement operates on X/Z ground
-        // coordinates.
-        //--------------------------------------------------
-
+        const point =
+            surfacePoint.clone();
+        
+        /*
+         * Keep existing wall tools
+         * working at floor level.
+         */
         point.y = 0;
 
         return {
-
             wall,
-
-            point
-
+            point,
+            surfacePoint
         };
-
     }
 
     return null;
