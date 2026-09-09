@@ -1,0 +1,110 @@
+/* Translucent, blurred nav bar — content scrolls under it, not behind an
+   opaque strip. Bright top edge reads as light catching a real material. */
+
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: var(--color-fill-translucent);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 0.5px solid var(--color-separator);
+  padding-top: env(safe-area-inset-top);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .navbar {
+    background-color: var(--color-background);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+.navbar__inner {
+  max-width: 72rem;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.875rem 1.25rem;
+}
+
+@media (min-width: 768px) {
+  .navbar__inner {
+    padding: 0.875rem 2rem;
+  }
+}
+
+/* --- Logo --- */
+
+.navbar__logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.navbar__logo-icon {
+  height: 1.125rem;
+  width: 1.125rem;
+  color: var(--color-label);
+}
+
+.navbar__logo-text {
+  font-family: var(--font-system);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.01em; /* size-specific tracking: tighten as size grows */
+  color: var(--color-label);
+}
+
+/* --- Links --- */
+
+.navbar__links {
+  display: none;
+  align-items: center;
+  gap: 2rem;
+}
+
+@media (min-width: 640px) {
+  .navbar__links {
+    display: flex;
+  }
+}
+
+.navbar__link {
+  position: relative;
+  font-family: var(--font-system);
+  font-size: 0.9375rem;
+  font-weight: 400;
+  letter-spacing: 0; /* body-size text needs ~0 tracking, not the heading's negative value */
+  color: var(--color-secondary-label);
+  padding-bottom: 0.5rem;
+}
+
+.navbar__link[data-active="true"] {
+  color: var(--color-label);
+}
+
+/* Motion owns position/width of this via layoutId — only visual styling here. */
+.navbar__indicator {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  border-radius: 1px;
+  background-color: var(--color-label);
+}
+
+/* --- Sign in CTA: the single sparing accent on the page --- */
+
+.navbar__cta {
+  display: inline-block;
+  border-radius: 0.875rem;
+  background-color: var(--color-accent);
+  padding: 0.5rem 1.125rem;
+  font-family: var(--font-system);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #ffffff;
+}

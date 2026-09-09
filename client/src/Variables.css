@@ -1,0 +1,24 @@
+/* Apple/iOS-inspired design tokens.
+   Neutral system palette, one sparing accent, hierarchy via size/weight. */
+
+:root {
+  --color-background: #ffffff;
+  --color-background-secondary: #f2f2f7; /* iOS systemGroupedBackground */
+
+  --color-label: #1c1c1e;           /* iOS label */
+  --color-secondary-label: #6e6e73; /* iOS secondaryLabel */
+  --color-tertiary-label: #a1a1a6;  /* iOS tertiaryLabel */
+
+  --color-separator: rgba(60, 60, 67, 0.29); /* iOS hairline separator */
+  --color-fill-translucent: rgba(255, 255, 255, 0.72);
+
+  /* the one sparing accent — used only for the single primary action */
+  --color-accent: #b76e46;
+  --color-accent-pressed: #9c5936;
+
+  --font-system:
+    -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+    "Segoe UI", Roboto, sans-serif;
+
+  --ease-standard: cubic-bezier(0.25, 0.1, 0.25, 1);
+}
