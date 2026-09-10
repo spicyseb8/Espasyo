@@ -1,0 +1,13 @@
+{
+  "name": "espasyo-server",
+  "version": "1.0.0",
+  "description": "Espasyo Firebase Admin server",
+  "type": "module",
+  "scripts": {
+    "verify-superadmin": "node src/create-superadmin.js",
+    "seed-test-data": "node src/seed-test-data.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.5.0"
+  }
+}
