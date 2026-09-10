@@ -3,6 +3,7 @@ import { Routes, Route } from "react-router-dom";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import UserTable from "@/components/pages/UserTable/UserTable";
 import AccountSettings from "@/components/pages/AccountSettings/AccountSettings";
+import AssetLibrary from "@/components/pages/AssetLibrary/AssetLibrary";
 import Login from "@/components/auth/Login";
 
 function App() {
@@ -46,27 +47,15 @@ function App() {
               }
 
               if (selectedPage === "furniture") {
-                return (
-                  <div>
-                    <h1 className="text-lg font-semibold">Furniture</h1>
-                  </div>
-                );
+                return <AssetLibrary type="furniture" />;
               }
 
               if (selectedPage === "materials") {
-                return (
-                  <div>
-                    <h1 className="text-lg font-semibold">Materials</h1>
-                  </div>
-                );
+                return <AssetLibrary type="materials" />;
               }
 
               if (selectedPage === "textures") {
-                return (
-                  <div>
-                    <h1 className="text-lg font-semibold">Textures</h1>
-                  </div>
-                );
+                return <AssetLibrary type="textures" />;
               }
 
               if (selectedPage === "projects") {

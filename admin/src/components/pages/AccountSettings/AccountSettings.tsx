@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { User, FolderKanban, Clock3 } from "lucide-react";
 
 import {
@@ -14,6 +14,15 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 import {
   useUserDetail,
@@ -36,6 +45,7 @@ export default function AccountSettings({
   type,
 }: AccountSettingsProps) {
   const { id } = useParams();
+  const navigate = useNavigate();
 
   const { data, loading, error } = useUserDetail(type, id);
 
@@ -44,37 +54,51 @@ export default function AccountSettings({
       ? (data as UserRecord | null)?.full_name
       : (data as EmployeeRecord | null)?.name;
 
+  const listLabel = type === "user" ? "Customers" : "Employees";
+  // Adjust this route to match wherever your table actually lives
+  const listPath = type === "user" ? "/customers" : "/employees";
+
   return (
     <Card className="bg-background text-foreground border-border">
       <CardHeader className="border-b border-dashed border-border pb-4">
-        <CardTitle className="text-base">
-          Account Setting
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base">
+            Account Setting
+          </CardTitle>
+
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink
+                  className="cursor-pointer"
+                  onClick={() => navigate(listPath)}
+                >
+                  {listLabel}
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Account Settings</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
       </CardHeader>
 
       <CardContent className="pt-4">
         <Tabs defaultValue="account">
           <TabsList className="h-auto w-full justify-start gap-8 rounded-none border-b border-border bg-transparent p-0">
-            <TabsTrigger
-              value="account"
-              className={tabTriggerClass}
-            >
+            <TabsTrigger value="account" className={tabTriggerClass}>
               <User className="h-4 w-4" />
               Account
             </TabsTrigger>
 
-            <TabsTrigger
-              value="projects"
-              className={tabTriggerClass}
-            >
+            <TabsTrigger value="projects" className={tabTriggerClass}>
               <FolderKanban className="h-4 w-4" />
               Projects
             </TabsTrigger>
 
-            <TabsTrigger
-              value="activity"
-              className={tabTriggerClass}
-            >
+            <TabsTrigger value="activity" className={tabTriggerClass}>
               <Clock3 className="h-4 w-4" />
               Recent Activities
             </TabsTrigger>
@@ -94,9 +118,7 @@ export default function AccountSettings({
           </TabsContent>
 
           <TabsContent value="activity" className="mt-6">
-            <RecentActivitiesTab
-              displayName={displayName}
-            />
+            <RecentActivitiesTab displayName={displayName} />
           </TabsContent>
         </Tabs>
       </CardContent>

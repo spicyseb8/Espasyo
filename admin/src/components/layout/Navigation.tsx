@@ -100,7 +100,7 @@ export default function Navigation({
                       : "hover:bg-accent hover:text-accent-foreground"
                   }`}
                 >
-                  Materials
+                  Floors
                 </NavigationMenuLink>
 
                 <NavigationMenuLink
@@ -111,7 +111,7 @@ export default function Navigation({
                       : "hover:bg-accent hover:text-accent-foreground"
                   }`}
                 >
-                  Textures
+                  Walls
                 </NavigationMenuLink>
               </div>
             </NavigationMenuContent>
