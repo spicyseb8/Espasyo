@@ -55,6 +55,11 @@ import {
     normalizeWindowModel
 } from "../../engine/windows/normalizeWindowModel";
 
+import {
+    findAsset
+} from "../../assets/AssetLibrary";
+
+
 //============================================================
 // OPENING PREVIEW
 //============================================================
@@ -145,6 +150,7 @@ function OpeningPreview() {
                     );
 
                     shape.closePath();
+
                 }
 
                 //--------------------------------------------------
@@ -248,7 +254,7 @@ function OpeningPreview() {
             );
 
             //--------------------------------------------------
-            // Find wall under mouse
+            // Find wall
             //--------------------------------------------------
 
             const hit =
@@ -258,7 +264,9 @@ function OpeningPreview() {
                     state.walls
                 );
 
-            if (!hit) {
+            if (
+                !hit
+            ) {
 
                 previewRef.current.visible =
                     false;
@@ -388,7 +396,6 @@ function OpeningPreview() {
             >
 
                 <meshStandardMaterial
-
                     color={
                         "#4DA3FF"
                     }
@@ -410,7 +417,6 @@ function OpeningPreview() {
                     side={
                         2
                     }
-
                 />
 
             </mesh>
@@ -419,11 +425,21 @@ function OpeningPreview() {
     );
 }
 
+
 //============================================================
 // DOOR / WINDOW PREVIEW
 //============================================================
 
-function DoorWindowPreview() {
+function DoorWindowPreview({
+    asset
+}: {
+    asset:
+        NonNullable<
+            ReturnType<
+                typeof findAsset
+            >
+        >;
+}) {
 
     const {
         state
@@ -436,9 +452,6 @@ function DoorWindowPreview() {
 
     const previewRef =
         useRef<Group>(null);
-
-    const asset =
-        state.selectedAsset!;
 
     //--------------------------------------------------
     // Load GLB
@@ -539,7 +552,9 @@ function DoorWindowPreview() {
         useMemo(
             () => {
 
-                if (!model) {
+                if (
+                    !model
+                ) {
 
                     return {
 
@@ -577,6 +592,7 @@ function DoorWindowPreview() {
 
                     depth:
                         size.z
+
                 };
 
             },
@@ -592,7 +608,9 @@ function DoorWindowPreview() {
     useEffect(
         () => {
 
-            if (!model) {
+            if (
+                !model
+            ) {
                 return;
             }
 
@@ -617,15 +635,12 @@ function DoorWindowPreview() {
                             opacity:
                                 0.55,
 
-                            //--------------------------------------------------
-                            // Doors/windows are inserted into walls.
-                            //--------------------------------------------------
-
                             depthTest:
                                 false,
 
                             depthWrite:
                                 false
+
                         });
 
                     child.renderOrder =
@@ -650,11 +665,12 @@ function DoorWindowPreview() {
                 !previewRef.current ||
                 !model
             ) {
+
                 return;
             }
 
             //--------------------------------------------------
-            // Wait until mouse actually moves over canvas.
+            // Wait for real pointer movement.
             //--------------------------------------------------
 
             if (
@@ -670,7 +686,7 @@ function DoorWindowPreview() {
             }
 
             //--------------------------------------------------
-            // Raycast
+            // Mouse ray
             //--------------------------------------------------
 
             buildInteraction.raycaster.setFromCamera(
@@ -679,7 +695,42 @@ function DoorWindowPreview() {
             );
 
             //--------------------------------------------------
-            // Wall
+            // Determine whether this is Move mode.
+            //--------------------------------------------------
+
+            const moveTarget =
+                buildInteraction.moveTarget;
+
+            const movingDoor =
+                moveTarget?.type ===
+                    "door"
+
+                    ? state.doors.find(
+                        door =>
+                            door.id ===
+                            moveTarget.id
+                    ) ?? null
+
+                    : null;
+
+            const movingWindow =
+                moveTarget?.type ===
+                    "window"
+
+                    ? state.windows.find(
+                        window =>
+                            window.id ===
+                            moveTarget.id
+                    ) ?? null
+
+                    : null;
+
+            const movingObject =
+                movingDoor ??
+                movingWindow;
+
+            //--------------------------------------------------
+            // Find wall under mouse.
             //--------------------------------------------------
 
             const hit =
@@ -689,7 +740,54 @@ function DoorWindowPreview() {
                     state.walls
                 );
 
-            if (!hit) {
+            //--------------------------------------------------
+            // Move mode:
+            //
+            // The object must stay attached to its
+            // ORIGINAL wall.
+            //--------------------------------------------------
+
+            if (
+                movingObject
+            ) {
+
+                if (
+                    !hit
+                ) {
+
+                    previewRef.current.visible =
+                        false;
+
+                    buildInteraction.clear();
+
+                    return;
+                }
+
+                //--------------------------------------------------
+                // Do not allow changing walls.
+                //--------------------------------------------------
+
+                if (
+                    hit.wall.id !==
+                    movingObject.wallId
+                ) {
+
+                    previewRef.current.visible =
+                        false;
+
+                    buildInteraction.clear();
+
+                    return;
+                }
+            }
+
+            //--------------------------------------------------
+            // Normal placement needs a wall too.
+            //--------------------------------------------------
+
+            if (
+                !hit
+            ) {
 
                 previewRef.current.visible =
                     false;
@@ -700,7 +798,10 @@ function DoorWindowPreview() {
             }
 
             //--------------------------------------------------
-            // Build placement
+            // Build placement.
+            //
+            // This automatically keeps the item attached
+            // to the wall.
             //--------------------------------------------------
 
             const transform =
@@ -713,22 +814,47 @@ function DoorWindowPreview() {
                 );
 
             //--------------------------------------------------
-            // Collision
+            // Collision.
+            //
+            // When moving an existing door/window,
+            // exclude the same object from collision checking.
             //--------------------------------------------------
+
+            const doorsForCollision =
+                movingDoor
+
+                    ? state.doors.filter(
+                        door =>
+                            door.id !==
+                            movingDoor.id
+                    )
+
+                    : state.doors;
+
+            const windowsForCollision =
+                movingWindow
+
+                    ? state.windows.filter(
+                        window =>
+                            window.id !==
+                            movingWindow.id
+                    )
+
+                    : state.windows;
 
             const collision =
                 checkBuildElementCollision(
                     asset,
                     transform,
                     bounds,
-                    state.doors,
-                    state.windows,
+                    doorsForCollision,
+                    windowsForCollision,
                     state.openings,
                     state.wallHeight
                 );
 
             //--------------------------------------------------
-            // Store
+            // Store preview.
             //--------------------------------------------------
 
             buildInteraction.currentPlacement =
@@ -741,14 +867,14 @@ function DoorWindowPreview() {
                 collision;
 
             //--------------------------------------------------
-            // Show
+            // Show preview.
             //--------------------------------------------------
 
             previewRef.current.visible =
                 true;
 
             //--------------------------------------------------
-            // Position
+            // Position.
             //--------------------------------------------------
 
             previewRef.current.position.copy(
@@ -756,14 +882,21 @@ function DoorWindowPreview() {
             );
 
             //--------------------------------------------------
-            // Wall rotation
+            // Rotation.
+            //
+            // IMPORTANT:
+            //
+            // Door/window Move mode NEVER changes
+            // rotation by itself.
+            //
+            // The wall determines the rotation.
             //--------------------------------------------------
 
             previewRef.current.rotation.y =
                 transform.rotationY;
 
             //--------------------------------------------------
-            // Blue / Red
+            // Color.
             //--------------------------------------------------
 
             const color =
@@ -777,6 +910,7 @@ function DoorWindowPreview() {
                     if (
                         !(child instanceof Mesh)
                     ) {
+
                         return;
                     }
 
@@ -831,6 +965,7 @@ function DoorWindowPreview() {
                                 model
                             }
                         />
+
                     )
                 }
 
@@ -839,6 +974,7 @@ function DoorWindowPreview() {
         </group>
     );
 }
+
 
 //============================================================
 // PREVIEW SWITCH
@@ -849,6 +985,54 @@ function PreviewModel() {
     const {
         state
     } = useEditor();
+
+    //--------------------------------------------------
+    // Existing Door / Window Move
+    //--------------------------------------------------
+
+    if (
+        buildInteraction.moveTarget
+    ) {
+
+        const target =
+            buildInteraction.moveTarget;
+
+        const moveAsset =
+            target.type ===
+                "door"
+
+                ? findAsset(
+                    state.doors.find(
+                        door =>
+                            door.id ===
+                            target.id
+                    )?.assetId ??
+                    ""
+                )
+
+                : findAsset(
+                    state.windows.find(
+                        window =>
+                            window.id ===
+                            target.id
+                    )?.assetId ??
+                    ""
+                );
+
+        if (
+            !moveAsset
+        ) {
+            return null;
+        }
+
+        return (
+            <DoorWindowPreview
+                asset={
+                    moveAsset
+                }
+            />
+        );
+    }
 
     //--------------------------------------------------
     // Opening
@@ -865,7 +1049,7 @@ function PreviewModel() {
     }
 
     //--------------------------------------------------
-    // Door / Window
+    // Normal Door / Window placement
     //--------------------------------------------------
 
     if (
@@ -876,8 +1060,15 @@ function PreviewModel() {
             BuildTool.Window
     ) {
 
+        const asset =
+            state.selectedAsset;
+
         return (
-            <DoorWindowPreview />
+            <DoorWindowPreview
+                asset={
+                    asset
+                }
+            />
         );
     }
 
@@ -887,6 +1078,7 @@ function PreviewModel() {
 
     return null;
 }
+
 
 //============================================================
 // MAIN
@@ -905,6 +1097,7 @@ export default function AssetPreview() {
     if (
         state.walkthroughMode
     ) {
+
         return null;
     }
 
@@ -915,31 +1108,56 @@ export default function AssetPreview() {
     if (
         !state.layoutConfirmed
     ) {
+
         return null;
     }
 
     //--------------------------------------------------
-    // No selected asset
+    // Existing Door / Window Move
+    //
+    // IMPORTANT:
+    //
+    // selectedAsset is NOT required.
+    //--------------------------------------------------
+
+    if (
+        buildInteraction.moveTarget
+    ) {
+
+        return (
+
+            <Suspense
+                fallback={
+                    null
+                }
+            >
+
+                <PreviewModel />
+
+            </Suspense>
+        );
+    }
+
+    //--------------------------------------------------
+    // Normal placement requires selected asset.
     //--------------------------------------------------
 
     if (
         !state.selectedAsset
     ) {
+
         return null;
     }
 
     //--------------------------------------------------
-    // IMPORTANT:
-    //
-    // selectedAsset alone does NOT activate preview.
-    //
-    // Apply must set buildTool first.
+    // Apply must activate the tool.
     //--------------------------------------------------
 
     if (
         state.buildTool ===
         BuildTool.None
     ) {
+
         return null;
     }
 
@@ -951,17 +1169,18 @@ export default function AssetPreview() {
         state.buildTool !==
         state.selectedAsset.type
     ) {
+
         return null;
     }
 
     //--------------------------------------------------
-    // AssetPreview handles only:
+    // AssetPreview handles:
     //
     // Door
     // Window
     // Opening
     //
-    // Furniture has FurniturePreview.
+    // Furniture uses FurniturePreview.
     //--------------------------------------------------
 
     if (
@@ -974,6 +1193,7 @@ export default function AssetPreview() {
         state.selectedAsset.type !==
             BuildTool.Opening
     ) {
+
         return null;
     }
 

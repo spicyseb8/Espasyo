@@ -1,4 +1,5 @@
 import {
+    useCallback,
     useEffect,
     useMemo,
     useRef,
@@ -8,6 +9,10 @@ import {
 import {
     useThree
 } from "@react-three/fiber";
+
+import {
+    Line
+} from "@react-three/drei";
 
 import {
     DoubleSide,
@@ -70,9 +75,6 @@ export default function BlueprintScene() {
 
     //--------------------------------------------------
     // Calibration
-    //
-    // Calibration UI stays completely inside
-    // FloorPlanPanel. Nothing is drawn in the scene.
     //--------------------------------------------------
 
     const calibrationActive =
@@ -80,6 +82,30 @@ export default function BlueprintScene() {
 
     const calibrationStart =
         useRef<Vector3 | null>(null);
+
+    //--------------------------------------------------
+    // Calibration visual line
+    //--------------------------------------------------
+
+    const [
+        calibrationLineStart,
+        setCalibrationLineStart
+    ] = useState<Vector3 | null>(null);
+
+    const [
+        calibrationLineEnd,
+        setCalibrationLineEnd
+    ] = useState<Vector3 | null>(null);
+
+    //--------------------------------------------------
+    // Calibration line reference
+    //
+    // We use this to force the line material to always
+    // render above the blueprint.
+    //--------------------------------------------------
+
+    const calibrationLineRef =
+        useRef<any>(null);
 
     //--------------------------------------------------
     // Raycaster
@@ -171,6 +197,77 @@ export default function BlueprintScene() {
     ]);
 
     //--------------------------------------------------
+    // Convert screen coordinate to floor coordinate
+    //--------------------------------------------------
+
+    const getFloorPoint =
+        useCallback(
+            (
+                clientX: number,
+                clientY: number
+            ): Vector3 | null => {
+
+                const rect =
+                    gl.domElement.getBoundingClientRect();
+
+                if (
+                    rect.width === 0 ||
+                    rect.height === 0
+                ) {
+                    return null;
+                }
+
+                const ndcX =
+                    (
+                        (
+                            clientX -
+                            rect.left
+                        ) /
+                        rect.width
+                    ) * 2 - 1;
+
+                const ndcY =
+                    -(
+                        (
+                            clientY -
+                            rect.top
+                        ) /
+                        rect.height
+                    ) * 2 + 1;
+
+                const pointer =
+                    new Vector2(
+                        ndcX,
+                        ndcY
+                    );
+
+                raycaster.setFromCamera(
+                    pointer,
+                    camera
+                );
+
+                const point =
+                    new Vector3();
+
+                const hit =
+                    raycaster.ray.intersectPlane(
+                        groundPlane,
+                        point
+                    );
+
+                return hit
+                    ? point
+                    : null;
+            },
+            [
+                camera,
+                gl,
+                groundPlane,
+                raycaster
+            ]
+        );
+
+    //--------------------------------------------------
     // Start / cancel calibration events
     //--------------------------------------------------
 
@@ -193,7 +290,19 @@ export default function BlueprintScene() {
                 null;
 
             //--------------------------------------------------
-            // Make sure the blueprint is visible.
+            // Clear previous calibration line
+            //--------------------------------------------------
+
+            setCalibrationLineStart(
+                null
+            );
+
+            setCalibrationLineEnd(
+                null
+            );
+
+            //--------------------------------------------------
+            // Make sure the blueprint is visible
             //--------------------------------------------------
 
             if (!blueprint.selected) {
@@ -224,6 +333,18 @@ export default function BlueprintScene() {
 
             calibrationStart.current =
                 null;
+
+            //--------------------------------------------------
+            // Remove temporary line
+            //--------------------------------------------------
+
+            setCalibrationLineStart(
+                null
+            );
+
+            setCalibrationLineEnd(
+                null
+            );
         }
 
         window.addEventListener(
@@ -255,6 +376,91 @@ export default function BlueprintScene() {
     ]);
 
     //--------------------------------------------------
+    // Calibration mouse movement
+    //
+    // After the first point is selected, the line end
+    // follows the mouse.
+    //--------------------------------------------------
+
+    useEffect(() => {
+
+        function handleCalibrationPointerMove(
+            event: PointerEvent
+        ) {
+
+            if (
+                !calibrationActive.current
+            ) {
+                return;
+            }
+
+            if (
+                !calibrationStart.current
+            ) {
+                return;
+            }
+
+            const rect =
+                gl.domElement.getBoundingClientRect();
+
+            //--------------------------------------------------
+            // Only update while cursor is inside canvas.
+            //--------------------------------------------------
+
+            if (
+                event.clientX < rect.left ||
+                event.clientX > rect.right ||
+                event.clientY < rect.top ||
+                event.clientY > rect.bottom
+            ) {
+                return;
+            }
+
+            const point =
+                getFloorPoint(
+                    event.clientX,
+                    event.clientY
+                );
+
+            if (!point) {
+                return;
+            }
+
+            //--------------------------------------------------
+            // Keep the guide slightly above the blueprint.
+            //--------------------------------------------------
+
+            const linePoint =
+                new Vector3(
+                    point.x,
+                    0.02,
+                    point.z
+                );
+
+            setCalibrationLineEnd(
+                linePoint
+            );
+        }
+
+        window.addEventListener(
+            "pointermove",
+            handleCalibrationPointerMove
+        );
+
+        return () => {
+
+            window.removeEventListener(
+                "pointermove",
+                handleCalibrationPointerMove
+            );
+        };
+
+    }, [
+        getFloorPoint,
+        gl
+    ]);
+
+    //--------------------------------------------------
     // Blueprint dimensions
     //--------------------------------------------------
 
@@ -263,68 +469,6 @@ export default function BlueprintScene() {
             ? blueprint.width /
               blueprint.aspectRatio
             : 1;
-
-    //--------------------------------------------------
-    // Convert screen coordinate to floor coordinate
-    //--------------------------------------------------
-
-    function getFloorPoint(
-        clientX: number,
-        clientY: number
-    ): Vector3 | null {
-
-        const rect =
-            gl.domElement.getBoundingClientRect();
-
-        if (
-            rect.width === 0 ||
-            rect.height === 0
-        ) {
-            return null;
-        }
-
-        const ndcX =
-            (
-                (
-                    clientX -
-                    rect.left
-                ) /
-                rect.width
-            ) * 2 - 1;
-
-        const ndcY =
-            -(
-                (
-                    clientY -
-                    rect.top
-                ) /
-                rect.height
-            ) * 2 + 1;
-
-        const pointer =
-            new Vector2(
-                ndcX,
-                ndcY
-            );
-
-        raycaster.setFromCamera(
-            pointer,
-            camera
-        );
-
-        const point =
-            new Vector3();
-
-        const hit =
-            raycaster.ray.intersectPlane(
-                groundPlane,
-                point
-            );
-
-        return hit
-            ? point
-            : null;
-    }
 
     //--------------------------------------------------
     // Drag movement
@@ -357,18 +501,23 @@ export default function BlueprintScene() {
             snapBlueprintPosition(
                 point.x -
                     dragOffset.current.x,
+
                 point.z -
                     dragOffset.current.z,
+
                 state.gridSize,
+
                 blueprint.snapEnabled
             );
 
         dispatch({
             type:
                 "UPDATE_BLUEPRINT",
+
             payload: {
                 x:
                     snapped.x,
+
                 z:
                     snapped.z
             }
@@ -411,10 +560,6 @@ export default function BlueprintScene() {
 
         //--------------------------------------------------
         // Calibration mode
-        //
-        // Only the clicked 3D point is sent back to the
-        // FloorPlanPanel. No ruler, HTML, label, or form
-        // is rendered in the scene.
         //--------------------------------------------------
 
         if (
@@ -434,12 +579,39 @@ export default function BlueprintScene() {
                         event.point.z
                     );
 
+            //--------------------------------------------------
+            // FIRST POINT
+            //--------------------------------------------------
+
             if (
                 !calibrationStart.current
             ) {
 
                 calibrationStart.current =
                     point;
+
+                //--------------------------------------------------
+                // Guide start
+                //--------------------------------------------------
+
+                const linePoint =
+                    new Vector3(
+                        point.x,
+                        0.02,
+                        point.z
+                    );
+
+                setCalibrationLineStart(
+                    linePoint
+                );
+
+                //--------------------------------------------------
+                // Start and end initially coincide.
+                //--------------------------------------------------
+
+                setCalibrationLineEnd(
+                    linePoint.clone()
+                );
 
                 window.dispatchEvent(
                     new CustomEvent(
@@ -455,6 +627,10 @@ export default function BlueprintScene() {
 
                 return;
             }
+
+            //--------------------------------------------------
+            // SECOND POINT
+            //--------------------------------------------------
 
             const start =
                 calibrationStart.current;
@@ -476,11 +652,31 @@ export default function BlueprintScene() {
                     dz * dz
                 );
 
+            //--------------------------------------------------
+            // Calibration finished
+            //--------------------------------------------------
+
             calibrationActive.current =
                 false;
 
             calibrationStart.current =
                 null;
+
+            //--------------------------------------------------
+            // Remove temporary line
+            //--------------------------------------------------
+
+            setCalibrationLineStart(
+                null
+            );
+
+            setCalibrationLineEnd(
+                null
+            );
+
+            //--------------------------------------------------
+            // Send result
+            //--------------------------------------------------
 
             window.dispatchEvent(
                 new CustomEvent(
@@ -489,6 +685,7 @@ export default function BlueprintScene() {
                         detail: {
                             type:
                                 "second-point",
+
                             measuredLength
                         }
                     }
@@ -499,8 +696,7 @@ export default function BlueprintScene() {
         }
 
         //--------------------------------------------------
-        // If somehow clicked while not selected,
-        // activate it first.
+        // Select blueprint
         //--------------------------------------------------
 
         if (
@@ -510,6 +706,7 @@ export default function BlueprintScene() {
             dispatch({
                 type:
                     "SET_BLUEPRINT_SELECTED",
+
                 payload:
                     true
             });
@@ -518,7 +715,7 @@ export default function BlueprintScene() {
         }
 
         //--------------------------------------------------
-        // Locked = visible but cannot move
+        // Locked
         //--------------------------------------------------
 
         if (
@@ -575,6 +772,14 @@ export default function BlueprintScene() {
             calibrationStart.current =
                 null;
 
+            setCalibrationLineStart(
+                null
+            );
+
+            setCalibrationLineEnd(
+                null
+            );
+
             window.removeEventListener(
                 "pointermove",
                 handleWindowPointerMove
@@ -587,6 +792,49 @@ export default function BlueprintScene() {
         };
 
     }, []);
+
+    //--------------------------------------------------
+    // Force calibration line rendering
+    //
+    // This is the important fix.
+    //
+    // The line must not test or write depth because
+    // the blueprint image is intentionally transparent
+    // and lies directly on the floor.
+    //--------------------------------------------------
+
+    useEffect(() => {
+
+        const line =
+            calibrationLineRef.current;
+
+        if (!line) {
+            return;
+        }
+
+        line.renderOrder =
+            100000;
+
+        const material =
+            line.material;
+
+        if (!material) {
+            return;
+        }
+
+        material.depthTest =
+            false;
+
+        material.depthWrite =
+            false;
+
+        material.toneMapped =
+            false;
+
+    }, [
+        calibrationLineStart,
+        calibrationLineEnd
+    ]);
 
     //--------------------------------------------------
     // R = rotate 90 degrees
@@ -652,6 +900,7 @@ export default function BlueprintScene() {
             dispatch({
                 type:
                     "UPDATE_BLUEPRINT",
+
                 payload: {
                     rotationY:
                         blueprint.rotationY +
@@ -705,61 +954,252 @@ export default function BlueprintScene() {
         );
 
     //--------------------------------------------------
-    // Render blueprint
+    // Render
     //--------------------------------------------------
 
     return (
-        <mesh
-            position={[
-                blueprint.x,
-                0.006,
-                blueprint.z
-            ]}
+        <>
+            {/* ==================================================
+                BLUEPRINT
+               ================================================== */}
 
-            rotation={[
-                -Math.PI / 2,
-                0,
-                blueprint.rotationY
-            ]}
-
-            onPointerDown={
-                handlePointerDown
-            }
-
-            raycast={
-                blueprint.locked
-                    ? () => null
-                    : undefined
-            }
-
-            renderOrder={
-                -10
-            }
-        >
-
-            <planeGeometry
-                args={[
-                    blueprint.width,
-                    height
+            <mesh
+                position={[
+                    blueprint.x,
+                    0.006,
+                    blueprint.z
                 ]}
-            />
 
-            <meshBasicMaterial
-                map={
-                    texture
-                }
-                transparent
-                opacity={
-                    opacity
-                }
-                depthWrite={
-                    false
-                }
-                side={
-                    DoubleSide
-                }
-            />
+                rotation={[
+                    -Math.PI / 2,
+                    0,
+                    blueprint.rotationY
+                ]}
 
-        </mesh>
+                onPointerDown={
+                    handlePointerDown
+                }
+
+                raycast={
+                    blueprint.locked
+                        ? () => null
+                        : undefined
+                }
+
+                renderOrder={
+                    -10
+                }
+            >
+
+                <planeGeometry
+                    args={[
+                        blueprint.width,
+                        height
+                    ]}
+                />
+
+                <meshBasicMaterial
+                    map={
+                        texture
+                    }
+
+                    transparent
+
+                    opacity={
+                        opacity
+                    }
+
+                    depthWrite={
+                        false
+                    }
+
+                    side={
+                        DoubleSide
+                    }
+                />
+
+            </mesh>
+
+            {/* ==================================================
+                CALIBRATION GUIDE
+               ================================================== */}
+
+            {
+                calibrationActive.current &&
+                calibrationLineStart &&
+                calibrationLineEnd && (
+                    <Line
+                        ref={
+                            calibrationLineRef
+                        }
+
+                        points={[
+                            calibrationLineStart,
+                            calibrationLineEnd
+                        ]}
+
+                        color="#00E5FF"
+
+                        lineWidth={
+                            4
+                        }
+
+                        dashed
+
+                        dashSize={
+                            0.12
+                        }
+
+                        gapSize={
+                            0.07
+                        }
+
+                        depthTest={
+                            false
+                        }
+
+                        depthWrite={
+                            false
+                        }
+
+                        toneMapped={
+                            false
+                        }
+
+                        renderOrder={
+                            100000
+                        }
+
+                        frustumCulled={
+                            false
+                        }
+
+                        raycast={() => null}
+                    />
+                )
+            }
+
+            {/* ==================================================
+                FIRST POINT OUTER CIRCLE
+
+                Black outline makes the marker visible
+                against both white and black blueprint lines.
+               ================================================== */}
+
+            {
+                calibrationActive.current &&
+                calibrationLineStart && (
+                    <mesh
+                        position={
+                            calibrationLineStart
+                        }
+
+                        rotation={[
+                            -Math.PI / 2,
+                            0,
+                            0
+                        ]}
+
+                        renderOrder={
+                            100001
+                        }
+
+                        raycast={() => null}
+                    >
+
+                        <circleGeometry
+                            args={[
+                                0.11,
+                                32
+                            ]}
+                        />
+
+                        <meshBasicMaterial
+                            color={
+                                "#000000"
+                            }
+
+                            depthTest={
+                                false
+                            }
+
+                            depthWrite={
+                                false
+                            }
+
+                            toneMapped={
+                                false
+                            }
+
+                            side={
+                                DoubleSide
+                            }
+                        />
+
+                    </mesh>
+                )
+            }
+
+            {/* ==================================================
+                FIRST POINT INNER CIRCLE
+               ================================================== */}
+
+            {
+                calibrationActive.current &&
+                calibrationLineStart && (
+                    <mesh
+                        position={[
+                            calibrationLineStart.x,
+                            calibrationLineStart.y +
+                                0.002,
+                            calibrationLineStart.z
+                        ]}
+
+                        rotation={[
+                            -Math.PI / 2,
+                            0,
+                            0
+                        ]}
+
+                        renderOrder={
+                            100002
+                        }
+
+                        raycast={() => null}
+                    >
+
+                        <circleGeometry
+                            args={[
+                                0.065,
+                                32
+                            ]}
+                        />
+
+                        <meshBasicMaterial
+                            color={
+                                "#00E5FF"
+                            }
+
+                            depthTest={
+                                false
+                            }
+
+                            depthWrite={
+                                false
+                            }
+
+                            toneMapped={
+                                false
+                            }
+
+                            side={
+                                DoubleSide
+                            }
+                        />
+
+                    </mesh>
+                )
+            }
+        </>
     );
 }

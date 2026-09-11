@@ -83,9 +83,21 @@ function isGlobalEditorAction(
 
         case "ADD_FURNITURE":
 
+        case "UPDATE_FURNITURE":
+
+        case "REMOVE_FURNITURE":
+
         case "ADD_DOOR":
 
+        case "UPDATE_DOOR":
+
+        case "REMOVE_DOOR":
+
         case "ADD_WINDOW":
+
+        case "UPDATE_WINDOW":
+
+        case "REMOVE_WINDOW":
 
         case "ADD_OPENING":
 
@@ -100,7 +112,6 @@ function isGlobalEditorAction(
             return false;
     }
 }
-
 //--------------------------------------------------
 // Material actions can be dispatched multiple
 // times during one user action.

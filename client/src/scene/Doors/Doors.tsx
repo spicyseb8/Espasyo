@@ -1,37 +1,68 @@
-import { useMemo } from "react";
+import {
+    useMemo
+} from "react";
 
-import useEditor from "../../context/editor/useEditor";
+import useEditor
+    from "../../context/editor/useEditor";
+
+import {
+    buildInteraction
+} from "../Build/BuildInteraction";
 
 import Door from "./Door";
 
+
 export default function Doors() {
 
-    const { state } = useEditor();
+    const {
+        state
+    } = useEditor();
 
-    const doorElements = useMemo(
+    const doorElements =
+        useMemo(
 
-        () =>
+            () =>
 
-            state.doors.map(
+                state.doors.map(
+                    door => (
 
-                door => (
+                        <Door
+                            key={
+                                door.id
+                            }
 
-                    <Door
+                            door={
+                                door
+                            }
 
-                        key={door.id}
+                        />
 
-                        door={door}
+                    )
+                ),
 
-                    />
+            [
+                state.doors,
 
-                )
+                //--------------------------------------------------
+                // Important:
+                //
+                // Re-render when Door Move starts/ends.
+                //--------------------------------------------------
 
-            ),
+                state.buildTool,
 
-        [state.doors]
+                buildInteraction.moveTarget?.type,
 
+                buildInteraction.moveTarget?.id
+            ]
+
+        );
+
+    return (
+        <>
+            {
+                doorElements
+            }
+        </>
     );
-
-    return <>{doorElements}</>;
-
 }

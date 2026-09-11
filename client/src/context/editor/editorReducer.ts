@@ -256,6 +256,96 @@ export function editorReducer(
         // SELECTION
         //==================================================
 
+        case "SELECT_OPENING":
+
+            if (state.walkthroughMode) {
+                return state;
+            }
+
+            return {
+                ...state,
+                selectedWallId: null,
+                selectedRegionId: null,
+                selectedCornerId: null,
+                selectedOpeningId: action.payload,
+                selectedFurnitureId: null,
+                selectedDoorId: null,
+                selectedWindowId: null
+            };
+
+
+        case "SELECT_FURNITURE":
+
+            if (state.walkthroughMode) {
+                return state;
+            }
+
+            return {
+                ...state,
+                selectedWallId: null,
+                selectedRegionId: null,
+                selectedCornerId: null,
+                selectedOpeningId: null,
+                selectedFurnitureId: action.payload,
+                selectedDoorId: null,
+                selectedWindowId: null
+            };
+
+
+        case "SELECT_DOOR":
+
+            if (state.walkthroughMode) {
+                return state;
+            }
+
+            return {
+                ...state,
+                selectedWallId: null,
+                selectedRegionId: null,
+                selectedCornerId: null,
+                selectedOpeningId: null,
+                selectedFurnitureId: null,
+                selectedDoorId: action.payload,
+                selectedWindowId: null
+            };
+
+
+        case "SELECT_WINDOW":
+
+            if (state.walkthroughMode) {
+                return state;
+            }
+
+            return {
+                ...state,
+                selectedWallId: null,
+                selectedRegionId: null,
+                selectedCornerId: null,
+                selectedOpeningId: null,
+                selectedFurnitureId: null,
+                selectedDoorId: null,
+                selectedWindowId: action.payload
+            };
+
+
+        case "CLEAR_SELECTION":
+
+            if (state.walkthroughMode) {
+                return state;
+            }
+
+            return {
+                ...state,
+                selectedWallId: null,
+                selectedRegionId: null,
+                selectedCornerId: null,
+                selectedOpeningId: null,
+                selectedFurnitureId: null,
+                selectedDoorId: null,
+                selectedWindowId: null
+            };
+
+
         case "SELECT_WALL":
 
             if (
@@ -308,7 +398,20 @@ export function editorReducer(
                     action.payload
 
             };
+            case "SET_MOVING_FURNITURE":
 
+    if (
+        state.walkthroughMode
+    ) {
+        return state;
+    }
+
+    return {
+        ...state,
+
+        movingFurnitureId:
+            action.payload
+    };
 
         case "SET_SELECTED_ASSET":
 
@@ -530,6 +633,90 @@ export function editorReducer(
                 ]
 
             };
+            case "UPDATE_DOOR":
+
+    if (
+        state.walkthroughMode
+    ) {
+        return state;
+    }
+
+    return {
+        ...state,
+
+        doors:
+            state.doors.map(
+                door =>
+                    door.id ===
+                    action.payload.id
+
+                        ? {
+                            ...door,
+                            ...action.payload.changes
+                        }
+
+                        : door
+            )
+    };
+
+
+case "REMOVE_DOOR":
+
+    if (
+        state.walkthroughMode
+    ) {
+        return state;
+    }
+
+    return {
+        ...state,
+
+        doors:
+            state.doors.filter(
+                door =>
+                    door.id !==
+                    action.payload
+            ),
+
+        selectedDoorId:
+            state.selectedDoorId ===
+            action.payload
+
+                ? null
+
+                : state.selectedDoorId
+    };
+
+        case "UPDATE_DOOR":
+
+            if (state.walkthroughMode) {
+                return state;
+            }
+
+            return {
+                ...state,
+                doors: state.doors.map(door =>
+                    door.id === action.payload.id
+                        ? { ...door, ...action.payload.changes }
+                        : door
+                )
+            };
+
+
+        case "REMOVE_DOOR":
+
+            if (state.walkthroughMode) {
+                return state;
+            }
+
+            return {
+                ...state,
+                doors: state.doors.filter(door => door.id !== action.payload),
+                selectedDoorId:
+                    state.selectedDoorId === action.payload
+                        ? null
+                        : state.selectedDoorId
+            };
 
 
         //==================================================
@@ -554,6 +741,90 @@ export function editorReducer(
                 ]
 
             };
+            case "UPDATE_WINDOW":
+
+    if (
+        state.walkthroughMode
+    ) {
+        return state;
+    }
+
+    return {
+        ...state,
+
+        windows:
+            state.windows.map(
+                window =>
+                    window.id ===
+                    action.payload.id
+
+                        ? {
+                            ...window,
+                            ...action.payload.changes
+                        }
+
+                        : window
+            )
+    };
+
+
+case "REMOVE_WINDOW":
+
+    if (
+        state.walkthroughMode
+    ) {
+        return state;
+    }
+
+    return {
+        ...state,
+
+        windows:
+            state.windows.filter(
+                window =>
+                    window.id !==
+                    action.payload
+            ),
+
+        selectedWindowId:
+            state.selectedWindowId ===
+            action.payload
+
+                ? null
+
+                : state.selectedWindowId
+    };
+
+        case "UPDATE_WINDOW":
+
+            if (state.walkthroughMode) {
+                return state;
+            }
+
+            return {
+                ...state,
+                windows: state.windows.map(window =>
+                    window.id === action.payload.id
+                        ? { ...window, ...action.payload.changes }
+                        : window
+                )
+            };
+
+
+        case "REMOVE_WINDOW":
+
+            if (state.walkthroughMode) {
+                return state;
+            }
+
+            return {
+                ...state,
+                windows: state.windows.filter(window => window.id !== action.payload),
+                selectedWindowId:
+                    state.selectedWindowId === action.payload
+                        ? null
+                        : state.selectedWindowId
+            };
 
 
         //==================================================
@@ -577,6 +848,98 @@ export function editorReducer(
                     action.payload
                 ]
 
+            };
+            case "UPDATE_FURNITURE":
+
+    if (
+        state.walkthroughMode
+    ) {
+        return state;
+    }
+
+    return {
+        ...state,
+
+        furniture:
+            state.furniture.map(
+                furniture =>
+                    furniture.id ===
+                    action.payload.id
+
+                        ? {
+                            ...furniture,
+                            ...action.payload.changes
+                        }
+
+                        : furniture
+            )
+    };
+
+
+case "REMOVE_FURNITURE":
+
+    if (
+        state.walkthroughMode
+    ) {
+        return state;
+    }
+
+    return {
+        ...state,
+
+        furniture:
+            state.furniture.filter(
+                furniture =>
+                    furniture.id !==
+                    action.payload
+            ),
+
+        selectedFurnitureId:
+            state.selectedFurnitureId ===
+            action.payload
+
+                ? null
+
+                : state.selectedFurnitureId,
+
+        movingFurnitureId:
+            state.movingFurnitureId ===
+            action.payload
+
+                ? null
+
+                : state.movingFurnitureId
+    };
+
+        case "UPDATE_FURNITURE":
+
+            if (state.walkthroughMode) {
+                return state;
+            }
+
+            return {
+                ...state,
+                furniture: state.furniture.map(item =>
+                    item.id === action.payload.id
+                        ? { ...item, ...action.payload.changes }
+                        : item
+                )
+            };
+
+
+        case "REMOVE_FURNITURE":
+
+            if (state.walkthroughMode) {
+                return state;
+            }
+
+            return {
+                ...state,
+                furniture: state.furniture.filter(item => item.id !== action.payload),
+                selectedFurnitureId:
+                    state.selectedFurnitureId === action.payload
+                        ? null
+                        : state.selectedFurnitureId
             };
 
 
@@ -1160,7 +1523,10 @@ export function editorReducer(
                 //--------------------------------------------------
                 // Clear editor selections when entering walkthrough.
                 //--------------------------------------------------
-
+                movingFurnitureId:
+                      walkthroughMode
+                      ? null
+                    : state.movingFurnitureId,
                 selectedWallId:
                     walkthroughMode
                         ? null
@@ -1177,6 +1543,30 @@ export function editorReducer(
                     walkthroughMode
                         ? null
                         : state.selectedRegionId,
+
+
+                selectedOpeningId:
+                    walkthroughMode
+                        ? null
+                        : state.selectedOpeningId,
+
+
+                selectedFurnitureId:
+                    walkthroughMode
+                        ? null
+                        : state.selectedFurnitureId,
+
+
+                selectedDoorId:
+                    walkthroughMode
+                        ? null
+                        : state.selectedDoorId,
+
+
+                selectedWindowId:
+                    walkthroughMode
+                        ? null
+                        : state.selectedWindowId,
 
 
                 selectedAsset:

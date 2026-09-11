@@ -29,6 +29,7 @@ import {
     BuildTool
 } from "../../context/BuildTool";
 
+
 export default function BuildInteractionEvents() {
 
     const {
@@ -40,11 +41,13 @@ export default function BuildInteractionEvents() {
         dispatch
     } = useEditor();
 
+
     useEffect(
         () => {
 
             const canvas =
                 gl.domElement;
+
 
             //==================================================
             // POINTER MOVE
@@ -54,11 +57,16 @@ export default function BuildInteractionEvents() {
                 event: PointerEvent
             ) {
 
+                //--------------------------------------------------
+                // Update shared pointer.
+                //--------------------------------------------------
+
                 buildInteraction.updatePointer(
                     event,
                     canvas
                 );
             }
+
 
             //==================================================
             // POINTER DOWN
@@ -69,7 +77,7 @@ export default function BuildInteractionEvents() {
             ) {
 
                 //--------------------------------------------------
-                // Left click only
+                // Left click only.
                 //--------------------------------------------------
 
                 if (
@@ -78,6 +86,196 @@ export default function BuildInteractionEvents() {
                 ) {
                     return;
                 }
+
+
+                //==================================================
+                // EXISTING DOOR / WINDOW MOVE
+                //==================================================
+
+                if (
+                    buildInteraction.isMoving()
+                ) {
+
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    buildInteraction
+                        .suppressPointerUp();
+
+                    buildInteraction
+                        .updatePointer(
+                            event,
+                            canvas
+                        );
+
+                    const result =
+                        buildInteraction
+                            .pointerDown();
+
+                    //--------------------------------------------------
+                    // No valid preview.
+                    //--------------------------------------------------
+
+                    if (
+                        !result
+                    ) {
+                        return;
+                    }
+
+
+                    //--------------------------------------------------
+                    // Invalid collision.
+                    //--------------------------------------------------
+
+                    if (
+                        !result.collision ||
+                        !result.collision.valid
+                    ) {
+
+                        console.log(
+                            "Build move blocked:",
+                            result.collision?.reason
+                        );
+
+                        return;
+                    }
+
+
+                    const moveTarget =
+                        buildInteraction
+                            .moveTarget;
+
+                    if (
+                        !moveTarget
+                    ) {
+                        return;
+                    }
+
+
+                    //==================================================
+                    // MOVE DOOR
+                    //==================================================
+
+                    if (
+                        moveTarget.type ===
+                        "door"
+                    ) {
+
+                        dispatch({
+
+                            type:
+                                "UPDATE_DOOR",
+
+                            payload: {
+
+                                id:
+                                    moveTarget.id,
+
+                                changes: {
+
+                                    position:
+                                        result.transform
+                                            .position
+                                            .clone()
+
+                                }
+
+                            }
+
+                        });
+
+
+                        buildInteraction
+                            .endMove();
+
+                        dispatch({
+
+                            type:
+                                "SET_BUILD_TOOL",
+
+                            payload:
+                                BuildTool.None
+
+                        });
+
+                        dispatch({
+
+                            type:
+                                "SET_SELECTED_ASSET",
+
+                            payload:
+                                null
+
+                        });
+
+                        return;
+                    }
+
+
+                    //==================================================
+                    // MOVE WINDOW
+                    //==================================================
+
+                    if (
+                        moveTarget.type ===
+                        "window"
+                    ) {
+
+                        dispatch({
+
+                            type:
+                                "UPDATE_WINDOW",
+
+                            payload: {
+
+                                id:
+                                    moveTarget.id,
+
+                                changes: {
+
+                                    position:
+                                        result.transform
+                                            .position
+                                            .clone()
+
+                                }
+
+                            }
+
+                        });
+
+
+                        buildInteraction
+                            .endMove();
+
+                        dispatch({
+
+                            type:
+                                "SET_BUILD_TOOL",
+
+                            payload:
+                                BuildTool.None
+
+                        });
+
+                        dispatch({
+
+                            type:
+                                "SET_SELECTED_ASSET",
+
+                            payload:
+                                null
+
+                        });
+
+                        return;
+                    }
+                }
+
+
+                //==================================================
+                // NORMAL NEW BUILD PLACEMENT
+                //==================================================
 
                 //--------------------------------------------------
                 // Only Door / Window / Opening.
@@ -98,8 +296,9 @@ export default function BuildInteractionEvents() {
                     return;
                 }
 
+
                 //--------------------------------------------------
-                // Canvas bounds
+                // Canvas bounds.
                 //--------------------------------------------------
 
                 const rect =
@@ -124,6 +323,7 @@ export default function BuildInteractionEvents() {
                     return;
                 }
 
+
                 //--------------------------------------------------
                 // Own this click.
                 //--------------------------------------------------
@@ -134,11 +334,9 @@ export default function BuildInteractionEvents() {
                 buildInteraction
                     .suppressPointerUp();
 
+
                 //--------------------------------------------------
-                // IMPORTANT:
-                //
-                // Update the pointer at the exact click
-                // position before reading the preview.
+                // Update pointer at exact click position.
                 //--------------------------------------------------
 
                 buildInteraction.updatePointer(
@@ -146,19 +344,23 @@ export default function BuildInteractionEvents() {
                     canvas
                 );
 
+
                 //--------------------------------------------------
-                // Selected asset
+                // Selected asset.
                 //--------------------------------------------------
 
                 const activeAsset =
                     state.selectedAsset;
 
-                if (!activeAsset) {
+                if (
+                    !activeAsset
+                ) {
                     return;
                 }
 
+
                 //--------------------------------------------------
-                // Tool and selected asset must match.
+                // Tool and asset must match.
                 //--------------------------------------------------
 
                 if (
@@ -168,17 +370,21 @@ export default function BuildInteractionEvents() {
                     return;
                 }
 
+
                 //--------------------------------------------------
-                // Current preview
+                // Current preview.
                 //--------------------------------------------------
 
                 const result =
                     buildInteraction
                         .pointerDown();
 
-                if (!result) {
+                if (
+                    !result
+                ) {
                     return;
                 }
+
 
                 //--------------------------------------------------
                 // Must be wall placement.
@@ -191,12 +397,10 @@ export default function BuildInteractionEvents() {
                     return;
                 }
 
-                //==================================================
-                // COLLISION
-                //==================================================
-                //
-                // Do not allow an invalid preview to be placed.
-                //==================================================
+
+                //--------------------------------------------------
+                // Collision.
+                //--------------------------------------------------
 
                 if (
                     !result.collision ||
@@ -210,6 +414,7 @@ export default function BuildInteractionEvents() {
 
                     return;
                 }
+
 
                 //==================================================
                 // DOOR
@@ -228,39 +433,45 @@ export default function BuildInteractionEvents() {
                         );
 
                     dispatch({
+
                         type:
                             "ADD_DOOR",
 
                         payload:
                             door
+
                     });
+
 
                     //--------------------------------------------------
                     // Placement finished.
-                    //
-                    // User must press Apply again for another door.
                     //--------------------------------------------------
 
                     dispatch({
+
                         type:
                             "SET_BUILD_TOOL",
 
                         payload:
                             BuildTool.None
+
                     });
 
                     dispatch({
+
                         type:
                             "SET_SELECTED_ASSET",
 
                         payload:
                             null
+
                     });
 
                     buildInteraction.clear();
 
                     return;
                 }
+
 
                 //==================================================
                 // WINDOW
@@ -279,37 +490,45 @@ export default function BuildInteractionEvents() {
                         );
 
                     dispatch({
+
                         type:
                             "ADD_WINDOW",
 
                         payload:
                             window
+
                     });
+
 
                     //--------------------------------------------------
                     // Placement finished.
                     //--------------------------------------------------
 
                     dispatch({
+
                         type:
                             "SET_BUILD_TOOL",
 
                         payload:
                             BuildTool.None
+
                     });
 
                     dispatch({
+
                         type:
                             "SET_SELECTED_ASSET",
 
                         payload:
                             null
+
                     });
 
                     buildInteraction.clear();
 
                     return;
                 }
+
 
                 //==================================================
                 // OPENING
@@ -328,40 +547,54 @@ export default function BuildInteractionEvents() {
 
                             : "rectangle";
 
+
                     const opening =
                         placeOpening(
+
                             result.transform,
+
                             result.bounds,
+
                             shape,
+
                             state.archRise
+
                         );
 
+
                     dispatch({
+
                         type:
                             "ADD_OPENING",
 
                         payload:
                             opening
+
                     });
+
 
                     //--------------------------------------------------
                     // Placement finished.
                     //--------------------------------------------------
 
                     dispatch({
+
                         type:
                             "SET_BUILD_TOOL",
 
                         payload:
                             BuildTool.None
+
                     });
 
                     dispatch({
+
                         type:
                             "SET_SELECTED_ASSET",
 
                         payload:
                             null
+
                     });
 
                     buildInteraction.clear();
@@ -369,6 +602,7 @@ export default function BuildInteractionEvents() {
                     return;
                 }
             }
+
 
             //==================================================
             // POINTER UP
@@ -382,12 +616,113 @@ export default function BuildInteractionEvents() {
                     !buildInteraction
                         .consumePointerUpSuppression()
                 ) {
+
                     return;
                 }
 
                 event.preventDefault();
                 event.stopPropagation();
             }
+
+
+            //==================================================
+            // RIGHT CLICK / CANCEL
+            //==================================================
+
+            function onContextMenu(
+                event: MouseEvent
+            ) {
+
+                //--------------------------------------------------
+                // Existing Door / Window Move
+                //--------------------------------------------------
+
+                if (
+                    buildInteraction.isMoving()
+                ) {
+
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    //--------------------------------------------------
+                    // Cancel only.
+                    //
+                    // The original object was never removed
+                    // from state.
+                    //--------------------------------------------------
+
+                    buildInteraction
+                        .cancelMove();
+
+                    dispatch({
+
+                        type:
+                            "SET_BUILD_TOOL",
+
+                        payload:
+                            BuildTool.None
+
+                    });
+
+                    dispatch({
+
+                        type:
+                            "SET_SELECTED_ASSET",
+
+                        payload:
+                            null
+
+                    });
+
+                    return;
+                }
+
+
+                //--------------------------------------------------
+                // Normal new build placement.
+                //--------------------------------------------------
+
+                if (
+                    state.buildTool !==
+                        BuildTool.Door &&
+
+                    state.buildTool !==
+                        BuildTool.Window &&
+
+                    state.buildTool !==
+                        BuildTool.Opening
+                ) {
+
+                    return;
+                }
+
+
+                event.preventDefault();
+                event.stopPropagation();
+
+                buildInteraction.clear();
+
+                dispatch({
+
+                    type:
+                        "SET_SELECTED_ASSET",
+
+                    payload:
+                        null
+
+                });
+
+                dispatch({
+
+                    type:
+                        "SET_BUILD_TOOL",
+
+                    payload:
+                        BuildTool.None
+
+                });
+            }
+
 
             //==================================================
             // REGISTER
@@ -403,11 +738,17 @@ export default function BuildInteractionEvents() {
                 onPointerDown
             );
 
+            canvas.addEventListener(
+                "contextmenu",
+                onContextMenu
+            );
+
             window.addEventListener(
                 "pointerup",
                 onPointerUp,
                 true
             );
+
 
             //==================================================
             // CLEANUP
@@ -423,6 +764,11 @@ export default function BuildInteractionEvents() {
                 canvas.removeEventListener(
                     "pointerdown",
                     onPointerDown
+                );
+
+                canvas.removeEventListener(
+                    "contextmenu",
+                    onContextMenu
                 );
 
                 window.removeEventListener(
@@ -453,6 +799,7 @@ export default function BuildInteractionEvents() {
             dispatch
         ]
     );
+
 
     return null;
 }

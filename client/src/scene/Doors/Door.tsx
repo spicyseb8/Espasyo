@@ -1,92 +1,122 @@
-import { useMemo } from "react";
+import {
+    useMemo
+} from "react";
 
-import { useGLTF } from "@react-three/drei";
+import {
+    useGLTF
+} from "@react-three/drei";
 
-import type { Door as DoorType } from "../../engine/doors/DoorTypes";
+import type {
+    Door as DoorType
+} from "../../engine/doors/DoorTypes";
 
-import { findAsset } from "../../assets/AssetLibrary";
+import {
+    findAsset
+} from "../../assets/AssetLibrary";
+
+import {
+    buildInteraction
+} from "../Build/BuildInteraction";
+
 
 interface Props {
-
     door: DoorType;
-
 }
 
+
 export default function Door({
-
     door
-
 }: Props) {
 
-    //--------------------------------------------------
-    // Find asset
-    //--------------------------------------------------
+    const asset =
+        findAsset(
+            door.assetId
+        );
 
-    const asset = findAsset(door.assetId);
-    if (!asset)
+    if (!asset) {
         return null;
+    }
 
     //--------------------------------------------------
-    // Load model
+    // Hide only the door currently being moved
     //--------------------------------------------------
 
-    const { scene } = useGLTF(
+    const isMoving =
+        buildInteraction.moveTarget?.type ===
+            "door" &&
 
+        buildInteraction.moveTarget.id ===
+            door.id;
+
+    if (
+        isMoving
+    ) {
+        return null;
+    }
+
+    //--------------------------------------------------
+    // GLTF
+    //--------------------------------------------------
+
+    const {
+        scene
+    } = useGLTF(
         asset.model
-
     );
 
     //--------------------------------------------------
-    // Clone model
+    // Clone
     //--------------------------------------------------
 
-    const model = useMemo(
+    const model =
+        useMemo(
+            () =>
+                scene.clone(),
+            [
+                scene
+            ]
+        );
 
-        () => scene.clone(),
-
-        [scene]
-
-    );
+    //--------------------------------------------------
+    // Render
+    //--------------------------------------------------
 
     return (
 
         <group
+            userData={{
+                doorId:
+                    door.id
+            }}
 
-            position={door.position}
+            position={
+                door.position
+            }
 
             rotation={[
-
                 0,
-
                 door.rotationY,
-
                 0
-
             ]}
-
         >
 
-            {/*
-                Same correction used in AssetPreview.
-                Later this can become part of the asset metadata.
-            */}
+            <group
+                rotation={[
+                    0,
+                    Math.PI / 2,
+                    0
+                ]}
+            >
 
-            <group rotation={[
-
-                0,
-
-                Math.PI / 2,
-
-                0
-
-            ]}>
-
-                <primitive object={model} />
+                <primitive
+                    object={
+                        model
+                    }
+                />
 
             </group>
 
         </group>
 
     );
-
 }

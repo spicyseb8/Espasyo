@@ -25,18 +25,21 @@ class FurnitureInteraction {
         new Raycaster();
 
     //--------------------------------------------------
-    // Normalized pointer
+    // Rotation
     //--------------------------------------------------
-//--------------------------------------------------
-// Current furniture rotation
-//--------------------------------------------------
 
-    rotationY = 0;
+    rotationY =
+        0;
+
+    //--------------------------------------------------
+    // Pointer
+    //--------------------------------------------------
+
     readonly pointer =
         new Vector2();
 
     //--------------------------------------------------
-    // Current preview
+    // Preview
     //--------------------------------------------------
 
     currentPlacement:
@@ -50,7 +53,19 @@ class FurnitureInteraction {
     currentCollision:
         FurnitureCollisionResult | null =
         null;
-        
+
+    //--------------------------------------------------
+    // Existing furniture move
+    //--------------------------------------------------
+
+    editingFurnitureId:
+        string | null =
+        null;
+
+    editingOriginalPlacement:
+        FurniturePlacement | null =
+        null;
+
     //--------------------------------------------------
     // Pointer-up suppression
     //--------------------------------------------------
@@ -59,8 +74,9 @@ class FurnitureInteraction {
         false;
 
     //--------------------------------------------------
-    // Update normalized pointer
+    // Rotation
     //--------------------------------------------------
+
     rotateClockwise() {
 
         this.rotationY +=
@@ -77,8 +93,14 @@ class FurnitureInteraction {
 
     resetRotation() {
 
-        this.rotationY = 0;
+        this.rotationY =
+            0;
     }
+
+    //--------------------------------------------------
+    // Pointer
+    //--------------------------------------------------
+
     updatePointer(
         event: PointerEvent,
         canvas: HTMLCanvasElement
@@ -96,19 +118,74 @@ class FurnitureInteraction {
 
         this.pointer.x =
             (
-                (event.clientX - rect.left) /
+                (
+                    event.clientX -
+                    rect.left
+                ) /
                 rect.width
             ) * 2 - 1;
 
         this.pointer.y =
             -(
-                (event.clientY - rect.top) /
+                (
+                    event.clientY -
+                    rect.top
+                ) /
                 rect.height
             ) * 2 + 1;
     }
 
     //--------------------------------------------------
-    // Suppress the next pointerup
+    // Start editing
+    //--------------------------------------------------
+
+    startEditing(
+        furnitureId: string,
+        rotationY: number
+    ) {
+
+        this.editingFurnitureId =
+            furnitureId;
+
+        this.rotationY =
+            rotationY;
+
+        this.editingOriginalPlacement =
+            null;
+
+        this.clearPreview();
+    }
+
+    //--------------------------------------------------
+    // Finish editing
+    //--------------------------------------------------
+
+    finishEditing() {
+
+        this.editingFurnitureId =
+            null;
+
+        this.editingOriginalPlacement =
+            null;
+    }
+
+    //--------------------------------------------------
+    // Cancel editing
+    //--------------------------------------------------
+
+    cancelEditing() {
+
+        this.editingFurnitureId =
+            null;
+
+        this.editingOriginalPlacement =
+            null;
+
+        this.clearPreview();
+    }
+
+    //--------------------------------------------------
+    // Pointer suppression
     //--------------------------------------------------
 
     suppressPointerUp() {
@@ -117,15 +194,12 @@ class FurnitureInteraction {
             true;
     }
 
-    //--------------------------------------------------
-    // Consume pointerup suppression
-    //--------------------------------------------------
-
     consumePointerUpSuppression(): boolean {
 
         if (
             !this.suppressNextPointerUp
         ) {
+
             return false;
         }
 
@@ -136,7 +210,7 @@ class FurnitureInteraction {
     }
 
     //--------------------------------------------------
-    // Get current placement
+    // Preview result
     //--------------------------------------------------
 
     pointerDown() {

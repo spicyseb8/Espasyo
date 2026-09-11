@@ -15,6 +15,27 @@ import type {
     BuildElementCollisionResult
 } from "./BuildElementCollision";
 
+
+//==================================================
+// MOVE TARGET
+//==================================================
+
+export type BuildMoveTarget =
+    | {
+        type: "door";
+        id: string;
+    }
+    | {
+        type: "window";
+        id: string;
+    }
+    | null;
+
+
+//==================================================
+// BUILD INTERACTION
+//==================================================
+
 class BuildInteraction {
 
     //--------------------------------------------------
@@ -67,15 +88,24 @@ class BuildInteraction {
         null;
 
     //--------------------------------------------------
+    // Existing door/window move target
+    //--------------------------------------------------
+
+    moveTarget:
+        BuildMoveTarget =
+        null;
+
+    //--------------------------------------------------
     // Pointer-up suppression
     //--------------------------------------------------
 
     private suppressNextPointerUp =
         false;
 
-    //--------------------------------------------------
-    // Update pointer
-    //--------------------------------------------------
+
+    //==================================================
+    // UPDATE POINTER
+    //==================================================
 
     updatePointer(
         event: PointerEvent,
@@ -108,7 +138,9 @@ class BuildInteraction {
         // Ignore pointer movement outside the canvas.
         //--------------------------------------------------
 
-        if (!insideCanvas) {
+        if (
+            !insideCanvas
+        ) {
 
             this.hasPointer =
                 false;
@@ -117,7 +149,7 @@ class BuildInteraction {
         }
 
         //--------------------------------------------------
-        // Convert screen coordinates to NDC.
+        // Convert to NDC.
         //--------------------------------------------------
 
         this.pointer.x =
@@ -146,9 +178,86 @@ class BuildInteraction {
             true;
     }
 
-    //--------------------------------------------------
-    // Clear current preview data
-    //--------------------------------------------------
+
+    //==================================================
+    // BEGIN DOOR MOVE
+    //==================================================
+
+    beginDoorMove(
+        id: string
+    ) {
+
+        this.moveTarget = {
+            type:
+                "door",
+
+            id
+        };
+
+        this.clear();
+    }
+
+
+    //==================================================
+    // BEGIN WINDOW MOVE
+    //==================================================
+
+    beginWindowMove(
+        id: string
+    ) {
+
+        this.moveTarget = {
+            type:
+                "window",
+
+            id
+        };
+
+        this.clear();
+    }
+
+
+    //==================================================
+    // END MOVE
+    //==================================================
+
+    endMove() {
+
+        this.moveTarget =
+            null;
+
+        this.clear();
+    }
+
+
+    //==================================================
+    // CANCEL MOVE
+    //==================================================
+
+    cancelMove() {
+
+        this.moveTarget =
+            null;
+
+        this.clear();
+    }
+
+
+    //==================================================
+    // IS MOVING
+    //==================================================
+
+    isMoving(): boolean {
+
+        return (
+            this.moveTarget !== null
+        );
+    }
+
+
+    //==================================================
+    // CLEAR CURRENT PREVIEW
+    //==================================================
 
     clear() {
 
@@ -162,9 +271,10 @@ class BuildInteraction {
             null;
     }
 
-    //--------------------------------------------------
-    // Suppress next pointerup
-    //--------------------------------------------------
+
+    //==================================================
+    // SUPPRESS NEXT POINTERUP
+    //==================================================
 
     suppressPointerUp() {
 
@@ -172,9 +282,10 @@ class BuildInteraction {
             true;
     }
 
-    //--------------------------------------------------
-    // Consume pointerup suppression
-    //--------------------------------------------------
+
+    //==================================================
+    // CONSUME POINTERUP SUPPRESSION
+    //==================================================
 
     consumePointerUpSuppression():
         boolean {
@@ -182,6 +293,7 @@ class BuildInteraction {
         if (
             !this.suppressNextPointerUp
         ) {
+
             return false;
         }
 
@@ -191,21 +303,24 @@ class BuildInteraction {
         return true;
     }
 
-    //--------------------------------------------------
-    // Get current preview result
-    //--------------------------------------------------
+
+    //==================================================
+    // GET CURRENT PREVIEW RESULT
+    //==================================================
 
     pointerDown() {
 
         if (
             !this.currentPlacement
         ) {
+
             return null;
         }
 
         if (
             !this.currentBounds
         ) {
+
             return null;
         }
 
@@ -222,6 +337,7 @@ class BuildInteraction {
         };
     }
 }
+
 
 export const buildInteraction =
     new BuildInteraction();

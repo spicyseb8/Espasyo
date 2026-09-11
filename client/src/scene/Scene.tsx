@@ -21,13 +21,15 @@ import WalkthroughController
 
 import Doors from "./Doors/Doors";
 import Windows from "./Windows/Windows";
-
+import SelectionInteractionEvents
+    from "./SelectionInteractionEvents";
 import FurnitureScene
     from "./Furniture/FurnitureScene";
 
 import FurniturePreview
     from "./Furniture/FurniturePreview";
-
+import SelectionToolbar
+    from "./SelectionToolbar";
 import BlueprintScene
     from "./Blueprint/BlueprintScene";
 
@@ -92,7 +94,7 @@ export default function Scene() {
 
             {!state.walkthroughMode && (
                 <>
-
+                    <SelectionToolbar />
                     <ClearSelection />
 
                     <BuildInteractionEvents />
@@ -106,6 +108,8 @@ export default function Scene() {
                     <FurniturePreview />
 
                     <FurnitureInteractionEvents />
+
+                    <SelectionInteractionEvents />
 
                 </>
             )}

@@ -18,6 +18,10 @@ import {
     normalizeWindowModel
 } from "../../engine/windows/normalizeWindowModel";
 
+import {
+    buildInteraction
+} from "../Build/BuildInteraction";
+
 
 interface Props {
     window: WindowType;
@@ -28,29 +32,45 @@ export default function Window({
     window
 }: Props) {
 
-    // --------------------------------------------------
-    // Find asset
-    // --------------------------------------------------
-
     const asset =
-        findAsset(window.assetId);
+        findAsset(
+            window.assetId
+        );
 
     if (!asset) {
         return null;
     }
 
+    //--------------------------------------------------
+    // Hide only the window currently being moved
+    //--------------------------------------------------
 
-    // --------------------------------------------------
-    // Load GLB
-    // --------------------------------------------------
+    const isMoving =
+        buildInteraction.moveTarget?.type ===
+            "window" &&
 
-    const { scene } =
-        useGLTF(asset.model);
+        buildInteraction.moveTarget.id ===
+            window.id;
 
+    if (
+        isMoving
+    ) {
+        return null;
+    }
 
-    // --------------------------------------------------
-    // Normalize model
-    // --------------------------------------------------
+    //--------------------------------------------------
+    // GLTF
+    //--------------------------------------------------
+
+    const {
+        scene
+    } = useGLTF(
+        asset.model
+    );
+
+    //--------------------------------------------------
+    // Normalize window
+    //--------------------------------------------------
 
     const normalized =
         useMemo(
@@ -65,26 +85,28 @@ export default function Window({
             ]
         );
 
-
-    // --------------------------------------------------
+    //--------------------------------------------------
     // Final rotation
-    //
-    // window.rotationY = wall orientation
-    // asset.rotationOffsetY = GLB correction
-    // --------------------------------------------------
+    //--------------------------------------------------
 
     const finalRotationY =
         window.rotationY +
-        (asset.rotationOffsetY ?? 0);
+        (
+            asset.rotationOffsetY ??
+            0
+        );
 
-
-    // --------------------------------------------------
+    //--------------------------------------------------
     // Render
-    // --------------------------------------------------
+    //--------------------------------------------------
 
     return (
 
         <group
+            userData={{
+                windowId:
+                    window.id
+            }}
 
             position={[
                 window.position.x,
@@ -97,11 +119,12 @@ export default function Window({
                 finalRotationY,
                 0
             ]}
-
         >
 
             <primitive
-                object={normalized.model}
+                object={
+                    normalized.model
+                }
             />
 
         </group>

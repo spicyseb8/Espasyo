@@ -99,6 +99,18 @@ export interface EditorState {
 
 
     //==================================================
+    // FURNITURE / DOOR / WINDOW SELECTION
+    //==================================================
+
+    selectedFurnitureId: string | null;
+
+    selectedDoorId: string | null;
+
+    selectedWindowId: string | null;
+    movingFurnitureId: string | null;
+    movingDoorId: string | null;
+    movingWindowId: string | null;
+    //==================================================
     // WALL SETTINGS
     //==================================================
 

@@ -1,5 +1,7 @@
 import type { EditorState } from "./types";
+
 import { Tool } from "./tools";
+
 import { BuildTool } from "../BuildTool";
 
 export const initialState: EditorState = {
@@ -12,6 +14,12 @@ export const initialState: EditorState = {
     selectedCornerId: null,
     walkthroughMode: false,
     selectedOpeningId: null,
+    selectedFurnitureId: null,
+    movingFurnitureId: null,
+    movingDoorId: null,
+    movingWindowId: null,
+    selectedDoorId: null,
+    selectedWindowId: null,
     wallHeight: 3,
     wallThickness: 0.15,
     snapEnabled: true,
