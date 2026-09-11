@@ -8,10 +8,9 @@ import Login from "@/components/auth/Login";
 
 function App() {
   return (
-    
     <Routes>
+      <Route path="/login" element={<Login />} />
 
-       <Route path="/login" element={<Login />} />
       {/* Customer Account */}
       <Route
         path="/users/:id"
@@ -50,25 +49,29 @@ function App() {
                 return <AssetLibrary type="furniture" />;
               }
 
-              if (selectedPage === "materials") {
-                return <AssetLibrary type="materials" />;
+              if (selectedPage === "floors") {
+                return <AssetLibrary type="floor" />;
               }
 
-              if (selectedPage === "textures") {
-                return <AssetLibrary type="textures" />;
+              if (selectedPage === "walls") {
+                return <AssetLibrary type="wall" />;
               }
 
               if (selectedPage === "projects") {
                 return (
                   <div>
-                    <h1 className="text-lg font-semibold">Projects</h1>
+                    <h1 className="text-lg font-semibold">
+                      Projects
+                    </h1>
                   </div>
                 );
               }
 
               return (
                 <div>
-                  <h1 className="text-lg font-semibold">Dashboard</h1>
+                  <h1 className="text-lg font-semibold">
+                    Dashboard
+                  </h1>
                 </div>
               );
             }}

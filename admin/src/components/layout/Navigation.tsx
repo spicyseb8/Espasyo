@@ -4,6 +4,7 @@ import {
   Package,
   FolderKanban,
 } from "lucide-react";
+
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -26,6 +27,7 @@ export default function Navigation({
     <nav className="h-14 flex items-center px-6">
       <NavigationMenu>
         <NavigationMenuList className="gap-1">
+          {/* Dashboard */}
           <NavigationMenuItem>
             <NavigationMenuLink
               className={`inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm font-medium ${
@@ -40,6 +42,7 @@ export default function Navigation({
             </NavigationMenuLink>
           </NavigationMenuItem>
 
+          {/* Users */}
           <NavigationMenuItem>
             <NavigationMenuTrigger className="h-9 gap-2 px-3 text-sm font-medium">
               <Users className="h-4 w-4" />
@@ -73,6 +76,7 @@ export default function Navigation({
             </NavigationMenuContent>
           </NavigationMenuItem>
 
+          {/* Assets */}
           <NavigationMenuItem>
             <NavigationMenuTrigger className="h-9 gap-2 px-3 text-sm font-medium">
               <Package className="h-4 w-4" />
@@ -81,6 +85,7 @@ export default function Navigation({
 
             <NavigationMenuContent>
               <div className="w-[140px] p-1">
+                {/* Furniture */}
                 <NavigationMenuLink
                   onClick={() => onPageChange("furniture")}
                   className={`block cursor-pointer rounded-md px-3 py-2 text-sm ${
@@ -92,10 +97,11 @@ export default function Navigation({
                   Furniture
                 </NavigationMenuLink>
 
+                {/* Floors */}
                 <NavigationMenuLink
-                  onClick={() => onPageChange("materials")}
+                  onClick={() => onPageChange("floors")}
                   className={`block cursor-pointer rounded-md px-3 py-2 text-sm ${
-                    selectedPage === "materials"
+                    selectedPage === "floors"
                       ? "bg-accent text-accent-foreground"
                       : "hover:bg-accent hover:text-accent-foreground"
                   }`}
@@ -103,10 +109,11 @@ export default function Navigation({
                   Floors
                 </NavigationMenuLink>
 
+                {/* Walls */}
                 <NavigationMenuLink
-                  onClick={() => onPageChange("textures")}
+                  onClick={() => onPageChange("walls")}
                   className={`block cursor-pointer rounded-md px-3 py-2 text-sm ${
-                    selectedPage === "textures"
+                    selectedPage === "walls"
                       ? "bg-accent text-accent-foreground"
                       : "hover:bg-accent hover:text-accent-foreground"
                   }`}
@@ -117,6 +124,7 @@ export default function Navigation({
             </NavigationMenuContent>
           </NavigationMenuItem>
 
+          {/* Projects */}
           <NavigationMenuItem>
             <NavigationMenuLink
               className={`inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm font-medium ${

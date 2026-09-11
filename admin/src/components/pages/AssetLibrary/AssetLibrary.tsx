@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -19,63 +19,95 @@ import {
 
 import AssetCard from "@/components/ui/assert-card";
 
-interface Asset {
-  id: string;
-  name: string;
-  price: string;
-  image: string;
-  description: string;
-  categories: string[];
-}
+import { getFurnitureAssets } from "@/services/assets/furniture";
+import { getWallAssets } from "@/services/assets/walls";
+import { getFloorAssets } from "@/services/assets/floors";
 
-type AssetType = "furniture" | "materials" | "textures";
+import type {
+  Asset,
+  AssetType,
+} from "@/services/assets/asset-types";
 
 interface AssetLibraryProps {
   type: AssetType;
   onTypeChange?: (type: AssetType) => void;
 }
 
-/*
- * Central place for the asset-type options shown in the Select.
- * Swap these when materials/textures become walls/floors.
- */
 const ASSET_TYPES: { value: AssetType; label: string }[] = [
   { value: "furniture", label: "Furniture" },
-  { value: "materials", label: "Materials" },
-  { value: "textures", label: "Textures" },
+  { value: "wall", label: "Wall" },
+  { value: "floor", label: "Floor" },
 ];
 
-/*
- * Placeholder data — swap for Firestore once the layout is approved.
- */
-const PLACEHOLDER_IMAGE =
-  "https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=400&q=80";
-
-const placeholderAssets: Asset[] = Array.from({ length: 20 }, (_, index) => ({
-  id: `asset-${index + 1}`,
-  name: "Ice Matcha",
-  price: "10$",
-  image: PLACEHOLDER_IMAGE,
-  description:
-    "A refreshing iced matcha made with stone-ground green tea, fresh milk, and a hint of vanilla. Served over ice with mint leaves.",
-  categories: ["Matcha", "Ice cream", "Honey", "Milk"],
-}));
-
 function getTitle(type: AssetType) {
-  return ASSET_TYPES.find((option) => option.value === type)?.label ?? "";
+  return (
+    ASSET_TYPES.find((option) => option.value === type)?.label ?? ""
+  );
 }
 
-export default function AssetLibrary({ type, onTypeChange }: AssetLibraryProps) {
+export default function AssetLibrary({
+  type,
+  onTypeChange,
+}: AssetLibraryProps) {
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+
+  const [assets, setAssets] = useState<Asset[]>([]);
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(
-    placeholderAssets[0]
+    null
   );
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const assetsPerPage = 20;
 
-  const filtered = placeholderAssets.filter((asset) =>
-    `${asset.name} ${asset.categories.join(" ")}`
+  /*
+   * Load assets from Firestore whenever
+   * the selected asset type changes.
+   */
+  useEffect(() => {
+    async function loadAssets() {
+      setLoading(true);
+      setError(null);
+      setAssets([]);
+      setSelectedAsset(null);
+      setCurrentPage(1);
+
+      try {
+        let data: Asset[] = [];
+
+        if (type === "furniture") {
+          data = await getFurnitureAssets();
+        }
+
+        if (type === "wall") {
+          data = await getWallAssets();
+        }
+
+        if (type === "floor") {
+          data = await getFloorAssets();
+        }
+
+        setAssets(data);
+      } catch (err) {
+        console.error("Failed to load assets:", err);
+
+        setAssets([]);
+        setError("Failed to load assets.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadAssets();
+  }, [type]);
+
+  /*
+   * Search/filter assets.
+   */
+  const filtered = assets.filter((asset) =>
+    `${asset.name} ${asset.category}`
       .toLowerCase()
       .includes(search.toLowerCase())
   );
@@ -103,12 +135,39 @@ export default function AssetLibrary({ type, onTypeChange }: AssetLibraryProps) 
     }
   };
 
+  const handleTypeChange = (value: AssetType) => {
+    setSearch("");
+    setCurrentPage(1);
+
+    onTypeChange?.(value);
+  };
+
+  /*
+   * Creates a simple color preview for assets
+   * that don't have a thumbnail yet.
+   */
+  const getAssetImage = (asset: Asset) => {
+    if (asset.thumbnail_path) {
+      return asset.thumbnail_path;
+    }
+
+    if (asset.color) {
+      const encodedColor = asset.color.replace("#", "%23");
+
+      return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect width='100%25' height='100%25' fill='${encodedColor}'/%3E%3C/svg%3E`;
+    }
+
+    return "";
+  };
+
   return (
     <div className="flex h-[calc(100vh-8rem)] flex-col rounded-lg border border-border bg-background">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border p-4">
         <div>
-          <h2 className="text-sm font-semibold">{getTitle(type)}</h2>
+          <h2 className="text-sm font-semibold">
+            {getTitle(type)}
+          </h2>
 
           <p className="text-xs text-muted-foreground">
             Manage {getTitle(type).toLowerCase()}
@@ -118,7 +177,9 @@ export default function AssetLibrary({ type, onTypeChange }: AssetLibraryProps) 
         <div className="flex items-center gap-2">
           <Select
             value={type}
-            onValueChange={(value) => onTypeChange?.(value as AssetType)}
+            onValueChange={(value) =>
+              handleTypeChange(value as AssetType)
+            }
           >
             <SelectTrigger className="w-36 bg-background">
               <SelectValue />
@@ -126,7 +187,10 @@ export default function AssetLibrary({ type, onTypeChange }: AssetLibraryProps) 
 
             <SelectContent>
               {ASSET_TYPES.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
+                <SelectItem
+                  key={option.value}
+                  value={option.value}
+                >
                   {option.label}
                 </SelectItem>
               ))}
@@ -136,50 +200,107 @@ export default function AssetLibrary({ type, onTypeChange }: AssetLibraryProps) 
           <Input
             placeholder={`Search ${getTitle(type).toLowerCase()}...`}
             value={search}
-            onChange={(event) => handleSearch(event.target.value)}
+            onChange={(event) =>
+              handleSearch(event.target.value)
+            }
             className="w-64 bg-background"
           />
         </div>
       </div>
 
-      {/* Body: fixed left preview + scrollable right catalogue */}
+      {/* Body */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left: selected asset preview */}
         <div className="w-72 shrink-0 overflow-y-auto p-4">
           {selectedAsset ? (
             <div>
-              <div className="overflow-hidden rounded-2xl bg-[#a9c08f]">
-                <img
-                  src={selectedAsset.image}
-                  alt={selectedAsset.name}
-                  className="h-56 w-full object-cover"
-                />
+              {/* Preview */}
+              <div className="flex h-56 items-center justify-center overflow-hidden rounded-2xl bg-muted">
+                {selectedAsset.thumbnail_path ? (
+                  <img
+                    src={selectedAsset.thumbnail_path}
+                    alt={selectedAsset.name}
+                    className="h-full w-full object-cover"
+                  />
+                ) : selectedAsset.color ? (
+                  <div
+                    className="h-full w-full"
+                    style={{
+                      backgroundColor: selectedAsset.color,
+                    }}
+                  />
+                ) : (
+                  <span className="text-sm text-muted-foreground">
+                    No preview available
+                  </span>
+                )}
               </div>
 
+              {/* Name + price */}
               <div className="mt-4 flex items-center justify-between">
                 <h3 className="text-base font-semibold">
                   {selectedAsset.name}
                 </h3>
 
                 <span className="text-base font-semibold underline underline-offset-2">
-                  {selectedAsset.price}
+                  ${selectedAsset.price}
                 </span>
               </div>
 
-              <p className="mt-2 text-sm text-muted-foreground">
-                {selectedAsset.description}
-              </p>
-
+              {/* Category */}
               <div className="mt-3 flex flex-wrap gap-1.5">
-                {selectedAsset.categories.map((category) => (
-                  <span
-                    key={category}
-                    className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground"
-                  >
-                    {category}
-                  </span>
-                ))}
+                <span className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground">
+                  {selectedAsset.category}
+                </span>
               </div>
+
+              {/* Color */}
+              {selectedAsset.color && (
+                <div className="mt-4">
+                  <p className="text-xs text-muted-foreground">
+                    Color
+                  </p>
+
+                  <div className="mt-2 flex items-center gap-2">
+                    <div
+                      className="h-6 w-6 rounded-full border border-border"
+                      style={{
+                        backgroundColor: selectedAsset.color,
+                      }}
+                    />
+
+                    <span className="text-sm">
+                      {selectedAsset.color}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Roughness */}
+              {selectedAsset.roughness !== undefined && (
+                <div className="mt-3">
+                  <p className="text-xs text-muted-foreground">
+                    Roughness
+                  </p>
+
+                  <p className="text-sm">
+                    {selectedAsset.roughness}
+                  </p>
+                </div>
+              )}
+
+              {/* Metalness */}
+              {selectedAsset.metalness !== undefined && (
+                <div className="mt-3">
+                  <p className="text-xs text-muted-foreground">
+                    Metalness
+                  </p>
+
+                  <p className="text-sm">
+                    {selectedAsset.metalness}
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
             <div className="flex h-56 items-center justify-center rounded-2xl border border-dashed border-border text-sm text-muted-foreground">
@@ -190,10 +311,18 @@ export default function AssetLibrary({ type, onTypeChange }: AssetLibraryProps) 
 
         <Separator orientation="vertical" className="h-auto" />
 
-        {/* Right: scrollable card catalogue */}
+        {/* Right: scrollable catalogue */}
         <div className="flex flex-1 flex-col overflow-hidden">
           <div className="flex-1 overflow-y-auto p-4">
-            {paginatedAssets.length === 0 ? (
+            {loading ? (
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                Loading {getTitle(type).toLowerCase()}...
+              </div>
+            ) : error ? (
+              <div className="flex h-full items-center justify-center text-sm text-destructive">
+                {error}
+              </div>
+            ) : paginatedAssets.length === 0 ? (
               <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
                 No {getTitle(type).toLowerCase()} found.
               </div>
@@ -211,9 +340,9 @@ export default function AssetLibrary({ type, onTypeChange }: AssetLibraryProps) 
                     }`}
                   >
                     <AssetCard
-                      image={asset.image}
+                      image={getAssetImage(asset)}
                       title={asset.name}
-                      categories={asset.categories}
+                      categories={[asset.category]}
                       className="max-w-none"
                     />
                   </button>
