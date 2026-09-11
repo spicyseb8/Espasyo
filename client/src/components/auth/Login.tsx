@@ -1,5 +1,9 @@
 import { useState } from "react";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import {
+  reload,
+  signInWithEmailAndPassword,
+  signOut,
+} from "firebase/auth";
 
 import { cn } from "cn";
 
@@ -57,23 +61,26 @@ export function LoginForm({
     setLoading(true);
 
     try {
-      const userCredential =
-        await signInWithEmailAndPassword(
-          auth,
-          email.trim().toLowerCase(),
-          password
-        );
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email.trim().toLowerCase(),
+        password
+      );
 
       const user = userCredential.user;
 
       /*
-       * Firebase allows authentication even when
-       * the email has not been verified.
-       *
-       * Prevent the user from entering Espasyo
-       * until their email is verified.
+       * Refresh the user's Auth information.
+       * This makes sure we get the latest emailVerified status.
        */
-      if (!user.emailVerified) {
+      await reload(user);
+
+      /*
+       * Prevent unverified users from accessing Espasyo.
+       */
+      if (!auth.currentUser?.emailVerified) {
+        await signOut(auth);
+
         setError(
           "Please verify your email before signing in."
         );
@@ -82,7 +89,8 @@ export function LoginForm({
       }
 
       /*
-       * Login successful.
+       * Email is verified.
+       * Allow the user to enter Espasyo.
        */
       window.location.href = "/home";
     } catch (error: any) {
