@@ -1558,7 +1558,7 @@ case "REMOVE_FURNITURE":
 
 
                 selectedDoorId:
-                    walkthroughMode
+                        walkthroughMode
                         ? null
                         : state.selectedDoorId,
 

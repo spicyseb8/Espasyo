@@ -15,16 +15,7 @@ export const AssetLibrary = {
     ] satisfies Asset[],
 
     windows: [
-        {
-            id: "w-sw01",
-            name: "Modern Sliding Window",
-            thumbnail: "/uploads/doors/single-door.png",
-            model: "/uploads/windows/sliding_window.glb",
-            type: BuildTool.Window,
-            price: 500,
-            rotationOffsetY: Math.PI / 2,
-            scale: 0.5
-        },
+
         {
             id: "w-sw02",
             name: "Slim Intersection Sliding Window",
