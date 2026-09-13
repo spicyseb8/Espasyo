@@ -2,34 +2,57 @@ import {
     Canvas
 } from "@react-three/fiber";
 
-import Camera from "./Camera";
-import Lights from "./Lights";
-import Grid from "./Grid";
+import Camera
+    from "./Camera";
 
-import Walls from "./Walls/Walls";
-import WallMeasurements from "./Walls/WallMeasurement";
-import WallDrawer from "./WallDrawer/WallDrawer";
+import Lights
+    from "./Lights";
 
-import ClearSelection from "./ClearSelection";
-import Floors from "./Floors/Floors";
+import Grid
+    from "./Grid";
 
-import AssetPreview from "./Build/AssetPreview";
-import BuildInteractionEvents from "./Build/BuildInteractionEvents";
+import Walls
+    from "./Walls/Walls";
+
+import WallMeasurements
+    from "./Walls/WallMeasurement";
+
+import WallDrawer
+    from "./WallDrawer/WallDrawer";
+
+import ClearSelection
+    from "./ClearSelection";
+
+import Floors
+    from "./Floors/Floors";
+
+import AssetPreview
+    from "./Build/AssetPreview";
+
+import BuildInteractionEvents
+    from "./Build/BuildInteractionEvents";
 
 import WalkthroughController
     from "./Walkthrough/WalkthroughController";
 
-import Doors from "./Doors/Doors";
-import Windows from "./Windows/Windows";
+import Doors
+    from "./Doors/Doors";
+
+import Windows
+    from "./Windows/Windows";
+
 import SelectionInteractionEvents
     from "./SelectionInteractionEvents";
+
 import FurnitureScene
     from "./Furniture/FurnitureScene";
 
 import FurniturePreview
     from "./Furniture/FurniturePreview";
+
 import SelectionToolbar
     from "./SelectionToolbar";
+
 import BlueprintScene
     from "./Blueprint/BlueprintScene";
 
@@ -46,14 +69,26 @@ export default function Scene() {
         state
     } = useEditor();
 
-
     return (
 
         <Canvas
+
+            /*==================================================
+                ENABLE THREE.JS SHADOWS
+            ==================================================*/
+
+            shadows
+
             camera={{
-                position: [0, 20, 0],
+                position: [
+                    0,
+                    20,
+                    0
+                ],
+
                 fov: 50
             }}
+
         >
 
             {/*==================================================
@@ -93,8 +128,11 @@ export default function Scene() {
             ==================================================*/}
 
             {!state.walkthroughMode && (
+
                 <>
+
                     <SelectionToolbar />
+
                     <ClearSelection />
 
                     <BuildInteractionEvents />
@@ -112,21 +150,21 @@ export default function Scene() {
                     <SelectionInteractionEvents />
 
                 </>
+
             )}
 
 
             {/*==================================================
                 WALKTHROUGH MODE
-
-                Only active while walkthrough is enabled.
             ==================================================*/}
 
             {state.walkthroughMode && (
+
                 <WalkthroughController />
+
             )}
 
         </Canvas>
 
     );
-
 }

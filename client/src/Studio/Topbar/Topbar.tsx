@@ -102,7 +102,189 @@ export default function Topbar() {
         );
 
     }
+    function hasClosedRoom(
+    walls: typeof state.walls
+) {
+    const EPSILON = 0.001;
 
+    if (
+        !walls ||
+        walls.length < 3
+    ) {
+        return false;
+    }
+
+    function samePoint(
+        a: { x: number; z: number },
+        b: { x: number; z: number }
+    ) {
+        return (
+            Math.abs(a.x - b.x) <= EPSILON &&
+            Math.abs(a.z - b.z) <= EPSILON
+        );
+    }
+
+    const adjacency =
+        new Map<number, number[]>();
+
+    const points: {
+        x: number;
+        z: number;
+    }[] = [];
+
+    function getPointIndex(
+        point: {
+            x: number;
+            z: number;
+        }
+    ) {
+        const existingIndex =
+            points.findIndex(
+                existing =>
+                    samePoint(
+                        existing,
+                        point
+                    )
+            );
+
+        if (
+            existingIndex !== -1
+        ) {
+            return existingIndex;
+        }
+
+        const newIndex =
+            points.length;
+
+        points.push({
+            x: point.x,
+            z: point.z
+        });
+
+        return newIndex;
+    }
+
+    for (
+        const wall of walls
+    ) {
+
+        const startIndex =
+            getPointIndex(
+                wall.start.position
+            );
+
+        const endIndex =
+            getPointIndex(
+                wall.end.position
+            );
+
+        if (
+            !adjacency.has(
+                startIndex
+            )
+        ) {
+            adjacency.set(
+                startIndex,
+                []
+            );
+        }
+
+        if (
+            !adjacency.has(
+                endIndex
+            )
+        ) {
+            adjacency.set(
+                endIndex,
+                []
+            );
+        }
+
+        adjacency
+            .get(startIndex)!
+            .push(endIndex);
+
+        adjacency
+            .get(endIndex)!
+            .push(startIndex);
+    }
+
+    //--------------------------------------------------
+    // Detect a cycle.
+    //--------------------------------------------------
+
+    const visited =
+        new Set<number>();
+
+    function hasCycle(
+        current: number,
+        parent: number
+    ): boolean {
+
+        visited.add(
+            current
+        );
+
+        const neighbours =
+            adjacency.get(
+                current
+            ) ?? [];
+
+        for (
+            const neighbour of neighbours
+        ) {
+
+            if (
+                !visited.has(
+                    neighbour
+                )
+            ) {
+
+                if (
+                    hasCycle(
+                        neighbour,
+                        current
+                    )
+                ) {
+                    return true;
+                }
+
+            }
+
+            else if (
+                neighbour !== parent
+            ) {
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    for (
+        const pointIndex of adjacency.keys()
+    ) {
+
+        if (
+            !visited.has(
+                pointIndex
+            )
+        ) {
+
+            if (
+                hasCycle(
+                    pointIndex,
+                    -1
+                )
+            ) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
 
     //==================================================
     // COST ESTIMATION
@@ -279,26 +461,25 @@ export default function Topbar() {
 
     function handleWalkthrough() {
 
-        if (
-            !state.walkthroughMode &&
-            state.walls.length < 4
-        ) {
+    if (
+        !state.walkthroughMode &&
+        !hasClosedRoom(
+            state.walls
+        )
+    ) {
 
-            alert(
-                "Create a room first before entering Walkthrough."
-            );
+        alert(
+            "Create a closed room first before entering Walkthrough."
+        );
 
-            return;
-
-        }
-
-
-        dispatch({
-            type:
-                "TOGGLE_WALKTHROUGH"
-        });
-
+        return;
     }
+
+    dispatch({
+        type:
+            "TOGGLE_WALKTHROUGH"
+    });
+}
 
 
     //==================================================
@@ -377,23 +558,57 @@ export default function Topbar() {
 
                 <button
 
-                    type="button"
+    type="button"
 
-                    className={
-                        state.walkthroughMode
-                            ? "walkthrough-button active"
-                            : "walkthrough-button"
-                    }
+    className={
+        state.walkthroughMode
+            ? "walkthrough-button active"
+            : "walkthrough-button"
+    }
 
-                    onClick={
-                        handleWalkthrough
-                    }
+    onClick={
+        event => {
 
-                    aria-pressed={
-                        state.walkthroughMode
-                    }
+            handleWalkthrough();
 
-                >
+            //--------------------------------------------------
+            // Remove keyboard focus from this button.
+            //
+            // This prevents pressing Space later from
+            // activating the button again.
+            //--------------------------------------------------
+
+            event.currentTarget.blur();
+
+        }
+    }
+
+    onKeyDown={
+        event => {
+
+            //--------------------------------------------------
+            // Space must NOT toggle Walkthrough.
+            //--------------------------------------------------
+
+            if (
+                event.key ===
+                " "
+            ) {
+
+                event.preventDefault();
+                event.stopPropagation();
+
+                return;
+            }
+
+        }
+    }
+
+    aria-pressed={
+        state.walkthroughMode
+    }
+
+>
 
                     <PersonStanding
                         size={16}

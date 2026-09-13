@@ -15,12 +15,12 @@ function getOccupiedDimensions(
     const sin = Math.abs(Math.sin(rotationOffsetY));
 
     const occupiedWidth =
-        width * cos +
-        depth * sin;
-
-    const occupiedDepth =
         width * sin +
         depth * cos;
+
+    const occupiedDepth =
+        width * cos +
+        depth * sin;
 
     return {
         width: occupiedWidth,

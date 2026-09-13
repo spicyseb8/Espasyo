@@ -11,9 +11,24 @@ import type {
 // WALKTHROUGH SETTINGS
 //==================================================
 
-export const PLAYER_HEIGHT = 1.70;
+export const PLAYER_HEIGHT =
+    1.70;
 
-export const PLAYER_RADIUS = 0.25;
+export const PLAYER_RADIUS =
+    0.25;
+
+
+//==================================================
+// SPAWN SAFETY
+//==================================================
+//
+// Spawn uses a little more clearance than normal walking.
+// This prevents the player from spawning directly beside
+// a wall or furniture and immediately getting stuck.
+//
+
+export const SPAWN_SAFETY_MARGIN =
+    0.08;
 
 
 //==================================================
@@ -22,15 +37,20 @@ export const PLAYER_RADIUS = 0.25;
 
 interface OBB2D {
 
-    centerX: number;
+    centerX:
+        number;
 
-    centerZ: number;
+    centerZ:
+        number;
 
-    halfWidth: number;
+    halfWidth:
+        number;
 
-    halfDepth: number;
+    halfDepth:
+        number;
 
-    rotation: number;
+    rotation:
+        number;
 
 }
 
@@ -40,18 +60,32 @@ interface OBB2D {
 //==================================================
 
 function createOBB(
-    x: number,
-    z: number,
-    width: number,
-    depth: number,
-    rotation: number
-): OBB2D {
+
+    x:
+        number,
+
+    z:
+        number,
+
+    width:
+        number,
+
+    depth:
+        number,
+
+    rotation:
+        number
+
+):
+    OBB2D {
 
     return {
 
-        centerX: x,
+        centerX:
+            x,
 
-        centerZ: z,
+        centerZ:
+            z,
 
         halfWidth:
             width / 2,
@@ -71,10 +105,18 @@ function createOBB(
 //==================================================
 
 function circleIntersectsOBB(
-    position: Vector3,
-    radius: number,
-    obb: OBB2D
-): boolean {
+
+    position:
+        Vector3,
+
+    radius:
+        number,
+
+    obb:
+        OBB2D
+
+):
+    boolean {
 
     const dx =
         position.x -
@@ -96,8 +138,9 @@ function circleIntersectsOBB(
         );
 
 
-    // Convert player position into
-    // the wall/furniture local space.
+    //--------------------------------------------------
+    // Convert player position into local OBB space.
+    //--------------------------------------------------
 
     const localX =
         dx * cos +
@@ -110,21 +153,27 @@ function circleIntersectsOBB(
 
     const closestX =
         Math.max(
+
             -obb.halfWidth,
+
             Math.min(
                 localX,
                 obb.halfWidth
             )
+
         );
 
 
     const closestZ =
         Math.max(
+
             -obb.halfDepth,
+
             Math.min(
                 localZ,
                 obb.halfDepth
             )
+
         );
 
 
@@ -146,7 +195,6 @@ function circleIntersectsOBB(
         distanceSquared <
         radius * radius
     );
-
 }
 
 
@@ -155,11 +203,21 @@ function circleIntersectsOBB(
 //==================================================
 
 function collidesWithWallPiece(
-    position: Vector3,
-    piece: WallPiece
-): boolean {
 
-    const playerBottom = 0;
+    position:
+        Vector3,
+
+    piece:
+        WallPiece,
+
+    radius:
+        number = PLAYER_RADIUS
+
+):
+    boolean {
+
+    const playerBottom =
+        0;
 
     const playerTop =
         PLAYER_HEIGHT;
@@ -175,16 +233,21 @@ function collidesWithWallPiece(
 
 
     //--------------------------------------------------
-    // Ignore pieces completely above/below player.
+    // Ignore wall pieces that are completely above or
+    // below the player.
     //--------------------------------------------------
 
     if (
-        playerTop <= wallBottom ||
-        playerBottom >= wallTop
+
+        playerTop <=
+        wallBottom ||
+
+        playerBottom >=
+        wallTop
+
     ) {
 
         return false;
-
     }
 
 
@@ -205,11 +268,14 @@ function collidesWithWallPiece(
 
 
     return circleIntersectsOBB(
-        position,
-        PLAYER_RADIUS,
-        wallOBB
-    );
 
+        position,
+
+        radius,
+
+        wallOBB
+
+    );
 }
 
 
@@ -218,14 +284,24 @@ function collidesWithWallPiece(
 //==================================================
 
 function collidesWithFurniture(
-    position: Vector3,
-    furniture: any
-): boolean {
 
-    if (!furniture) {
+    position:
+        Vector3,
+
+    furniture:
+        any,
+
+    radius:
+        number = PLAYER_RADIUS
+
+):
+    boolean {
+
+    if (
+        !furniture
+    ) {
 
         return false;
-
     }
 
 
@@ -241,12 +317,14 @@ function collidesWithFurniture(
 
 
     if (
+
         width <= 0 ||
+
         depth <= 0
+
     ) {
 
         return false;
-
     }
 
 
@@ -254,10 +332,11 @@ function collidesWithFurniture(
         furniture.position;
 
 
-    if (!furniturePosition) {
+    if (
+        !furniturePosition
+    ) {
 
         return false;
-
     }
 
 
@@ -295,11 +374,14 @@ function collidesWithFurniture(
 
 
     return circleIntersectsOBB(
-        position,
-        PLAYER_RADIUS,
-        furnitureOBB
-    );
 
+        position,
+
+        radius,
+
+        furnitureOBB
+
+    );
 }
 
 
@@ -308,13 +390,21 @@ function collidesWithFurniture(
 //==================================================
 
 export function canWalkTo(
-    position: Vector3,
-    wallPieces: WallPiece[],
-    furniture: any[] = []
-): boolean {
+
+    position:
+        Vector3,
+
+    wallPieces:
+        WallPiece[],
+
+    furniture:
+        any[] = []
+
+):
+    boolean {
 
     //--------------------------------------------------
-    // Check walls
+    // Check walls.
     //--------------------------------------------------
 
     for (
@@ -324,19 +414,18 @@ export function canWalkTo(
         if (
             collidesWithWallPiece(
                 position,
-                piece
+                piece,
+                PLAYER_RADIUS
             )
         ) {
 
             return false;
-
         }
-
     }
 
 
     //--------------------------------------------------
-    // Check furniture
+    // Check furniture.
     //--------------------------------------------------
 
     for (
@@ -346,17 +435,90 @@ export function canWalkTo(
         if (
             collidesWithFurniture(
                 position,
-                item
+                item,
+                PLAYER_RADIUS
             )
         ) {
 
             return false;
-
         }
-
     }
 
 
     return true;
+}
 
+
+//==================================================
+// SAFE SPAWN COLLISION TEST
+//==================================================
+//
+// This is stricter than canWalkTo().
+//
+// The player needs a little more room around their body
+// before being allowed to spawn.
+//
+
+export function canSpawnAt(
+
+    position:
+        Vector3,
+
+    wallPieces:
+        WallPiece[],
+
+    furniture:
+        any[] = []
+
+):
+    boolean {
+
+    const spawnRadius =
+        PLAYER_RADIUS +
+        SPAWN_SAFETY_MARGIN;
+
+
+    //--------------------------------------------------
+    // Check walls.
+    //--------------------------------------------------
+
+    for (
+        const piece of wallPieces
+    ) {
+
+        if (
+            collidesWithWallPiece(
+                position,
+                piece,
+                spawnRadius
+            )
+        ) {
+
+            return false;
+        }
+    }
+
+
+    //--------------------------------------------------
+    // Check furniture.
+    //--------------------------------------------------
+
+    for (
+        const item of furniture
+    ) {
+
+        if (
+            collidesWithFurniture(
+                position,
+                item,
+                spawnRadius
+            )
+        ) {
+
+            return false;
+        }
+    }
+
+
+    return true;
 }

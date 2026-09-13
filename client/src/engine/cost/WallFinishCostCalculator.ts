@@ -1,17 +1,30 @@
-import type { Corner } from "../walls/Corner";
-import type { Wall } from "../walls/WallTypes";
+import type {
+    Corner
+} from "../walls/Corner";
 
-import type { Door } from "../doors/DoorTypes";
-import type { Window } from "../windows/WindowTypes";
-import type { Opening } from "../openings/OpeningTypes";
+import type {
+    Wall
+} from "../walls/WallTypes";
+
+import type {
+    Door
+} from "../doors/DoorTypes";
+
+import type {
+    Window
+} from "../windows/WindowTypes";
+
+import type {
+    Opening
+} from "../openings/OpeningTypes";
 
 import {
     solveRegions
 } from "../regions/RegionSolver";
 
 import {
-    MaterialLibrary
-} from "../materials/MaterialLibrary";
+    findCachedWallMaterial
+} from "../../assets/walls";
 
 import type {
     CostItem
@@ -76,6 +89,9 @@ interface WallCutout {
         | "arch";
 }
 
+//==================================================
+// WALL DIRECTION
+//==================================================
 
 function getWallDirection(
     wall: Wall
@@ -100,11 +116,14 @@ function getWallDirection(
     ) {
 
         return {
-            x: 1,
-            z: 0,
-            length: 0
-        };
 
+            x: 1,
+
+            z: 0,
+
+            length: 0
+
+        };
     }
 
     return {
@@ -136,15 +155,23 @@ function distanceAlongWall(
         );
 
     return (
-        (x - wall.start.position.x) *
-            direction.x +
 
-        (z - wall.start.position.z) *
-            direction.z
+        (x -
+            wall.start.position.x) *
+        direction.x
+
+        +
+
+        (z -
+            wall.start.position.z) *
+        direction.z
+
     );
 }
 
-
+//==================================================
+// RECTANGLE UNION AREA
+//==================================================
 
 function calculateRectangleUnionArea(
     rectangles: CutoutRect[]
@@ -155,20 +182,22 @@ function calculateRectangleUnionArea(
     ) {
 
         return 0;
-
     }
 
-    //--------------------------------------------------
-    // Unique X coordinates
-    //--------------------------------------------------
+    //==================================================
+    // UNIQUE X COORDINATES
+    //==================================================
 
     const xCoordinates =
         Array.from(
             new Set(
                 rectangles.flatMap(
                     rect => [
+
                         rect.startX,
+
                         rect.endX
+
                     ]
                 )
             )
@@ -177,9 +206,9 @@ function calculateRectangleUnionArea(
                 a - b
         );
 
-    //--------------------------------------------------
-    // Vertical sweep
-    //--------------------------------------------------
+    //==================================================
+    // VERTICAL SWEEP
+    //==================================================
 
     let area = 0;
 
@@ -204,29 +233,33 @@ function calculateRectangleUnionArea(
         ) {
 
             continue;
-
         }
 
-        //--------------------------------------------------
-        // Find rectangles active in this X interval
-        //--------------------------------------------------
+        //==================================================
+        // ACTIVE RECTANGLES
+        //==================================================
 
         const active =
             rectangles
+
                 .filter(
                     rect =>
                         rect.startX < x1 &&
                         rect.endX > x0
                 )
+
                 .map(
                     rect => ({
+
                         bottomY:
                             rect.bottomY,
 
                         topY:
                             rect.topY
+
                     })
                 )
+
                 .sort(
                     (a, b) =>
                         a.bottomY -
@@ -238,12 +271,11 @@ function calculateRectangleUnionArea(
         ) {
 
             continue;
-
         }
 
-        //--------------------------------------------------
-        // Merge Y intervals
-        //--------------------------------------------------
+        //==================================================
+        // MERGE Y INTERVALS
+        //==================================================
 
         let coveredHeight = 0;
 
@@ -284,9 +316,7 @@ function calculateRectangleUnionArea(
 
                 currentEnd =
                     next.topY;
-
             }
-
         }
 
         coveredHeight +=
@@ -303,15 +333,6 @@ function calculateRectangleUnionArea(
 
 //==================================================
 // ARCH CUTOUT AREA
-//
-// Your current WallMeshBuilder creates a
-// semicircular arch based on:
-// radius = openingWidth / 2
-//
-// So:
-//
-// area = rectangle below spring line
-//      + semicircle
 //==================================================
 
 function calculateArchArea(
@@ -334,12 +355,7 @@ function calculateArchArea(
     ) {
 
         return 0;
-
     }
-
-    //--------------------------------------------------
-    // Current wall builder uses a semicircular top.
-    //--------------------------------------------------
 
     const radius =
         width * 0.5;
@@ -351,24 +367,17 @@ function calculateArchArea(
             radius
         );
 
-    //--------------------------------------------------
-    // Rectangle portion
-    //--------------------------------------------------
-
     const rectangleArea =
         width *
         springHeight;
-
-    //--------------------------------------------------
-    // Semicircle portion
-    //--------------------------------------------------
 
     const archArea =
         (
             Math.PI *
             radius *
             radius
-        ) * 0.5;
+        ) *
+        0.5;
 
     return (
         rectangleArea +
@@ -402,9 +411,9 @@ export function calculateWallFinishCosts(
 
     } = options;
 
-    //--------------------------------------------------
-    // Find rooms
-    //--------------------------------------------------
+    //==================================================
+    // FIND ROOMS
+    //==================================================
 
     const regions =
         solveRegions(
@@ -412,9 +421,9 @@ export function calculateWallFinishCosts(
             walls
         );
 
-    //--------------------------------------------------
-    // Group by material
-    //--------------------------------------------------
+    //==================================================
+    // GROUP COSTS
+    //==================================================
 
     const grouped =
         new Map<
@@ -422,28 +431,27 @@ export function calculateWallFinishCosts(
             CostItem
         >();
 
-    //--------------------------------------------------
-    // Process each room
-    //--------------------------------------------------
+    //==================================================
+    // PROCESS EACH ROOM
+    //==================================================
 
     for (
         const region
         of regions
     ) {
 
-        //--------------------------------------------------
-        // Process every wall on this room side
-        //--------------------------------------------------
+        //==================================================
+        // PROCESS EACH WALL SIDE
+        //==================================================
 
         for (
             const wall
             of region.walls
         ) {
 
-            //--------------------------------------------------
-            // Find material assigned to THIS room side
-            // of THIS wall.
-            //--------------------------------------------------
+            //==================================================
+            // MATERIAL ASSIGNED TO THIS ROOM SIDE
+            //==================================================
 
             const materialId =
                 wallFinishes[
@@ -457,34 +465,32 @@ export function calculateWallFinishCosts(
             ) {
 
                 continue;
-
             }
 
-            //--------------------------------------------------
-            // Find material
-            //--------------------------------------------------
+            //==================================================
+            // GET FIREBASE WALL MATERIAL
+            //==================================================
 
             const material =
-                MaterialLibrary.find(
-                    item =>
-                        item.id ===
-                            materialId &&
-
-                        item.category ===
-                            "wallFinish"
+                findCachedWallMaterial(
+                    materialId
                 );
 
             if (
                 !material
             ) {
 
-                continue;
+                console.warn(
+                    "Wall material was not found in the Firebase material cache:",
+                    materialId
+                );
 
+                continue;
             }
 
-            //--------------------------------------------------
-            // Wall dimensions
-            //--------------------------------------------------
+            //==================================================
+            // WALL DIMENSIONS
+            //==================================================
 
             const direction =
                 getWallDirection(
@@ -500,30 +506,26 @@ export function calculateWallFinishCosts(
             ) {
 
                 continue;
-
             }
 
-            //--------------------------------------------------
+            //==================================================
             // TOTAL WALL AREA
-            //--------------------------------------------------
+            //==================================================
 
             const totalWallArea =
                 wallLength *
                 wallHeight;
 
-            //--------------------------------------------------
-            // Collect rectangular cutouts.
-            //
-            // These are handled with a union calculation
-            // so overlapping cutouts don't subtract twice.
-            //--------------------------------------------------
+            //==================================================
+            // RECTANGULAR CUTOUTS
+            //==================================================
 
             const rectangularCutouts:
                 CutoutRect[] = [];
 
-            //--------------------------------------------------
+            //==================================================
             // DOORS
-            //--------------------------------------------------
+            //==================================================
 
             for (
                 const door
@@ -536,7 +538,6 @@ export function calculateWallFinishCosts(
                 ) {
 
                     continue;
-
                 }
 
                 const distance =
@@ -568,10 +569,8 @@ export function calculateWallFinishCosts(
                     0;
 
                 if (
-                    endX >
-                    0 &&
-                    startX <
-                    wallLength
+                    endX > 0 &&
+                    startX < wallLength
                 ) {
 
                     rectangularCutouts.push({
@@ -593,14 +592,12 @@ export function calculateWallFinishCosts(
                         topY
 
                     });
-
                 }
-
             }
 
-            //--------------------------------------------------
+            //==================================================
             // WINDOWS
-            //--------------------------------------------------
+            //==================================================
 
             for (
                 const window
@@ -613,7 +610,6 @@ export function calculateWallFinishCosts(
                 ) {
 
                     continue;
-
                 }
 
                 const distance =
@@ -622,10 +618,6 @@ export function calculateWallFinishCosts(
                         window.position.z,
                         wall
                     );
-
-                //--------------------------------------------------
-                // Window width projected onto the wall.
-                //--------------------------------------------------
 
                 const relativeRotation =
                     window.rotationY -
@@ -670,10 +662,6 @@ export function calculateWallFinishCosts(
                     distance +
                     halfWidth;
 
-                //--------------------------------------------------
-                // Window is vertically centered.
-                //--------------------------------------------------
-
                 const bottomY =
                     Math.max(
                         0,
@@ -691,12 +679,9 @@ export function calculateWallFinishCosts(
                     );
 
                 if (
-                    endX >
-                    0 &&
-                    startX <
-                    wallLength &&
-                    topY >
-                    bottomY
+                    endX > 0 &&
+                    startX < wallLength &&
+                    topY > bottomY
                 ) {
 
                     rectangularCutouts.push({
@@ -718,14 +703,12 @@ export function calculateWallFinishCosts(
                         topY
 
                     });
-
                 }
-
             }
 
-            //--------------------------------------------------
-            // RECTANGULAR OPENINGS
-            //--------------------------------------------------
+            //==================================================
+            // OPENINGS
+            //==================================================
 
             const archCutouts:
                 WallCutout[] = [];
@@ -741,7 +724,6 @@ export function calculateWallFinishCosts(
                 ) {
 
                     continue;
-
                 }
 
                 const distance =
@@ -803,12 +785,9 @@ export function calculateWallFinishCosts(
                 } else {
 
                     if (
-                        endX >
-                        0 &&
-                        startX <
-                        wallLength &&
-                        topY >
-                        bottomY
+                        endX > 0 &&
+                        startX < wallLength &&
+                        topY > bottomY
                     ) {
 
                         rectangularCutouts.push({
@@ -830,25 +809,22 @@ export function calculateWallFinishCosts(
                             topY
 
                         });
-
                     }
-
                 }
-
             }
 
-            //--------------------------------------------------
-            // Calculate rectangular cutout union
-            //--------------------------------------------------
+            //==================================================
+            // RECTANGULAR CUTOUT AREA
+            //==================================================
 
             const rectangularCutoutArea =
                 calculateRectangleUnionArea(
                     rectangularCutouts
                 );
 
-            //--------------------------------------------------
-            // Calculate arch areas
-            //--------------------------------------------------
+            //==================================================
+            // ARCH AREA
+            //==================================================
 
             let archCutoutArea =
                 0;
@@ -863,36 +839,33 @@ export function calculateWallFinishCosts(
                     arch.startX;
 
                 if (
-                    width <=
-                    0
+                    width <= 0
                 ) {
 
                     continue;
-
                 }
 
                 archCutoutArea +=
                     calculateArchArea(
                         width,
                         arch.topY -
-                            arch.bottomY,
+                        arch.bottomY,
                         arch.bottomY,
                         wallHeight
                     );
-
             }
 
-            //--------------------------------------------------
-            // Total cutout area
-            //--------------------------------------------------
+            //==================================================
+            // TOTAL CUTOUT AREA
+            //==================================================
 
             const cutoutArea =
                 rectangularCutoutArea +
                 archCutoutArea;
 
-            //--------------------------------------------------
-            // Remaining finish area
-            //--------------------------------------------------
+            //==================================================
+            // REMAINING WALL FINISH AREA
+            //==================================================
 
             const finishArea =
                 Math.max(
@@ -907,12 +880,11 @@ export function calculateWallFinishCosts(
             ) {
 
                 continue;
-
             }
 
-            //--------------------------------------------------
-            // Group by material
-            //--------------------------------------------------
+            //==================================================
+            // GROUP BY FIREBASE MATERIAL
+            //==================================================
 
             const existing =
                 grouped.get(
@@ -954,19 +926,15 @@ export function calculateWallFinishCosts(
                         subtotal:
                             finishArea *
                             material.pricePerSquareMeter
-
                     }
                 );
-
             }
-
         }
-
     }
 
-    //--------------------------------------------------
-    // Return grouped costs
-    //--------------------------------------------------
+    //==================================================
+    // RETURN GROUPED COSTS
+    //==================================================
 
     return Array.from(
         grouped.values()

@@ -6,8 +6,6 @@ import {
     useGLTF
 } from "@react-three/drei";
 
-
-
 import useEditor
     from "../../context/editor/useEditor";
 
@@ -24,45 +22,70 @@ import type {
 } from "../../engine/furniture/FurnitureTypes";
 
 
-
 interface FurnitureItemProps {
+
     id: string;
+
     assetId: string;
-    position: Furniture["position"];
+
+    position:
+        Furniture["position"];
+
     rotationY: number;
-    modelOffset: Furniture["modelOffset"];
+
+    modelOffset:
+        Furniture["modelOffset"];
 }
 
+
 function FurnitureItem({
+
     id,
+
     assetId,
+
     position,
+
     rotationY,
+
     modelOffset
+
 }: FurnitureItemProps) {
 
     const {
         state
     } = useEditor();
 
+
     const asset =
         findAsset(
             assetId
         );
 
-    if (!asset) {
+
+    if (
+        !asset
+    ) {
+
         return null;
     }
 
-    //--------------------------------------------------
-    // Hide original while this furniture is being moved.
-    //--------------------------------------------------
+
+    //==================================================
+    // Hide original while furniture is being moved
+    //==================================================
 
     if (
         state.movingFurnitureId === id
     ) {
+
         return null;
     }
+
+
+    //==================================================
+    // GLTF
+    //==================================================
 
     const {
         scene
@@ -70,12 +93,24 @@ function FurnitureItem({
         asset.model
     );
 
+
+    //==================================================
+    // Clone and configure model
+    //==================================================
+
     const model =
         useMemo(
             () => {
 
                 const clone =
-                    scene.clone();
+                    scene.clone(
+                        true
+                    );
+
+
+                //==================================================
+                // SCALE
+                //==================================================
 
                 if (
                     asset.furnitureDimensions
@@ -90,19 +125,41 @@ function FurnitureItem({
                     clone.scale.copy(
                         scale
                     );
+
                 }
+
+
+                //==================================================
+                // FURNITURE ID
+                //==================================================
 
                 clone.traverse(
                     child => {
 
                         child.userData =
                             {
+
                                 ...child.userData,
+
                                 furnitureId:
                                     id
+
                             };
+
+
+                        //==================================================
+                        // SHADOWS
+                        //==================================================
+
+                        child.castShadow =
+                            true;
+
+                        child.receiveShadow =
+                            true;
+
                     }
                 );
+
 
                 return clone;
 
@@ -114,9 +171,15 @@ function FurnitureItem({
             ]
         );
 
+
+    //==================================================
+    // RENDER
+    //==================================================
+
     return (
 
         <group
+
             userData={{
                 furnitureId:
                     id
@@ -133,9 +196,11 @@ function FurnitureItem({
                 rotationY,
                 0
             ]}
+
         >
 
             <primitive
+
                 object={
                     model
                 }
@@ -145,11 +210,13 @@ function FurnitureItem({
                     modelOffset.y,
                     modelOffset.z
                 ]}
+
             />
 
         </group>
     );
 }
+
 
 export default function FurnitureScene() {
 
@@ -157,41 +224,46 @@ export default function FurnitureScene() {
         state
     } = useEditor();
 
+
     return (
 
         <>
 
-            {state.furniture.map(
-                furniture => (
+            {
+                state.furniture.map(
+                    furniture => (
 
-                    <FurnitureItem
-                        key={
-                            furniture.id
-                        }
+                        <FurnitureItem
 
-                        id={
-                            furniture.id
-                        }
+                            key={
+                                furniture.id
+                            }
 
-                        assetId={
-                            furniture.assetId
-                        }
+                            id={
+                                furniture.id
+                            }
 
-                        position={
-                            furniture.position
-                        }
+                            assetId={
+                                furniture.assetId
+                            }
 
-                        rotationY={
-                            furniture.rotationY
-                        }
+                            position={
+                                furniture.position
+                            }
 
-                        modelOffset={
-                            furniture.modelOffset
-                        }
-                    />
+                            rotationY={
+                                furniture.rotationY
+                            }
 
+                            modelOffset={
+                                furniture.modelOffset
+                            }
+
+                        />
+
+                    )
                 )
-            )}
+            }
 
         </>
     );
