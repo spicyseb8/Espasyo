@@ -11,6 +11,14 @@ import {
     MaterialLibrary
 } from "../../../engine/materials/MaterialLibrary";
 
+import type {
+    Material
+} from "../../../engine/materials/MaterialTypes";
+
+import {
+    getWallMaterials
+} from "../../../assets/walls";
+
 import {
     solveRegions
 } from "../../../engine/regions/RegionSolver";
@@ -25,9 +33,9 @@ export default function DesignPanel() {
         dispatch
     } = useEditor();
 
-    //--------------------------------------------------
-    // Current regions
-    //--------------------------------------------------
+    //==================================================
+    // CURRENT REGIONS
+    //==================================================
 
     const regions =
         useMemo(
@@ -42,9 +50,9 @@ export default function DesignPanel() {
             ]
         );
 
-    //--------------------------------------------------
-    // Materials
-    //--------------------------------------------------
+    //==================================================
+    // FLOOR MATERIALS
+    //==================================================
 
     const flooringMaterials =
         useMemo(
@@ -57,20 +65,108 @@ export default function DesignPanel() {
             []
         );
 
-    const wallMaterials =
-        useMemo(
-            () =>
-                MaterialLibrary.filter(
-                    material =>
-                        material.category ===
-                        "wallFinish"
-                ),
-            []
-        );
+    //==================================================
+    // FIREBASE WALL MATERIALS
+    //==================================================
 
-    //--------------------------------------------------
-    // UI-selected floor material
-    //--------------------------------------------------
+    const [
+        wallMaterials,
+        setWallMaterials
+    ] = useState<Material[]>(
+        []
+    );
+
+    const [
+        wallMaterialsLoading,
+        setWallMaterialsLoading
+    ] = useState<boolean>(
+        true
+    );
+
+    const [
+        wallMaterialsError,
+        setWallMaterialsError
+    ] = useState<boolean>(
+        false
+    );
+
+    useEffect(() => {
+
+        let cancelled = false;
+
+        async function loadWallMaterials() {
+
+            try {
+
+                setWallMaterialsLoading(
+                    true
+                );
+
+                setWallMaterialsError(
+                    false
+                );
+
+                const materials =
+                    await getWallMaterials();
+
+                if (
+                    cancelled
+                ) {
+                    return;
+                }
+
+                setWallMaterials(
+                    materials
+                );
+
+            } catch (error) {
+
+                console.error(
+                    "Failed to load wall materials:",
+                    error
+                );
+
+                if (
+                    cancelled
+                ) {
+                    return;
+                }
+
+                setWallMaterials(
+                    []
+                );
+
+                setWallMaterialsError(
+                    true
+                );
+
+            } finally {
+
+                if (
+                    !cancelled
+                ) {
+
+                    setWallMaterialsLoading(
+                        false
+                    );
+
+                }
+            }
+        }
+
+        loadWallMaterials();
+
+        return () => {
+
+            cancelled = true;
+
+        };
+
+    }, []);
+
+    //==================================================
+    // UI-SELECTED FLOOR MATERIAL
+    //==================================================
 
     const [
         selectedFloorMaterialId,
@@ -79,9 +175,9 @@ export default function DesignPanel() {
         null
     );
 
-    //--------------------------------------------------
-    // UI-selected wall material
-    //--------------------------------------------------
+    //==================================================
+    // UI-SELECTED WALL MATERIAL
+    //==================================================
 
     const [
         selectedWallMaterialId,
@@ -90,9 +186,9 @@ export default function DesignPanel() {
         null
     );
 
-    //--------------------------------------------------
-    // Selected region
-    //--------------------------------------------------
+    //==================================================
+    // SELECTED REGION
+    //==================================================
 
     const selectedRegion =
         regions.find(
@@ -101,39 +197,47 @@ export default function DesignPanel() {
                 state.selectedRegionId
         ) ?? null;
 
-    //--------------------------------------------------
-    // Current floor material
-    //--------------------------------------------------
+    //==================================================
+    // CURRENT FLOOR MATERIAL
+    //==================================================
 
     const currentFloorMaterialId =
         state.selectedRegionId
 
-            ? state.floorFinishes[
-                state.selectedRegionId
-            ] ?? null
+            ? (
+                state.floorFinishes[
+                    state.selectedRegionId
+                ] ?? null
+            )
 
             : null;
 
-    //--------------------------------------------------
-    // Current wall material
-    //
-    // Only available when a specific wall is selected
-    // inside the selected room.
-    //--------------------------------------------------
+    //==================================================
+    // SELECTED WALL BELONGS TO ROOM
+    //==================================================
 
     const selectedWallBelongsToRoom =
         Boolean(
+
             selectedRegion &&
+
             state.selectedWallId &&
+
             selectedRegion.walls.some(
                 wall =>
                     wall.id ===
                     state.selectedWallId
             )
+
         );
+
+    //==================================================
+    // CURRENT WALL MATERIAL
+    //==================================================
 
     const currentWallMaterialId =
         selectedWallBelongsToRoom
+
             ? (
                 state.wallFinishes[
                     state.selectedRegionId!
@@ -141,12 +245,12 @@ export default function DesignPanel() {
                     state.selectedWallId!
                 ] ?? null
             )
+
             : null;
 
-    //--------------------------------------------------
-    // Keep UI selection synchronized when switching
-    // rooms/walls.
-    //--------------------------------------------------
+    //==================================================
+    // KEEP FLOOR UI SELECTION SYNCHRONIZED
+    //==================================================
 
     useEffect(() => {
 
@@ -158,6 +262,10 @@ export default function DesignPanel() {
         state.selectedRegionId,
         currentFloorMaterialId
     ]);
+
+    //==================================================
+    // KEEP WALL UI SELECTION SYNCHRONIZED
+    //==================================================
 
     useEffect(() => {
 
@@ -171,9 +279,9 @@ export default function DesignPanel() {
         currentWallMaterialId
     ]);
 
-    //--------------------------------------------------
+    //==================================================
     // FLOOR
-    //--------------------------------------------------
+    //==================================================
 
     const handleApplyFloor =
         () => {
@@ -204,9 +312,9 @@ export default function DesignPanel() {
 
         };
 
-    //--------------------------------------------------
+    //==================================================
     // FLOOR → ALL ROOMS
-    //--------------------------------------------------
+    //==================================================
 
     const handleApplyFloorToAll =
         () => {
@@ -214,9 +322,7 @@ export default function DesignPanel() {
             if (
                 !selectedFloorMaterialId
             ) {
-
                 return;
-
             }
 
             for (
@@ -245,9 +351,9 @@ export default function DesignPanel() {
 
         };
 
-    //--------------------------------------------------
+    //==================================================
     // WALL → ONE WALL
-    //--------------------------------------------------
+    //==================================================
 
     const handleApplyWall =
         () => {
@@ -257,17 +363,13 @@ export default function DesignPanel() {
                 !state.selectedWallId ||
                 !selectedWallMaterialId
             ) {
-
                 return;
-
             }
 
             if (
                 !selectedWallBelongsToRoom
             ) {
-
                 return;
-
             }
 
             dispatch({
@@ -292,9 +394,9 @@ export default function DesignPanel() {
 
         };
 
-    //--------------------------------------------------
+    //==================================================
     // WALL → ENTIRE ROOM
-    //--------------------------------------------------
+    //==================================================
 
     const handleApplyWallToRoom =
         () => {
@@ -303,9 +405,7 @@ export default function DesignPanel() {
                 !state.selectedRegionId ||
                 !selectedWallMaterialId
             ) {
-
                 return;
-
             }
 
             const region =
@@ -314,9 +414,7 @@ export default function DesignPanel() {
             if (
                 !region
             ) {
-
                 return;
-
             }
 
             //--------------------------------------------------
@@ -359,12 +457,9 @@ export default function DesignPanel() {
 
         };
 
-    //--------------------------------------------------
+    //==================================================
     // WALL → ENTIRE HOUSE
-    //
-    // Note that shared walls receive a separate
-    // assignment for each room side.
-    //--------------------------------------------------
+    //==================================================
 
     const handleApplyWallToAll =
         () => {
@@ -372,9 +467,7 @@ export default function DesignPanel() {
             if (
                 !selectedWallMaterialId
             ) {
-
                 return;
-
             }
 
             for (
@@ -419,6 +512,10 @@ export default function DesignPanel() {
             }
 
         };
+
+    //==================================================
+    // RENDER
+    //==================================================
 
     return (
 
@@ -473,7 +570,6 @@ export default function DesignPanel() {
                 }
 
             />
-
 
             {/* =========================================
                 WALLS
@@ -534,6 +630,31 @@ export default function DesignPanel() {
                 }
 
             />
+
+            {/* =========================================
+                OPTIONAL LOADING / ERROR MESSAGE
+                ========================================= */}
+
+            {wallMaterialsLoading && (
+
+                <div
+                    className="material-empty"
+                >
+                    Loading wall paints...
+                </div>
+
+            )}
+
+            {!wallMaterialsLoading &&
+                wallMaterialsError && (
+
+                <div
+                    className="material-empty"
+                >
+                    Failed to load wall paints.
+                </div>
+
+            )}
 
         </div>
     );

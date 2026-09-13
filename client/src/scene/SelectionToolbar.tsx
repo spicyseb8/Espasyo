@@ -26,6 +26,132 @@ import {
 } from "./Build/BuildInteraction";
 
 
+//======================================================
+// Icons
+//
+// Small inline SVGs so the toolbar has no extra
+// dependency and every icon shares the same stroke
+// weight / viewBox.
+//======================================================
+
+function RotateIcon() {
+    return (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path
+                d="M20 11a8 8 0 1 0-2.6 6.2"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+            <path
+                d="M20 5v6h-6"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        </svg>
+    );
+}
+
+function MoveIcon() {
+    return (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path
+                d="M12 3v18M3 12h18M6 6l-3 3 3 3M18 6l3 3-3 3M6 18l-3-3 3-3M18 18l3-3-3-3"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        </svg>
+    );
+}
+
+function TrashIcon() {
+    return (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path
+                d="M4 7h16M9 7V4.8c0-.44.36-.8.8-.8h4.4c.44 0 .8.36.8.8V7m-9 0 .9 12.1c.05.65.6 1.15 1.25 1.15h6.7c.65 0 1.2-.5 1.25-1.15L18 7"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        </svg>
+    );
+}
+
+
+//======================================================
+// Toolbar chrome shared across every icon button.
+//======================================================
+
+const TOOLBAR_STYLES = `
+.est-toolbar {
+    animation: est-pop 120ms ease-out;
+}
+@keyframes est-pop {
+    from { opacity: 0; transform: translateY(-50%) scale(0.9); }
+    to   { opacity: 1; transform: translateY(-50%) scale(1); }
+}
+.est-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: none;
+    background: transparent;
+    color: #52525b;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: background 120ms ease, color 120ms ease, transform 80ms ease;
+}
+.est-btn:hover {
+    background: #f4f4f5;
+    color: #18181b;
+}
+.est-btn:active {
+    transform: scale(0.92);
+}
+.est-btn-delete:hover {
+    background: #fdecec;
+    color: #e0483f;
+}
+.est-tooltip {
+    position: absolute;
+    right: calc(100% + 8px);
+    top: 50%;
+    transform: translateY(-50%);
+    background: #18181b;
+    color: #fafafa;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+    padding: 5px 8px;
+    border-radius: 6px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 120ms ease;
+}
+.est-btn:hover .est-tooltip {
+    opacity: 1;
+}
+.est-dialog {
+    animation: est-pop-dialog 110ms ease-out;
+    transform-origin: left center;
+}
+@keyframes est-pop-dialog {
+    from { opacity: 0; transform: scale(0.94); }
+    to   { opacity: 1; transform: scale(1); }
+}
+`;
+
+
 interface DeleteDialogProps {
 
     label:
@@ -48,39 +174,43 @@ function DeleteDialog({
     return (
 
         <div
+            className="est-dialog"
             style={{
                 position:
                     "absolute",
 
                 left:
-                    "48px",
+                    "calc(100% + 12px)",
 
                 top:
-                    "0",
+                    "50%",
+
+                transform:
+                    "translateY(-50%)",
 
                 background:
                     "#ffffff",
 
                 border:
-                    "1px solid #dddddd",
+                    "1px solid #ececee",
 
                 borderRadius:
-                    "10px",
+                    "14px",
 
                 padding:
-                    "12px",
+                    "14px",
 
                 minWidth:
-                    "190px",
+                    "200px",
 
                 boxShadow:
-                    "0 8px 24px rgba(0,0,0,0.16)",
+                    "0 12px 32px rgba(15,15,20,0.16), 0 2px 8px rgba(15,15,20,0.06)",
 
                 fontFamily:
-                    "Arial, sans-serif",
+                    "'Inter', system-ui, -apple-system, sans-serif",
 
                 color:
-                    "#222",
+                    "#18181b",
 
                 zIndex:
                     20
@@ -89,32 +219,87 @@ function DeleteDialog({
 
             <div
                 style={{
-                    fontSize:
-                        "13px",
+                    display:
+                        "flex",
 
-                    fontWeight:
-                        600,
+                    alignItems:
+                        "flex-start",
 
-                    marginBottom:
-                        "5px"
-                }}
-            >
-                Delete {label}?
-            </div>
-
-            <div
-                style={{
-                    fontSize:
-                        "12px",
-
-                    color:
-                        "#666",
+                    gap:
+                        "10px",
 
                     marginBottom:
-                        "10px"
+                        "12px"
                 }}
             >
-                This action can be undone.
+
+                <div
+                    style={{
+                        flexShrink:
+                            0,
+
+                        width:
+                            "28px",
+
+                        height:
+                            "28px",
+
+                        borderRadius:
+                            "999px",
+
+                        background:
+                            "#fdecec",
+
+                        color:
+                            "#e0483f",
+
+                        display:
+                            "flex",
+
+                        alignItems:
+                            "center",
+
+                        justifyContent:
+                            "center"
+                    }}
+                >
+                    <TrashIcon />
+                </div>
+
+                <div>
+
+                    <div
+                        style={{
+                            fontSize:
+                                "13px",
+
+                            fontWeight:
+                                600,
+
+                            marginBottom:
+                                "2px"
+                        }}
+                    >
+                        Delete {label}?
+                    </div>
+
+                    <div
+                        style={{
+                            fontSize:
+                                "12px",
+
+                            color:
+                                "#8b8b93",
+
+                            lineHeight:
+                                1.4
+                        }}
+                    >
+                        This action can be undone.
+                    </div>
+
+                </div>
+
             </div>
 
             <div
@@ -123,7 +308,7 @@ function DeleteDialog({
                         "flex",
 
                     gap:
-                        "6px",
+                        "8px",
 
                     justifyContent:
                         "flex-end"
@@ -137,22 +322,28 @@ function DeleteDialog({
                     }
                     style={{
                         border:
-                            "none",
+                            "1px solid #e4e4e7",
 
                         background:
-                            "#eeeeee",
+                            "#ffffff",
+
+                        color:
+                            "#3f3f46",
 
                         borderRadius:
-                            "6px",
+                            "8px",
 
                         padding:
-                            "6px 10px",
+                            "6px 12px",
 
                         cursor:
                             "pointer",
 
                         fontSize:
-                            "12px"
+                            "12px",
+
+                        fontWeight:
+                            500
                     }}
                 >
                     Cancel
@@ -168,22 +359,25 @@ function DeleteDialog({
                             "none",
 
                         background:
-                            "#d9534f",
+                            "#e0483f",
 
                         color:
                             "#ffffff",
 
                         borderRadius:
-                            "6px",
+                            "8px",
 
                         padding:
-                            "6px 10px",
+                            "6px 12px",
 
                         cursor:
                             "pointer",
 
                         fontSize:
-                            "12px"
+                            "12px",
+
+                        fontWeight:
+                            600
                     }}
                 >
                     Delete
@@ -652,297 +846,257 @@ export default function SelectionToolbar() {
             ]}
         >
 
+            <style>
+                {TOOLBAR_STYLES}
+            </style>
+
             <div
-                className="selection-toolbar"
-                onPointerDown={
-                    event => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                    }
-                }
-                onPointerUp={
-                    event => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                    }
-                }
-                onClick={
-                    event => {
-                        event.stopPropagation();
-                    }
-                }
                 style={{
                     position:
-                        "relative",
-
-                    display:
-                        "flex",
-
-                    flexDirection:
-                        "column",
-
-                    alignItems:
-                        "stretch",
-
-                    gap:
-                        "4px",
-
-                    marginLeft:
-                        "24px",
-
-                    transform:
-                        "translateY(-50%)",
-
-                    background:
-                        "#ffffff",
-
-                    border:
-                        "1px solid #dddddd",
-
-                    borderRadius:
-                        "9px",
-
-                    padding:
-                        "5px",
-
-                    boxShadow:
-                        "0 5px 18px rgba(0,0,0,0.15)",
-
-                    width:
-                        "64px",
-
-                    boxSizing:
-                        "border-box",
-
-                    zIndex:
-                        10
+                        "relative"
                 }}
             >
 
                 {/*==================================================
-                    FURNITURE TOOLS
+                    CONNECTOR STEM
+
+                    A small line grounding the toolbar to the
+                    selected object, like a callout.
                 ==================================================*/}
 
-                {selectedType ===
-                    "furniture" && (
-
-                    <>
-
-                        <button
-                            type="button"
-                            onClick={
-                                rotateFurniture
-                            }
-                            style={{
-                                border:
-                                    "none",
-
-                                background:
-                                    "#f5f5f5",
-
-                                borderRadius:
-                                    "6px",
-
-                                padding:
-                                    "7px 4px",
-
-                                cursor:
-                                    "pointer",
-
-                                fontSize:
-                                    "11px",
-
-                                width:
-                                    "100%"
-                            }}
-                        >
-                            Rotate
-                        </button>
-
-
-                        <button
-                            type="button"
-                            onClick={
-                                moveFurniture
-                            }
-                            style={{
-                                border:
-                                    "none",
-
-                                background:
-                                    "#f5f5f5",
-
-                                borderRadius:
-                                    "6px",
-
-                                padding:
-                                    "7px 4px",
-
-                                cursor:
-                                    "pointer",
-
-                                fontSize:
-                                    "11px",
-
-                                width:
-                                    "100%"
-                            }}
-                        >
-                            Move
-                        </button>
-
-                    </>
-                )}
-
-
-                {/*==================================================
-                    DOOR TOOLS
-
-                    NO ROTATE
-                ==================================================*/}
-
-                {selectedType ===
-                    "door" && (
-
-                    <button
-                        type="button"
-                        onClick={
-                            moveDoor
-                        }
-                        style={{
-                            border:
-                                "none",
-
-                            background:
-                                "#f5f5f5",
-
-                            borderRadius:
-                                "6px",
-
-                            padding:
-                                "7px 4px",
-
-                            cursor:
-                                "pointer",
-
-                            fontSize:
-                                "11px",
-
-                            width:
-                                "100%"
-                        }}
-                    >
-                        Move
-                    </button>
-                )}
-
-
-                {/*==================================================
-                    WINDOW TOOLS
-
-                    NO ROTATE
-                ==================================================*/}
-
-                {selectedType ===
-                    "window" && (
-
-                    <button
-                        type="button"
-                        onClick={
-                            moveWindow
-                        }
-                        style={{
-                            border:
-                                "none",
-
-                            background:
-                                "#f5f5f5",
-
-                            borderRadius:
-                                "6px",
-
-                            padding:
-                                "7px 4px",
-
-                            cursor:
-                                "pointer",
-
-                            fontSize:
-                                "11px",
-
-                            width:
-                                "100%"
-                        }}
-                    >
-                        Move
-                    </button>
-                )}
-
-
-                {/*==================================================
-                    DELETE
-                ==================================================*/}
-
-                <button
-                    type="button"
-                    onClick={() =>
-                        setDeleteOpen(
-                            value =>
-                                !value
-                        )
-                    }
+                <div
                     style={{
-                        border:
-                            "none",
+                        position:
+                            "absolute",
 
-                        background:
-                            "#f5f5f5",
+                        left:
+                            0,
 
-                        borderRadius:
-                            "6px",
-
-                        padding:
-                            "7px 4px",
-
-                        cursor:
-                            "pointer",
-
-                        fontSize:
-                            "11px",
+                        top:
+                            "50%",
 
                         width:
-                            "100%"
+                            "18px",
+
+                        height:
+                            "1px",
+
+                        background:
+                            "#d4d4d8",
+
+                        transform:
+                            "translateY(-50%)"
+                    }}
+                />
+
+                <div
+                    className="selection-toolbar est-toolbar"
+                    onPointerDown={
+                        event => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                        }
+                    }
+                    onPointerUp={
+                        event => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                        }
+                    }
+                    onClick={
+                        event => {
+                            event.stopPropagation();
+                        }
+                    }
+                    style={{
+                        position:
+                            "relative",
+
+                        display:
+                            "flex",
+
+                        flexDirection:
+                            "column",
+
+                        alignItems:
+                            "stretch",
+
+                        gap:
+                            "2px",
+
+                        marginLeft:
+                            "18px",
+
+                        transform:
+                            "translateY(-50%)",
+
+                        background:
+                            "#ffffff",
+
+                        border:
+                            "1px solid #ececee",
+
+                        borderRadius:
+                            "16px",
+
+                        padding:
+                            "5px",
+
+                        boxShadow:
+                            "0 10px 28px rgba(15,15,20,0.14), 0 2px 6px rgba(15,15,20,0.05)",
+
+                        fontFamily:
+                            "'Inter', system-ui, -apple-system, sans-serif",
+
+                        zIndex:
+                            10
                     }}
                 >
-                    Delete
-                </button>
+
+                    {/*==================================================
+                        FURNITURE TOOLS
+                    ==================================================*/}
+
+                    {selectedType ===
+                        "furniture" && (
+
+                        <>
+
+                            <button
+                                type="button"
+                                className="est-btn"
+                                onClick={
+                                    rotateFurniture
+                                }
+                            >
+                                <RotateIcon />
+                                <span className="est-tooltip">Rotate</span>
+                            </button>
 
 
-                {/*==================================================
-                    DELETE DIALOG
-                ==================================================*/}
+                            <button
+                                type="button"
+                                className="est-btn"
+                                onClick={
+                                    moveFurniture
+                                }
+                            >
+                                <MoveIcon />
+                                <span className="est-tooltip">Move</span>
+                            </button>
 
-                {deleteOpen && (
+                        </>
+                    )}
 
-                    <DeleteDialog
 
-                        label={
-                            label
-                        }
+                    {/*==================================================
+                        DOOR TOOLS
 
-                        onConfirm={
-                            confirmDelete
-                        }
+                        NO ROTATE
+                    ==================================================*/}
 
-                        onCancel={() =>
-                            setDeleteOpen(
-                                false
-                            )
-                        }
+                    {selectedType ===
+                        "door" && (
 
+                        <button
+                            type="button"
+                            className="est-btn"
+                            onClick={
+                                moveDoor
+                            }
+                        >
+                            <MoveIcon />
+                            <span className="est-tooltip">Move</span>
+                        </button>
+                    )}
+
+
+                    {/*==================================================
+                        WINDOW TOOLS
+
+                        NO ROTATE
+                    ==================================================*/}
+
+                    {selectedType ===
+                        "window" && (
+
+                        <button
+                            type="button"
+                            className="est-btn"
+                            onClick={
+                                moveWindow
+                            }
+                        >
+                            <MoveIcon />
+                            <span className="est-tooltip">Move</span>
+                        </button>
+                    )}
+
+
+                    {/*==================================================
+                        DIVIDER
+                    ==================================================*/}
+
+                    <div
+                        style={{
+                            height:
+                                "1px",
+
+                            background:
+                                "#f0f0f1",
+
+                            margin:
+                                "3px 4px"
+                        }}
                     />
 
-                )}
+
+                    {/*==================================================
+                        DELETE
+                    ==================================================*/}
+
+                    <button
+                        type="button"
+                        className="est-btn est-btn-delete"
+                        onClick={() =>
+                            setDeleteOpen(
+                                value =>
+                                    !value
+                            )
+                        }
+                    >
+                        <TrashIcon />
+                        <span className="est-tooltip">Delete</span>
+                    </button>
+
+
+                    {/*==================================================
+                        DELETE DIALOG
+                    ==================================================*/}
+
+                    {deleteOpen && (
+
+                        <DeleteDialog
+
+                            label={
+                                label
+                            }
+
+                            onConfirm={
+                                confirmDelete
+                            }
+
+                            onCancel={() =>
+                                setDeleteOpen(
+                                    false
+                                )
+                            }
+
+                        />
+
+                    )}
+
+                </div>
 
             </div>
 

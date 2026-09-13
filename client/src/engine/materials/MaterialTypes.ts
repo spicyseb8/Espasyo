@@ -19,6 +19,11 @@ export interface Material {
     // Texture used by Three.js
     texture?: string;
 
-    // Solid color used for materials such as paint
+    // Solid color used by paint/materials
     color?: string;
+
+    // Three.js material properties
+    roughness?: number;
+
+    metalness?: number;
 }

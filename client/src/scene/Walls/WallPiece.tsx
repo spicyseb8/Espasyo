@@ -1,5 +1,6 @@
 import {
     memo,
+    useMemo,
     useState
 } from "react";
 
@@ -21,6 +22,10 @@ import WallFinishSurface
 import type {
     WallFinishSide
 } from "./WallFinishUtils";
+
+import {
+    solveRegions
+} from "../../engine/regions/RegionSolver";
 
 
 interface Props {
@@ -56,25 +61,44 @@ function WallPiece({
     ] = useState(false);
 
 
+    //==================================================
+    // REGIONS
+    //==================================================
+
+    const regions =
+        useMemo(
+            () =>
+                solveRegions(
+                    state.corners,
+                    state.walls
+                ),
+            [
+                state.corners,
+                state.walls
+            ]
+        );
+
+
+    //==================================================
+    // SELECTED WALL
+    //==================================================
+
     const selected =
-        state.selectedWallId === wallId;
+        state.selectedWallId ===
+        wallId;
 
 
-    //--------------------------------------------------
-    // Walkthrough state
-    //--------------------------------------------------
+    //==================================================
+    // WALKTHROUGH
+    //==================================================
 
     const walkthroughMode =
         state.walkthroughMode;
 
 
-    //--------------------------------------------------
-    // During walkthrough:
-    //
-    // - Ignore hover
-    // - Ignore selection
-    // - Show normal wall color
-    //--------------------------------------------------
+    //==================================================
+    // VISUAL STATES
+    //==================================================
 
     const showHovered =
         hovered &&
@@ -86,9 +110,180 @@ function WallPiece({
         !walkthroughMode;
 
 
-    // ==================================================
+    //==================================================
+    // FIND REGION FOR THIS WALL
+    //==================================================
+    //
+    // Priority:
+    //
+    // 1. Keep the currently selected room if this wall
+    //    belongs to it.
+    //
+    // 2. Otherwise use the first room containing
+    //    this wall.
+    //
+    // This is especially useful for shared walls because
+    // clicking a room first determines which side of the
+    // shared wall the user is working on.
+    //==================================================
+
+    const getRegionForWall =
+        () => {
+
+            //--------------------------------------------------
+            // Currently selected room
+            //--------------------------------------------------
+
+            if (
+                state.selectedRegionId
+            ) {
+
+                const selectedRegion =
+                    regions.find(
+                        region =>
+                            region.id ===
+                            state.selectedRegionId
+                    );
+
+                if (
+                    selectedRegion &&
+                    selectedRegion.walls.some(
+                        wall =>
+                            wall.id ===
+                            wallId
+                    )
+                ) {
+
+                    return selectedRegion;
+                }
+            }
+
+            //--------------------------------------------------
+            // No suitable selected room.
+            //
+            // Find the first region containing this wall.
+            //--------------------------------------------------
+
+            return (
+                regions.find(
+                    region =>
+                        region.walls.some(
+                            wall =>
+                                wall.id ===
+                                wallId
+                        )
+                ) ?? null
+            );
+        };
+
+
+    //==================================================
+    // WALL CLICK
+    //==================================================
+
+    const handleWallClick =
+        (
+            e: any
+        ) => {
+
+            if (
+                walkthroughMode
+            ) {
+
+                return;
+            }
+
+            e.stopPropagation();
+
+            //--------------------------------------------------
+            // Find the room this wall belongs to.
+            //--------------------------------------------------
+
+            const region =
+                getRegionForWall();
+
+            //--------------------------------------------------
+            // Select room first.
+            //
+            // This guarantees DesignPanel has a valid
+            // selectedRegionId.
+            //--------------------------------------------------
+
+            if (
+                region
+            ) {
+
+                dispatch({
+
+                    type:
+                        "SELECT_REGION",
+
+                    payload:
+                        region.id
+
+                });
+
+            }
+
+            //--------------------------------------------------
+            // Then select the wall.
+            //--------------------------------------------------
+
+            dispatch({
+
+                type:
+                    "SELECT_WALL",
+
+                payload:
+                    wallId
+
+            });
+        };
+
+
+    //==================================================
+    // WALL HOVER
+    //==================================================
+
+    const handlePointerOver =
+        (
+            e: any
+        ) => {
+
+            if (
+                walkthroughMode
+            ) {
+
+                return;
+            }
+
+            e.stopPropagation();
+
+            setHovered(
+                true
+            );
+        };
+
+
+    const handlePointerOut =
+        () => {
+
+            if (
+                walkthroughMode
+            ) {
+
+                return;
+            }
+
+            setHovered(
+                false
+            );
+        };
+
+
+    //==================================================
     // ARCH
-    // ==================================================
+    //==================================================
 
     if (
         piece.kind === "arch" &&
@@ -148,17 +343,24 @@ function WallPiece({
 
             const angle =
                 Math.PI *
-                (i / segments);
+                (
+                    i /
+                    segments
+                );
 
 
             const x =
-                Math.cos(angle) *
+                Math.cos(
+                    angle
+                ) *
                 radius;
 
 
             const y =
                 openingHeight +
-                Math.sin(angle) *
+                Math.sin(
+                    angle
+                ) *
                 radius;
 
 
@@ -166,7 +368,6 @@ function WallPiece({
                 x,
                 y
             );
-
         }
 
 
@@ -198,9 +399,9 @@ function WallPiece({
 
             <group>
 
-                {/* ------------------------------------------
-                    Actual wall
-                ------------------------------------------ */}
+                {/* ==========================================
+                    ACTUAL WALL
+                ========================================== */}
 
                 <mesh
 
@@ -222,50 +423,20 @@ function WallPiece({
                         wallId
                     }}
 
+                    castShadow
+
+                    receiveShadow
+
                     onPointerOver={
-                        walkthroughMode
-                            ? undefined
-                            : (e) => {
-
-                                e.stopPropagation();
-
-                                setHovered(
-                                    true
-                                );
-
-                            }
+                        handlePointerOver
                     }
 
                     onPointerOut={
-                        walkthroughMode
-                            ? undefined
-                            : () => {
-
-                                setHovered(
-                                    false
-                                );
-
-                            }
+                        handlePointerOut
                     }
 
                     onClick={
-                        walkthroughMode
-                            ? undefined
-                            : (e) => {
-
-                                e.stopPropagation();
-
-                                dispatch({
-
-                                    type:
-                                        "SELECT_WALL",
-
-                                    payload:
-                                        wallId
-
-                                });
-
-                            }
+                        handleWallClick
                     }
 
                 >
@@ -291,9 +462,9 @@ function WallPiece({
                 </mesh>
 
 
-                {/* ------------------------------------------
-                    Interior wall finish
-                ------------------------------------------ */}
+                {/* ==========================================
+                    INTERIOR WALL FINISH
+                ========================================== */}
 
                 {
                     finishSides.map(
@@ -320,23 +491,22 @@ function WallPiece({
                 }
 
             </group>
-
         );
 
     }
 
 
-    // ==================================================
+    //==================================================
     // NORMAL WALL
-    // ==================================================
+    //==================================================
 
     return (
 
         <group>
 
-            {/* ------------------------------------------
-                Actual wall
-            ------------------------------------------ */}
+            {/* ==========================================
+                ACTUAL WALL
+            ========================================== */}
 
             <mesh
 
@@ -354,50 +524,20 @@ function WallPiece({
                     wallId
                 }}
 
+                castShadow
+
+                receiveShadow
+
                 onPointerOver={
-                    walkthroughMode
-                        ? undefined
-                        : (e) => {
-
-                            e.stopPropagation();
-
-                            setHovered(
-                                true
-                            );
-
-                        }
+                    handlePointerOver
                 }
 
                 onPointerOut={
-                    walkthroughMode
-                        ? undefined
-                        : () => {
-
-                            setHovered(
-                                false
-                            );
-
-                        }
+                    handlePointerOut
                 }
 
                 onClick={
-                    walkthroughMode
-                        ? undefined
-                        : (e) => {
-
-                            e.stopPropagation();
-
-                            dispatch({
-
-                                type:
-                                    "SELECT_WALL",
-
-                                payload:
-                                    wallId
-
-                            });
-
-                        }
+                    handleWallClick
                 }
 
             >
@@ -434,9 +574,9 @@ function WallPiece({
             </mesh>
 
 
-            {/* ------------------------------------------
-                Interior wall finish
-            ------------------------------------------ */}
+            {/* ==========================================
+                INTERIOR WALL FINISH
+            ========================================== */}
 
             {
                 finishSides.map(
@@ -463,9 +603,7 @@ function WallPiece({
             }
 
         </group>
-
     );
-
 }
 
 

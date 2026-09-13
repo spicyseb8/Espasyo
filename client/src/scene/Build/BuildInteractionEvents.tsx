@@ -57,10 +57,6 @@ export default function BuildInteractionEvents() {
                 event: PointerEvent
             ) {
 
-                //--------------------------------------------------
-                // Update shared pointer.
-                //--------------------------------------------------
-
                 buildInteraction.updatePointer(
                     event,
                     canvas
@@ -77,13 +73,14 @@ export default function BuildInteractionEvents() {
             ) {
 
                 //--------------------------------------------------
-                // Left click only.
+                // Left click only
                 //--------------------------------------------------
 
                 if (
                     event.button !==
                     0
                 ) {
+
                     return;
                 }
 
@@ -99,8 +96,14 @@ export default function BuildInteractionEvents() {
                     event.preventDefault();
                     event.stopPropagation();
 
+
                     buildInteraction
                         .suppressPointerUp();
+
+
+                    //--------------------------------------------------
+                    // Update pointer at exact click location.
+                    //--------------------------------------------------
 
                     buildInteraction
                         .updatePointer(
@@ -108,23 +111,26 @@ export default function BuildInteractionEvents() {
                             canvas
                         );
 
+
+                    //--------------------------------------------------
+                    // Current preview
+                    //--------------------------------------------------
+
                     const result =
                         buildInteraction
                             .pointerDown();
 
-                    //--------------------------------------------------
-                    // No valid preview.
-                    //--------------------------------------------------
 
                     if (
                         !result
                     ) {
+
                         return;
                     }
 
 
                     //--------------------------------------------------
-                    // Invalid collision.
+                    // Invalid preview
                     //--------------------------------------------------
 
                     if (
@@ -141,13 +147,42 @@ export default function BuildInteractionEvents() {
                     }
 
 
+                    //--------------------------------------------------
+                    // EXACT target wall
+                    //
+                    // This was populated by AssetPreview from
+                    // the actual raycast hit.
+                    //--------------------------------------------------
+
+                    const targetWallId =
+                        result.wallId;
+
+
+                    if (
+                        !targetWallId
+                    ) {
+
+                        console.log(
+                            "Build move blocked: no target wall"
+                        );
+
+                        return;
+                    }
+
+
+                    //--------------------------------------------------
+                    // Move target
+                    //--------------------------------------------------
+
                     const moveTarget =
                         buildInteraction
                             .moveTarget;
 
+
                     if (
                         !moveTarget
                     ) {
+
                         return;
                     }
 
@@ -176,7 +211,14 @@ export default function BuildInteractionEvents() {
                                     position:
                                         result.transform
                                             .position
-                                            .clone()
+                                            .clone(),
+
+                                    wallId:
+                                        targetWallId,
+
+                                    rotationY:
+                                        result.transform
+                                            .rotationY
 
                                 }
 
@@ -185,8 +227,13 @@ export default function BuildInteractionEvents() {
                         });
 
 
+                        //--------------------------------------------------
+                        // Finish move
+                        //--------------------------------------------------
+
                         buildInteraction
                             .endMove();
+
 
                         dispatch({
 
@@ -198,6 +245,7 @@ export default function BuildInteractionEvents() {
 
                         });
 
+
                         dispatch({
 
                             type:
@@ -207,6 +255,7 @@ export default function BuildInteractionEvents() {
                                 null
 
                         });
+
 
                         return;
                     }
@@ -236,7 +285,14 @@ export default function BuildInteractionEvents() {
                                     position:
                                         result.transform
                                             .position
-                                            .clone()
+                                            .clone(),
+
+                                    wallId:
+                                        targetWallId,
+
+                                    rotationY:
+                                        result.transform
+                                            .rotationY
 
                                 }
 
@@ -245,8 +301,13 @@ export default function BuildInteractionEvents() {
                         });
 
 
+                        //--------------------------------------------------
+                        // Finish move
+                        //--------------------------------------------------
+
                         buildInteraction
                             .endMove();
+
 
                         dispatch({
 
@@ -258,6 +319,7 @@ export default function BuildInteractionEvents() {
 
                         });
 
+
                         dispatch({
 
                             type:
@@ -268,6 +330,7 @@ export default function BuildInteractionEvents() {
 
                         });
 
+
                         return;
                     }
                 }
@@ -276,12 +339,6 @@ export default function BuildInteractionEvents() {
                 //==================================================
                 // NORMAL NEW BUILD PLACEMENT
                 //==================================================
-
-                //--------------------------------------------------
-                // Only Door / Window / Opening.
-                //
-                // Furniture uses FurnitureInteractionEvents.
-                //--------------------------------------------------
 
                 if (
                     state.buildTool !==
@@ -293,16 +350,18 @@ export default function BuildInteractionEvents() {
                     state.buildTool !==
                         BuildTool.Opening
                 ) {
+
                     return;
                 }
 
 
                 //--------------------------------------------------
-                // Canvas bounds.
+                // Canvas bounds
                 //--------------------------------------------------
 
                 const rect =
                     canvas.getBoundingClientRect();
+
 
                 const insideCanvas =
                     event.clientX >=
@@ -317,26 +376,29 @@ export default function BuildInteractionEvents() {
                     event.clientY <=
                         rect.bottom;
 
+
                 if (
                     !insideCanvas
                 ) {
+
                     return;
                 }
 
 
                 //--------------------------------------------------
-                // Own this click.
+                // Own click
                 //--------------------------------------------------
 
                 event.preventDefault();
                 event.stopPropagation();
+
 
                 buildInteraction
                     .suppressPointerUp();
 
 
                 //--------------------------------------------------
-                // Update pointer at exact click position.
+                // Update pointer
                 //--------------------------------------------------
 
                 buildInteraction.updatePointer(
@@ -346,60 +408,66 @@ export default function BuildInteractionEvents() {
 
 
                 //--------------------------------------------------
-                // Selected asset.
+                // Selected asset
                 //--------------------------------------------------
 
                 const activeAsset =
                     state.selectedAsset;
 
+
                 if (
                     !activeAsset
                 ) {
+
                     return;
                 }
 
 
                 //--------------------------------------------------
-                // Tool and asset must match.
+                // Tool and asset match
                 //--------------------------------------------------
 
                 if (
                     state.buildTool !==
                     activeAsset.type
                 ) {
+
                     return;
                 }
 
 
                 //--------------------------------------------------
-                // Current preview.
+                // Current preview
                 //--------------------------------------------------
 
                 const result =
                     buildInteraction
                         .pointerDown();
 
+
                 if (
                     !result
                 ) {
+
                     return;
                 }
 
 
                 //--------------------------------------------------
-                // Must be wall placement.
+                // Must be wall placement
                 //--------------------------------------------------
 
                 if (
                     result.transform.kind !==
                     "wall"
                 ) {
+
                     return;
                 }
 
 
                 //--------------------------------------------------
-                // Collision.
+                // Collision
                 //--------------------------------------------------
 
                 if (
@@ -432,6 +500,7 @@ export default function BuildInteractionEvents() {
                             result.bounds
                         );
 
+
                     dispatch({
 
                         type:
@@ -443,10 +512,6 @@ export default function BuildInteractionEvents() {
                     });
 
 
-                    //--------------------------------------------------
-                    // Placement finished.
-                    //--------------------------------------------------
-
                     dispatch({
 
                         type:
@@ -457,6 +522,7 @@ export default function BuildInteractionEvents() {
 
                     });
 
+
                     dispatch({
 
                         type:
@@ -466,6 +532,7 @@ export default function BuildInteractionEvents() {
                             null
 
                     });
+
 
                     buildInteraction.clear();
 
@@ -489,6 +556,7 @@ export default function BuildInteractionEvents() {
                             result.bounds
                         );
 
+
                     dispatch({
 
                         type:
@@ -500,10 +568,6 @@ export default function BuildInteractionEvents() {
                     });
 
 
-                    //--------------------------------------------------
-                    // Placement finished.
-                    //--------------------------------------------------
-
                     dispatch({
 
                         type:
@@ -514,6 +578,7 @@ export default function BuildInteractionEvents() {
 
                     });
 
+
                     dispatch({
 
                         type:
@@ -523,6 +588,7 @@ export default function BuildInteractionEvents() {
                             null
 
                     });
+
 
                     buildInteraction.clear();
 
@@ -573,10 +639,6 @@ export default function BuildInteractionEvents() {
                     });
 
 
-                    //--------------------------------------------------
-                    // Placement finished.
-                    //--------------------------------------------------
-
                     dispatch({
 
                         type:
@@ -587,6 +649,7 @@ export default function BuildInteractionEvents() {
 
                     });
 
+
                     dispatch({
 
                         type:
@@ -596,6 +659,7 @@ export default function BuildInteractionEvents() {
                             null
 
                     });
+
 
                     buildInteraction.clear();
 
@@ -644,15 +708,10 @@ export default function BuildInteractionEvents() {
                     event.preventDefault();
                     event.stopPropagation();
 
-                    //--------------------------------------------------
-                    // Cancel only.
-                    //
-                    // The original object was never removed
-                    // from state.
-                    //--------------------------------------------------
 
                     buildInteraction
                         .cancelMove();
+
 
                     dispatch({
 
@@ -664,6 +723,7 @@ export default function BuildInteractionEvents() {
 
                     });
 
+
                     dispatch({
 
                         type:
@@ -674,12 +734,13 @@ export default function BuildInteractionEvents() {
 
                     });
 
+
                     return;
                 }
 
 
                 //--------------------------------------------------
-                // Normal new build placement.
+                // Normal placement
                 //--------------------------------------------------
 
                 if (
@@ -700,7 +761,9 @@ export default function BuildInteractionEvents() {
                 event.preventDefault();
                 event.stopPropagation();
 
+
                 buildInteraction.clear();
+
 
                 dispatch({
 
@@ -711,6 +774,7 @@ export default function BuildInteractionEvents() {
                         null
 
                 });
+
 
                 dispatch({
 
@@ -795,6 +859,8 @@ export default function BuildInteractionEvents() {
             state.openings,
 
             state.archRise,
+
+            state.wallThickness,
 
             dispatch
         ]

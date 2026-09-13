@@ -45,6 +45,7 @@ class BuildInteraction {
     readonly raycaster =
         new Raycaster();
 
+
     //--------------------------------------------------
     // Normalized pointer
     //--------------------------------------------------
@@ -52,13 +53,15 @@ class BuildInteraction {
     readonly pointer =
         new Vector2();
 
+
     //--------------------------------------------------
     // Prevent preview from using camera center
-    // before the mouse actually enters the canvas.
+    // before mouse enters canvas.
     //--------------------------------------------------
 
     hasPointer =
         false;
+
 
     //--------------------------------------------------
     // Current preview placement
@@ -69,6 +72,7 @@ class BuildInteraction {
         | null =
         null;
 
+
     //--------------------------------------------------
     // Current bounds
     //--------------------------------------------------
@@ -77,6 +81,7 @@ class BuildInteraction {
         | AssetBounds
         | null =
         null;
+
 
     //--------------------------------------------------
     // Current collision
@@ -87,6 +92,18 @@ class BuildInteraction {
         | null =
         null;
 
+
+    //--------------------------------------------------
+    // Exact wall currently under the preview
+    //
+    // This is populated directly from the wall raycast.
+    //--------------------------------------------------
+
+    currentWallId:
+        string | null =
+        null;
+
+
     //--------------------------------------------------
     // Existing door/window move target
     //--------------------------------------------------
@@ -94,6 +111,7 @@ class BuildInteraction {
     moveTarget:
         BuildMoveTarget =
         null;
+
 
     //--------------------------------------------------
     // Pointer-up suppression
@@ -119,6 +137,7 @@ class BuildInteraction {
             rect.width <= 0 ||
             rect.height <= 0
         ) {
+
             return;
         }
 
@@ -135,7 +154,7 @@ class BuildInteraction {
             y <= rect.bottom;
 
         //--------------------------------------------------
-        // Ignore pointer movement outside the canvas.
+        // Ignore pointer movement outside canvas.
         //--------------------------------------------------
 
         if (
@@ -188,11 +207,16 @@ class BuildInteraction {
     ) {
 
         this.moveTarget = {
+
             type:
                 "door",
 
             id
+
         };
+
+        this.currentWallId =
+            null;
 
         this.clear();
     }
@@ -207,11 +231,16 @@ class BuildInteraction {
     ) {
 
         this.moveTarget = {
+
             type:
                 "window",
 
             id
+
         };
+
+        this.currentWallId =
+            null;
 
         this.clear();
     }
@@ -224,6 +253,9 @@ class BuildInteraction {
     endMove() {
 
         this.moveTarget =
+            null;
+
+        this.currentWallId =
             null;
 
         this.clear();
@@ -239,6 +271,9 @@ class BuildInteraction {
         this.moveTarget =
             null;
 
+        this.currentWallId =
+            null;
+
         this.clear();
     }
 
@@ -247,10 +282,12 @@ class BuildInteraction {
     // IS MOVING
     //==================================================
 
-    isMoving(): boolean {
+    isMoving():
+        boolean {
 
         return (
-            this.moveTarget !== null
+            this.moveTarget !==
+            null
         );
     }
 
@@ -268,6 +305,9 @@ class BuildInteraction {
             null;
 
         this.currentCollision =
+            null;
+
+        this.currentWallId =
             null;
     }
 
@@ -333,11 +373,19 @@ class BuildInteraction {
                 this.currentBounds,
 
             collision:
-                this.currentCollision
+                this.currentCollision,
+
+            wallId:
+                this.currentWallId
+
         };
     }
 }
 
+
+//==================================================
+// SINGLE INSTANCE
+//==================================================
 
 export const buildInteraction =
     new BuildInteraction();

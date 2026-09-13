@@ -1,6 +1,5 @@
 import {
     Suspense,
-    useEffect,
     useMemo,
     useRef
 } from "react";
@@ -88,8 +87,7 @@ function findFurnitureAsset(
     return (
         AssetLibrary.furniture.find(
             asset =>
-                asset.id ===
-                assetId
+                asset.id === assetId
         ) ?? null
     );
 }
@@ -185,7 +183,6 @@ function getFloorPointAtXZ(
             1000,
             z
         ),
-
         new Vector3(
             0,
             -1,
@@ -366,8 +363,7 @@ function findFurniture(
     return (
         furniture.find(
             item =>
-                item.id ===
-                id
+                item.id === id
         ) ?? null
     );
 }
@@ -479,6 +475,102 @@ interface FurniturePreviewModelProps {
 }
 
 
+//==================================================
+// Create isolated preview material
+//==================================================
+
+function createPreviewMaterial(): MeshStandardMaterial {
+
+    return new MeshStandardMaterial({
+
+        color:
+            "#4DA3FF",
+
+        transparent:
+            true,
+
+        opacity:
+            0.55,
+
+        depthTest:
+            true,
+
+        depthWrite:
+            false,
+
+        roughness:
+            0.75,
+
+        metalness:
+            0
+    });
+}
+
+
+//==================================================
+// Replace all mesh materials with isolated preview
+// materials.
+//
+// IMPORTANT:
+// This happens during model creation instead of in
+// useEffect, so the preview never shares the original
+// GLB material with the actual furniture.
+//==================================================
+
+function preparePreviewMaterials(
+    model: Object3D
+): void {
+
+    model.traverse(
+        child => {
+
+            if (
+                !(child instanceof Mesh)
+            ) {
+
+                return;
+            }
+
+            //--------------------------------------------------
+            // Some GLBs use a single material.
+            //--------------------------------------------------
+
+            if (
+                Array.isArray(
+                    child.material
+                )
+            ) {
+
+                child.material =
+                    child.material.map(
+                        () =>
+                            createPreviewMaterial()
+                    );
+
+            }
+
+            //--------------------------------------------------
+            // Normal single-material mesh.
+            //--------------------------------------------------
+
+            else {
+
+                child.material =
+                    createPreviewMaterial();
+
+            }
+
+            child.renderOrder =
+                0;
+        }
+    );
+}
+
+
+//==================================================
+// Preview model component
+//==================================================
+
 function FurniturePreviewModel({
     asset,
     movingFurnitureId
@@ -529,7 +621,7 @@ function FurniturePreviewModel({
     );
 
     //--------------------------------------------------
-    // Clone and size
+    // Clone, size and isolate materials
     //--------------------------------------------------
 
     const model =
@@ -537,7 +629,9 @@ function FurniturePreviewModel({
             () => {
 
                 const clone =
-                    gltfScene.clone();
+                    gltfScene.clone(
+                        true
+                    );
 
                 if (
                     asset.furnitureDimensions
@@ -554,6 +648,15 @@ function FurniturePreviewModel({
                     );
                 }
 
+                //--------------------------------------------------
+                // IMPORTANT:
+                // Give every preview mesh its own material.
+                //--------------------------------------------------
+
+                preparePreviewMaterials(
+                    clone
+                );
+
                 return clone;
 
             },
@@ -562,60 +665,6 @@ function FurniturePreviewModel({
                 asset.furnitureDimensions
             ]
         );
-
-    //--------------------------------------------------
-    // Preview material
-    //--------------------------------------------------
-
-    useEffect(
-        () => {
-
-            model.traverse(
-                child => {
-
-                    if (
-                        !(child instanceof Mesh)
-                    ) {
-
-                        return;
-                    }
-
-                    child.material =
-                        new MeshStandardMaterial({
-
-                            color:
-                                "#4DA3FF",
-
-                            transparent:
-                                true,
-
-                            opacity:
-                                0.55,
-
-                            depthTest:
-                                true,
-
-                            depthWrite:
-                                false,
-
-                            roughness:
-                                0.75,
-
-                            metalness:
-                                0
-
-                        });
-
-                    child.renderOrder =
-                        0;
-                }
-            );
-
-        },
-        [
-            model
-        ]
-    );
 
     //--------------------------------------------------
     // Measure model
@@ -684,10 +733,6 @@ function FurniturePreviewModel({
 
             //--------------------------------------------------
             // Placement surfaces
-            //
-            // Use some() instead of includes()
-            // so this also works with your current
-            // Asset typing.
             //--------------------------------------------------
 
             const placementSurfaces =
@@ -753,6 +798,7 @@ function FurniturePreviewModel({
 
                     point:
                         Vector3;
+
                 } | null =
                 null;
 
@@ -787,7 +833,6 @@ function FurniturePreviewModel({
 
                     reason:
                         "wall"
-
                 };
 
             let previewIsWall =
@@ -964,15 +1009,19 @@ function FurniturePreviewModel({
 
                         basePlacement.position =
                             new Vector3(
+
                                 wallCenterX(
                                     wallStart,
                                     frame
                                 ),
+
                                 0,
+
                                 wallCenterZ(
                                     wallStart,
                                     frame
                                 )
+
                             );
 
                         finalTransform =
@@ -985,8 +1034,8 @@ function FurniturePreviewModel({
 
                             reason:
                                 "wall"
-
                         };
+
                     }
 
                     else {
@@ -1304,8 +1353,8 @@ function FurniturePreviewModel({
 
                         reason:
                             "wall"
-
                     };
+
                 }
 
                 else {
@@ -1415,8 +1464,13 @@ function FurniturePreviewModel({
                 finalTransform.rotationY;
 
             //--------------------------------------------------
-            // Color
+            // Preview color
             //--------------------------------------------------
+
+            const previewColor =
+                previewCollision.valid
+                    ? "#4DA3FF"
+                    : "#D9534F";
 
             model.traverse(
                 child => {
@@ -1428,6 +1482,10 @@ function FurniturePreviewModel({
                         return;
                     }
 
+                    //--------------------------------------------------
+                    // Single material
+                    //--------------------------------------------------
+
                     if (
                         child.material
                             instanceof
@@ -1435,11 +1493,7 @@ function FurniturePreviewModel({
                     ) {
 
                         child.material.color.set(
-
-                            previewCollision.valid
-                                ? "#4DA3FF"
-                                : "#D9534F"
-
+                            previewColor
                         );
 
                         child.material.depthTest =
@@ -1447,6 +1501,47 @@ function FurniturePreviewModel({
 
                         child.material.depthWrite =
                             false;
+
+                        child.renderOrder =
+                            previewIsWall
+                                ? 1000
+                                : 0;
+
+                        return;
+                    }
+
+                    //--------------------------------------------------
+                    // Multiple materials
+                    //--------------------------------------------------
+
+                    if (
+                        Array.isArray(
+                            child.material
+                        )
+                    ) {
+
+                        for (
+                            const material
+                            of child.material
+                        ) {
+
+                            if (
+                                material
+                                    instanceof
+                                MeshStandardMaterial
+                            ) {
+
+                                material.color.set(
+                                    previewColor
+                                );
+
+                                material.depthTest =
+                                    !previewIsWall;
+
+                                material.depthWrite =
+                                    false;
+                            }
+                        }
 
                         child.renderOrder =
                             previewIsWall
@@ -1498,12 +1593,15 @@ function wallCenterX(
 ): number {
 
     return (
+
         wallStart.x +
+
         frame.tangent.x *
         (
             frame.wallLength *
             0.5
         )
+
     );
 }
 
@@ -1521,12 +1619,15 @@ function wallCenterZ(
 ): number {
 
     return (
+
         wallStart.z +
+
         frame.tangent.z *
         (
             frame.wallLength *
             0.5
         )
+
     );
 }
 
@@ -1662,9 +1763,6 @@ export default function FurniturePreview() {
 
     //--------------------------------------------------
     // Existing furniture move
-    //
-    // Does NOT require BuildTool.Furniture.
-    // Does NOT require selectedAsset.
     //--------------------------------------------------
 
     const movingFurniturePreview =
@@ -1712,6 +1810,7 @@ export default function FurniturePreview() {
         >
 
             <FurniturePreviewModel
+
                 asset={
                     previewAsset
                 }
@@ -1719,6 +1818,7 @@ export default function FurniturePreview() {
                 movingFurnitureId={
                     state.movingFurnitureId
                 }
+
             />
 
         </Suspense>

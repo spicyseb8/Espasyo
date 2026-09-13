@@ -1,5 +1,7 @@
 import {
-    useMemo
+    useEffect,
+    useMemo,
+    useState
 } from "react";
 
 import {
@@ -18,9 +20,14 @@ import type {
     WallPiece
 } from "../../engine/walls/WallPiece";
 
+import type {
+    Material
+} from "../../engine/materials/MaterialTypes";
+
 import {
-    MaterialLibrary
-} from "../../engine/materials/MaterialLibrary";
+    findCachedWallMaterial,
+    getWallMaterials
+} from "../../assets/walls";
 
 import type {
     WallFinishSide
@@ -33,9 +40,11 @@ interface Props {
     finish: WallFinishSide;
 }
 
-const FINISH_THICKNESS = 0.004;
+const FINISH_THICKNESS =
+    0.004;
 
-const FINISH_GAP = 0.002;
+const FINISH_GAP =
+    0.002;
 
 const DEFAULT_TEXTURE =
     "/uploads/materials/walls/white-paint.jpg";
@@ -45,24 +54,88 @@ export default function WallFinishSurface({
     finish
 }: Props) {
 
-    //--------------------------------------------------
-    // Find selected material
-    //--------------------------------------------------
+    //==================================================
+    // MATERIAL
+    //==================================================
 
-    const material =
-        MaterialLibrary.find(
-            item =>
-                item.id ===
-                    finish.materialId &&
+    const [
+        material,
+        setMaterial
+    ] = useState<Material | null>(
+        () =>
+            findCachedWallMaterial(
+                finish.materialId
+            ) ?? null
+    );
 
-                item.category ===
-                    "wallFinish"
-        );
+    //==================================================
+    // LOAD WALL MATERIAL DATA
+    //==================================================
 
-    //--------------------------------------------------
-    // Always provide a texture URL so the hook is
-    // called in the same order every render.
-    //--------------------------------------------------
+    useEffect(() => {
+
+        let cancelled =
+            false;
+
+        async function loadMaterial() {
+
+            try {
+
+                const materials =
+                    await getWallMaterials();
+
+                if (
+                    cancelled
+                ) {
+                    return;
+                }
+
+                const found =
+                    materials.find(
+                        item =>
+                            item.id ===
+                            finish.materialId
+                    ) ?? null;
+
+                setMaterial(
+                    found
+                );
+
+            } catch (error) {
+
+                console.error(
+                    "Failed to load wall material:",
+                    error
+                );
+
+                if (
+                    !cancelled
+                ) {
+
+                    setMaterial(
+                        null
+                    );
+
+                }
+            }
+        }
+
+        loadMaterial();
+
+        return () => {
+
+            cancelled =
+                true;
+
+        };
+
+    }, [
+        finish.materialId
+    ]);
+
+    //==================================================
+    // TEXTURE
+    //==================================================
 
     const textureUrl =
         material?.texture ??
@@ -73,13 +146,11 @@ export default function WallFinishSurface({
             textureUrl
         );
 
-    //--------------------------------------------------
-    // Configure texture only when needed.
-    //
-    // Paint materials simply won't use it.
-    //--------------------------------------------------
+    //==================================================
+    // CONFIGURE TEXTURE
+    //==================================================
 
-    useMemo(() => {
+    useEffect(() => {
 
         texture.wrapS =
             RepeatWrapping;
@@ -107,17 +178,9 @@ export default function WallFinishSurface({
         piece.height
     ]);
 
-    //--------------------------------------------------
-    // No material
-    //--------------------------------------------------
-
-    if (!material) {
-        return null;
-    }
-
-    //--------------------------------------------------
-    // Wall normal
-    //--------------------------------------------------
+    //==================================================
+    // WALL NORMAL
+    //==================================================
 
     const normal =
         useMemo(() => {
@@ -136,9 +199,9 @@ export default function WallFinishSurface({
             piece.rotationY
         ]);
 
-    //--------------------------------------------------
-    // Finish position
-    //--------------------------------------------------
+    //==================================================
+    // FINISH POSITION
+    //==================================================
 
     const position =
         useMemo(() => {
@@ -153,7 +216,9 @@ export default function WallFinishSurface({
                             (
                                 piece.thickness *
                                 0.5 +
+
                                 FINISH_GAP +
+
                                 FINISH_THICKNESS *
                                 0.5
                             )
@@ -167,9 +232,9 @@ export default function WallFinishSurface({
             normal
         ]);
 
-    //--------------------------------------------------
+    //==================================================
     // ARCH GEOMETRY
-    //--------------------------------------------------
+    //==================================================
 
     const archGeometry =
         useMemo(() => {
@@ -189,7 +254,8 @@ export default function WallFinishSurface({
                 piece.arch.openingHeight;
 
             const radius =
-                openingWidth * 0.5;
+                openingWidth *
+                0.5;
 
             const shape =
                 new Shape();
@@ -214,7 +280,8 @@ export default function WallFinishSurface({
                 openingHeight
             );
 
-            const segments = 24;
+            const segments =
+                24;
 
             for (
                 let i = segments;
@@ -224,15 +291,22 @@ export default function WallFinishSurface({
 
                 const angle =
                     Math.PI *
-                    (i / segments);
+                    (
+                        i /
+                        segments
+                    );
 
                 const x =
-                    Math.cos(angle) *
+                    Math.cos(
+                        angle
+                    ) *
                     radius;
 
                 const y =
                     openingHeight +
-                    Math.sin(angle) *
+                    Math.sin(
+                        angle
+                    ) *
                     radius;
 
                 shape.lineTo(
@@ -268,43 +342,35 @@ export default function WallFinishSurface({
             piece.height
         ]);
 
-    //--------------------------------------------------
-    // Material
-    //--------------------------------------------------
+    //==================================================
+    // MATERIAL
+    //==================================================
 
     const finishMaterial =
         useMemo(() => {
 
-            const isPaint =
+            const hasTexture =
                 Boolean(
-                    material.color
+                    material?.texture
                 );
 
             return new MeshStandardMaterial({
 
-                //--------------------------------------------------
-                // Only use texture for actual textured materials
-                //--------------------------------------------------
-
                 map:
-                    isPaint
-                        ? undefined
-                        : texture,
-
-                //--------------------------------------------------
-                // Paint color / fallback
-                //--------------------------------------------------
+                    hasTexture
+                        ? texture
+                        : undefined,
 
                 color:
-                    material.color ??
+                    material?.color ??
                     "#FFFFFF",
 
                 roughness:
-                    isPaint
-                        ? 0.92
-                        : 0.85,
+                    material?.roughness ??
+                    0.92,
 
                 metalness:
+                    material?.metalness ??
                     0,
 
                 polygonOffset:
@@ -319,13 +385,40 @@ export default function WallFinishSurface({
             });
 
         }, [
-            material.color,
+            material,
             texture
         ]);
 
-    //--------------------------------------------------
+    //==================================================
+    // CLEANUP
+    //==================================================
+
+    useEffect(() => {
+
+        return () => {
+
+            finishMaterial.dispose();
+
+        };
+
+    }, [
+        finishMaterial
+    ]);
+
+    //==================================================
+    // WAITING FOR MATERIAL
+    //==================================================
+
+    if (
+        !material
+    ) {
+
+        return null;
+    }
+
+    //==================================================
     // ARCH
-    //--------------------------------------------------
+    //==================================================
 
     if (
         piece.kind === "arch" &&
@@ -351,8 +444,14 @@ export default function WallFinishSurface({
                 ]}
 
                 userData={{
-                isWallFinish: true
-                  }}
+                    isWallFinish: true
+                }}
+
+                castShadow={
+                    false
+                }
+
+                receiveShadow
 
                 material={
                     finishMaterial
@@ -363,9 +462,9 @@ export default function WallFinishSurface({
         );
     }
 
-    //--------------------------------------------------
+    //==================================================
     // NORMAL WALL
-    //--------------------------------------------------
+    //==================================================
 
     return (
 
@@ -382,8 +481,14 @@ export default function WallFinishSurface({
             ]}
 
             userData={{
-             isWallFinish: true
+                isWallFinish: true
             }}
+
+            castShadow={
+                false
+            }
+
+            receiveShadow
 
             material={
                 finishMaterial
@@ -392,11 +497,13 @@ export default function WallFinishSurface({
         >
 
             <boxGeometry
+
                 args={[
                     piece.width,
                     piece.height,
                     FINISH_THICKNESS
                 ]}
+
             />
 
         </mesh>
