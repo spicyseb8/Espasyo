@@ -6,7 +6,8 @@ import {
 
 import {
     ExtrudeGeometry,
-    Shape
+    Shape,
+    Vector3
 } from "three";
 
 import useEditor
@@ -26,6 +27,10 @@ import type {
 import {
     solveRegions
 } from "../../engine/regions/RegionSolver";
+
+import {
+    getRegionWallSide
+} from "./WallFinishUtils";
 
 
 interface Props {
@@ -111,27 +116,243 @@ function WallPiece({
 
 
     //==================================================
-    // FIND REGION FOR THIS WALL
-    //==================================================
-    //
-    // Priority:
-    //
-    // 1. Keep the currently selected room if this wall
-    //    belongs to it.
-    //
-    // 2. Otherwise use the first room containing
-    //    this wall.
-    //
-    // This is especially useful for shared walls because
-    // clicking a room first determines which side of the
-    // shared wall the user is working on.
+    // GET PHYSICAL WALL
     //==================================================
 
-    const getRegionForWall =
-        () => {
+    const physicalWall =
+        state.walls.find(
+            wall =>
+                wall.id ===
+                wallId
+        ) ?? null;
+
+
+    //==================================================
+    // DETERMINE CLICKED WALL SIDE
+    //==================================================
+    //
+    // A shared wall belongs to two rooms.
+    //
+    // We determine which physical side of the wall
+    // the user clicked by comparing the pointer hit
+    // point with the wall's center and normal.
+    //
+    // +1 = normal side
+    // -1 = opposite side
+    //==================================================
+
+    const getClickedWallSide =
+        (
+            clickPoint: Vector3
+        ): 1 | -1 | null => {
+
+            if (
+                !physicalWall
+            ) {
+
+                return null;
+            }
+
+
+            const start =
+                physicalWall.start.position;
+
+            const end =
+                physicalWall.end.position;
+
 
             //--------------------------------------------------
-            // Currently selected room
+            // Wall direction
+            //--------------------------------------------------
+
+            const direction =
+                new Vector3()
+                    .subVectors(
+                        end,
+                        start
+                    );
+
+
+            const length =
+                direction.length();
+
+
+            if (
+                length <=
+                0.001
+            ) {
+
+                return null;
+            }
+
+
+            direction.normalize();
+
+
+            //--------------------------------------------------
+            // Same normal convention used by
+            // getRegionWallSide().
+            //--------------------------------------------------
+
+            const normal =
+                new Vector3(
+                    -direction.z,
+                    0,
+                    direction.x
+                ).normalize();
+
+
+            //--------------------------------------------------
+            // Wall center
+            //--------------------------------------------------
+
+            const center =
+                start.clone()
+                    .add(
+                        direction
+                            .clone()
+                            .multiplyScalar(
+                                length * 0.5
+                            )
+                    );
+
+
+            //--------------------------------------------------
+            // Vector from wall center to click point
+            //--------------------------------------------------
+
+            const toClick =
+                clickPoint
+                    .clone()
+                    .sub(
+                        center
+                    );
+
+
+            //--------------------------------------------------
+            // Only use X/Z.
+            //
+            // Y is irrelevant because the wall has height.
+            //--------------------------------------------------
+
+            const sideValue =
+                toClick.x *
+                    normal.x +
+
+                toClick.z *
+                    normal.z;
+
+
+            //--------------------------------------------------
+            // The click may land very close to the center
+            // because of geometry/raycast precision.
+            //--------------------------------------------------
+
+            if (
+                Math.abs(
+                    sideValue
+                ) < 0.0001
+            ) {
+
+                return null;
+            }
+
+
+            return sideValue > 0
+                ? 1
+                : -1;
+        };
+
+
+    //==================================================
+    // FIND REGION FOR CLICKED SIDE
+    //==================================================
+    //
+    // This is the important part for shared walls.
+    //==================================================
+
+    const getRegionForWallClick =
+        (
+            clickPoint: Vector3
+        ) => {
+
+            if (
+                !physicalWall
+            ) {
+
+                return null;
+            }
+
+
+            //--------------------------------------------------
+            // Determine which side was clicked.
+            //--------------------------------------------------
+
+            const clickedSide =
+                getClickedWallSide(
+                    clickPoint
+                );
+
+
+            //--------------------------------------------------
+            // If we can determine the side, find the
+            // region whose interior faces that side.
+            //--------------------------------------------------
+
+            if (
+                clickedSide !== null
+            ) {
+
+                const matchingRegion =
+                    regions.find(
+                        region => {
+
+                            const belongsToRegion =
+                                region.walls.some(
+                                    regionWall =>
+                                        regionWall.id ===
+                                        wallId
+                                );
+
+
+                            if (
+                                !belongsToRegion
+                            ) {
+
+                                return false;
+                            }
+
+
+                            const regionSide =
+                                getRegionWallSide(
+                                    physicalWall,
+                                    region
+                                );
+
+
+                            return (
+                                regionSide ===
+                                clickedSide
+                            );
+                        }
+                    );
+
+
+                if (
+                    matchingRegion
+                ) {
+
+                    return matchingRegion;
+                }
+            }
+
+
+            //--------------------------------------------------
+            // Fallback:
+            //
+            // If the click is too close to the wall center,
+            // preserve the currently selected room if it
+            // owns this wall.
             //--------------------------------------------------
 
             if (
@@ -145,11 +366,12 @@ function WallPiece({
                             state.selectedRegionId
                     );
 
+
                 if (
                     selectedRegion &&
                     selectedRegion.walls.some(
-                        wall =>
-                            wall.id ===
+                        regionWall =>
+                            regionWall.id ===
                             wallId
                     )
                 ) {
@@ -158,22 +380,38 @@ function WallPiece({
                 }
             }
 
+
             //--------------------------------------------------
-            // No suitable selected room.
-            //
-            // Find the first region containing this wall.
+            // Final fallback for a wall belonging to only
+            // one room.
             //--------------------------------------------------
 
-            return (
-                regions.find(
+            const owningRegions =
+                regions.filter(
                     region =>
                         region.walls.some(
-                            wall =>
-                                wall.id ===
+                            regionWall =>
+                                regionWall.id ===
                                 wallId
                         )
-                ) ?? null
-            );
+                );
+
+
+            if (
+                owningRegions.length === 1
+            ) {
+
+                return owningRegions[0];
+            }
+
+
+            //--------------------------------------------------
+            // Shared wall but no reliable side detected.
+            //
+            // Don't guess.
+            //--------------------------------------------------
+
+            return null;
         };
 
 
@@ -193,37 +431,67 @@ function WallPiece({
                 return;
             }
 
+
             e.stopPropagation();
 
-            //--------------------------------------------------
-            // Find the room this wall belongs to.
-            //--------------------------------------------------
-
-            const region =
-                getRegionForWall();
 
             //--------------------------------------------------
-            // Select room first.
-            //
-            // This guarantees DesignPanel has a valid
-            // selectedRegionId.
+            // We need the actual raycast point.
             //--------------------------------------------------
 
             if (
-                region
+                !e.point
             ) {
 
-                dispatch({
-
-                    type:
-                        "SELECT_REGION",
-
-                    payload:
-                        region.id
-
-                });
-
+                return;
             }
+
+
+            const clickPoint =
+                e.point.clone();
+
+
+            //--------------------------------------------------
+            // Determine which room side was clicked.
+            //--------------------------------------------------
+
+            const region =
+                getRegionForWallClick(
+                    clickPoint
+                );
+
+
+            //--------------------------------------------------
+            // If this is a shared wall and we couldn't
+            // safely determine the side, don't switch
+            // the selected room.
+            //--------------------------------------------------
+
+            if (
+                !region
+            ) {
+
+                return;
+            }
+
+
+            //--------------------------------------------------
+            // Select the room side first.
+            //
+            // This is what makes DesignPanel know which
+            // side of the wall is being edited.
+            //--------------------------------------------------
+
+            dispatch({
+
+                type:
+                    "SELECT_REGION",
+
+                payload:
+                    region.id
+
+            });
+
 
             //--------------------------------------------------
             // Then select the wall.
@@ -238,6 +506,7 @@ function WallPiece({
                     wallId
 
             });
+
         };
 
 
@@ -257,7 +526,9 @@ function WallPiece({
                 return;
             }
 
+
             e.stopPropagation();
+
 
             setHovered(
                 true
@@ -274,6 +545,7 @@ function WallPiece({
 
                 return;
             }
+
 
             setHovered(
                 false
@@ -300,7 +572,8 @@ function WallPiece({
 
 
         const radius =
-            openingWidth * 0.5;
+            openingWidth *
+            0.5;
 
 
         const shape =
@@ -308,25 +581,33 @@ function WallPiece({
 
 
         shape.moveTo(
-            -openingWidth * 0.5,
+            -openingWidth *
+                0.5,
+
             openingHeight
         );
 
 
         shape.lineTo(
-            -openingWidth * 0.5,
+            -openingWidth *
+                0.5,
+
             piece.height
         );
 
 
         shape.lineTo(
-            openingWidth * 0.5,
+            openingWidth *
+                0.5,
+
             piece.height
         );
 
 
         shape.lineTo(
-            openingWidth * 0.5,
+            openingWidth *
+                0.5,
+
             openingHeight
         );
 
@@ -368,6 +649,7 @@ function WallPiece({
                 x,
                 y
             );
+
         }
 
 
@@ -491,6 +773,7 @@ function WallPiece({
                 }
 
             </group>
+
         );
 
     }
@@ -551,7 +834,6 @@ function WallPiece({
                     ]}
 
                 />
-
 
                 <meshStandardMaterial
 

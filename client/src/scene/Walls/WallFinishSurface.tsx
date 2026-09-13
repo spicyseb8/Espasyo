@@ -33,21 +33,28 @@ import type {
     WallFinishSide
 } from "./WallFinishUtils";
 
+
 interface Props {
 
-    piece: WallPiece;
+    piece:
+        WallPiece;
 
-    finish: WallFinishSide;
+    finish:
+        WallFinishSide;
 }
+
 
 const FINISH_THICKNESS =
     0.004;
 
+
 const FINISH_GAP =
     0.002;
 
+
 const DEFAULT_TEXTURE =
     "/uploads/materials/walls/white-paint.jpg";
+
 
 export default function WallFinishSurface({
     piece,
@@ -68,6 +75,7 @@ export default function WallFinishSurface({
             ) ?? null
     );
 
+
     //==================================================
     // LOAD WALL MATERIAL DATA
     //==================================================
@@ -77,6 +85,7 @@ export default function WallFinishSurface({
         let cancelled =
             false;
 
+
         async function loadMaterial() {
 
             try {
@@ -84,11 +93,14 @@ export default function WallFinishSurface({
                 const materials =
                     await getWallMaterials();
 
+
                 if (
                     cancelled
                 ) {
+
                     return;
                 }
+
 
                 const found =
                     materials.find(
@@ -96,6 +108,7 @@ export default function WallFinishSurface({
                             item.id ===
                             finish.materialId
                     ) ?? null;
+
 
                 setMaterial(
                     found
@@ -107,6 +120,7 @@ export default function WallFinishSurface({
                     "Failed to load wall material:",
                     error
                 );
+
 
                 if (
                     !cancelled
@@ -120,7 +134,9 @@ export default function WallFinishSurface({
             }
         }
 
+
         loadMaterial();
+
 
         return () => {
 
@@ -133,6 +149,7 @@ export default function WallFinishSurface({
         finish.materialId
     ]);
 
+
     //==================================================
     // TEXTURE
     //==================================================
@@ -141,10 +158,12 @@ export default function WallFinishSurface({
         material?.texture ??
         DEFAULT_TEXTURE;
 
+
     const texture =
         useTexture(
             textureUrl
         );
+
 
     //==================================================
     // CONFIGURE TEXTURE
@@ -159,14 +178,17 @@ export default function WallFinishSurface({
             RepeatWrapping;
 
         texture.repeat.set(
+
             Math.max(
                 1,
                 piece.width
             ),
+
             Math.max(
                 1,
                 piece.height
             )
+
         );
 
         texture.needsUpdate =
@@ -178,6 +200,7 @@ export default function WallFinishSurface({
         piece.height
     ]);
 
+
     //==================================================
     // WALL NORMAL
     //==================================================
@@ -186,18 +209,23 @@ export default function WallFinishSurface({
         useMemo(() => {
 
             return new Vector3(
+
                 -Math.sin(
                     piece.rotationY
                 ),
+
                 0,
+
                 Math.cos(
                     piece.rotationY
                 )
+
             ).normalize();
 
         }, [
             piece.rotationY
         ]);
+
 
     //==================================================
     // FINISH POSITION
@@ -209,9 +237,11 @@ export default function WallFinishSurface({
             return piece.position
                 .clone()
                 .add(
+
                     normal
                         .clone()
                         .multiplyScalar(
+
                             finish.side *
                             (
                                 piece.thickness *
@@ -222,7 +252,9 @@ export default function WallFinishSurface({
                                 FINISH_THICKNESS *
                                 0.5
                             )
+
                         )
+
                 );
 
         }, [
@@ -231,6 +263,7 @@ export default function WallFinishSurface({
             finish.side,
             normal
         ]);
+
 
     //==================================================
     // ARCH GEOMETRY
@@ -247,41 +280,59 @@ export default function WallFinishSurface({
                 return null;
             }
 
+
             const openingWidth =
                 piece.arch.openingWidth;
 
+
             const openingHeight =
                 piece.arch.openingHeight;
+
 
             const radius =
                 openingWidth *
                 0.5;
 
+
             const shape =
                 new Shape();
 
+
             shape.moveTo(
-                -openingWidth * 0.5,
+                -openingWidth *
+                    0.5,
+
                 openingHeight
             );
 
+
             shape.lineTo(
-                -openingWidth * 0.5,
+                -openingWidth *
+                    0.5,
+
                 piece.height
             );
 
+
             shape.lineTo(
-                openingWidth * 0.5,
+                openingWidth *
+                    0.5,
+
                 piece.height
             );
 
+
             shape.lineTo(
-                openingWidth * 0.5,
+                openingWidth *
+                    0.5,
+
                 openingHeight
             );
+
 
             const segments =
                 24;
+
 
             for (
                 let i = segments;
@@ -296,11 +347,13 @@ export default function WallFinishSurface({
                         segments
                     );
 
+
                 const x =
                     Math.cos(
                         angle
                     ) *
                     radius;
+
 
                 const y =
                     openingHeight +
@@ -309,18 +362,22 @@ export default function WallFinishSurface({
                     ) *
                     radius;
 
+
                 shape.lineTo(
                     x,
                     y
                 );
             }
 
+
             shape.closePath();
+
 
             const geometry =
                 new ExtrudeGeometry(
                     shape,
                     {
+
                         depth:
                             FINISH_THICKNESS,
 
@@ -329,10 +386,13 @@ export default function WallFinishSurface({
 
                         steps:
                             1
+
                     }
                 );
 
+
             geometry.center();
+
 
             return geometry;
 
@@ -341,6 +401,7 @@ export default function WallFinishSurface({
             piece.arch,
             piece.height
         ]);
+
 
     //==================================================
     // MATERIAL
@@ -353,6 +414,7 @@ export default function WallFinishSurface({
                 Boolean(
                     material?.texture
                 );
+
 
             return new MeshStandardMaterial({
 
@@ -389,6 +451,7 @@ export default function WallFinishSurface({
             texture
         ]);
 
+
     //==================================================
     // CLEANUP
     //==================================================
@@ -405,6 +468,7 @@ export default function WallFinishSurface({
         finishMaterial
     ]);
 
+
     //==================================================
     // WAITING FOR MATERIAL
     //==================================================
@@ -415,6 +479,7 @@ export default function WallFinishSurface({
 
         return null;
     }
+
 
     //==================================================
     // ARCH
@@ -453,6 +518,15 @@ export default function WallFinishSurface({
 
                 receiveShadow
 
+                //==================================================
+                // IMPORTANT:
+                // Wall finish should NOT capture mouse clicks.
+                // This allows the actual WallPiece underneath to
+                // receive the click.
+                //==================================================
+
+                raycast={() => {}}
+
                 material={
                     finishMaterial
                 }
@@ -461,6 +535,7 @@ export default function WallFinishSurface({
 
         );
     }
+
 
     //==================================================
     // NORMAL WALL
@@ -489,6 +564,13 @@ export default function WallFinishSurface({
             }
 
             receiveShadow
+
+            //==================================================
+            // IMPORTANT:
+            // Wall finish should NOT capture mouse clicks.
+            //==================================================
+
+            raycast={() => {}}
 
             material={
                 finishMaterial
