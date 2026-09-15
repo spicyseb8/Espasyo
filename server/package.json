@@ -6,7 +6,9 @@
   "scripts": {
     "verify-superadmin": "node src/create-superadmin.js",
     "seed-test-data": "node src/seed-test-data.js",
+    "inspect:firestore": "node src/inspect-firestore.js",
     "seed:assets": "node src/seed-assets.js"
+    
   },
   "dependencies": {
     "firebase-admin": "^13.10.0"

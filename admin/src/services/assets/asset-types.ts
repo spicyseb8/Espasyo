@@ -1,7 +1,7 @@
 export type AssetType =
-  | "furniture"
+  | "floor"
   | "wall"
-  | "floor";
+  | "furniture";
 
 export type AssetStatus =
   | "available"
@@ -9,31 +9,29 @@ export type AssetStatus =
 
 export interface Asset {
   id: string;
-  name: string;
 
+  name: string;
   asset_type: AssetType;
   category: string;
   price: number;
 
-  asset_status: AssetStatus;
+  asset_status?: AssetStatus | null;
 
-  // Furniture / Wall
-  thumbnail_path?: string;
-  model_path?: string;
+  // Firebase Storage paths
+  storage_path?: string | null;
+  thumbnail_path?: string | null;
 
-  // Floor material files
-  storage_path?: string;
-  ao_path?: string;
-  diffuse_path?: string;
-  normal_path?: string;
-  rough_path?: string;
+  // Optional texture maps
+  ao_path?: string | null;
+  diffuse_path?: string | null;
+  normal_path?: string | null;
+  rough_path?: string | null;
 
   // Optional material properties
-  color?: string;
-  roughness?: number;
-  metalness?: number;
+  color?: string | null;
+  roughness?: number | null;
+  metalness?: number | null;
 
-  // Firestore timestamps
   created_at?: unknown;
   updated_at?: unknown;
 }

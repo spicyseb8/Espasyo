@@ -4,6 +4,7 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import AssetCard from "@/components/ui/assert-card";
+import PreviewScene from "@/components/asset-preview/PreviewScene";
 import { getFurnitureAssets } from "@/services/assets/furniture";
 import { getWallAssets } from "@/services/assets/walls";
 import { getFloorAssets } from "@/services/assets/floors";
@@ -74,7 +75,7 @@ export default function AssetLibrary({ type, onTypeChange }: AssetLibraryProps) 
   const handleSearch = (value: string) => { setSearch(value); setCurrentPage(1); };
   const handleCategoryChange = (value: string | null) => { if (value === null) return; setCategoryFilter(value); setCurrentPage(1); };
   const goToPage = (page: number) => { if (page >= 1 && page <= totalPages) setCurrentPage(page); };
-  const handleTypeChange = (value: AssetType) => { setSearch(""); setCategoryFilter("all"); setCurrentPage(1); setDetailPage(1); onTypeChange?.(value); };
+  const OnTypeChange = (value: AssetType) => { setSearch(""); setCategoryFilter("all"); setCurrentPage(1); setDetailPage(1); onTypeChange?.(value); };
 
   const handleSelectAsset = (asset: Asset) => {
     setSelectedAsset(asset); setSaveError(null); setEditName(asset.name); setEditPrice(String(asset.price)); setEditStatus(asset.asset_status ?? "available"); setDetailPage(1);
@@ -106,10 +107,10 @@ export default function AssetLibrary({ type, onTypeChange }: AssetLibraryProps) 
     finally { setSaving(false); }
   };
 
-  const getAssetImage = (asset: Asset) => {
+  const getAssetImage = (asset: Asset): string | null => {
     if (asset.thumbnail_path) return asset.thumbnail_path;
     if (asset.color) { const encodedColor = asset.color.replace("#", "%23"); return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect width='100%25' height='100%25' fill='${encodedColor}'/%3E%3C/svg%3E`; }
-    return "";
+    return null;
   };
 
   return (
@@ -131,19 +132,19 @@ export default function AssetLibrary({ type, onTypeChange }: AssetLibraryProps) 
         </div>
       </div>
       <div className="flex flex-1 overflow-hidden">
-        <div className="w-72 shrink-0 overflow-hidden p-4">
+        <div className="w-72 shrink-0 overflow-hidden p-2">
           {!selectedAsset ? (
             <div className="flex h-56 items-center justify-center rounded-2xl border border-dashed border-border text-sm text-muted-foreground">Select an asset to preview</div>
           ) : detailPage === 1 ? (
             <div className="flex h-full flex-col">
-              <div className="flex h-56 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-muted">
-                {getAssetImage(selectedAsset) ? (<img src={getAssetImage(selectedAsset)} alt={selectedAsset.name} className="h-full w-full object-cover" />) : (<span className="text-sm text-muted-foreground">No preview available</span>)}
+              <div className="h-56 shrink-0 overflow-hidden rounded-2xl bg-muted">
+                <PreviewScene asset={selectedAsset} />
               </div>
               <div className="mt-4"><h3 className="text-base font-semibold">{selectedAsset.name}</h3></div>
               <div className="mt-3"><p className="text-xs text-muted-foreground">Price</p><p className="text-sm font-semibold">${selectedAsset.price}</p></div>
               <div className="mt-3"><p className="text-xs text-muted-foreground">Category</p><span className="mt-1 inline-flex rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground">{selectedAsset.category}</span></div>
               <div className="mt-3"><p className="text-xs text-muted-foreground">Status</p><p className="mt-1 text-sm">{selectedAsset.asset_status === "not_available" ? "Not Available" : "Available"}</p></div>
-              <div className="mt-auto pt-4"><button type="button" onClick={handleNext} className="w-full rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background transition-opacity hover:opacity-90">Next</button></div>
+              <div className="mt-auto pt-4"><button type="button" onClick={handleNext} className="w-full rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background transition-opacity hover:opacity-90">Edit</button></div>
             </div>
           ) : (
             <div className="flex h-full flex-col">

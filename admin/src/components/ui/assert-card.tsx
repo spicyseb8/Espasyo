@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
 interface AssetCardProps {
-  image: string;
+  image?: string | null;
   title: string;
   categories: string[]; // only the first 1-2 are shown
   className?: string;
@@ -23,18 +23,23 @@ export default function AssetCard({
       )}
     >
       <div className="overflow-hidden rounded-xl bg-neutral-100">
-        <img
-          src={image}
-          alt={title}
-          className="h-44 w-full object-cover"
-        />
+        {image ? (
+          <img
+            src={image}
+            alt={title}
+            className="h-44 w-full object-cover"
+          />
+        ) : (
+          <div className="flex h-44 w-full items-center justify-center">
+            <span className="text-xs text-neutral-400">No preview</span>
+          </div>
+        )}
       </div>
 
       <div className="mt-2.5 flex items-center justify-between px-1.5">
         <h3 className="text-sm font-semibold text-neutral-900">
           {title}
         </h3>
-
       </div>
 
       {visibleCategories.length > 0 && (

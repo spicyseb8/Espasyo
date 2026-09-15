@@ -1,0 +1,7 @@
+{
+  "scripts": {
+    "dev": "concurrently \"npm run dev:admin\" \"npm run dev:client\"",
+    "dev:admin": "npm --prefix admin run dev",
+    "dev:client": "npm --prefix client run dev"
+  }
+}
