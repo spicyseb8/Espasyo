@@ -1,14 +1,18 @@
 import {
-    useMemo
+    useMemo,
+    useState
 } from "react";
 
 import {
+    useCursor,
     useGLTF
 } from "@react-three/drei";
 
 import {
     Mesh,
     Material,
+    MeshPhysicalMaterial,
+    MeshStandardMaterial,
     Object3D
 } from "three";
 
@@ -28,6 +32,9 @@ import {
     buildInteraction
 } from "../Build/BuildInteraction";
 
+import useEditor
+    from "../../context/editor/useEditor";
+
 
 //==================================================
 // PROPS
@@ -35,21 +42,34 @@ import {
 
 interface Props {
 
-    window: WindowType;
+    window:
+        WindowType;
 
 }
 
 
 //==================================================
-// Check whether a material is likely glass
+// HOVER SETTINGS
+//==================================================
+
+const HOVER_COLOR =
+    "#63B8FF";
+
+const HOVER_EMISSIVE_INTENSITY =
+    0.35;
+
+
+//==================================================
+// CHECK WHETHER MATERIAL IS GLASS
 //==================================================
 
 function isGlassMaterial(
-    material: Material
+    material:
+        Material
 ): boolean {
 
     //--------------------------------------------------
-    // Transparent material
+    // Transparent
     //--------------------------------------------------
 
     if (
@@ -59,28 +79,34 @@ function isGlassMaterial(
         return true;
     }
 
+
     //--------------------------------------------------
-    // Very low opacity
+    // Low opacity
     //--------------------------------------------------
 
     if (
-        typeof material.opacity === "number" &&
-        material.opacity < 0.95
+        typeof material.opacity ===
+            "number" &&
+
+        material.opacity <
+            0.95
     ) {
 
         return true;
     }
+
 
     return false;
 }
 
 
 //==================================================
-// Configure window shadows
+// CONFIGURE WINDOW SHADOWS
 //==================================================
 
 function configureWindowShadows(
-    model: Object3D
+    model:
+        Object3D
 ): void {
 
     model.traverse(
@@ -92,6 +118,7 @@ function configureWindowShadows(
 
                 return;
             }
+
 
             //--------------------------------------------------
             // Multiple materials
@@ -111,10 +138,6 @@ function configureWindowShadows(
                             )
                     );
 
-                //--------------------------------------------------
-                // If this mesh contains glass material,
-                // don't let the whole mesh cast a shadow.
-                //--------------------------------------------------
 
                 child.castShadow =
                     !hasGlass;
@@ -124,6 +147,7 @@ function configureWindowShadows(
 
                 return;
             }
+
 
             //--------------------------------------------------
             // Single material
@@ -137,21 +161,142 @@ function configureWindowShadows(
                     material
                 );
 
-            //--------------------------------------------------
-            // Opaque frame/divisions cast shadows.
-            //--------------------------------------------------
 
             child.castShadow =
                 !glass;
 
-            //--------------------------------------------------
-            // Everything can receive shadows.
-            //--------------------------------------------------
-
             child.receiveShadow =
                 true;
+
         }
     );
+}
+
+
+//==================================================
+// WINDOW HIGHLIGHT
+//==================================================
+
+function setWindowHighlight(
+
+    object:
+        Object3D,
+
+    highlighted:
+        boolean
+
+) {
+
+    object.traverse(
+        child => {
+
+            if (
+                !(child instanceof Mesh)
+            ) {
+
+                return;
+            }
+
+
+            const materials =
+                Array.isArray(
+                    child.material
+                )
+                    ? child.material
+                    : [
+                        child.material
+                    ];
+
+
+            materials.forEach(
+                material => {
+
+                    //--------------------------------------------------
+                    // Do not strongly highlight glass.
+                    //--------------------------------------------------
+
+                    if (
+                        isGlassMaterial(
+                            material
+                        )
+                    ) {
+
+                        return;
+                    }
+
+
+                    const standard =
+                        material as
+                            | MeshStandardMaterial
+                            | MeshPhysicalMaterial;
+
+
+                    //--------------------------------------------------
+                    // Standard / Physical
+                    //--------------------------------------------------
+
+                    if (
+                        "emissive" in standard &&
+                        standard.emissive
+                    ) {
+
+                        if (
+                            highlighted
+                        ) {
+
+                            standard.emissive.set(
+                                HOVER_COLOR
+                            );
+
+                            standard.emissiveIntensity =
+                                HOVER_EMISSIVE_INTENSITY;
+
+                        }
+
+                        else {
+
+                            standard.emissive.set(
+                                0x000000
+                            );
+
+                            standard.emissiveIntensity =
+                                0;
+
+                        }
+
+                        return;
+                    }
+
+
+                    //--------------------------------------------------
+                    // Fallback
+                    //--------------------------------------------------
+
+                    if (
+                        "color" in material &&
+                        material.color
+                    ) {
+
+                        if (
+                            highlighted
+                        ) {
+
+                            material.color.offsetHSL(
+                                0,
+                                0,
+                                0.12
+                            );
+
+                        }
+
+                    }
+
+                }
+            );
+
+        }
+    );
+
 }
 
 
@@ -163,15 +308,46 @@ export default function Window({
     window
 }: Props) {
 
+    const {
+        state
+    } = useEditor();
+
+
+    const [
+        hovered,
+        setHovered
+    ] = useState(
+        false
+    );
+
+
+    //==================================================
+    // CURSOR
+    //==================================================
+
+    useCursor(
+        hovered &&
+        !state.walkthroughMode,
+
+        'url("/cursors/hand.png") 16 16, pointer'
+    );
+
+
+    //--------------------------------------------------
+    // Asset
+    //--------------------------------------------------
+
     const asset =
         findAsset(
             window.assetId
         );
 
+
     //--------------------------------------------------
     // GLTF
+    //--------------------------------------------------
     //
-    // Always call the hook before conditional return.
+    // Always call hook before conditional return.
     //--------------------------------------------------
 
     const {
@@ -179,6 +355,7 @@ export default function Window({
     } = useGLTF(
         asset?.model ?? ""
     );
+
 
     //--------------------------------------------------
     // Normalize window model
@@ -195,10 +372,64 @@ export default function Window({
                     return null;
                 }
 
-                return normalizeWindowModel(
-                    scene,
-                    asset
-                );
+
+                const result =
+                    normalizeWindowModel(
+                        scene,
+                        asset
+                    );
+
+
+                //--------------------------------------------------
+                // Clone materials so hover does not affect
+                // another window using the same model.
+                //--------------------------------------------------
+
+                if (
+                    result?.model
+                ) {
+
+                    result.model.traverse(
+                        child => {
+
+                            if (
+                                !(child instanceof Mesh)
+                            ) {
+
+                                return;
+                            }
+
+
+                            if (
+                                Array.isArray(
+                                    child.material
+                                )
+                            ) {
+
+                                child.material =
+                                    child.material.map(
+                                        material =>
+                                            material.clone()
+                                    );
+
+                            }
+
+                            else if (
+                                child.material
+                            ) {
+
+                                child.material =
+                                    child.material.clone();
+
+                            }
+
+                        }
+                    );
+
+                }
+
+
+                return result;
 
             },
             [
@@ -206,6 +437,7 @@ export default function Window({
                 asset
             ]
         );
+
 
     //--------------------------------------------------
     // Configure shadows
@@ -221,6 +453,7 @@ export default function Window({
                 return;
             }
 
+
             configureWindowShadows(
                 normalized.model
             );
@@ -230,6 +463,7 @@ export default function Window({
             normalized
         ]
     );
+
 
     //--------------------------------------------------
     // No asset / normalized model
@@ -243,8 +477,9 @@ export default function Window({
         return null;
     }
 
+
     //--------------------------------------------------
-    // Hide only the window currently being moved
+    // Hide only window currently being moved
     //--------------------------------------------------
 
     const isMoving =
@@ -258,12 +493,14 @@ export default function Window({
             .id ===
             window.id;
 
+
     if (
         isMoving
     ) {
 
         return null;
     }
+
 
     //--------------------------------------------------
     // Final rotation
@@ -275,6 +512,69 @@ export default function Window({
             asset.rotationOffsetY ??
             0
         );
+
+
+    //--------------------------------------------------
+    // Hover enter
+    //--------------------------------------------------
+
+    const handlePointerEnter =
+        (event: any) => {
+
+            if (
+                state.walkthroughMode
+            ) {
+
+                return;
+            }
+
+
+            event.stopPropagation();
+
+
+            setHovered(
+                true
+            );
+
+
+            setWindowHighlight(
+                normalized.model,
+                true
+            );
+
+        };
+
+
+    //--------------------------------------------------
+    // Hover leave
+    //--------------------------------------------------
+
+    const handlePointerLeave =
+        (event: any) => {
+
+            if (
+                state.walkthroughMode
+            ) {
+
+                return;
+            }
+
+
+            event.stopPropagation();
+
+
+            setHovered(
+                false
+            );
+
+
+            setWindowHighlight(
+                normalized.model,
+                false
+            );
+
+        };
+
 
     //--------------------------------------------------
     // Render
@@ -300,6 +600,14 @@ export default function Window({
                 finalRotationY,
                 0
             ]}
+
+            onPointerEnter={
+                handlePointerEnter
+            }
+
+            onPointerLeave={
+                handlePointerLeave
+            }
 
         >
 

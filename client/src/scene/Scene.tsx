@@ -63,108 +63,59 @@ import useEditor
     from "../context/editor/useEditor";
 
 
-export default function Scene() {
+interface SceneProps {
+    onSpawnConfirmed: (confirmed: boolean) => void;
+}
 
-    const {
-        state
-    } = useEditor();
+export default function Scene({
+    onSpawnConfirmed,
+}: SceneProps) {
+    const { state } = useEditor();
 
     return (
-
         <Canvas
-
-            /*==================================================
-                ENABLE THREE.JS SHADOWS
-            ==================================================*/
-
             shadows
-
             camera={{
-                position: [
-                    0,
-                    20,
-                    0
-                ],
-
-                fov: 50
+                position: [8, 8, 8],
+                fov: 50,
             }}
-
+            style={{
+                width: "100%",
+                height: "100%",
+            }}
         >
-
-            {/*==================================================
-                BASIC SCENE
-            ==================================================*/}
-
             <Lights />
-
             <Grid />
-
             <BlueprintScene />
-
             <Camera />
 
-
-            {/*==================================================
-                ACTUAL SCENE OBJECTS
-
-                These stay visible during walkthrough.
-            ==================================================*/}
-
             <Floors />
-
             <Walls />
-
             <Doors />
-
             <Windows />
-
             <FurnitureScene />
 
-
-            {/*==================================================
-                NORMAL EDITOR INTERACTIONS
-
-                Completely disabled during walkthrough.
-            ==================================================*/}
-
             {!state.walkthroughMode && (
-
                 <>
-
                     <SelectionToolbar />
-
                     <ClearSelection />
-
                     <BuildInteractionEvents />
-
                     <WallMeasurements />
-
                     <AssetPreview />
-
                     <WallDrawer />
-
                     <FurniturePreview />
-
                     <FurnitureInteractionEvents />
-
                     <SelectionInteractionEvents />
-
                 </>
-
             )}
-
-
-            {/*==================================================
-                WALKTHROUGH MODE
-            ==================================================*/}
 
             {state.walkthroughMode && (
-
-                <WalkthroughController />
-
+                <WalkthroughController
+                    onSpawnConfirmed={
+                        onSpawnConfirmed
+                    }
+                />
             )}
-
         </Canvas>
-
     );
 }

@@ -5,6 +5,10 @@ import {
 } from "react";
 
 import {
+    Edges
+} from "@react-three/drei";
+
+import {
     ExtrudeGeometry,
     Shape,
     Vector3
@@ -130,16 +134,6 @@ function WallPiece({
     //==================================================
     // DETERMINE CLICKED WALL SIDE
     //==================================================
-    //
-    // A shared wall belongs to two rooms.
-    //
-    // We determine which physical side of the wall
-    // the user clicked by comparing the pointer hit
-    // point with the wall's center and normal.
-    //
-    // +1 = normal side
-    // -1 = opposite side
-    //==================================================
 
     const getClickedWallSide =
         (
@@ -151,6 +145,7 @@ function WallPiece({
             ) {
 
                 return null;
+
             }
 
 
@@ -183,6 +178,7 @@ function WallPiece({
             ) {
 
                 return null;
+
             }
 
 
@@ -231,8 +227,6 @@ function WallPiece({
 
             //--------------------------------------------------
             // Only use X/Z.
-            //
-            // Y is irrelevant because the wall has height.
             //--------------------------------------------------
 
             const sideValue =
@@ -244,8 +238,7 @@ function WallPiece({
 
 
             //--------------------------------------------------
-            // The click may land very close to the center
-            // because of geometry/raycast precision.
+            // Click too close to center
             //--------------------------------------------------
 
             if (
@@ -255,20 +248,19 @@ function WallPiece({
             ) {
 
                 return null;
+
             }
 
 
             return sideValue > 0
                 ? 1
                 : -1;
+
         };
 
 
     //==================================================
     // FIND REGION FOR CLICKED SIDE
-    //==================================================
-    //
-    // This is the important part for shared walls.
     //==================================================
 
     const getRegionForWallClick =
@@ -281,11 +273,12 @@ function WallPiece({
             ) {
 
                 return null;
+
             }
 
 
             //--------------------------------------------------
-            // Determine which side was clicked.
+            // Determine clicked side
             //--------------------------------------------------
 
             const clickedSide =
@@ -295,8 +288,7 @@ function WallPiece({
 
 
             //--------------------------------------------------
-            // If we can determine the side, find the
-            // region whose interior faces that side.
+            // Find matching room side
             //--------------------------------------------------
 
             if (
@@ -320,6 +312,7 @@ function WallPiece({
                             ) {
 
                                 return false;
+
                             }
 
 
@@ -334,6 +327,7 @@ function WallPiece({
                                 regionSide ===
                                 clickedSide
                             );
+
                         }
                     );
 
@@ -343,16 +337,15 @@ function WallPiece({
                 ) {
 
                     return matchingRegion;
+
                 }
+
             }
 
 
             //--------------------------------------------------
             // Fallback:
-            //
-            // If the click is too close to the wall center,
-            // preserve the currently selected room if it
-            // owns this wall.
+            // preserve selected room if it owns wall
             //--------------------------------------------------
 
             if (
@@ -377,13 +370,15 @@ function WallPiece({
                 ) {
 
                     return selectedRegion;
+
                 }
+
             }
 
 
             //--------------------------------------------------
-            // Final fallback for a wall belonging to only
-            // one room.
+            // Final fallback:
+            // sole owning region
             //--------------------------------------------------
 
             const owningRegions =
@@ -402,16 +397,16 @@ function WallPiece({
             ) {
 
                 return owningRegions[0];
+
             }
 
 
             //--------------------------------------------------
-            // Shared wall but no reliable side detected.
-            //
-            // Don't guess.
+            // Shared wall unresolved
             //--------------------------------------------------
 
             return null;
+
         };
 
 
@@ -429,6 +424,7 @@ function WallPiece({
             ) {
 
                 return;
+
             }
 
 
@@ -436,7 +432,7 @@ function WallPiece({
 
 
             //--------------------------------------------------
-            // We need the actual raycast point.
+            // We need actual raycast point
             //--------------------------------------------------
 
             if (
@@ -444,6 +440,7 @@ function WallPiece({
             ) {
 
                 return;
+
             }
 
 
@@ -452,7 +449,7 @@ function WallPiece({
 
 
             //--------------------------------------------------
-            // Determine which room side was clicked.
+            // Determine room side
             //--------------------------------------------------
 
             const region =
@@ -462,9 +459,7 @@ function WallPiece({
 
 
             //--------------------------------------------------
-            // If this is a shared wall and we couldn't
-            // safely determine the side, don't switch
-            // the selected room.
+            // Shared wall with no reliable side
             //--------------------------------------------------
 
             if (
@@ -472,14 +467,12 @@ function WallPiece({
             ) {
 
                 return;
+
             }
 
 
             //--------------------------------------------------
-            // Select the room side first.
-            //
-            // This is what makes DesignPanel know which
-            // side of the wall is being edited.
+            // Select room
             //--------------------------------------------------
 
             dispatch({
@@ -494,7 +487,7 @@ function WallPiece({
 
 
             //--------------------------------------------------
-            // Then select the wall.
+            // Select wall
             //--------------------------------------------------
 
             dispatch({
@@ -524,6 +517,7 @@ function WallPiece({
             ) {
 
                 return;
+
             }
 
 
@@ -533,6 +527,7 @@ function WallPiece({
             setHovered(
                 true
             );
+
         };
 
 
@@ -544,12 +539,14 @@ function WallPiece({
             ) {
 
                 return;
+
             }
 
 
             setHovered(
                 false
             );
+
         };
 
 
@@ -581,34 +578,42 @@ function WallPiece({
 
 
         shape.moveTo(
+
             -openingWidth *
                 0.5,
 
             openingHeight
+
         );
 
 
         shape.lineTo(
+
             -openingWidth *
                 0.5,
 
             piece.height
+
         );
 
 
         shape.lineTo(
+
             openingWidth *
                 0.5,
 
             piece.height
+
         );
 
 
         shape.lineTo(
+
             openingWidth *
                 0.5,
 
             openingHeight
+
         );
 
 
@@ -741,6 +746,22 @@ function WallPiece({
 
                     />
 
+                    {/* ======================================
+                        WALL OUTLINE
+                    ====================================== */}
+
+                    <Edges
+
+                        threshold={
+                            15
+                        }
+
+                        color={
+                            "#252525"
+                        }
+
+                    />
+
                 </mesh>
 
 
@@ -853,6 +874,22 @@ function WallPiece({
 
                 />
 
+                {/* ==========================================
+                    WALL OUTLINE
+                ========================================== */}
+
+                <Edges
+
+                    threshold={
+                        15
+                    }
+
+                    color={
+                        "#252525"
+                    }
+
+                />
+
             </mesh>
 
 
@@ -885,7 +922,9 @@ function WallPiece({
             }
 
         </group>
+
     );
+
 }
 
 
