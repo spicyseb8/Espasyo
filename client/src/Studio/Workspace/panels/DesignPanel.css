@@ -3,18 +3,47 @@
    Matches Build / Floor Plan visual style
    ========================================================== */
 
+/* ==========================================================
+   DESIGN PANEL
+   The outer floating background is provided by Workspace.
+   Inner MaterialSection cards stay white.
+   ========================================================== */
+
 .design-panel {
-    display: flex;
 
-    flex-direction: column;
+    display:
+        flex;
 
-    gap: 12px;
+    flex-direction:
+        column;
 
-    padding: 20px;
+    gap:
+        12px;
 
-    box-sizing: border-box;
+    padding:
+        20px;
 
-    width: 100%;
+    box-sizing:
+        border-box;
+
+    width:
+        100%;
+
+    /* IMPORTANT:
+       Do not create another outer card here.
+    */
+
+    background:
+        transparent;
+
+    border:
+        0;
+
+    border-radius:
+        0;
+
+    box-shadow:
+        none;
 }
 
 
@@ -23,24 +52,34 @@
    ========================================================== */
 
 .design-panel-tabs {
-    display: flex;
 
-    gap: 8px;
+    display:
+        flex;
 
-    width: 100%;
+    gap:
+        8px;
+
+    width:
+        100%;
 }
 
 .design-panel-tabs button {
-    flex: 1;
 
-    min-height: 38px;
+    flex:
+        1;
 
-    padding: 8px 12px;
+    min-height:
+        38px;
+
+    padding:
+        8px 12px;
 
     border:
-        1px solid var(--ws-border);
+        1px solid
+        var(--ws-border);
 
-    border-radius: 10px;
+    border-radius:
+        10px;
 
     background:
         var(--ws-input-bg);
@@ -64,6 +103,7 @@
 }
 
 .design-panel-tabs button:hover {
+
     background:
         #f5f5f5;
 
@@ -72,6 +112,7 @@
 }
 
 .design-panel-tabs button.active {
+
     border-color:
         var(--ws-accent);
 
@@ -88,16 +129,22 @@
    ========================================================== */
 
 .design-panel-group {
-    width: 100%;
 
-    box-sizing: border-box;
+    width:
+        100%;
 
-    padding: 14px;
+    box-sizing:
+        border-box;
+
+    padding:
+        14px;
 
     border:
-        1px solid var(--ws-border);
+        1px solid
+        var(--ws-border);
 
-    border-radius: 12px;
+    border-radius:
+        12px;
 
     background:
         #ffffff;
@@ -112,6 +159,7 @@
    ========================================================== */
 
 .design-panel-group h3 {
+
     margin:
         0 0 12px;
 
@@ -137,6 +185,7 @@
    ========================================================== */
 
 .design-panel-apply-all {
+
     display:
         flex;
 
@@ -160,6 +209,7 @@
 }
 
 .design-panel-apply-all:hover {
+
     color:
         var(--ws-text);
 }
@@ -170,6 +220,7 @@
    ========================================================== */
 
 .design-panel-apply-btn {
+
     width:
         100%;
 
@@ -219,16 +270,19 @@
 }
 
 .design-panel-apply-btn:hover:not(:disabled) {
+
     background:
         #f58a30;
 }
 
 .design-panel-apply-btn:active:not(:disabled) {
+
     transform:
         translateY(1px);
 }
 
 .design-panel-apply-btn:disabled {
+
     opacity:
         .5;
 
@@ -243,11 +297,13 @@
 
 .design-panel input:disabled,
 .design-panel button:disabled {
+
     cursor:
         not-allowed;
 }
 
 .design-panel input:disabled {
+
     opacity:
         .55;
 }
