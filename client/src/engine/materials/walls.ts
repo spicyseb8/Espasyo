@@ -13,11 +13,11 @@ import {
 import {
     db,
     storage
-} from "../firebase/firebase";
+} from "../../firebase/firebase";
 
 import type {
     Material
-} from "../engine/materials/MaterialTypes";
+} from "./MaterialTypes";
 
 //==================================================
 // FIREBASE WALL ASSET

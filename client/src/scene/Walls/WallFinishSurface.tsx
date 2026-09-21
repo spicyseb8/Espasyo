@@ -27,7 +27,7 @@ import type {
 import {
     findCachedWallMaterial,
     getWallMaterials
-} from "../../assets/walls";
+} from "../../engine/materials/walls";
 
 import type {
     WallFinishSide

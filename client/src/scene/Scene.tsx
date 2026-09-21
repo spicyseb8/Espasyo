@@ -1,6 +1,4 @@
-import {
-    Canvas
-} from "@react-three/fiber";
+import { Canvas } from "@react-three/fiber";
 
 import Camera
     from "./Camera";
@@ -25,6 +23,9 @@ import ClearSelection
 
 import Floors
     from "./Floors/Floors";
+
+import Roof
+    from "./Roof/Roof";
 
 import AssetPreview
     from "./Build/AssetPreview";
@@ -64,51 +65,112 @@ import useEditor
 
 
 interface SceneProps {
-    onSpawnConfirmed: (confirmed: boolean) => void;
+    onSpawnConfirmed: (
+        confirmed: boolean
+    ) => void;
+
+    walkthroughSpawnConfirmed: boolean;
 }
+
 
 export default function Scene({
     onSpawnConfirmed,
+    walkthroughSpawnConfirmed
 }: SceneProps) {
-    const { state } = useEditor();
+
+    const {
+        state
+    } = useEditor();
 
     return (
         <Canvas
             shadows
             camera={{
-                position: [8, 8, 8],
-                fov: 50,
+                position: [
+                    8,
+                    8,
+                    8
+                ],
+                fov: 50
             }}
             style={{
                 width: "100%",
-                height: "100%",
+                height: "100%"
             }}
         >
+
+            {/*==================================================
+                SCENE LIGHTING
+            ==================================================*/}
             <Lights />
+
+
+            {/*==================================================
+                EDITOR HELPERS
+            ==================================================*/}
             <Grid />
+
             <BlueprintScene />
+
+
+            {/*==================================================
+                CAMERA
+            ==================================================*/}
             <Camera />
 
+
+            {/*==================================================
+                MAIN HOUSE
+            ==================================================*/}
             <Floors />
+
             <Walls />
+
             <Doors />
+
             <Windows />
+
             <FurnitureScene />
 
+
+            {/*==================================================
+                WALKTHROUGH ROOF
+            ==================================================*/}
+            {state.walkthroughMode &&
+                walkthroughSpawnConfirmed && (
+                    <Roof />
+                )}
+
+
+            {/*==================================================
+                NORMAL EDITOR INTERACTION
+            ==================================================*/}
             {!state.walkthroughMode && (
                 <>
                     <SelectionToolbar />
+
                     <ClearSelection />
+
                     <BuildInteractionEvents />
+
                     <WallMeasurements />
+
                     <AssetPreview />
+
                     <WallDrawer />
+
                     <FurniturePreview />
+
                     <FurnitureInteractionEvents />
+
                     <SelectionInteractionEvents />
                 </>
             )}
 
+
+            {/*==================================================
+                WALKTHROUGH CONTROLLER
+            ==================================================*/}
             {state.walkthroughMode && (
                 <WalkthroughController
                     onSpawnConfirmed={
@@ -116,6 +178,7 @@ export default function Scene({
                     }
                 />
             )}
+
         </Canvas>
     );
 }

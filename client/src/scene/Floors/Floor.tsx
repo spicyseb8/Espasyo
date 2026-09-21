@@ -1,11 +1,8 @@
 import {
     useMemo,
-    useEffect
+    useEffect,
+    useState
 } from "react";
-
-import {
-    useTexture
-} from "@react-three/drei";
 
 import {
     CanvasTexture,
@@ -13,8 +10,11 @@ import {
     Path,
     ShapeGeometry,
     DoubleSide,
-    RepeatWrapping,
     Vector3
+} from "three";
+
+import type {
+    Texture
 } from "three";
 
 import useEditor
@@ -28,21 +28,47 @@ import {
     pointInPolygon
 } from "../../engine/regions/Polygon";
 
+import type {
+    Material
+} from "../../engine/materials/MaterialTypes";
+
 import {
-    MaterialLibrary
-} from "../../engine/materials/MaterialLibrary";
+    DEFAULT_FLOOR_MATERIAL_ID,
+    getCachedFloorTexture,
+    preloadFloorTexture
+} from "../../engine/materials/floors";
 
 interface FloorProps {
 
     region: Region;
 
+    materials: Material[];
+
 }
 
 
-/**
- * Shortest distance from a point to a line segment
- * in the XZ ground plane.
- */
+//==================================================
+// DEFAULT FLOOR
+//==================================================
+//
+// Firebase document:
+//
+// id: A-26015
+// name: Terrazo Tiles
+// category: tiles
+//
+// DEFAULT_FLOOR_MATERIAL_ID is imported from
+// floors.ts so the ID only exists in ONE place.
+//
+// This material will be used automatically for a
+// newly created room when no floor has been selected.
+//==================================================
+
+
+//==================================================
+// SHORT DISTANCE TO LINE SEGMENT
+//==================================================
+
 function distanceToSegment(
     p: Vector3,
     a: Vector3,
@@ -102,10 +128,10 @@ function distanceToSegment(
 }
 
 
-/**
- * Shortest distance from a point to any edge
- * of a closed polygon.
- */
+//==================================================
+// SHORT DISTANCE TO POLYGON BOUNDARY
+//==================================================
+
 function distanceToPolygonBoundary(
     point: Vector3,
     polygon: Vector3[]
@@ -149,9 +175,10 @@ function distanceToPolygonBoundary(
 }
 
 
-/**
- * Finds a good label anchor for a region.
- */
+//==================================================
+// FLOOR LABEL ANCHOR
+//==================================================
+
 function computeLabelAnchor(
     region: Region
 ): {
@@ -340,8 +367,109 @@ function computeLabelAnchor(
 }
 
 
+//==================================================
+// FLOOR TEXTURE HOOK
+//==================================================
+//
+// Replaces Drei's useTexture().
+//
+// useTexture() suspends the Canvas while loading and
+// keeps its OWN cache, so the texture that Floors.tsx
+// already preloaded through floors.ts was never
+// reused. This hook reads floors.ts's shared cache
+// instead:
+//
+// - Already preloaded  -> returned immediately.
+// - Not loaded yet     -> loaded in the background.
+//                         The PREVIOUS texture stays
+//                         visible until the new one is
+//                         ready (no blank flash).
+// - Failed to load     -> null.
+//
+// Wrap, repeat and color space are already configured
+// by preloadFloorTexture(), so nothing is set here.
+//==================================================
+
+function useFloorTexture(
+    url?: string
+): Texture | null {
+
+    const [
+        loadedTexture,
+        setLoadedTexture
+    ] = useState<Texture | null>(
+        null
+    );
+
+
+    useEffect(() => {
+
+        if (
+            !url
+        ) {
+
+            return;
+        }
+
+
+        let cancelled =
+            false;
+
+
+        preloadFloorTexture(
+            url
+        ).then(
+            texture => {
+
+                if (
+                    !cancelled
+                ) {
+
+                    setLoadedTexture(
+                        texture
+                    );
+                }
+
+            }
+        );
+
+
+        return () => {
+
+            cancelled =
+                true;
+
+        };
+
+    }, [
+        url
+    ]);
+
+
+    if (
+        !url
+    ) {
+
+        return null;
+    }
+
+
+    return (
+        getCachedFloorTexture(
+            url
+        ) ??
+        loadedTexture
+    );
+}
+
+
+//==================================================
+// FLOOR
+//==================================================
+
 export default function Floor({
-    region
+    region,
+    materials
 }: FloorProps) {
 
     const {
@@ -372,59 +500,67 @@ export default function Floor({
 
 
     const selectedMaterial =
-        MaterialLibrary.find(
+        materials.find(
             material =>
                 material.id ===
-                    selectedMaterialId &&
-
-                material.category ===
-                    "flooring"
+                selectedMaterialId
         );
 
+
+    //==================================================
+    // DEFAULT FLOOR MATERIAL
+    //==================================================
+    //
+    // When the room has no manually selected flooring,
+    // use Terrazo Tiles (A-26015).
+    //
+    // If that Firebase material is temporarily unavailable
+    // (or has no diffuse PNG), use the first loaded
+    // Firebase material as a fallback.
+    //==================================================
 
     const defaultFloorMaterial =
-        MaterialLibrary.find(
+        materials.find(
             material =>
-                material.category ===
-                "flooring"
-        );
+                material.id ===
+                DEFAULT_FLOOR_MATERIAL_ID
+        ) ??
+        materials[0];
 
+
+    //==================================================
+    // FINAL MATERIAL
+    //
+    // Priority:
+    //
+    // 1. User-selected floor
+    // 2. Terrazo Tiles (A-26015)
+    // 3. First Firebase floor as fallback
+    //==================================================
+
+    const displayMaterial =
+        selectedMaterial ??
+        defaultFloorMaterial;
+
+
+    //==================================================
+    // TEXTURE
+    //==================================================
+    //
+    // Every Firebase floor is a diffuse PNG now, so
+    // displayMaterial.texture is always set once a
+    // material exists. It is only undefined while the
+    // materials are still loading.
+    //==================================================
 
     const textureUrl =
-        selectedMaterial?.texture ??
-        defaultFloorMaterial?.texture;
+        displayMaterial?.texture;
 
 
     const floorTexture =
-        useTexture(
-            textureUrl ??
-            "/uploads/materials/flooring/ceramic-white.jpg"
+        useFloorTexture(
+            textureUrl
         );
-
-
-    //==================================================
-    // CONFIGURE FLOOR TEXTURE
-    //==================================================
-
-    useEffect(() => {
-
-        floorTexture.wrapS =
-            RepeatWrapping;
-
-        floorTexture.wrapT =
-            RepeatWrapping;
-
-        floorTexture.repeat.set(
-            1,
-            1
-        );
-
-        floorTexture.needsUpdate =
-            true;
-
-    }, [
-        floorTexture
-    ]);
 
 
     //==================================================
@@ -460,13 +596,14 @@ export default function Floor({
                 new Shape();
 
 
-            // Outer boundary
+            //==================================================
+            // OUTER BOUNDARY
+            //==================================================
 
             shape.moveTo(
                 outer[0].x,
                 -outer[0].z
             );
-
 
             for (
                 let i = 1;
@@ -481,11 +618,12 @@ export default function Floor({
 
             }
 
-
             shape.closePath();
 
 
-            // Holes
+            //==================================================
+            // HOLES
+            //==================================================
 
             const holes =
                 loops
@@ -786,17 +924,50 @@ export default function Floor({
 
             >
 
+                {/*
+                    key: three.js does NOT recompile a material
+                    when its "map" changes between null and a
+                    texture, so the floor could stay untextured
+                    after the image finishes loading. Changing
+                    the key creates a fresh material at that
+                    moment.
+
+                    color: the color is MULTIPLIED with the
+                    diffuse image, so a textured floor uses
+                    white (true PNG colors). The old default
+                    "#d9dde3" would have tinted every PNG
+                    gray-blue. The gray color is only used
+                    while no texture is available.
+                */}
+
                 <meshStandardMaterial
+
+                    key={
+                        floorTexture
+                            ? "textured"
+                            : "untextured"
+                    }
 
                     map={
                         floorTexture
                     }
 
+                    color={
+                        displayMaterial?.color ??
+                        (
+                            floorTexture
+                                ? "#ffffff"
+                                : "#d9dde3"
+                        )
+                    }
+
                     metalness={
+                        displayMaterial?.metalness ??
                         0
                     }
 
                     roughness={
+                        displayMaterial?.roughness ??
                         0.8
                     }
 

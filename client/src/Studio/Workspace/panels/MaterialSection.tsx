@@ -1,11 +1,6 @@
 import "./MaterialSection.css";
 
 import {
-    useState
-} from "react";
-
-import {
-    ChevronDown,
     Check
 } from "lucide-react";
 
@@ -24,8 +19,6 @@ interface Props {
 
     selectedMaterialId:
         string | null;
-
-    defaultOpen?: boolean;
 
     onSelect:
         (materialId: string) => void;
@@ -50,6 +43,7 @@ interface Props {
     applyToRoomLabel?: string;
 
     applyToAllLabel?: string;
+
 }
 
 export default function MaterialSection({
@@ -59,8 +53,6 @@ export default function MaterialSection({
     materials,
 
     selectedMaterialId,
-
-    defaultOpen = false,
 
     onSelect,
 
@@ -84,47 +76,28 @@ export default function MaterialSection({
 
 }: Props) {
 
-    const [open, setOpen] =
-        useState(
-            defaultOpen
-        );
-
     return (
 
         <section
             className="material-section"
         >
 
-            <button
+            {/* =========================================
+                HEADER
+                ========================================= */}
 
-                type="button"
-
-                className=
-                    "material-section-header"
-
-                onClick={() =>
-                    setOpen(
-                        value =>
-                            !value
-                    )
-                }
-
-                aria-expanded={
-                    open
-                }
-
+            <div
+                className="material-section-header"
             >
 
                 <span
-                    className=
-                        "material-section-title"
+                    className="material-section-title"
                 >
 
                     {title}
 
                     <span
-                        className=
-                            "material-section-count"
+                        className="material-section-count"
                     >
                         {
                             materials.length
@@ -133,206 +106,180 @@ export default function MaterialSection({
 
                 </span>
 
-                <ChevronDown
+            </div>
 
-                    size={16}
-
-                    className={
-                        `material-section-chevron ${
-                            open
-                                ? "open"
-                                : ""
-                        }`
-                    }
-
-                />
-
-            </button>
+            {/* =========================================
+                SCROLLABLE MATERIAL AREA
+                ========================================= */}
 
             <div
-                className={
-                    `material-section-collapse ${
-                        open
-                            ? "open"
-                            : ""
-                    }`
-                }
+                className="material-scroll"
             >
 
-                <div
-                    className=
-                        "material-section-inner"
-                >
+                {
+                    materials.length > 0
 
-                    {
-                        materials.length > 0
-
-                            ? (
-
-                                <div
-                                    className=
-                                        "material-grid"
-                                >
-
-                                    {
-                                        materials.map(
-                                            material => (
-
-                                                <MaterialCard
-
-                                                    key={
-                                                        material.id
-                                                    }
-
-                                                    material={
-                                                        material
-                                                    }
-
-                                                    selected={
-                                                        selectedMaterialId ===
-                                                        material.id
-                                                    }
-
-                                                    onClick={() =>
-                                                        onSelect(
-                                                            material.id
-                                                        )
-                                                    }
-
-                                                />
-
-                                            )
-                                        )
-                                    }
-
-                                </div>
-
-                            )
-
-                            : (
-
-                                <p
-                                    className=
-                                        "material-empty"
-                                >
-                                    No materials
-                                    available.
-                                </p>
-
-                            )
-                    }
-
-                    {
-                        (
-                            onApply ||
-                            onApplyToRoom ||
-                            onApplyToAll
-                        ) && (
+                        ? (
 
                             <div
-                                className=
-                                    "material-actions"
+                                className="material-grid"
                             >
 
                                 {
-                                    onApply && (
+                                    materials.map(
+                                        material => (
 
-                                        <button
+                                            <MaterialCard
 
-                                            type="button"
+                                                key={
+                                                    material.id
+                                                }
 
-                                            className=
-                                                "material-apply-button"
+                                                material={
+                                                    material
+                                                }
 
-                                            disabled={
-                                                !canApply
-                                            }
+                                                selected={
+                                                    selectedMaterialId ===
+                                                    material.id
+                                                }
 
-                                            onClick={
-                                                onApply
-                                            }
+                                                onClick={() =>
+                                                    onSelect(
+                                                        material.id
+                                                    )
+                                                }
 
-                                        >
-
-                                            <Check
-                                                size={15}
                                             />
 
-                                            {
-                                                applyLabel
-                                            }
-
-                                        </button>
-
-                                    )
-                                }
-
-                                {
-                                    onApplyToRoom && (
-
-                                        <button
-
-                                            type="button"
-
-                                            className=
-                                                "material-apply-room-button"
-
-                                            disabled={
-                                                !canApplyToRoom
-                                            }
-
-                                            onClick={
-                                                onApplyToRoom
-                                            }
-
-                                        >
-
-                                            {
-                                                applyToRoomLabel
-                                            }
-
-                                        </button>
-
-                                    )
-                                }
-
-                                {
-                                    onApplyToAll && (
-
-                                        <button
-
-                                            type="button"
-
-                                            className=
-                                                "material-apply-all-button"
-
-                                            disabled={
-                                                !canApplyToAll
-                                            }
-
-                                            onClick={
-                                                onApplyToAll
-                                            }
-
-                                        >
-
-                                            {
-                                                applyToAllLabel
-                                            }
-
-                                        </button>
-
+                                        )
                                     )
                                 }
 
                             </div>
 
                         )
-                    }
 
-                </div>
+                        : (
+
+                            <p
+                                className="material-empty"
+                            >
+                                No materials available.
+                            </p>
+
+                        )
+                }
 
             </div>
+
+            {/* =========================================
+                ACTION BUTTONS
+                ========================================= */}
+
+            {
+                (
+                    onApply ||
+                    onApplyToRoom ||
+                    onApplyToAll
+                ) && (
+
+                    <div
+                        className="material-actions"
+                    >
+
+                        {
+                            onApply && (
+
+                                <button
+
+                                    type="button"
+
+                                    className="material-apply-button"
+
+                                    disabled={
+                                        !canApply
+                                    }
+
+                                    onClick={
+                                        onApply
+                                    }
+
+                                >
+
+                                    <Check
+                                        size={15}
+                                    />
+
+                                    {
+                                        applyLabel
+                                    }
+
+                                </button>
+
+                            )
+                        }
+
+                        {
+                            onApplyToRoom && (
+
+                                <button
+
+                                    type="button"
+
+                                    className="material-apply-room-button"
+
+                                    disabled={
+                                        !canApplyToRoom
+                                    }
+
+                                    onClick={
+                                        onApplyToRoom
+                                    }
+
+                                >
+
+                                    {
+                                        applyToRoomLabel
+                                    }
+
+                                </button>
+
+                            )
+                        }
+
+                        {
+                            onApplyToAll && (
+
+                                <button
+
+                                    type="button"
+
+                                    className="material-apply-all-button"
+
+                                    disabled={
+                                        !canApplyToAll
+                                    }
+
+                                    onClick={
+                                        onApplyToAll
+                                    }
+
+                                >
+
+                                    {
+                                        applyToAllLabel
+                                    }
+
+                                </button>
+
+                            )
+                        }
+
+                    </div>
+
+                )
+            }
 
         </section>
     );

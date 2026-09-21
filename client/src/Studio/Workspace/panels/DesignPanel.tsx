@@ -7,17 +7,17 @@ import {
 import useEditor
     from "../../../context/editor/useEditor";
 
-import {
-    MaterialLibrary
-} from "../../../engine/materials/MaterialLibrary";
-
 import type {
     Material
 } from "../../../engine/materials/MaterialTypes";
 
 import {
     getWallMaterials
-} from "../../../assets/walls";
+} from "../../../engine/materials/walls";
+
+import {
+    getFloorMaterials
+} from "../../../engine/materials/floors";
 
 import {
     solveRegions
@@ -51,19 +51,106 @@ export default function DesignPanel() {
         );
 
     //==================================================
-    // FLOOR MATERIALS
+    // FIREBASE FLOOR MATERIALS
     //==================================================
 
-    const flooringMaterials =
-        useMemo(
-            () =>
-                MaterialLibrary.filter(
-                    material =>
-                        material.category ===
-                        "flooring"
-                ),
-            []
-        );
+    const [
+        flooringMaterials,
+        setFlooringMaterials
+    ] = useState<Material[]>(
+        []
+    );
+
+    const [
+        floorMaterialsLoading,
+        setFloorMaterialsLoading
+    ] = useState<boolean>(
+        true
+    );
+
+    const [
+        floorMaterialsError,
+        setFloorMaterialsError
+    ] = useState<boolean>(
+        false
+    );
+
+    useEffect(() => {
+
+        let cancelled = false;
+
+        async function loadFloorMaterials() {
+
+            try {
+
+                setFloorMaterialsLoading(
+                    true
+                );
+
+                setFloorMaterialsError(
+                    false
+                );
+
+                const materials =
+                    await getFloorMaterials();
+
+                if (
+                    cancelled
+                ) {
+
+                    return;
+                }
+
+                setFlooringMaterials(
+                    materials
+                );
+
+            } catch (error) {
+
+                console.error(
+                    "Failed to load floor materials:",
+                    error
+                );
+
+                if (
+                    cancelled
+                ) {
+
+                    return;
+                }
+
+                setFlooringMaterials(
+                    []
+                );
+
+                setFloorMaterialsError(
+                    true
+                );
+
+            } finally {
+
+                if (
+                    !cancelled
+                ) {
+
+                    setFloorMaterialsLoading(
+                        false
+                    );
+
+                }
+
+            }
+        }
+
+        loadFloorMaterials();
+
+        return () => {
+
+            cancelled = true;
+
+        };
+
+    }, []);
 
     //==================================================
     // FIREBASE WALL MATERIALS
@@ -112,6 +199,7 @@ export default function DesignPanel() {
                 if (
                     cancelled
                 ) {
+
                     return;
                 }
 
@@ -129,6 +217,7 @@ export default function DesignPanel() {
                 if (
                     cancelled
                 ) {
+
                     return;
                 }
 
@@ -151,6 +240,7 @@ export default function DesignPanel() {
                     );
 
                 }
+
             }
         }
 
@@ -290,6 +380,7 @@ export default function DesignPanel() {
                 !state.selectedRegionId ||
                 !selectedFloorMaterialId
             ) {
+
                 return;
             }
 
@@ -322,6 +413,7 @@ export default function DesignPanel() {
             if (
                 !selectedFloorMaterialId
             ) {
+
                 return;
             }
 
@@ -363,12 +455,14 @@ export default function DesignPanel() {
                 !state.selectedWallId ||
                 !selectedWallMaterialId
             ) {
+
                 return;
             }
 
             if (
                 !selectedWallBelongsToRoom
             ) {
+
                 return;
             }
 
@@ -405,6 +499,7 @@ export default function DesignPanel() {
                 !state.selectedRegionId ||
                 !selectedWallMaterialId
             ) {
+
                 return;
             }
 
@@ -414,12 +509,9 @@ export default function DesignPanel() {
             if (
                 !region
             ) {
+
                 return;
             }
-
-            //--------------------------------------------------
-            // Prevent duplicate wall IDs.
-            //--------------------------------------------------
 
             const wallIds =
                 new Set(
@@ -467,6 +559,7 @@ export default function DesignPanel() {
             if (
                 !selectedWallMaterialId
             ) {
+
                 return;
             }
 
@@ -539,10 +632,6 @@ export default function DesignPanel() {
                     selectedFloorMaterialId
                 }
 
-                defaultOpen={
-                    true
-                }
-
                 onSelect={
                     setSelectedFloorMaterialId
                 }
@@ -587,10 +676,6 @@ export default function DesignPanel() {
                     selectedWallMaterialId
                 }
 
-                defaultOpen={
-                    false
-                }
-
                 onSelect={
                     setSelectedWallMaterialId
                 }
@@ -632,7 +717,32 @@ export default function DesignPanel() {
             />
 
             {/* =========================================
-                OPTIONAL LOADING / ERROR MESSAGE
+                FLOOR LOADING / ERROR MESSAGE
+                ========================================= */}
+
+            {floorMaterialsLoading && (
+
+                <div
+                    className="material-empty"
+                >
+                    Loading floor materials...
+                </div>
+
+            )}
+
+            {!floorMaterialsLoading &&
+                floorMaterialsError && (
+
+                <div
+                    className="material-empty"
+                >
+                    Failed to load floor materials.
+                </div>
+
+            )}
+
+            {/* =========================================
+                WALL LOADING / ERROR MESSAGE
                 ========================================= */}
 
             {wallMaterialsLoading && (
