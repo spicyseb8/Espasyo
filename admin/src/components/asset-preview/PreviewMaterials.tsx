@@ -13,15 +13,19 @@ import {
   type PreviewTextures,
 } from "./assetPreviewUtils";
 
+/**
+ * Material properties used by the
+ * room's solid geometry.
+ *
+ * Polygon offset helps prevent
+ * z-fighting with edges/lines.
+ */
 export const SOLID_MATERIAL_PROPS = {
   polygonOffset: true,
   polygonOffsetFactor: 1,
   polygonOffsetUnits: 1,
 } as const;
 
-/**
- * Default material values.
- */
 const DEFAULT_COLOR =
   "#ffffff";
 
@@ -35,16 +39,24 @@ const DEFAULT_METALNESS =
   0;
 
 /**
- * Hybrid material component.
+ * Asset material.
  *
- * This supports:
+ * Supported:
  *
- * 1. Paint/material-only assets
- * 2. Fully textured assets
- * 3. Partially textured assets
- * 4. Hybrid assets
+ * - Diffuse texture
+ * - Firestore color
+ * - Firestore roughness
+ * - Firestore metalness
  *
- * Every texture map is optional.
+ * Not supported:
+ *
+ * - Normal map
+ * - Roughness map
+ * - AO map
+ *
+ * meshStandardMaterial is used so the
+ * surface can interact with lighting
+ * and shadows.
  */
 function AssetMaterial({
   asset,
@@ -59,55 +71,41 @@ function AssetMaterial({
   ] =
     useState<PreviewTextures>({
       diffuse: null,
-      normal: null,
-      rough: null,
-      ao: null,
     });
-
-  const [
-    loading,
-    setLoading,
-  ] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadTextures() {
       /**
-       * Reset when the selected asset changes.
+       * Remove the previous texture
+       * immediately when the selected
+       * asset changes.
        */
       setTextures({
         diffuse: null,
-        normal: null,
-        rough: null,
-        ao: null,
       });
 
       /**
-       * If the asset has no texture paths,
-       * don't even start texture loading.
-       *
-       * This is important for paint assets.
+       * If there is no diffuse texture,
+       * simply use the Firestore color.
        */
       if (!hasTextures(asset)) {
-        setLoading(false);
+        console.log(
+          "[PreviewMaterials] No diffuse texture:",
+          asset.name
+        );
+
         return;
       }
 
-      setLoading(true);
-
       console.log(
-        "[PreviewMaterials] Loading available textures:",
+        "[PreviewMaterials] Loading asset diffuse:",
         {
           asset: asset.name,
+          assetId: asset.id,
           diffuse:
             asset.diffuse_path,
-          normal:
-            asset.normal_path,
-          rough:
-            asset.rough_path,
-          ao:
-            asset.ao_path,
         }
       );
 
@@ -117,9 +115,23 @@ function AssetMaterial({
             asset
           );
 
+        /**
+         * Do not apply an old texture
+         * if the selected asset changed
+         * while loading.
+         */
         if (cancelled) {
           return;
         }
+
+        console.log(
+          "[PreviewMaterials] DIFFUSE CHECK:",
+          {
+            asset: asset.name,
+            diffuse:
+              !!loadedTextures.diffuse,
+          }
+        );
 
         setTextures(
           loadedTextures
@@ -127,13 +139,9 @@ function AssetMaterial({
       } catch (error) {
         if (!cancelled) {
           console.error(
-            "[PreviewMaterials] Failed to load asset textures:",
+            "[PreviewMaterials] Failed to load diffuse texture:",
             error
           );
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
         }
       }
     }
@@ -146,29 +154,21 @@ function AssetMaterial({
   }, [
     asset.id,
     asset.diffuse_path,
-    asset.normal_path,
-    asset.rough_path,
-    asset.ao_path,
   ]);
 
   /**
-   * Dispose textures when this material
-   * is no longer using them.
-   *
-   * NOTE:
-   *
-   * Cached textures are managed by
-   * assetPreviewUtils.
-   *
-   * Therefore we should NOT dispose them here.
-   *
-   * The cache owns their lifecycle.
+   * Firestore color is used when
+   * there is no diffuse texture.
    */
-
   const color =
     asset.color ??
     defaultColor;
 
+  /**
+   * Firestore material properties.
+   *
+   * These are values, not texture maps.
+   */
   const roughness =
     asset.roughness ??
     DEFAULT_ROUGHNESS;
@@ -178,54 +178,62 @@ function AssetMaterial({
     DEFAULT_METALNESS;
 
   /**
-   * A diffuse texture already contains
-   * the visible color information.
+   * When a diffuse texture exists,
+   * use white so the texture isn't
+   * multiplied/tinted by another color.
    *
-   * In that case we use white so the
-   * texture isn't tinted.
-   *
-   * If there is no diffuse texture,
-   * the Firestore color is used.
+   * When there is no texture,
+   * use the Firestore/default color.
    */
   const materialColor =
     textures.diffuse
       ? "#ffffff"
       : color;
 
-  /**
-   * Avoid an unnecessary render state
-   * while textures are being loaded.
-   *
-   * The material will initially use
-   * the color/material properties and
-   * then update when textures arrive.
-   */
-  void loading;
+  console.log(
+    "[PreviewMaterials] Material:",
+    {
+      asset: asset.name,
+      diffuseLoaded:
+        !!textures.diffuse,
+      color:
+        materialColor,
+      roughness,
+      metalness,
+    }
+  );
 
   return (
     <meshStandardMaterial
-      color={materialColor}
+      color={
+        materialColor
+      }
 
+      /**
+       * Firebase diffuse texture.
+       */
       map={
         textures.diffuse
       }
 
-      normalMap={
-        textures.normal
+      /**
+       * Firestore material properties.
+       *
+       * These are only numeric values.
+       * There are no roughness/normal/AO maps.
+       */
+      roughness={
+        roughness
       }
 
-      roughnessMap={
-        textures.rough
+      metalness={
+        metalness
       }
 
-      aoMap={
-        textures.ao
-      }
-
-      roughness={roughness}
-
-      metalness={metalness}
-
+      /**
+       * Keep the existing room
+       * material configuration.
+       */
       {...SOLID_MATERIAL_PROPS}
     />
   );
@@ -233,19 +241,15 @@ function AssetMaterial({
 
 /**
  * Wall material.
- *
- * Can be:
- *
- * - paint only
- * - textured
- * - partially textured
- * - hybrid
  */
 export function WallMaterial({
   asset,
 }: {
   asset: Asset | null;
 }) {
+  /**
+   * No wall asset selected.
+   */
   if (
     !asset ||
     asset.asset_type !==
@@ -269,6 +273,7 @@ export function WallMaterial({
 
   return (
     <AssetMaterial
+      key={asset.id}
       asset={asset}
       defaultColor={
         DEFAULT_COLOR
@@ -279,19 +284,15 @@ export function WallMaterial({
 
 /**
  * Floor material.
- *
- * Can be:
- *
- * - color/material only
- * - textured
- * - partially textured
- * - hybrid
  */
 export function FloorMaterial({
   asset,
 }: {
   asset: Asset | null;
 }) {
+  /**
+   * No floor asset selected.
+   */
   if (
     !asset ||
     asset.asset_type !==
@@ -315,6 +316,7 @@ export function FloorMaterial({
 
   return (
     <AssetMaterial
+      key={asset.id}
       asset={asset}
       defaultColor={
         DEFAULT_FLOOR_COLOR
@@ -324,18 +326,16 @@ export function FloorMaterial({
 }
 
 /**
- * Optional generic material for future
- * furniture/material previews.
- *
- * You can use this later when furniture
- * assets start using the same hybrid
- * material system.
+ * Generic asset preview material.
  */
 export function AssetPreviewMaterial({
   asset,
 }: {
   asset: Asset | null;
 }) {
+  /**
+   * No asset selected.
+   */
   if (!asset) {
     return (
       <meshStandardMaterial
@@ -353,6 +353,7 @@ export function AssetPreviewMaterial({
 
   return (
     <AssetMaterial
+      key={asset.id}
       asset={asset}
       defaultColor={
         DEFAULT_COLOR
@@ -360,4 +361,3 @@ export function AssetPreviewMaterial({
     />
   );
 }
-

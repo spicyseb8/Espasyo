@@ -39,7 +39,7 @@ export default function PreviewCanvas({
     >
       <color
         attach="background"
-        args={["#521212"]}
+        args={["#ffffff"]}
       />
 
       <PreviewCamera />
