@@ -2,7 +2,8 @@ import {
     Suspense,
     useEffect,
     useMemo,
-    useRef
+    useRef,
+    useState
 } from "react";
 
 import {
@@ -59,6 +60,40 @@ import {
     findAsset
 } from "../../assets/AssetLibrary";
 
+import {
+    getCachedDoorWindowAsset,
+    getDoorWindowAssets
+} from "../../engine/build/FirebaseDoorWindowLibrary";
+
+import type {
+    Asset
+} from "../../assets/Asset";
+
+
+//============================================================
+// GET BUILD ASSET
+//============================================================
+//
+// Firebase is the primary source for doors/windows.
+// The old local AssetLibrary remains as a fallback so
+// previously-created local assets do not immediately break.
+//============================================================
+
+function getBuildAsset(
+    assetId: string
+): Asset | null {
+
+    return (
+        getCachedDoorWindowAsset(
+            assetId
+        ) ??
+        findAsset(
+            assetId
+        ) ??
+        null
+    );
+}
+
 
 //============================================================
 // OPENING PREVIEW
@@ -109,6 +144,7 @@ function OpeningPreview() {
 
         depth:
             state.wallThickness
+
     };
 
 
@@ -205,6 +241,7 @@ function OpeningPreview() {
                     );
 
                     shape.closePath();
+
                 }
 
 
@@ -290,7 +327,7 @@ function OpeningPreview() {
 
 
             //--------------------------------------------------
-            // Store EXACT wall ID
+            // Store exact wall ID
             //--------------------------------------------------
 
             buildInteraction.currentWallId =
@@ -395,13 +432,12 @@ function OpeningPreview() {
             ) {
 
                 mesh.material.color.set(
-
                     collision.valid
                         ? "#4DA3FF"
                         : "#D9534F"
-
                 );
             }
+
         }
     );
 
@@ -462,12 +498,7 @@ function OpeningPreview() {
 function DoorWindowPreview({
     asset
 }: {
-    asset:
-        NonNullable<
-            ReturnType<
-                typeof findAsset
-            >
-        >;
+    asset: Asset;
 }) {
 
     const {
@@ -585,6 +616,7 @@ function DoorWindowPreview({
 
     const bounds:
         AssetBounds =
+
         useMemo(
             () => {
 
@@ -602,6 +634,7 @@ function DoorWindowPreview({
 
                         depth:
                             0.1
+
                     };
                 }
 
@@ -628,6 +661,7 @@ function DoorWindowPreview({
 
                     depth:
                         size.z
+
                 };
 
             },
@@ -683,6 +717,7 @@ function DoorWindowPreview({
 
                     child.renderOrder =
                         1000;
+
                 }
             );
 
@@ -771,7 +806,7 @@ function DoorWindowPreview({
 
 
             //--------------------------------------------------
-            // Find ANY wall
+            // Find any wall
             //--------------------------------------------------
 
             const hit =
@@ -796,7 +831,7 @@ function DoorWindowPreview({
 
 
             //--------------------------------------------------
-            // Store EXACT target wall
+            // Store exact target wall
             //--------------------------------------------------
 
             buildInteraction.currentWallId =
@@ -804,7 +839,7 @@ function DoorWindowPreview({
 
 
             //--------------------------------------------------
-            // Build placement using TARGET wall
+            // Build placement using target wall
             //--------------------------------------------------
 
             const transform =
@@ -894,10 +929,6 @@ function DoorWindowPreview({
 
             //--------------------------------------------------
             // Rotation
-            //
-            // There is still NO manual rotation.
-            //
-            // The TARGET WALL controls orientation.
             //--------------------------------------------------
 
             previewRef.current.rotation.y =
@@ -933,9 +964,12 @@ function DoorWindowPreview({
                         child.material.color.set(
                             color
                         );
+
                     }
+
                 }
             );
+
         }
     );
 
@@ -969,17 +1003,17 @@ function DoorWindowPreview({
                 ]}
             >
 
-                {
-                    model && (
+                    {
+        model && (
 
-                        <primitive
-                            object={
-                                model
-                            }
-                        />
-
-                    )
+            <primitive
+                object={
+                    model
                 }
+            />
+
+        )
+    }
 
             </group>
 
@@ -1010,28 +1044,27 @@ function PreviewModel() {
         const target =
             buildInteraction.moveTarget;
 
-
-        const moveAsset =
+        const assetId =
             target.type ===
                 "door"
 
-                ? findAsset(
-                    state.doors.find(
-                        door =>
-                            door.id ===
-                            target.id
-                    )?.assetId ??
-                    ""
-                )
+                ? state.doors.find(
+                    door =>
+                        door.id ===
+                        target.id
+                )?.assetId ?? ""
 
-                : findAsset(
-                    state.windows.find(
-                        window =>
-                            window.id ===
-                            target.id
-                    )?.assetId ??
-                    ""
-                );
+                : state.windows.find(
+                    window =>
+                        window.id ===
+                        target.id
+                )?.assetId ?? "";
+
+
+        const moveAsset =
+            getBuildAsset(
+                assetId
+            );
 
 
         if (
@@ -1094,7 +1127,7 @@ function PreviewModel() {
 
 
     //--------------------------------------------------
-    // Furniture handled by FurniturePreview.
+    // Furniture handled by FurniturePreview
     //--------------------------------------------------
 
     return null;
@@ -1110,6 +1143,87 @@ export default function AssetPreview() {
     const {
         state
     } = useEditor();
+
+
+    //--------------------------------------------------
+    // Firebase door/window catalog
+    //
+    // This makes sure a Firebase asset can be resolved
+    // even when the BuildPanel or placed-object renderer
+    // has not loaded it yet.
+    //--------------------------------------------------
+
+    const [
+        firebaseCatalogLoaded,
+        setFirebaseCatalogLoaded
+    ] = useState(
+        false
+    );
+
+
+    useEffect(
+        () => {
+
+            let cancelled =
+                false;
+
+
+            getDoorWindowAssets()
+                .then(
+                    () => {
+
+                        if (
+                            !cancelled
+                        ) {
+
+                            setFirebaseCatalogLoaded(
+                                true
+                            );
+
+                        }
+
+                    }
+                )
+                .catch(
+                    error => {
+
+                        console.error(
+                            "Failed to load Firebase door/window catalog for preview:",
+                            error
+                        );
+
+                        if (
+                            !cancelled
+                        ) {
+
+                            setFirebaseCatalogLoaded(
+                                true
+                            );
+
+                        }
+
+                    }
+                );
+
+
+            return () => {
+
+                cancelled =
+                    true;
+
+            };
+
+        },
+        []
+    );
+
+
+    //--------------------------------------------------
+    // Intentional state usage:
+    // re-render when Firebase catalog becomes available.
+    //--------------------------------------------------
+
+    void firebaseCatalogLoaded;
 
 
     //--------------------------------------------------

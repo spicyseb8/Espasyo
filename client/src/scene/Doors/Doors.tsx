@@ -1,5 +1,7 @@
 import {
-    useMemo
+    useEffect,
+    useMemo,
+    useState
 } from "react";
 
 import useEditor
@@ -9,7 +11,12 @@ import {
     buildInteraction
 } from "../Build/BuildInteraction";
 
-import Door from "./Door";
+import {
+    getDoorWindowAssets
+} from "../../engine/build/FirebaseDoorWindowLibrary";
+
+import Door
+    from "./Door";
 
 
 export default function Doors() {
@@ -18,11 +25,70 @@ export default function Doors() {
         state
     } = useEditor();
 
+    const [
+        firebaseLoaded,
+        setFirebaseLoaded
+    ] = useState(false);
+
+
+    useEffect(
+        () => {
+
+            let cancelled =
+                false;
+
+            getDoorWindowAssets()
+                .then(
+                    () => {
+
+                        if (
+                            !cancelled
+                        ) {
+
+                            setFirebaseLoaded(
+                                true
+                            );
+
+                        }
+                    }
+                )
+                .catch(
+                    error => {
+
+                        console.error(
+                            "Failed to load Firebase door/window catalog:",
+                            error
+                        );
+
+                        if (
+                            !cancelled
+                        ) {
+
+                            setFirebaseLoaded(
+                                true
+                            );
+
+                        }
+                    }
+                );
+
+            return () => {
+
+                cancelled =
+                    true;
+
+            };
+
+        },
+        []
+    );
+
+    void firebaseLoaded;
+
+
     const doorElements =
         useMemo(
-
             () =>
-
                 state.doors.map(
                     door => (
 
@@ -30,33 +96,21 @@ export default function Doors() {
                             key={
                                 door.id
                             }
-
                             door={
                                 door
                             }
-
                         />
 
                     )
                 ),
-
             [
                 state.doors,
-
-                //--------------------------------------------------
-                // Important:
-                //
-                // Re-render when Door Move starts/ends.
-                //--------------------------------------------------
-
                 state.buildTool,
-
                 buildInteraction.moveTarget?.type,
-
                 buildInteraction.moveTarget?.id
             ]
-
         );
+
 
     return (
         <>

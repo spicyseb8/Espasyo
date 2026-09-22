@@ -4,56 +4,67 @@ import {
     Vector3
 } from "three";
 
-import type {
-    FurnitureDimensions
-} from "../../assets/Asset";
 
-export function getFurnitureScale(
-    model: Object3D,
-    target: FurnitureDimensions
-): Vector3 {
+//==================================================
+// NATIVE FURNITURE BOUNDS
+//==================================================
+
+export interface FurnitureNativeBounds {
+
+    width: number;
+
+    depth: number;
+
+    height: number;
+
+}
+
+
+
+
+export function getFurnitureNativeBounds(
+
+    model: Object3D
+
+): FurnitureNativeBounds {
+
 
     const box =
         new Box3()
-            .setFromObject(model);
+            .setFromObject(
+                model
+            );
 
-    const nativeSize =
+
+    const size =
         new Vector3();
 
+
     box.getSize(
-        nativeSize
+        size
     );
 
-    //--------------------------------------------------
-    // Prevent invalid scaling
-    //--------------------------------------------------
 
-    if (
-        nativeSize.x <= 0 ||
-        nativeSize.y <= 0 ||
-        nativeSize.z <= 0
-    ) {
-        return new Vector3(
-            1,
-            1,
-            1
-        );
-    }
+    return {
 
-    //--------------------------------------------------
-    // Scale each axis to target real-world dimensions
-    //--------------------------------------------------
+        width:
+            Math.max(
+                size.x,
+                0
+            ),
 
-    return new Vector3(
+        depth:
+            Math.max(
+                size.z,
+                0
+            ),
 
-        target.width /
-            nativeSize.x,
+        height:
+            Math.max(
+                size.y,
+                0
+            )
 
-        target.height /
-            nativeSize.y,
+    };
 
-        target.depth /
-            nativeSize.z
-
-    );
 }

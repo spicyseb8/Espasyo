@@ -34,6 +34,7 @@ import type {
 
 import {
     DEFAULT_FLOOR_MATERIAL_ID,
+    LOCAL_DEFAULT_FLOOR_TEXTURE,
     getCachedFloorTexture,
     preloadFloorTexture
 } from "../../engine/materials/floors";
@@ -47,27 +48,6 @@ interface FloorProps {
 }
 
 
-//==================================================
-// DEFAULT FLOOR
-//==================================================
-//
-// Firebase document:
-//
-// id: A-26015
-// name: Terrazo Tiles
-// category: tiles
-//
-// DEFAULT_FLOOR_MATERIAL_ID is imported from
-// floors.ts so the ID only exists in ONE place.
-//
-// This material will be used automatically for a
-// newly created room when no floor has been selected.
-//==================================================
-
-
-//==================================================
-// SHORT DISTANCE TO LINE SEGMENT
-//==================================================
 
 function distanceToSegment(
     p: Vector3,
@@ -128,10 +108,6 @@ function distanceToSegment(
 }
 
 
-//==================================================
-// SHORT DISTANCE TO POLYGON BOUNDARY
-//==================================================
-
 function distanceToPolygonBoundary(
     point: Vector3,
     polygon: Vector3[]
@@ -175,9 +151,7 @@ function distanceToPolygonBoundary(
 }
 
 
-//==================================================
-// FLOOR LABEL ANCHOR
-//==================================================
+
 
 function computeLabelAnchor(
     region: Region
@@ -367,28 +341,6 @@ function computeLabelAnchor(
 }
 
 
-//==================================================
-// FLOOR TEXTURE HOOK
-//==================================================
-//
-// Replaces Drei's useTexture().
-//
-// useTexture() suspends the Canvas while loading and
-// keeps its OWN cache, so the texture that Floors.tsx
-// already preloaded through floors.ts was never
-// reused. This hook reads floors.ts's shared cache
-// instead:
-//
-// - Already preloaded  -> returned immediately.
-// - Not loaded yet     -> loaded in the background.
-//                         The PREVIOUS texture stays
-//                         visible until the new one is
-//                         ready (no blank flash).
-// - Failed to load     -> null.
-//
-// Wrap, repeat and color space are already configured
-// by preloadFloorTexture(), so nothing is set here.
-//==================================================
 
 function useFloorTexture(
     url?: string
@@ -507,51 +459,64 @@ export default function Floor({
         );
 
 
-    //==================================================
-    // DEFAULT FLOOR MATERIAL
-    //==================================================
-    //
-    // When the room has no manually selected flooring,
-    // use Terrazo Tiles (A-26015).
-    //
-    // If that Firebase material is temporarily unavailable
-    // (or has no diffuse PNG), use the first loaded
-    // Firebase material as a fallback.
-    //==================================================
 
-    const defaultFloorMaterial =
-        materials.find(
-            material =>
-                material.id ===
-                DEFAULT_FLOOR_MATERIAL_ID
-        ) ??
-        materials[0];
+const firebaseDefaultMaterial =
+    materials.find(
+        material =>
+            material.id ===
+            DEFAULT_FLOOR_MATERIAL_ID
+    );
 
 
-    //==================================================
-    // FINAL MATERIAL
-    //
-    // Priority:
-    //
-    // 1. User-selected floor
-    // 2. Terrazo Tiles (A-26015)
-    // 3. First Firebase floor as fallback
-    //==================================================
+const defaultFloorMaterial =
+    firebaseDefaultMaterial
+        ? {
+            ...firebaseDefaultMaterial,
+
+            texture:
+                LOCAL_DEFAULT_FLOOR_TEXTURE,
+
+            thumbnail:
+                firebaseDefaultMaterial.thumbnail ??
+                LOCAL_DEFAULT_FLOOR_TEXTURE
+        }
+        : {
+
+            id:
+                DEFAULT_FLOOR_MATERIAL_ID,
+
+            name:
+                "Terrazo Tiles",
+
+            category:
+                "flooring",
+
+            pricePerSquareMeter:
+                0,
+
+            thumbnail:
+                LOCAL_DEFAULT_FLOOR_TEXTURE,
+
+            texture:
+                LOCAL_DEFAULT_FLOOR_TEXTURE,
+
+            color:
+                "#ffffff",
+
+            roughness:
+                0.8,
+
+            metalness:
+                0
+
+        };
+
+
 
     const displayMaterial =
         selectedMaterial ??
         defaultFloorMaterial;
 
-
-    //==================================================
-    // TEXTURE
-    //==================================================
-    //
-    // Every Firebase floor is a diffuse PNG now, so
-    // displayMaterial.texture is always set once a
-    // material exists. It is only undefined while the
-    // materials are still loading.
-    //==================================================
 
     const textureUrl =
         displayMaterial?.texture;
@@ -563,9 +528,6 @@ export default function Floor({
         );
 
 
-    //==================================================
-    // BUILD FLOOR GEOMETRY
-    //==================================================
 
     const geometry =
         useMemo(() => {

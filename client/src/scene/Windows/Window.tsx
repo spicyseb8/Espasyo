@@ -25,6 +25,10 @@ import {
 } from "../../assets/AssetLibrary";
 
 import {
+    getCachedWindowAsset
+} from "../../engine/build/FirebaseDoorWindowLibrary";
+
+import {
     normalizeWindowModel
 } from "../../engine/windows/normalizeWindowModel";
 
@@ -36,21 +40,12 @@ import useEditor
     from "../../context/editor/useEditor";
 
 
-//==================================================
-// PROPS
-//==================================================
-
 interface Props {
 
     window:
         WindowType;
-
 }
 
-
-//==================================================
-// HOVER SETTINGS
-//==================================================
 
 const HOVER_COLOR =
     "#63B8FF";
@@ -59,18 +54,10 @@ const HOVER_EMISSIVE_INTENSITY =
     0.35;
 
 
-//==================================================
-// CHECK WHETHER MATERIAL IS GLASS
-//==================================================
-
 function isGlassMaterial(
     material:
         Material
 ): boolean {
-
-    //--------------------------------------------------
-    // Transparent
-    //--------------------------------------------------
 
     if (
         material.transparent
@@ -79,30 +66,18 @@ function isGlassMaterial(
         return true;
     }
 
-
-    //--------------------------------------------------
-    // Low opacity
-    //--------------------------------------------------
-
     if (
         typeof material.opacity ===
             "number" &&
-
-        material.opacity <
-            0.95
+        material.opacity < 0.95
     ) {
 
         return true;
     }
 
-
     return false;
 }
 
-
-//==================================================
-// CONFIGURE WINDOW SHADOWS
-//==================================================
 
 function configureWindowShadows(
     model:
@@ -119,11 +94,6 @@ function configureWindowShadows(
                 return;
             }
 
-
-            //--------------------------------------------------
-            // Multiple materials
-            //--------------------------------------------------
-
             if (
                 Array.isArray(
                     child.material
@@ -138,7 +108,6 @@ function configureWindowShadows(
                             )
                     );
 
-
                 child.castShadow =
                     !hasGlass;
 
@@ -148,11 +117,6 @@ function configureWindowShadows(
                 return;
             }
 
-
-            //--------------------------------------------------
-            // Single material
-            //--------------------------------------------------
-
             const material =
                 child.material;
 
@@ -161,30 +125,21 @@ function configureWindowShadows(
                     material
                 );
 
-
             child.castShadow =
                 !glass;
 
             child.receiveShadow =
                 true;
-
         }
     );
 }
 
 
-//==================================================
-// WINDOW HIGHLIGHT
-//==================================================
-
 function setWindowHighlight(
-
     object:
         Object3D,
-
     highlighted:
         boolean
-
 ) {
 
     object.traverse(
@@ -197,23 +152,15 @@ function setWindowHighlight(
                 return;
             }
 
-
             const materials =
                 Array.isArray(
                     child.material
                 )
                     ? child.material
-                    : [
-                        child.material
-                    ];
-
+                    : [child.material];
 
             materials.forEach(
                 material => {
-
-                    //--------------------------------------------------
-                    // Do not strongly highlight glass.
-                    //--------------------------------------------------
 
                     if (
                         isGlassMaterial(
@@ -224,16 +171,10 @@ function setWindowHighlight(
                         return;
                     }
 
-
                     const standard =
                         material as
                             | MeshStandardMaterial
                             | MeshPhysicalMaterial;
-
-
-                    //--------------------------------------------------
-                    // Standard / Physical
-                    //--------------------------------------------------
 
                     if (
                         "emissive" in standard &&
@@ -251,9 +192,7 @@ function setWindowHighlight(
                             standard.emissiveIntensity =
                                 HOVER_EMISSIVE_INTENSITY;
 
-                        }
-
-                        else {
+                        } else {
 
                             standard.emissive.set(
                                 0x000000
@@ -267,42 +206,25 @@ function setWindowHighlight(
                         return;
                     }
 
-
-                    //--------------------------------------------------
-                    // Fallback
-                    //--------------------------------------------------
-
                     if (
                         "color" in material &&
-                        material.color
+                        material.color &&
+                        highlighted
                     ) {
 
-                        if (
-                            highlighted
-                        ) {
-
-                            material.color.offsetHSL(
-                                0,
-                                0,
-                                0.12
-                            );
-
-                        }
+                        material.color.offsetHSL(
+                            0,
+                            0,
+                            0.12
+                        );
 
                     }
-
                 }
             );
-
         }
     );
-
 }
 
-
-//==================================================
-// WINDOW
-//==================================================
 
 export default function Window({
     window
@@ -312,32 +234,27 @@ export default function Window({
         state
     } = useEditor();
 
-
     const [
         hovered,
         setHovered
-    ] = useState(
-        false
-    );
+    ] = useState(false);
 
-
-    //==================================================
-    // CURSOR
-    //==================================================
 
     useCursor(
         hovered &&
         !state.walkthroughMode,
-
         'url("/cursors/hand.png") 16 16, pointer'
     );
 
 
     //--------------------------------------------------
-    // Asset
+    // Firebase first; local asset remains as fallback.
     //--------------------------------------------------
 
     const asset =
+        getCachedWindowAsset(
+            window.assetId
+        ) ??
         findAsset(
             window.assetId
         );
@@ -345,9 +262,6 @@ export default function Window({
 
     //--------------------------------------------------
     // GLTF
-    //--------------------------------------------------
-    //
-    // Always call hook before conditional return.
     //--------------------------------------------------
 
     const {
@@ -372,18 +286,11 @@ export default function Window({
                     return null;
                 }
 
-
                 const result =
                     normalizeWindowModel(
                         scene,
                         asset
                     );
-
-
-                //--------------------------------------------------
-                // Clone materials so hover does not affect
-                // another window using the same model.
-                //--------------------------------------------------
 
                 if (
                     result?.model
@@ -399,7 +306,6 @@ export default function Window({
                                 return;
                             }
 
-
                             if (
                                 Array.isArray(
                                     child.material
@@ -412,9 +318,7 @@ export default function Window({
                                             material.clone()
                                     );
 
-                            }
-
-                            else if (
+                            } else if (
                                 child.material
                             ) {
 
@@ -422,15 +326,11 @@ export default function Window({
                                     child.material.clone();
 
                             }
-
                         }
                     );
-
                 }
 
-
                 return result;
-
             },
             [
                 scene,
@@ -453,7 +353,6 @@ export default function Window({
                 return;
             }
 
-
             configureWindowShadows(
                 normalized.model
             );
@@ -465,10 +364,6 @@ export default function Window({
     );
 
 
-    //--------------------------------------------------
-    // No asset / normalized model
-    //--------------------------------------------------
-
     if (
         !asset ||
         !normalized
@@ -479,20 +374,14 @@ export default function Window({
 
 
     //--------------------------------------------------
-    // Hide only window currently being moved
+    // Hide only the window currently being moved.
     //--------------------------------------------------
 
     const isMoving =
-        buildInteraction
-            .moveTarget
-            ?.type ===
+        buildInteraction.moveTarget?.type ===
             "window" &&
-
-        buildInteraction
-            .moveTarget
-            .id ===
+        buildInteraction.moveTarget.id ===
             window.id;
-
 
     if (
         isMoving
@@ -502,10 +391,6 @@ export default function Window({
     }
 
 
-    //--------------------------------------------------
-    // Final rotation
-    //--------------------------------------------------
-
     const finalRotationY =
         window.rotationY +
         (
@@ -513,10 +398,6 @@ export default function Window({
             0
         );
 
-
-    //--------------------------------------------------
-    // Hover enter
-    //--------------------------------------------------
 
     const handlePointerEnter =
         (event: any) => {
@@ -528,26 +409,16 @@ export default function Window({
                 return;
             }
 
-
             event.stopPropagation();
 
-
-            setHovered(
-                true
-            );
-
+            setHovered(true);
 
             setWindowHighlight(
                 normalized.model,
                 true
             );
-
         };
 
-
-    //--------------------------------------------------
-    // Hover leave
-    //--------------------------------------------------
 
     const handlePointerLeave =
         (event: any) => {
@@ -559,56 +430,40 @@ export default function Window({
                 return;
             }
 
-
             event.stopPropagation();
 
-
-            setHovered(
-                false
-            );
-
+            setHovered(false);
 
             setWindowHighlight(
                 normalized.model,
                 false
             );
-
         };
 
-
-    //--------------------------------------------------
-    // Render
-    //--------------------------------------------------
 
     return (
 
         <group
-
             userData={{
                 windowId:
                     window.id
             }}
-
             position={[
                 window.position.x,
                 window.position.y,
                 window.position.z
             ]}
-
             rotation={[
                 0,
                 finalRotationY,
                 0
             ]}
-
             onPointerEnter={
                 handlePointerEnter
             }
-
             onPointerLeave={
                 handlePointerLeave
             }
-
         >
 
             <primitive

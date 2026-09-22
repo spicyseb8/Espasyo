@@ -1,59 +1,139 @@
-import type { Furniture } from "../furniture/FurnitureTypes";
-import { findAsset } from "../../assets/AssetLibrary";
+import type {
+    Furniture
+} from "../furniture/FurnitureTypes";
 
-import type { CostItem } from "./CostTypes";
+import {
+    findAsset
+} from "../../assets/AssetLibrary";
+
+import {
+    getCachedFurnitureAsset
+} from "../../engine/furniture/FirebaseFurnitureLibrary";
+
+import type {
+    CostItem
+} from "./CostTypes";
+
+
+//==================================================
+// CALCULATE FURNITURE COSTS
+//==================================================
 
 export function calculateFurnitureCosts(
     furnitureList: Furniture[]
 ): CostItem[] {
 
     const grouped =
-        new Map<string, CostItem>();
+        new Map<
+            string,
+            CostItem
+        >();
 
-    for (const furniture of furnitureList) {
+
+    for (
+        const furniture
+        of furnitureList
+    ) {
+
+        //--------------------------------------------------
+        // Firebase first
+        //
+        // Older/local furniture remains supported through
+        // AssetLibrary as a fallback.
+        //--------------------------------------------------
 
         const asset =
+            getCachedFurnitureAsset(
+                furniture.assetId
+            ) ??
             findAsset(
                 furniture.assetId
             );
 
-        if (!asset) {
+
+        //--------------------------------------------------
+        // Asset not found
+        //--------------------------------------------------
+
+        if (
+            !asset
+        ) {
+
             continue;
+
         }
 
+
+        //--------------------------------------------------
+        // Existing item
+        //--------------------------------------------------
+
         const existing =
-            grouped.get(asset.id);
+            grouped.get(
+                asset.id
+            );
 
-        if (existing) {
 
-            existing.quantity += 1;
+        if (
+            existing
+        ) {
+
+            existing.quantity +=
+                1;
+
 
             existing.subtotal =
                 existing.quantity *
                 existing.rate;
 
-        } else {
+        }
+
+
+        //--------------------------------------------------
+        // New item
+        //--------------------------------------------------
+
+        else {
 
             grouped.set(
+
                 asset.id,
+
                 {
-                    category: "furniture",
 
-                    name: asset.name,
+                    category:
+                        "furniture",
 
-                    quantity: 1,
+                    name:
+                        asset.name,
 
-                    unit: "item",
+                    quantity:
+                        1,
 
-                    rate: asset.price,
+                    unit:
+                        "item",
 
-                    subtotal: asset.price
+                    rate:
+                        asset.price,
+
+                    subtotal:
+                        asset.price
+
                 }
+
             );
+
         }
+
     }
+
+
+    //--------------------------------------------------
+    // Return grouped costs
+    //--------------------------------------------------
 
     return Array.from(
         grouped.values()
     );
+
 }

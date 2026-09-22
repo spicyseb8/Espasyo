@@ -1,6 +1,10 @@
 import "./AssetCard.css";
 
 import {
+    useState
+} from "react";
+
+import {
     Check
 } from "lucide-react";
 
@@ -15,9 +19,14 @@ import {
     BuildTool
 } from "../../../context/BuildTool";
 
+import AssetModelThumbnail
+    from "../AssetModelThumbnail";
+
+
 interface Props {
     asset: Asset;
 }
+
 
 export default function AssetCard({
     asset
@@ -28,9 +37,21 @@ export default function AssetCard({
         dispatch
     } = useEditor();
 
+    const [
+        thumbnailError,
+        setThumbnailError
+    ] = useState(false);
+
+
     const selected =
         state.selectedAsset?.id ===
         asset.id;
+
+
+    const hasThumbnail =
+        Boolean(asset.thumbnail?.trim()) &&
+        !thumbnailError;
+
 
     return (
 
@@ -50,14 +71,8 @@ export default function AssetCard({
             onClick={() => {
 
                 //--------------------------------------------------
-                // IMPORTANT:
-                //
-                // Clicking a card only selects an asset.
-                //
-                // It must NOT immediately start placement.
-                //
-                // If another asset was already being placed,
-                // cancel that placement first.
+                // Clicking only selects the asset.
+                // It does not immediately start placement.
                 //--------------------------------------------------
 
                 dispatch({
@@ -67,6 +82,7 @@ export default function AssetCard({
                     payload:
                         BuildTool.None
                 });
+
 
                 //--------------------------------------------------
                 // Select / deselect pending asset
@@ -89,22 +105,44 @@ export default function AssetCard({
                 className="asset-thumb"
             >
 
-                <img
-                    src={
-                        asset.thumbnail
-                    }
+                {hasThumbnail ? (
 
-                    alt={
-                        asset.name
-                    }
-                />
+                    <img
+                        src={
+                            asset.thumbnail
+                        }
+
+                        alt={
+                            asset.name
+                        }
+
+                        onError={() => {
+                            setThumbnailError(true);
+                        }}
+                    />
+
+                ) : asset.model ? (
+
+                    <AssetModelThumbnail
+                        model={
+                            asset.model
+                        }
+                    />
+
+                ) : (
+
+                    <div className="asset-thumb-empty">
+                        No preview
+                    </div>
+
+                )}
+
 
                 {
                     selected && (
 
                         <span
-                            className=
-                                "selected-badge"
+                            className="selected-badge"
                         >
 
                             <Check
@@ -113,10 +151,12 @@ export default function AssetCard({
                             />
 
                         </span>
+
                     )
                 }
 
             </div>
+
 
             <div>
 
@@ -127,10 +167,13 @@ export default function AssetCard({
                 </span>
 
                 <small>
+
                     ₱
+
                     {
                         asset.price.toLocaleString()
                     }
+
                 </small>
 
             </div>

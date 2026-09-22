@@ -1,4 +1,6 @@
 import {
+    memo,
+    useEffect,
     useMemo,
     useState
 } from "react";
@@ -16,8 +18,9 @@ import {
 } from "../../assets/AssetLibrary";
 
 import {
-    getFurnitureScale
-} from "./FurnitureSizing";
+    getCachedFurnitureAsset,
+    getFurnitureAssets
+} from "../../engine/furniture/FirebaseFurnitureLibrary";
 
 import type {
     Furniture
@@ -31,29 +34,33 @@ import {
 } from "three";
 
 
-//==================================================
+//======================================================
 // PROPS
-//==================================================
+//======================================================
 
 interface FurnitureItemProps {
 
-    id: string;
+    id:
+        string;
 
-    assetId: string;
+    assetId:
+        string;
 
     position:
         Furniture["position"];
 
-    rotationY: number;
+    rotationY:
+        number;
 
     modelOffset:
         Furniture["modelOffset"];
+
 }
 
 
-//==================================================
+//======================================================
 // HIGHLIGHT SETTINGS
-//==================================================
+//======================================================
 
 const HOVER_COLOR =
     "#63B8FF";
@@ -62,9 +69,23 @@ const HOVER_EMISSIVE_INTENSITY =
     0.35;
 
 
-//==================================================
+//======================================================
+// ORIGINAL MATERIAL USER DATA
+//======================================================
+
+const ORIGINAL_COLOR_KEY =
+    "__espasyoOriginalColor";
+
+const ORIGINAL_EMISSIVE_KEY =
+    "__espasyoOriginalEmissive";
+
+const ORIGINAL_EMISSIVE_INTENSITY_KEY =
+    "__espasyoOriginalEmissiveIntensity";
+
+
+//======================================================
 // APPLY HOVER HIGHLIGHT
-//==================================================
+//======================================================
 
 function setFurnitureHighlight(
 
@@ -77,6 +98,7 @@ function setFurnitureHighlight(
 ) {
 
     object.traverse(
+
         child => {
 
             if (
@@ -98,16 +120,42 @@ function setFurnitureHighlight(
 
 
             materials.forEach(
+
                 material => {
 
                     const standard =
                         material as
-                            | MeshStandardMaterial
-                            | MeshPhysicalMaterial;
+                            MeshStandardMaterial |
+                            MeshPhysicalMaterial;
 
 
                     //--------------------------------------------------
-                    // Standard / Physical material
+                    // SAVE ORIGINAL COLOR
+                    //--------------------------------------------------
+
+                    if (
+                        "color" in material &&
+                        material.color
+                    ) {
+
+                        if (
+                            standard.userData[
+                                ORIGINAL_COLOR_KEY
+                            ] === undefined
+                        ) {
+
+                            standard.userData[
+                                ORIGINAL_COLOR_KEY
+                            ] =
+                                material.color.getHex();
+
+                        }
+
+                    }
+
+
+                    //--------------------------------------------------
+                    // SAVE ORIGINAL EMISSIVE
                     //--------------------------------------------------
 
                     if (
@@ -116,7 +164,50 @@ function setFurnitureHighlight(
                     ) {
 
                         if (
-                            highlighted
+                            standard.userData[
+                                ORIGINAL_EMISSIVE_KEY
+                            ] === undefined
+                        ) {
+
+                            standard.userData[
+                                ORIGINAL_EMISSIVE_KEY
+                            ] =
+                                standard.emissive.getHex();
+
+                        }
+
+
+                        if (
+                            standard.userData[
+                                ORIGINAL_EMISSIVE_INTENSITY_KEY
+                            ] === undefined
+                        ) {
+
+                            standard.userData[
+                                ORIGINAL_EMISSIVE_INTENSITY_KEY
+                            ] =
+                                standard.emissiveIntensity;
+
+                        }
+
+                    }
+
+
+                    //--------------------------------------------------
+                    // HIGHLIGHT
+                    //--------------------------------------------------
+
+                    if (
+                        highlighted
+                    ) {
+
+                        //--------------------------------------------------
+                        // Standard / Physical material
+                        //--------------------------------------------------
+
+                        if (
+                            "emissive" in standard &&
+                            standard.emissive
                         ) {
 
                             standard.emissive.set(
@@ -126,35 +217,37 @@ function setFurnitureHighlight(
                             standard.emissiveIntensity =
                                 HOVER_EMISSIVE_INTENSITY;
 
-                        }
-
-                        else {
-
-                            standard.emissive.set(
-                                0x000000
-                            );
-
-                            standard.emissiveIntensity =
-                                0;
+                            return;
 
                         }
 
-                        return;
-                    }
 
-
-                    //--------------------------------------------------
-                    // Fallback
-                    //--------------------------------------------------
-
-                    if (
-                        "color" in material &&
-                        material.color
-                    ) {
+                        //--------------------------------------------------
+                        // Fallback material
+                        //--------------------------------------------------
 
                         if (
-                            highlighted
+                            "color" in material &&
+                            material.color
                         ) {
+
+                            const originalColor =
+                                standard.userData[
+                                    ORIGINAL_COLOR_KEY
+                                ];
+
+
+                            if (
+                                typeof originalColor ===
+                                "number"
+                            ) {
+
+                                material.color.setHex(
+                                    originalColor
+                                );
+
+                            }
+
 
                             material.color.offsetHSL(
                                 0,
@@ -164,20 +257,92 @@ function setFurnitureHighlight(
 
                         }
 
+
+                        return;
+
+                    }
+
+
+                    //--------------------------------------------------
+                    // RESTORE ORIGINAL
+                    //--------------------------------------------------
+
+                    const originalColor =
+                        standard.userData[
+                            ORIGINAL_COLOR_KEY
+                        ];
+
+
+                    if (
+                        typeof originalColor ===
+                        "number" &&
+
+                        "color" in material &&
+                        material.color
+                    ) {
+
+                        material.color.setHex(
+                            originalColor
+                        );
+
+                    }
+
+
+                    //--------------------------------------------------
+                    // Restore emissive
+                    //--------------------------------------------------
+
+                    const originalEmissive =
+                        standard.userData[
+                            ORIGINAL_EMISSIVE_KEY
+                        ];
+
+
+                    if (
+                        typeof originalEmissive ===
+                        "number" &&
+
+                        "emissive" in standard &&
+                        standard.emissive
+                    ) {
+
+                        standard.emissive.setHex(
+                            originalEmissive
+                        );
+
+
+                        const originalIntensity =
+                            standard.userData[
+                                ORIGINAL_EMISSIVE_INTENSITY_KEY
+                            ];
+
+
+                        if (
+                            typeof originalIntensity ===
+                            "number"
+                        ) {
+
+                            standard.emissiveIntensity =
+                                originalIntensity;
+
+                        }
+
                     }
 
                 }
+
             );
 
         }
+
     );
 
 }
 
 
-//==================================================
+//======================================================
 // FURNITURE ITEM
-//==================================================
+//======================================================
 
 function FurnitureItem({
 
@@ -193,10 +358,15 @@ function FurnitureItem({
 
 }: FurnitureItemProps) {
 
+
     const {
         state
     } = useEditor();
 
+
+    //--------------------------------------------------
+    // Hover
+    //--------------------------------------------------
 
     const [
         hovered,
@@ -206,31 +376,36 @@ function FurnitureItem({
     );
 
 
-    //==================================================
-    // CURSOR
-    //==================================================
+    //--------------------------------------------------
+    // Cursor
+    //--------------------------------------------------
 
     useCursor(
+
         hovered &&
         !state.walkthroughMode,
 
         'url("/cursors/hand.png") 16 16, pointer'
+
     );
 
 
-    //==================================================
-    // ASSET
-    //==================================================
+    //--------------------------------------------------
+    // Asset
+    //--------------------------------------------------
 
     const asset =
+        getCachedFurnitureAsset(
+            assetId
+        ) ??
         findAsset(
             assetId
         );
 
 
-    //==================================================
+    //--------------------------------------------------
     // GLTF
-    //==================================================
+    //--------------------------------------------------
 
     const {
         scene
@@ -239,25 +414,13 @@ function FurnitureItem({
     );
 
 
-    //==================================================
-    // Hide original while furniture is being moved
-    //==================================================
-
-    if (
-        !asset ||
-        state.movingFurnitureId === id
-    ) {
-
-        return null;
-    }
-
-
-    //==================================================
-    // CLONE AND CONFIGURE MODEL
-    //==================================================
+    //--------------------------------------------------
+    // Clone model
+    //--------------------------------------------------
 
     const model =
         useMemo(
+
             () => {
 
                 const clone =
@@ -266,41 +429,27 @@ function FurnitureItem({
                     );
 
 
-                //==================================================
-                // SCALE
-                //==================================================
-
-                if (
-                    asset.furnitureDimensions
-                ) {
-
-                    const scale =
-                        getFurnitureScale(
-                            clone,
-                            asset.furnitureDimensions
-                        );
-
-                    clone.scale.copy(
-                        scale
-                    );
-
-                }
-
-
-                //==================================================
-                // FURNITURE ID + SHADOWS
-                //==================================================
+                //--------------------------------------------------
+                // Furniture ID
+                //--------------------------------------------------
 
                 clone.traverse(
+
                     child => {
 
                         child.userData = {
+
                             ...child.userData,
 
                             furnitureId:
                                 id
+
                         };
 
+
+                        //--------------------------------------------------
+                        // Shadows
+                        //--------------------------------------------------
 
                         child.castShadow =
                             true;
@@ -310,8 +459,7 @@ function FurnitureItem({
 
 
                         //--------------------------------------------------
-                        // Clone materials so hover highlighting does
-                        // not modify other furniture using the same GLTF.
+                        // Clone materials
                         //--------------------------------------------------
 
                         if (
@@ -326,8 +474,10 @@ function FurnitureItem({
 
                                 child.material =
                                     child.material.map(
+
                                         material =>
                                             material.clone()
+
                                     );
 
                             }
@@ -344,23 +494,60 @@ function FurnitureItem({
                         }
 
                     }
+
                 );
 
 
                 return clone;
 
             },
+
             [
                 scene,
-                asset.furnitureDimensions,
                 id
             ]
+
         );
 
 
-    //==================================================
-    // HOVER
-    //==================================================
+    //--------------------------------------------------
+    // Clear hover when furniture starts moving
+    //--------------------------------------------------
+
+    useEffect(
+
+        () => {
+
+            if (
+                state.movingFurnitureId ===
+                id
+            ) {
+
+                setHovered(
+                    false
+                );
+
+                setFurnitureHighlight(
+                    model,
+                    false
+                );
+
+            }
+
+        },
+
+        [
+            state.movingFurnitureId,
+            id,
+            model
+        ]
+
+    );
+
+
+    //--------------------------------------------------
+    // Hover enter
+    //--------------------------------------------------
 
     const handlePointerEnter =
         (event: any) => {
@@ -389,6 +576,10 @@ function FurnitureItem({
         };
 
 
+    //--------------------------------------------------
+    // Hover leave
+    //--------------------------------------------------
+
     const handlePointerLeave =
         (event: any) => {
 
@@ -416,9 +607,26 @@ function FurnitureItem({
         };
 
 
-    //==================================================
-    // RENDER
-    //==================================================
+    //--------------------------------------------------
+    // Hide original while moving
+    //
+    // IMPORTANT:
+    // This is AFTER every hook.
+    //--------------------------------------------------
+
+    if (
+        !asset ||
+        state.movingFurnitureId ===
+            id
+    ) {
+
+        return null;
+    }
+
+
+    //--------------------------------------------------
+    // Render
+    //--------------------------------------------------
 
     return (
 
@@ -466,27 +674,126 @@ function FurnitureItem({
             />
 
         </group>
+
     );
+
 }
 
 
-//==================================================
+//======================================================
 // FURNITURE SCENE
-//==================================================
+//======================================================
 
-export default function FurnitureScene() {
+function FurnitureScene() {
+
 
     const {
         state
     } = useEditor();
 
 
+    //--------------------------------------------------
+    // Load Firebase furniture catalog
+    //--------------------------------------------------
+
+    const [
+        firebaseFurnitureLoaded,
+        setFirebaseFurnitureLoaded
+    ] = useState(
+        false
+    );
+
+
+    useEffect(
+
+        () => {
+
+            let cancelled =
+                false;
+
+
+            getFurnitureAssets()
+
+                .then(
+
+                    () => {
+
+                        if (
+                            !cancelled
+                        ) {
+
+                            setFirebaseFurnitureLoaded(
+                                true
+                            );
+
+                        }
+
+                    }
+
+                )
+
+                .catch(
+
+                    error => {
+
+                        console.error(
+
+                            "Failed to load Firebase furniture catalog:",
+
+                            error
+
+                        );
+
+
+                        if (
+                            !cancelled
+                        ) {
+
+                            setFirebaseFurnitureLoaded(
+                                true
+                            );
+
+                        }
+
+                    }
+
+                );
+
+
+            return () => {
+
+                cancelled =
+                    true;
+
+            };
+
+        },
+
+        []
+
+    );
+
+
+    //--------------------------------------------------
+    // Intentionally used to re-render after Firebase
+    // catalog loading.
+    //--------------------------------------------------
+
+    void firebaseFurnitureLoaded;
+
+
+    //--------------------------------------------------
+    // Render
+    //--------------------------------------------------
+
     return (
 
         <>
 
             {
+
                 state.furniture.map(
+
                     furniture => (
 
                         <FurnitureItem
@@ -518,9 +825,18 @@ export default function FurnitureScene() {
                         />
 
                     )
+
                 )
+
             }
 
         </>
+
     );
+
 }
+
+
+export default memo(
+    FurnitureScene
+);

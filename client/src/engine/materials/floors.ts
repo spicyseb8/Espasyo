@@ -1,7 +1,5 @@
 import {
     collection,
-    doc,
-    getDoc,
     getDocs,
     query,
     where
@@ -28,18 +26,24 @@ import type {
     Material
 } from "./MaterialTypes";
 
+import localDefaultFloorTexture from "../../../uploads/default_floor/assets_floors_Tiles_terrazo_tiles_Diffuse.png";
+
 
 //==================================================
 // DEFAULT FLOOR
 //==================================================
 //
-// Firebase asset:
+// This ID still matches the Firebase Terrazo Tiles
+// material:
 //
 // id: A-26015
 // name: Terrazo Tiles
-// category: tiles
 //
-// This material is loaded first.
+// IMPORTANT:
+// The actual default floor texture is now LOCAL.
+//
+// This means a newly created room does NOT need to wait
+// for Firebase Storage before showing its floor.
 //==================================================
 
 export const DEFAULT_FLOOR_MATERIAL_ID =
@@ -47,33 +51,24 @@ export const DEFAULT_FLOOR_MATERIAL_ID =
 
 
 //==================================================
-// FIREBASE FLOOR ASSET
+// LOCAL DEFAULT FLOOR TEXTURE
 //==================================================
 //
-// Every floor in Firestore is now a PNG-based floor.
+// Vite converts this imported file into a browser URL.
 //
-// Example document (assets / A-26016):
+// Actual file:
 //
-// asset_status:  "available"
-// asset_type:    "floor"
-// category:      "wood"
-// diffuse_path:  "assets/floors/Wood/plank_flooring/Diffuse.png"
-// id:            "A-26016"
-// name:          "Plank Flooring"
-// price:         500
-// storage_path:  "assets/floors/Wood/plank_flooring"
+// client/uploads/default_floor/
+// assets_floors_Tiles_terrazo_tiles_Diffuse.png
 //
-// diffuse_path is the only file the 3D scene needs.
-//
-// It is typed as optional here because Firestore data
-// can never be trusted at compile time. It is checked
-// at runtime, and floors without a usable diffuse
-// image are skipped.
-//
-// thumbnail_path / color / roughness / metalness are
-// NOT in the current data. They are kept as optional
-// overrides so they can be added later per material
-// without touching this file again.
+//==================================================
+
+export const LOCAL_DEFAULT_FLOOR_TEXTURE =
+    localDefaultFloorTexture;
+
+
+//==================================================
+// FIREBASE FLOOR ASSET
 //==================================================
 
 interface FirebaseFloorAsset {
@@ -102,8 +97,6 @@ interface FirebaseFloorAsset {
     storage_path?:
         string;
 
-    // Optional overrides (not in the current data).
-
     thumbnail_path?:
         string;
 
@@ -120,6 +113,12 @@ interface FirebaseFloorAsset {
 
 //==================================================
 // DEFAULT FLOOR CACHE
+//==================================================
+//
+// This is created immediately from the local PNG.
+//
+// Firebase metadata can replace/enrich it later when
+// the complete catalog is loaded.
 //==================================================
 
 let cachedDefaultFloorMaterial:
@@ -173,6 +172,62 @@ const floorTexturePromises =
 
 
 //==================================================
+// LOCAL DEFAULT MATERIAL
+//==================================================
+//
+// This material exists without Firebase.
+//
+// Price is temporarily 0 until the Firebase catalog
+// provides the real metadata for A-26015.
+//
+// The actual texture is ALWAYS the local PNG.
+//==================================================
+
+function createLocalDefaultFloorMaterial(
+    firebaseMaterial?: Material
+): Material {
+
+    return {
+
+        id:
+            DEFAULT_FLOOR_MATERIAL_ID,
+
+        name:
+            firebaseMaterial?.name ??
+            "Terrazo Tiles",
+
+        category:
+            firebaseMaterial?.category ??
+            "flooring",
+
+        pricePerSquareMeter:
+            firebaseMaterial?.pricePerSquareMeter ??
+            0,
+
+        thumbnail:
+            firebaseMaterial?.thumbnail ??
+            LOCAL_DEFAULT_FLOOR_TEXTURE,
+
+        texture:
+            LOCAL_DEFAULT_FLOOR_TEXTURE,
+
+        color:
+            firebaseMaterial?.color ??
+            "#ffffff",
+
+        roughness:
+            firebaseMaterial?.roughness ??
+            0.8,
+
+        metalness:
+            firebaseMaterial?.metalness ??
+            0
+
+    };
+}
+
+
+//==================================================
 // RESOLVE STORAGE URL
 //==================================================
 
@@ -209,11 +264,6 @@ async function resolveStorageUrl(
 
     //--------------------------------------------------
     // Firebase Storage path.
-    //
-    // NOTE: Firebase Storage paths are CASE-SENSITIVE.
-    // "assets/floors/Wood/plank_flooring/Diffuse.png"
-    // must match the file in Storage exactly
-    // (capital W, capital D).
     //--------------------------------------------------
 
     try {
@@ -241,26 +291,12 @@ async function resolveStorageUrl(
 //==================================================
 // BUILD MATERIAL
 //==================================================
-//
-// Returns null when the floor has no usable diffuse
-// PNG. Every floor is texture-based now, so a floor
-// without a texture would only show up as a blank
-// gray entry in the catalog and in the 3D scene.
-//==================================================
 
 async function buildFloorMaterial(
     documentId: string,
     data: FirebaseFloorAsset,
     includeThumbnail: boolean
 ): Promise<Material | null> {
-
-    //--------------------------------------------------
-    // Use Firebase's "id" field when available.
-    //
-    // Example:
-    //
-    // id: "A-26015"
-    //--------------------------------------------------
 
     const materialId =
         data.id?.trim() ||
@@ -278,7 +314,7 @@ async function buildFloorMaterial(
 
 
     //--------------------------------------------------
-    // No diffuse image: skip this floor.
+    // No diffuse image.
     //--------------------------------------------------
 
     if (
@@ -297,10 +333,6 @@ async function buildFloorMaterial(
 
     //--------------------------------------------------
     // Thumbnail.
-    //
-    // The current data has no separate thumbnail, so the
-    // diffuse image URL is reused instead of making
-    // another Firebase Storage request.
     //--------------------------------------------------
 
     let thumbnail:
@@ -331,7 +363,7 @@ async function buildFloorMaterial(
 
 
     //--------------------------------------------------
-    // Convert Firebase asset to Material.
+    // Firebase material.
     //--------------------------------------------------
 
     return {
@@ -368,165 +400,18 @@ async function buildFloorMaterial(
 
 
 //==================================================
-// FETCH DEFAULT FLOOR DOCUMENT
-//==================================================
-//
-// Fast path:
-// assets / A-26015
-//
-// Fallback:
-// search the Firebase "id" field.
-//
-// This makes the loader work whether A-26015 is the
-// Firestore document ID or only the asset's id field.
-//==================================================
-
-async function fetchDefaultFloorDocument():
-    Promise<{
-        documentId: string;
-        data: FirebaseFloorAsset;
-    } | null> {
-
-    //--------------------------------------------------
-    // FAST PATH
-    //--------------------------------------------------
-
-    try {
-
-        const directDocument =
-            await getDoc(
-                doc(
-                    db,
-                    "assets",
-                    DEFAULT_FLOOR_MATERIAL_ID
-                )
-            );
-
-
-        if (
-            directDocument.exists()
-        ) {
-
-            const data =
-                directDocument.data() as
-                FirebaseFloorAsset;
-
-
-            if (
-                data.asset_type ===
-                "floor"
-            ) {
-
-                return {
-
-                    documentId:
-                        directDocument.id,
-
-                    data
-
-                };
-            }
-        }
-
-    } catch (error) {
-
-        console.warn(
-            "Direct default floor lookup failed:",
-            error
-        );
-    }
-
-
-    //--------------------------------------------------
-    // FALLBACK BY FIREBASE "id" FIELD
-    //--------------------------------------------------
-
-    try {
-
-        const defaultQuery =
-            query(
-
-                collection(
-                    db,
-                    "assets"
-                ),
-
-                where(
-                    "id",
-                    "==",
-                    DEFAULT_FLOOR_MATERIAL_ID
-                )
-
-            );
-
-
-        const snapshot =
-            await getDocs(
-                defaultQuery
-            );
-
-
-        const matchingDocument =
-            snapshot.docs.find(
-                document => {
-
-                    const data =
-                        document.data() as
-                        FirebaseFloorAsset;
-
-
-                    return (
-                        data.asset_type ===
-                        "floor"
-                    );
-
-                }
-            );
-
-
-        if (
-            matchingDocument
-        ) {
-
-            return {
-
-                documentId:
-                    matchingDocument.id,
-
-                data:
-                    matchingDocument.data() as
-                    FirebaseFloorAsset
-
-            };
-        }
-
-    } catch (error) {
-
-        console.error(
-            "Fallback default floor lookup failed:",
-            error
-        );
-    }
-
-
-    console.warn(
-        "Default floor asset not found:",
-        DEFAULT_FLOOR_MATERIAL_ID
-    );
-
-
-    return null;
-}
-
-
-//==================================================
 // GET DEFAULT FLOOR MATERIAL
 //==================================================
 //
-// ONLY the default material is loaded here.
+// IMPORTANT:
 //
-// The complete catalog remains unloaded until
-// getFloorMaterials() is called afterwards.
+// This no longer waits for Firebase.
+//
+// It immediately returns a material using the local
+// Terrazo PNG.
+//
+// The Firebase catalog can still load afterwards and
+// provide the real price/name/etc.
 //==================================================
 
 export async function getDefaultFloorMaterial():
@@ -544,63 +429,26 @@ export async function getDefaultFloorMaterial():
     }
 
 
-    try {
+    //--------------------------------------------------
+    // Create immediately from LOCAL texture.
+    //--------------------------------------------------
 
-        const result =
-            await fetchDefaultFloorDocument();
-
-
-        if (
-            !result
-        ) {
-
-            return null;
-        }
+    cachedDefaultFloorMaterial =
+        createLocalDefaultFloorMaterial();
 
 
-        //--------------------------------------------------
-        // No thumbnail is needed for the 3D scene.
-        //
-        // Returns null if the default floor has no usable
-        // diffuse PNG. Floor.tsx then falls back to the
-        // first material of the loaded catalog.
-        //--------------------------------------------------
+    //--------------------------------------------------
+    // Begin preloading the local texture.
+    //
+    // This does not block room creation.
+    //--------------------------------------------------
 
-        const material =
-            await buildFloorMaterial(
-
-                result.documentId,
-
-                result.data,
-
-                false
-
-            );
+    preloadFloorTexture(
+        LOCAL_DEFAULT_FLOOR_TEXTURE
+    );
 
 
-        if (
-            !material
-        ) {
-
-            return null;
-        }
-
-
-        cachedDefaultFloorMaterial =
-            material;
-
-
-        return material;
-
-    } catch (error) {
-
-        console.error(
-            "Failed to load default floor material:",
-            error
-        );
-
-        return null;
-    }
+    return cachedDefaultFloorMaterial;
 }
 
 
@@ -636,8 +484,6 @@ async function loadFloorMaterials():
 
     //--------------------------------------------------
     // Load all floor materials.
-    //
-    // One failed texture must not stop the rest.
     //--------------------------------------------------
 
     const results =
@@ -673,9 +519,6 @@ async function loadFloorMaterials():
 
     //--------------------------------------------------
     // Keep successful materials only.
-    //
-    // "fulfilled" with a null value means the floor was
-    // skipped because it has no usable diffuse PNG.
     //--------------------------------------------------
 
     for (
@@ -743,7 +586,7 @@ async function loadFloorMaterials():
 
 
     //--------------------------------------------------
-    // Save complete catalog.
+    // Save catalog.
     //--------------------------------------------------
 
     cachedFloorMaterials =
@@ -754,10 +597,11 @@ async function loadFloorMaterials():
 
 
     //--------------------------------------------------
-    // Update default cache with complete version.
+    // If Firebase contains A-26015, use its metadata
+    // but KEEP the LOCAL texture as the default texture.
     //--------------------------------------------------
 
-    const completeDefaultMaterial =
+    const firebaseDefaultMaterial =
         materials.find(
             material =>
                 material.id ===
@@ -766,12 +610,27 @@ async function loadFloorMaterials():
 
 
     if (
-        completeDefaultMaterial
+        firebaseDefaultMaterial
     ) {
 
         cachedDefaultFloorMaterial =
-            completeDefaultMaterial;
+            createLocalDefaultFloorMaterial(
+                firebaseDefaultMaterial
+            );
+
     }
+
+
+    //--------------------------------------------------
+    // Preload local default texture again.
+    //
+    // It is already cached when possible, so this is
+    // effectively free after the first load.
+    //--------------------------------------------------
+
+    preloadFloorTexture(
+        LOCAL_DEFAULT_FLOOR_TEXTURE
+    );
 
 
     return cachedFloorMaterials;
@@ -899,16 +758,6 @@ export function getCachedFloorTexture(
 //==================================================
 // PRELOAD FLOOR TEXTURE
 //==================================================
-//
-// The texture is manually loaded instead of using
-// Drei's useTexture(), so loading does not suspend
-// the whole React Three Fiber Canvas.
-//
-// Floor.tsx reads these textures through
-// getCachedFloorTexture() / preloadFloorTexture(),
-// so Floors.tsx's preload of the default floor is
-// really shared with the 3D scene.
-//==================================================
 
 export function preloadFloorTexture(
     url?: string
@@ -982,7 +831,7 @@ export function preloadFloorTexture(
                     texture => {
 
                         //--------------------------------------------------
-                        // Diffuse images are color textures.
+                        // Diffuse texture.
                         //--------------------------------------------------
 
                         texture.colorSpace =
@@ -991,10 +840,6 @@ export function preloadFloorTexture(
 
                         //--------------------------------------------------
                         // Repeat.
-                        //
-                        // ShapeGeometry UVs are in world units
-                        // (meters), so repeat 1,1 means one copy of
-                        // the image per 1 m x 1 m.
                         //--------------------------------------------------
 
                         texture.wrapS =
@@ -1019,11 +864,8 @@ export function preloadFloorTexture(
                         //--------------------------------------------------
 
                         floorTextureCache.set(
-
                             normalizedUrl,
-
                             texture
-
                         );
 
 
@@ -1075,10 +917,6 @@ export function preloadFloorTexture(
 //==================================================
 // REFRESH
 //==================================================
-//
-// Textures are intentionally kept cached because
-// already downloaded images can be reused.
-//==================================================
 
 export async function refreshFloorMaterials():
     Promise<Material[]> {
@@ -1094,6 +932,19 @@ export async function refreshFloorMaterials():
 
     floorMaterialsPromise =
         null;
+
+
+    //--------------------------------------------------
+    // Recreate local default immediately.
+    //--------------------------------------------------
+
+    cachedDefaultFloorMaterial =
+        createLocalDefaultFloorMaterial();
+
+
+    preloadFloorTexture(
+        LOCAL_DEFAULT_FLOOR_TEXTURE
+    );
 
 
     return getFloorMaterials();

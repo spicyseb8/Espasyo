@@ -1,4 +1,5 @@
 import {
+   
     useMemo,
     useState
 } from "react";
@@ -24,6 +25,11 @@ import {
 } from "../../assets/AssetLibrary";
 
 import {
+    getCachedDoorAsset,
+    
+} from "../../engine/build/FirebaseDoorWindowLibrary";
+
+import {
     buildInteraction
 } from "../Build/BuildInteraction";
 
@@ -31,21 +37,12 @@ import useEditor
     from "../../context/editor/useEditor";
 
 
-//==================================================
-// PROPS
-//==================================================
-
 interface Props {
 
     door:
         DoorType;
-
 }
 
-
-//==================================================
-// HIGHLIGHT SETTINGS
-//==================================================
 
 const HOVER_COLOR =
     "#63B8FF";
@@ -54,18 +51,11 @@ const HOVER_EMISSIVE_INTENSITY =
     0.35;
 
 
-//==================================================
-// DOOR HIGHLIGHT
-//==================================================
-
 function setDoorHighlight(
-
     object:
         Object3D,
-
     highlighted:
         boolean
-
 ) {
 
     object.traverse(
@@ -78,16 +68,12 @@ function setDoorHighlight(
                 return;
             }
 
-
             const materials =
                 Array.isArray(
                     child.material
                 )
                     ? child.material
-                    : [
-                        child.material
-                    ];
-
+                    : [child.material];
 
             materials.forEach(
                 material => {
@@ -96,11 +82,6 @@ function setDoorHighlight(
                         material as
                             | MeshStandardMaterial
                             | MeshPhysicalMaterial;
-
-
-                    //--------------------------------------------------
-                    // Standard / Physical
-                    //--------------------------------------------------
 
                     if (
                         "emissive" in standard &&
@@ -118,9 +99,7 @@ function setDoorHighlight(
                             standard.emissiveIntensity =
                                 HOVER_EMISSIVE_INTENSITY;
 
-                        }
-
-                        else {
+                        } else {
 
                             standard.emissive.set(
                                 0x000000
@@ -134,42 +113,25 @@ function setDoorHighlight(
                         return;
                     }
 
-
-                    //--------------------------------------------------
-                    // Fallback
-                    //--------------------------------------------------
-
                     if (
                         "color" in material &&
-                        material.color
+                        material.color &&
+                        highlighted
                     ) {
 
-                        if (
-                            highlighted
-                        ) {
-
-                            material.color.offsetHSL(
-                                0,
-                                0,
-                                0.12
-                            );
-
-                        }
+                        material.color.offsetHSL(
+                            0,
+                            0,
+                            0.12
+                        );
 
                     }
-
                 }
             );
-
         }
     );
-
 }
 
-
-//==================================================
-// DOOR
-//==================================================
 
 export default function Door({
     door
@@ -179,39 +141,34 @@ export default function Door({
         state
     } = useEditor();
 
-
     const [
         hovered,
         setHovered
-    ] = useState(
-        false
-    );
+    ] = useState(false);
 
-
-    //==================================================
-    // CURSOR
-    //==================================================
 
     useCursor(
         hovered &&
         !state.walkthroughMode,
-
         'url("/cursors/hand.png") 16 16, pointer'
     );
 
 
     //--------------------------------------------------
-    // Asset
+    // Firebase first; local asset remains as fallback.
     //--------------------------------------------------
 
     const asset =
+        getCachedDoorAsset(
+            door.assetId
+        ) ??
         findAsset(
             door.assetId
         );
 
 
     //--------------------------------------------------
-    // GLTF
+    // GLTF hook must run consistently.
     //--------------------------------------------------
 
     const {
@@ -222,28 +179,8 @@ export default function Door({
 
 
     //--------------------------------------------------
-    // Hide only the door currently being moved
-    //--------------------------------------------------
-
-    const isMoving =
-        buildInteraction.moveTarget?.type ===
-            "door" &&
-
-        buildInteraction.moveTarget.id ===
-            door.id;
-
-
-    if (
-        !asset ||
-        isMoving
-    ) {
-
-        return null;
-    }
-
-
-    //--------------------------------------------------
-    // Clone
+    // Clone before the moving-state return so the hook
+    // order stays stable when a door starts moving.
     //--------------------------------------------------
 
     const model =
@@ -255,23 +192,23 @@ export default function Door({
                         true
                     );
 
+                const scale =
+                    asset?.scale ?? 1;
+
+                clone.scale.set(
+                    scale,
+                    scale,
+                    scale
+                );
 
                 clone.traverse(
                     child => {
 
                         child.userData = {
-
                             ...child.userData,
-
                             doorId:
                                 door.id
-
                         };
-
-
-                        //--------------------------------------------------
-                        // Clone material
-                        //--------------------------------------------------
 
                         if (
                             child instanceof Mesh
@@ -289,9 +226,7 @@ export default function Door({
                                             material.clone()
                                     );
 
-                            }
-
-                            else if (
+                            } else if (
                                 child.material
                             ) {
 
@@ -300,7 +235,6 @@ export default function Door({
 
                             }
 
-
                             child.castShadow =
                                 true;
 
@@ -308,23 +242,22 @@ export default function Door({
                                 true;
 
                         }
-
                     }
                 );
-
 
                 return clone;
 
             },
             [
                 scene,
-                door.id
+                door.id,
+                asset?.scale
             ]
         );
 
 
     //--------------------------------------------------
-    // Hover enter
+    // Hover handlers
     //--------------------------------------------------
 
     const handlePointerEnter =
@@ -337,26 +270,16 @@ export default function Door({
                 return;
             }
 
-
             event.stopPropagation();
 
-
-            setHovered(
-                true
-            );
-
+            setHovered(true);
 
             setDoorHighlight(
                 model,
                 true
             );
-
         };
 
-
-    //--------------------------------------------------
-    // Hover leave
-    //--------------------------------------------------
 
     const handlePointerLeave =
         (event: any) => {
@@ -368,75 +291,81 @@ export default function Door({
                 return;
             }
 
-
             event.stopPropagation();
 
-
-            setHovered(
-                false
-            );
-
+            setHovered(false);
 
             setDoorHighlight(
                 model,
                 false
             );
-
         };
 
 
     //--------------------------------------------------
-    // Render
+    // Hide only the door currently being moved.
     //--------------------------------------------------
+
+    const isMoving =
+        buildInteraction.moveTarget?.type ===
+            "door" &&
+        buildInteraction.moveTarget.id ===
+            door.id;
+
+    if (
+        !asset ||
+        isMoving
+    ) {
+
+        return null;
+    }
+
+
+    //--------------------------------------------------
+    // Use Firebase/local asset rotation offset when
+    // present. The current local door is Math.PI / 2,
+    // so its behavior remains unchanged.
+    //--------------------------------------------------
+
+    const rotationOffsetY =
+        asset.rotationOffsetY ??
+        Math.PI / 2;
+
+
+    const finalRotationY =
+        door.rotationY +
+        rotationOffsetY;
+
 
     return (
 
         <group
-
             userData={{
                 doorId:
                     door.id
             }}
-
             position={
                 door.position
             }
-
             rotation={[
                 0,
-                door.rotationY,
+                finalRotationY,
                 0
             ]}
-
             onPointerEnter={
                 handlePointerEnter
             }
-
             onPointerLeave={
                 handlePointerLeave
             }
-
         >
 
-            <group
-
-                rotation={[
-                    0,
-                    Math.PI / 2,
-                    0
-                ]}
-
-            >
-
-                <primitive
-                    object={
-                        model
-                    }
-                />
-
-            </group>
+            <primitive
+                object={
+                    model
+                }
+            />
 
         </group>
-
     );
 }

@@ -1,5 +1,7 @@
 import {
-    useMemo
+    useEffect,
+    useMemo,
+    useState
 } from "react";
 
 import useEditor
@@ -9,7 +11,12 @@ import {
     buildInteraction
 } from "../Build/BuildInteraction";
 
-import Window from "./Window";
+import {
+    getDoorWindowAssets
+} from "../../engine/build/FirebaseDoorWindowLibrary";
+
+import Window
+    from "./Window";
 
 
 export default function Windows() {
@@ -18,11 +25,70 @@ export default function Windows() {
         state
     } = useEditor();
 
+    const [
+        firebaseLoaded,
+        setFirebaseLoaded
+    ] = useState(false);
+
+
+    useEffect(
+        () => {
+
+            let cancelled =
+                false;
+
+            getDoorWindowAssets()
+                .then(
+                    () => {
+
+                        if (
+                            !cancelled
+                        ) {
+
+                            setFirebaseLoaded(
+                                true
+                            );
+
+                        }
+                    }
+                )
+                .catch(
+                    error => {
+
+                        console.error(
+                            "Failed to load Firebase door/window catalog:",
+                            error
+                        );
+
+                        if (
+                            !cancelled
+                        ) {
+
+                            setFirebaseLoaded(
+                                true
+                            );
+
+                        }
+                    }
+                );
+
+            return () => {
+
+                cancelled =
+                    true;
+
+            };
+
+        },
+        []
+    );
+
+    void firebaseLoaded;
+
+
     const windowElements =
         useMemo(
-
             () =>
-
                 state.windows.map(
                     window => (
 
@@ -30,37 +96,21 @@ export default function Windows() {
                             key={
                                 window.id
                             }
-
                             window={
                                 window
                             }
-
                         />
 
                     )
                 ),
-
             [
                 state.windows,
-
-                //--------------------------------------------------
-                // Important:
-                //
-                // Moving a window changes buildInteraction.moveTarget
-                // and BuildTool changes at the same time.
-                //
-                // Include the current move target so this list
-                // re-renders and hides the original window.
-                //--------------------------------------------------
-
                 state.buildTool,
-
                 buildInteraction.moveTarget?.type,
-
                 buildInteraction.moveTarget?.id
             ]
-
         );
+
 
     return (
         <>
