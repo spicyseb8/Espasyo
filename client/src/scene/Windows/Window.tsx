@@ -1,4 +1,5 @@
 import {
+    useEffect,
     useMemo,
     useState
 } from "react";
@@ -20,12 +21,17 @@ import type {
     Window as WindowType
 } from "../../engine/windows/WindowTypes";
 
+import type {
+    Asset
+} from "../../assets/Asset";
+
 import {
     findAsset
 } from "../../assets/AssetLibrary";
 
 import {
-    getCachedWindowAsset
+    getCachedWindowAsset,
+    getDoorWindowAssets
 } from "../../engine/build/FirebaseDoorWindowLibrary";
 
 import {
@@ -40,6 +46,10 @@ import useEditor
     from "../../context/editor/useEditor";
 
 
+//======================================================
+// PROPS
+//======================================================
+
 interface Props {
 
     window:
@@ -47,12 +57,20 @@ interface Props {
 }
 
 
+//======================================================
+// HIGHLIGHT SETTINGS
+//======================================================
+
 const HOVER_COLOR =
     "#63B8FF";
 
 const HOVER_EMISSIVE_INTENSITY =
     0.35;
 
+
+//======================================================
+// GLASS DETECTION
+//======================================================
 
 function isGlassMaterial(
     material:
@@ -66,18 +84,25 @@ function isGlassMaterial(
         return true;
     }
 
+
     if (
         typeof material.opacity ===
             "number" &&
+
         material.opacity < 0.95
     ) {
 
         return true;
     }
 
+
     return false;
 }
 
+
+//======================================================
+// WINDOW SHADOWS
+//======================================================
 
 function configureWindowShadows(
     model:
@@ -85,6 +110,7 @@ function configureWindowShadows(
 ): void {
 
     model.traverse(
+
         child => {
 
             if (
@@ -93,6 +119,7 @@ function configureWindowShadows(
 
                 return;
             }
+
 
             if (
                 Array.isArray(
@@ -102,11 +129,14 @@ function configureWindowShadows(
 
                 const hasGlass =
                     child.material.some(
+
                         material =>
                             isGlassMaterial(
                                 material
                             )
+
                     );
+
 
                 child.castShadow =
                     !hasGlass;
@@ -114,35 +144,49 @@ function configureWindowShadows(
                 child.receiveShadow =
                     true;
 
+
                 return;
             }
 
+
             const material =
                 child.material;
+
 
             const glass =
                 isGlassMaterial(
                     material
                 );
 
+
             child.castShadow =
                 !glass;
 
             child.receiveShadow =
                 true;
+
         }
+
     );
+
 }
 
+
+//======================================================
+// WINDOW HIGHLIGHT
+//======================================================
 
 function setWindowHighlight(
     object:
         Object3D,
+
     highlighted:
         boolean
+
 ) {
 
     object.traverse(
+
         child => {
 
             if (
@@ -152,15 +196,26 @@ function setWindowHighlight(
                 return;
             }
 
+
             const materials =
                 Array.isArray(
                     child.material
                 )
+
                     ? child.material
-                    : [child.material];
+
+                    : [
+                        child.material
+                    ];
+
 
             materials.forEach(
+
                 material => {
+
+                    //--------------------------------------------------
+                    // Don't highlight glass
+                    //--------------------------------------------------
 
                     if (
                         isGlassMaterial(
@@ -171,10 +226,16 @@ function setWindowHighlight(
                         return;
                     }
 
+
                     const standard =
                         material as
                             | MeshStandardMaterial
                             | MeshPhysicalMaterial;
+
+
+                    //--------------------------------------------------
+                    // EMISSIVE
+                    //--------------------------------------------------
 
                     if (
                         "emissive" in standard &&
@@ -203,8 +264,14 @@ function setWindowHighlight(
 
                         }
 
+
                         return;
                     }
+
+
+                    //--------------------------------------------------
+                    // FALLBACK COLOR
+                    //--------------------------------------------------
 
                     if (
                         "color" in material &&
@@ -219,12 +286,27 @@ function setWindowHighlight(
                         );
 
                     }
+
                 }
+
             );
+
         }
+
     );
+
 }
 
+
+//======================================================
+// WINDOW
+//======================================================
+//
+// IMPORTANT:
+//
+// This component does not call useGLTF() until a valid
+// Firebase/local Asset with a non-empty model URL exists.
+//======================================================
 
 export default function Window({
     window
@@ -234,24 +316,130 @@ export default function Window({
         state
     } = useEditor();
 
+
+    //==================================================
+    // HOVER
+    //==================================================
+
     const [
         hovered,
         setHovered
     ] = useState(false);
 
 
-    useCursor(
-        hovered &&
-        !state.walkthroughMode,
-        'url("/cursors/hand.png") 16 16, pointer'
+    //==================================================
+    // CATALOG READY
+    //==================================================
+
+    const [
+        catalogReady,
+        setCatalogReady
+    ] = useState(false);
+
+
+    //==================================================
+    // LOAD FIREBASE DOOR/WINDOW CATALOG
+    //==================================================
+
+    useEffect(
+
+        () => {
+
+            let cancelled =
+                false;
+
+
+            getDoorWindowAssets()
+
+                .then(
+
+                    () => {
+
+                        if (
+                            !cancelled
+                        ) {
+
+                            setCatalogReady(
+                                true
+                            );
+
+                        }
+
+                    }
+
+                )
+
+                .catch(
+
+                    error => {
+
+                        console.error(
+
+                            "Failed to load Firebase door/window catalog:",
+
+                            error
+
+                        );
+
+
+                        if (
+                            !cancelled
+                        ) {
+
+                            setCatalogReady(
+                                true
+                            );
+
+                        }
+
+                    }
+
+                );
+
+
+            return () => {
+
+                cancelled =
+                    true;
+
+            };
+
+        },
+
+        []
+
     );
 
 
     //--------------------------------------------------
-    // Firebase first; local asset remains as fallback.
+    // Intentionally used to rerender after catalog
+    // loading.
     //--------------------------------------------------
 
-    const asset =
+    void catalogReady;
+
+
+    //==================================================
+    // CURSOR
+    //==================================================
+
+    useCursor(
+
+        hovered &&
+        !state.walkthroughMode,
+
+        'url("/cursors/hand.png") 16 16, pointer'
+
+    );
+
+
+    //==================================================
+    // ASSET
+    //==================================================
+
+    const asset:
+        Asset | undefined =
+
         getCachedWindowAsset(
             window.assetId
         ) ??
@@ -260,31 +448,148 @@ export default function Window({
         );
 
 
-    //--------------------------------------------------
+    //==================================================
+    // MOVING
+    //==================================================
+
+    const isMoving =
+        buildInteraction.moveTarget?.type ===
+            "window" &&
+
+        buildInteraction.moveTarget.id ===
+            window.id;
+
+
+    if (
+        isMoving
+    ) {
+
+        return null;
+    }
+
+
+    //==================================================
+    // NO ASSET YET
+    //==================================================
+
+    if (
+        !asset
+    ) {
+
+        return null;
+    }
+
+
+    //==================================================
+    // NO VALID MODEL URL
+    //==================================================
+
+    if (
+        typeof asset.model !==
+        "string" ||
+
+        asset.model.trim() === ""
+    ) {
+
+        console.warn(
+
+            "Window asset has no valid model URL:",
+
+            {
+                windowId:
+                    window.id,
+
+                assetId:
+                    window.assetId,
+
+                asset
+            }
+
+        );
+
+        return null;
+    }
+
+
+    //==================================================
+    // ACTUAL GLTF MODEL
+    //==================================================
+
+    return (
+
+        <WindowModel
+
+            window={
+                window
+            }
+
+            asset={
+                asset
+            }
+
+            setHovered={
+                setHovered
+            }
+
+        />
+
+    );
+
+}
+
+
+//======================================================
+// WINDOW MODEL
+//======================================================
+
+interface WindowModelProps {
+
+    window:
+        WindowType;
+
+    asset:
+        Asset;
+
+    setHovered:
+        (value: boolean) => void;
+
+}
+
+
+function WindowModel({
+
+    window,
+
+    asset,
+
+    setHovered
+
+}: WindowModelProps) {
+
+    const {
+        state
+    } = useEditor();
+
+
+    //==================================================
     // GLTF
-    //--------------------------------------------------
+    //==================================================
 
     const {
         scene
     } = useGLTF(
-        asset?.model ?? ""
+        asset.model
     );
 
 
-    //--------------------------------------------------
-    // Normalize window model
-    //--------------------------------------------------
+    //==================================================
+    // NORMALIZE WINDOW MODEL
+    //==================================================
 
     const normalized =
         useMemo(
+
             () => {
-
-                if (
-                    !asset
-                ) {
-
-                    return null;
-                }
 
                 const result =
                     normalizeWindowModel(
@@ -292,11 +597,17 @@ export default function Window({
                         asset
                     );
 
+
+                //--------------------------------------------------
+                // Clone materials
+                //--------------------------------------------------
+
                 if (
                     result?.model
                 ) {
 
                     result.model.traverse(
+
                         child => {
 
                             if (
@@ -305,6 +616,7 @@ export default function Window({
 
                                 return;
                             }
+
 
                             if (
                                 Array.isArray(
@@ -318,7 +630,9 @@ export default function Window({
                                             material.clone()
                                     );
 
-                            } else if (
+                            }
+
+                            else if (
                                 child.material
                             ) {
 
@@ -326,24 +640,32 @@ export default function Window({
                                     child.material.clone();
 
                             }
+
                         }
+
                     );
+
                 }
 
+
                 return result;
+
             },
+
             [
                 scene,
                 asset
             ]
+
         );
 
 
-    //--------------------------------------------------
-    // Configure shadows
-    //--------------------------------------------------
+    //==================================================
+    // CONFIGURE SHADOWS
+    //==================================================
 
     useMemo(
+
         () => {
 
             if (
@@ -353,51 +675,35 @@ export default function Window({
                 return;
             }
 
+
             configureWindowShadows(
                 normalized.model
             );
 
         },
+
         [
             normalized
         ]
+
     );
 
 
+    //==================================================
+    // NORMALIZATION FAILED
+    //==================================================
+
     if (
-        !asset ||
-        !normalized
+        !normalized?.model
     ) {
 
         return null;
     }
 
 
-    //--------------------------------------------------
-    // Hide only the window currently being moved.
-    //--------------------------------------------------
-
-    const isMoving =
-        buildInteraction.moveTarget?.type ===
-            "window" &&
-        buildInteraction.moveTarget.id ===
-            window.id;
-
-    if (
-        isMoving
-    ) {
-
-        return null;
-    }
-
-
-    const finalRotationY =
-        window.rotationY +
-        (
-            asset.rotationOffsetY ??
-            0
-        );
-
+    //==================================================
+    // POINTER ENTER
+    //==================================================
 
     const handlePointerEnter =
         (event: any) => {
@@ -409,16 +715,26 @@ export default function Window({
                 return;
             }
 
+
             event.stopPropagation();
 
-            setHovered(true);
+
+            setHovered(
+                true
+            );
+
 
             setWindowHighlight(
                 normalized.model,
                 true
             );
+
         };
 
+
+    //==================================================
+    // POINTER LEAVE
+    //==================================================
 
     const handlePointerLeave =
         (event: any) => {
@@ -430,40 +746,68 @@ export default function Window({
                 return;
             }
 
+
             event.stopPropagation();
 
-            setHovered(false);
+
+            setHovered(
+                false
+            );
+
 
             setWindowHighlight(
                 normalized.model,
                 false
             );
+
         };
 
+
+    //==================================================
+    // ROTATION
+    //==================================================
+
+    const finalRotationY =
+        window.rotationY +
+        (
+            asset.rotationOffsetY ??
+            0
+        );
+
+
+    //==================================================
+    // RENDER
+    //==================================================
 
     return (
 
         <group
+
             userData={{
                 windowId:
                     window.id
             }}
+
             position={[
                 window.position.x,
                 window.position.y,
                 window.position.z
             ]}
+
             rotation={[
                 0,
                 finalRotationY,
                 0
             ]}
+
             onPointerEnter={
                 handlePointerEnter
             }
+
             onPointerLeave={
                 handlePointerLeave
             }
+
         >
 
             <primitive
@@ -473,5 +817,7 @@ export default function Window({
             />
 
         </group>
+
     );
+
 }

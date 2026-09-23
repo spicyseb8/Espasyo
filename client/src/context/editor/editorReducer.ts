@@ -6,7 +6,39 @@ import type {
     EditorAction
 } from "./editorActions";
 
+import {
+    Vector3
+} from "three";
 
+import {
+    initialState
+} from "./initialState";
+//==================================================
+// EDITOR REDUCER
+//==================================================
+import type {
+    Wall
+} from "../../engine/walls/WallTypes";
+
+import type {
+    Corner
+} from "../../engine/walls/Corner";
+
+import type {
+    Door
+} from "../../engine/doors/DoorTypes";
+
+import type {
+    Furniture
+} from "../../engine/furniture/FurnitureTypes";
+
+import type {
+    Window
+} from "../../engine/windows/WindowTypes";
+
+import type {
+    Opening
+} from "../../engine/openings/OpeningTypes";
 export function editorReducer(
     state: EditorState,
     action: EditorAction
@@ -20,33 +52,25 @@ export function editorReducer(
 
         case "SET_ACTIVE_TAB":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
             return {
                 ...state,
-                activeTab:
-                    action.payload
+                activeTab: action.payload
             };
-
 
         case "SET_ACTIVE_TOOL":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
             return {
                 ...state,
-                activeTool:
-                    action.payload
+                activeTool: action.payload
             };
-
 
         //==================================================
         // WALLS
@@ -54,87 +78,65 @@ export function editorReducer(
 
         case "ADD_WALL":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
             return {
                 ...state,
-
                 walls: [
                     ...state.walls,
                     action.payload
                 ]
             };
 
-
         case "SET_WALLS":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
             return {
                 ...state,
-                walls:
-                    action.payload
+                walls: action.payload
             };
-
 
         case "SET_CORNERS":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
             return {
                 ...state,
-                corners:
-                    action.payload
+                corners: action.payload
             };
-
 
         case "SET_WALL_HEIGHT":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
             return {
                 ...state,
-                wallHeight:
-                    action.payload
+                wallHeight: action.payload
             };
-
 
         case "SET_WALL_THICKNESS":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
             return {
                 ...state,
-                wallThickness:
-                    action.payload
+                wallThickness: action.payload
             };
-
 
         case "SET_WALL_FINISH": {
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
@@ -144,54 +146,30 @@ export function editorReducer(
                 materialId
             } = action.payload;
 
-
             return {
-
                 ...state,
-
                 wallFinishes: {
-
                     ...state.wallFinishes,
-
                     [regionId]: {
-
-                        ...(state.wallFinishes[
-                            regionId
-                        ] ?? {}),
-
-                        [wallId]:
-                            materialId
-
+                        ...(state.wallFinishes[regionId] ?? {}),
+                        [wallId]: materialId
                     }
-
                 }
-
             };
-
         }
-
 
         case "REMOVE_WALL":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
             return {
-
                 ...state,
-
-                walls:
-                    state.walls.filter(
-                        wall =>
-                            wall.id !==
-                            action.payload
-                    )
-
+                walls: state.walls.filter(
+                    wall => wall.id !== action.payload
+                )
             };
-
 
         //==================================================
         // CORNERS
@@ -199,58 +177,38 @@ export function editorReducer(
 
         case "ADD_CORNER":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
             if (
                 state.corners.some(
-                    corner =>
-                        corner.id ===
-                        action.payload.id
+                    corner => corner.id === action.payload.id
                 )
             ) {
-
                 return state;
-
             }
 
-
             return {
-
                 ...state,
-
                 corners: [
                     ...state.corners,
                     action.payload
                 ]
-
             };
-
 
         case "REMOVE_CORNER":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
             return {
-
                 ...state,
-
-                corners:
-                    state.corners.filter(
-                        corner =>
-                            corner.id !==
-                            action.payload
-                    )
-
+                corners: state.corners.filter(
+                    corner => corner.id !== action.payload
+                )
             };
-
 
         //==================================================
         // SELECTION
@@ -273,7 +231,6 @@ export function editorReducer(
                 selectedWindowId: null
             };
 
-
         case "SELECT_FURNITURE":
 
             if (state.walkthroughMode) {
@@ -290,7 +247,6 @@ export function editorReducer(
                 selectedDoorId: null,
                 selectedWindowId: null
             };
-
 
         case "SELECT_DOOR":
 
@@ -309,7 +265,6 @@ export function editorReducer(
                 selectedWindowId: null
             };
 
-
         case "SELECT_WINDOW":
 
             if (state.walkthroughMode) {
@@ -326,7 +281,6 @@ export function editorReducer(
                 selectedDoorId: null,
                 selectedWindowId: action.payload
             };
-
 
         case "CLEAR_SELECTION":
 
@@ -345,91 +299,60 @@ export function editorReducer(
                 selectedWindowId: null
             };
 
-
         case "SELECT_WALL":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
             return {
-
                 ...state,
-
-                selectedWallId:
-                    action.payload
-
+                selectedWallId: action.payload
             };
-
 
         case "SELECT_REGION":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
             return {
-
                 ...state,
-
-                selectedRegionId:
-                    action.payload
-
+                selectedRegionId: action.payload
             };
-
 
         case "SELECT_CORNER":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
             return {
-
                 ...state,
-
-                selectedCornerId:
-                    action.payload
-
+                selectedCornerId: action.payload
             };
-            case "SET_MOVING_FURNITURE":
 
-    if (
-        state.walkthroughMode
-    ) {
-        return state;
-    }
+        case "SET_MOVING_FURNITURE":
 
-    return {
-        ...state,
+            if (state.walkthroughMode) {
+                return state;
+            }
 
-        movingFurnitureId:
-            action.payload
-    };
+            return {
+                ...state,
+                movingFurnitureId: action.payload
+            };
 
         case "SET_SELECTED_ASSET":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
             return {
-
                 ...state,
-
-                selectedAsset:
-                    action.payload
-
+                selectedAsset: action.payload
             };
-
 
         //==================================================
         // GRID / SNAP
@@ -437,39 +360,25 @@ export function editorReducer(
 
         case "SET_GRID_SIZE":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
             return {
-
                 ...state,
-
-                gridSize:
-                    action.payload
-
+                gridSize: action.payload
             };
-
 
         case "TOGGLE_SNAP":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
             return {
-
                 ...state,
-
-                snapEnabled:
-                    !state.snapEnabled
-
+                snapEnabled: !state.snapEnabled
             };
-
 
         //==================================================
         // FLOOR FINISH
@@ -477,68 +386,39 @@ export function editorReducer(
 
         case "SET_FLOOR_FINISH":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
             return {
-
                 ...state,
-
                 floorFinishes: {
-
                     ...state.floorFinishes,
-
-                    [action.payload.regionId]:
-                        action.payload.materialId
-
+                    [action.payload.regionId]: action.payload.materialId
                 }
-
             };
-
 
         case "SET_FLOOR_FINISH_ALL":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
             return {
-
                 ...state,
-
                 floorFinishes: {
-
-                    ...Object.keys(
-                        state.floorFinishes
-                    ).reduce(
+                    ...Object.keys(state.floorFinishes).reduce(
                         (
                             result,
                             regionId
                         ) => {
-
-                            result[
-                                regionId
-                            ] =
-                                action.payload;
-
+                            result[regionId] = action.payload;
                             return result;
-
                         },
-                        {} as Record<
-                            string,
-                            string
-                        >
+                        {} as Record<string, string>
                     )
-
                 }
-
             };
-
 
         //==================================================
         // BUILD TOOL
@@ -546,45 +426,29 @@ export function editorReducer(
 
         case "SET_BUILD_TOOL":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
             return {
-
                 ...state,
-
-                buildTool:
-                    action.payload
-
+                buildTool: action.payload
             };
-
 
         case "APPLY_SELECTED_ASSET":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
-            if (
-                !state.selectedAsset
-            ) {
+            if (!state.selectedAsset) {
                 return state;
             }
 
             return {
-
                 ...state,
-
-                buildTool:
-                    state.selectedAsset.type
-
+                buildTool: state.selectedAsset.type
             };
-
 
         //==================================================
         // LAYOUT
@@ -592,24 +456,15 @@ export function editorReducer(
 
         case "CONFIRM_LAYOUT":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
             return {
-
                 ...state,
-
-                layoutConfirmed:
-                    true,
-
-                activeTab:
-                    "build"
-
+                layoutConfirmed: true,
+                activeTab: "build"
             };
-
 
         //==================================================
         // DOORS
@@ -617,75 +472,17 @@ export function editorReducer(
 
         case "ADD_DOOR":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
             return {
-
                 ...state,
-
                 doors: [
                     ...state.doors,
                     action.payload
                 ]
-
             };
-            case "UPDATE_DOOR":
-
-    if (
-        state.walkthroughMode
-    ) {
-        return state;
-    }
-
-    return {
-        ...state,
-
-        doors:
-            state.doors.map(
-                door =>
-                    door.id ===
-                    action.payload.id
-
-                        ? {
-                            ...door,
-                            ...action.payload.changes
-                        }
-
-                        : door
-            )
-    };
-
-
-case "REMOVE_DOOR":
-
-    if (
-        state.walkthroughMode
-    ) {
-        return state;
-    }
-
-    return {
-        ...state,
-
-        doors:
-            state.doors.filter(
-                door =>
-                    door.id !==
-                    action.payload
-            ),
-
-        selectedDoorId:
-            state.selectedDoorId ===
-            action.payload
-
-                ? null
-
-                : state.selectedDoorId
-    };
 
         case "UPDATE_DOOR":
 
@@ -695,13 +492,16 @@ case "REMOVE_DOOR":
 
             return {
                 ...state,
-                doors: state.doors.map(door =>
-                    door.id === action.payload.id
-                        ? { ...door, ...action.payload.changes }
-                        : door
+                doors: state.doors.map(
+                    door =>
+                        door.id === action.payload.id
+                            ? {
+                                ...door,
+                                ...action.payload.changes
+                            }
+                            : door
                 )
             };
-
 
         case "REMOVE_DOOR":
 
@@ -711,13 +511,14 @@ case "REMOVE_DOOR":
 
             return {
                 ...state,
-                doors: state.doors.filter(door => door.id !== action.payload),
+                doors: state.doors.filter(
+                    door => door.id !== action.payload
+                ),
                 selectedDoorId:
                     state.selectedDoorId === action.payload
                         ? null
                         : state.selectedDoorId
             };
-
 
         //==================================================
         // WINDOWS
@@ -725,75 +526,17 @@ case "REMOVE_DOOR":
 
         case "ADD_WINDOW":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
             return {
-
                 ...state,
-
                 windows: [
                     ...state.windows,
                     action.payload
                 ]
-
             };
-            case "UPDATE_WINDOW":
-
-    if (
-        state.walkthroughMode
-    ) {
-        return state;
-    }
-
-    return {
-        ...state,
-
-        windows:
-            state.windows.map(
-                window =>
-                    window.id ===
-                    action.payload.id
-
-                        ? {
-                            ...window,
-                            ...action.payload.changes
-                        }
-
-                        : window
-            )
-    };
-
-
-case "REMOVE_WINDOW":
-
-    if (
-        state.walkthroughMode
-    ) {
-        return state;
-    }
-
-    return {
-        ...state,
-
-        windows:
-            state.windows.filter(
-                window =>
-                    window.id !==
-                    action.payload
-            ),
-
-        selectedWindowId:
-            state.selectedWindowId ===
-            action.payload
-
-                ? null
-
-                : state.selectedWindowId
-    };
 
         case "UPDATE_WINDOW":
 
@@ -803,13 +546,16 @@ case "REMOVE_WINDOW":
 
             return {
                 ...state,
-                windows: state.windows.map(window =>
-                    window.id === action.payload.id
-                        ? { ...window, ...action.payload.changes }
-                        : window
+                windows: state.windows.map(
+                    window =>
+                        window.id === action.payload.id
+                            ? {
+                                ...window,
+                                ...action.payload.changes
+                            }
+                            : window
                 )
             };
-
 
         case "REMOVE_WINDOW":
 
@@ -819,13 +565,14 @@ case "REMOVE_WINDOW":
 
             return {
                 ...state,
-                windows: state.windows.filter(window => window.id !== action.payload),
+                windows: state.windows.filter(
+                    window => window.id !== action.payload
+                ),
                 selectedWindowId:
                     state.selectedWindowId === action.payload
                         ? null
                         : state.selectedWindowId
             };
-
 
         //==================================================
         // FURNITURE
@@ -833,83 +580,17 @@ case "REMOVE_WINDOW":
 
         case "ADD_FURNITURE":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
             return {
-
                 ...state,
-
                 furniture: [
                     ...state.furniture,
                     action.payload
                 ]
-
             };
-            case "UPDATE_FURNITURE":
-
-    if (
-        state.walkthroughMode
-    ) {
-        return state;
-    }
-
-    return {
-        ...state,
-
-        furniture:
-            state.furniture.map(
-                furniture =>
-                    furniture.id ===
-                    action.payload.id
-
-                        ? {
-                            ...furniture,
-                            ...action.payload.changes
-                        }
-
-                        : furniture
-            )
-    };
-
-
-case "REMOVE_FURNITURE":
-
-    if (
-        state.walkthroughMode
-    ) {
-        return state;
-    }
-
-    return {
-        ...state,
-
-        furniture:
-            state.furniture.filter(
-                furniture =>
-                    furniture.id !==
-                    action.payload
-            ),
-
-        selectedFurnitureId:
-            state.selectedFurnitureId ===
-            action.payload
-
-                ? null
-
-                : state.selectedFurnitureId,
-
-        movingFurnitureId:
-            state.movingFurnitureId ===
-            action.payload
-
-                ? null
-
-                : state.movingFurnitureId
-    };
 
         case "UPDATE_FURNITURE":
 
@@ -919,13 +600,16 @@ case "REMOVE_FURNITURE":
 
             return {
                 ...state,
-                furniture: state.furniture.map(item =>
-                    item.id === action.payload.id
-                        ? { ...item, ...action.payload.changes }
-                        : item
+                furniture: state.furniture.map(
+                    furniture =>
+                        furniture.id === action.payload.id
+                            ? {
+                                ...furniture,
+                                ...action.payload.changes
+                            }
+                            : furniture
                 )
             };
-
 
         case "REMOVE_FURNITURE":
 
@@ -935,13 +619,18 @@ case "REMOVE_FURNITURE":
 
             return {
                 ...state,
-                furniture: state.furniture.filter(item => item.id !== action.payload),
+                furniture: state.furniture.filter(
+                    furniture => furniture.id !== action.payload
+                ),
                 selectedFurnitureId:
                     state.selectedFurnitureId === action.payload
                         ? null
-                        : state.selectedFurnitureId
+                        : state.selectedFurnitureId,
+                movingFurnitureId:
+                    state.movingFurnitureId === action.payload
+                        ? null
+                        : state.movingFurnitureId
             };
-
 
         //==================================================
         // OPENINGS
@@ -949,77 +638,50 @@ case "REMOVE_FURNITURE":
 
         case "ADD_OPENING":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
             return {
-
                 ...state,
-
                 openings: [
                     ...state.openings,
                     action.payload
                 ]
-
             };
-
 
         case "SET_OPENING_WIDTH":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
             return {
-
                 ...state,
-
-                openingWidth:
-                    action.payload
-
+                openingWidth: action.payload
             };
-
 
         case "SET_OPENING_HEIGHT":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
             return {
-
                 ...state,
-
-                openingHeight:
-                    action.payload
-
+                openingHeight: action.payload
             };
-
 
         case "SET_ARCH_RISE":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
             return {
-
                 ...state,
-
-                archRise:
-                    action.payload
-
+                archRise: action.payload
             };
-
 
         //==================================================
         // MEASUREMENTS
@@ -1027,39 +689,25 @@ case "REMOVE_FURNITURE":
 
         case "SET_DRAFT_WALL_LENGTH":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
             return {
-
                 ...state,
-
-                draftWallLength:
-                    action.payload
-
+                draftWallLength: action.payload
             };
-
 
         case "SET_SHOW_WALL_MEASUREMENTS":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
             return {
-
                 ...state,
-
-                showWallMeasurements:
-                    action.payload
-
+                showWallMeasurements: action.payload
             };
-
 
         //==================================================
         // BLUEPRINT
@@ -1067,224 +715,139 @@ case "REMOVE_FURNITURE":
 
         case "SET_BLUEPRINT":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
             return {
-
                 ...state,
-
-                blueprint:
-                    action.payload
-
+                blueprint: action.payload
             };
-
 
         case "REMOVE_BLUEPRINT":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
             return {
-
                 ...state,
-
-                blueprint:
-                    null
-
+                blueprint: null
             };
-
 
         case "HIDE_BLUEPRINT":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
-            if (
-                !state.blueprint
-            ) {
+            if (!state.blueprint) {
                 return state;
             }
 
             return {
-
                 ...state,
-
                 blueprint: {
-
                     ...state.blueprint,
-
-                    selected:
-                        false
-
+                    selected: false
                 }
-
             };
-
 
         case "SHOW_BLUEPRINT":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
-            if (
-                !state.blueprint
-            ) {
+            if (!state.blueprint) {
                 return state;
             }
 
             return {
-
                 ...state,
-
                 blueprint: {
-
                     ...state.blueprint,
-
-                    selected:
-                        true
-
+                    selected: true
                 }
-
             };
-
 
         case "UPDATE_BLUEPRINT":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
-            if (
-                !state.blueprint
-            ) {
+            if (!state.blueprint) {
                 return state;
             }
 
             return {
-
                 ...state,
-
                 blueprint: {
-
                     ...state.blueprint,
-
                     ...action.payload
-
                 }
-
             };
-
 
         case "SET_BLUEPRINT_LOCKED":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
-            if (
-                !state.blueprint
-            ) {
+            if (!state.blueprint) {
                 return state;
             }
 
             return {
-
                 ...state,
-
                 blueprint: {
-
                     ...state.blueprint,
-
-                    locked:
-                        action.payload
-
+                    locked: action.payload
                 }
-
             };
-
 
         case "SET_BLUEPRINT_OPACITY":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
-            if (
-                !state.blueprint
-            ) {
+            if (!state.blueprint) {
                 return state;
             }
 
             return {
-
                 ...state,
-
                 blueprint: {
-
                     ...state.blueprint,
-
-                    opacity:
-                        Math.max(
-                            0,
-                            Math.min(
-                                1,
-                                action.payload
-                            )
+                    opacity: Math.max(
+                        0,
+                        Math.min(
+                            1,
+                            action.payload
                         )
-
+                    )
                 }
-
             };
-
 
         case "SET_BLUEPRINT_SELECTED":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
-            if (
-                !state.blueprint
-            ) {
+            if (!state.blueprint) {
                 return state;
             }
 
             return {
-
                 ...state,
-
                 blueprint: {
-
                     ...state.blueprint,
-
-                    selected:
-                        action.payload
-
+                    selected: action.payload
                 }
-
             };
-
 
         //==================================================
         // BLUEPRINT CALIBRATION MODE
@@ -1292,78 +855,49 @@ case "REMOVE_FURNITURE":
 
         case "SET_BLUEPRINT_CALIBRATION_MODE":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
             return {
-
                 ...state,
-
-                blueprintCalibrationMode:
-                    action.payload
-
+                blueprintCalibrationMode: action.payload
             };
-
 
         case "SET_BLUEPRINT_CALIBRATION_START":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
             return {
-
                 ...state,
-
-                blueprintCalibrationStart:
-                    action.payload
-
+                blueprintCalibrationStart: action.payload
             };
-
 
         case "SET_BLUEPRINT_CALIBRATION_END":
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
             return {
-
                 ...state,
-
-                blueprintCalibrationEnd:
-                    action.payload
-
+                blueprintCalibrationEnd: action.payload
             };
-
 
         case "CLEAR_BLUEPRINT_CALIBRATION":
 
             return {
-
                 ...state,
-
-                blueprintCalibrationMode:
-                    false,
-
-                blueprintCalibrationStart:
-                    null,
-
-                blueprintCalibrationEnd:
-                    null
-
+                blueprintCalibrationMode: false,
+                blueprintCalibrationStart: null,
+                blueprintCalibrationEnd: null
             };
-
 
         //==================================================
         // APPLY BLUEPRINT CALIBRATION
+        //==================================================
         //
         // action.payload = actual real-world distance
         // entered by the user in meters.
@@ -1371,65 +905,39 @@ case "REMOVE_FURNITURE":
 
         case "APPLY_BLUEPRINT_CALIBRATION": {
 
-            if (
-                state.walkthroughMode
-            ) {
+            if (state.walkthroughMode) {
                 return state;
             }
 
-
-            if (
-                !state.blueprint
-            ) {
+            if (!state.blueprint) {
                 return state;
             }
-
 
             const start =
                 state.blueprintCalibrationStart;
 
-
             const end =
                 state.blueprintCalibrationEnd;
 
-
-            if (
-                !start ||
-                !end
-            ) {
-
+            if (!start || !end) {
                 return state;
-
             }
-
 
             const actualLength =
-                Number(
-                    action.payload
-                );
-
+                Number(action.payload);
 
             if (
-                !Number.isFinite(
-                    actualLength
-                ) ||
+                !Number.isFinite(actualLength) ||
                 actualLength <= 0
             ) {
-
                 return state;
-
             }
 
-
             const dx =
-                end.x -
-                start.x;
-
+                end.x - start.x;
 
             const dz =
-                end.z -
-                start.z;
-
+                end.z - start.z;
 
             const measuredLength =
                 Math.sqrt(
@@ -1437,16 +945,9 @@ case "REMOVE_FURNITURE":
                     dz * dz
                 );
 
-
-            if (
-                measuredLength <=
-                0.000001
-            ) {
-
+            if (measuredLength <= 0.000001) {
                 return state;
-
             }
-
 
             //--------------------------------------------------
             // Calculate scale factor.
@@ -1463,45 +964,26 @@ case "REMOVE_FURNITURE":
                 actualLength /
                 measuredLength;
 
-
             const newWidth =
                 state.blueprint.width *
                 scaleFactor;
 
-
             return {
-
                 ...state,
 
                 blueprint: {
-
                     ...state.blueprint,
-
-                    width:
-                        newWidth,
-
-                    calibrated:
-                        true,
-
+                    width: newWidth,
+                    calibrated: true,
                     calibrationReferenceLength:
                         actualLength
-
                 },
 
-
-                blueprintCalibrationMode:
-                    false,
-
-                blueprintCalibrationStart:
-                    null,
-
-                blueprintCalibrationEnd:
-                    null
-
+                blueprintCalibrationMode: false,
+                blueprintCalibrationStart: null,
+                blueprintCalibrationEnd: null
             };
-
         }
-
 
         //==================================================
         // WALKTHROUGH
@@ -1512,68 +994,58 @@ case "REMOVE_FURNITURE":
             const walkthroughMode =
                 !state.walkthroughMode;
 
-
             return {
-
                 ...state,
-
                 walkthroughMode,
-
 
                 //--------------------------------------------------
                 // Clear editor selections when entering walkthrough.
                 //--------------------------------------------------
+
                 movingFurnitureId:
-                      walkthroughMode
-                      ? null
-                    : state.movingFurnitureId,
+                    walkthroughMode
+                        ? null
+                        : state.movingFurnitureId,
+
                 selectedWallId:
                     walkthroughMode
                         ? null
                         : state.selectedWallId,
-
 
                 selectedCornerId:
                     walkthroughMode
                         ? null
                         : state.selectedCornerId,
 
-
                 selectedRegionId:
                     walkthroughMode
                         ? null
                         : state.selectedRegionId,
-
 
                 selectedOpeningId:
                     walkthroughMode
                         ? null
                         : state.selectedOpeningId,
 
-
                 selectedFurnitureId:
                     walkthroughMode
                         ? null
                         : state.selectedFurnitureId,
 
-
                 selectedDoorId:
-                        walkthroughMode
+                    walkthroughMode
                         ? null
                         : state.selectedDoorId,
-
 
                 selectedWindowId:
                     walkthroughMode
                         ? null
                         : state.selectedWindowId,
 
-
                 selectedAsset:
                     walkthroughMode
                         ? null
                         : state.selectedAsset,
-
 
                 //--------------------------------------------------
                 // Cancel blueprint calibration when entering
@@ -1594,20 +1066,544 @@ case "REMOVE_FURNITURE":
                     walkthroughMode
                         ? null
                         : state.blueprintCalibrationEnd
+            };
+        }
+        //==================================================
+// LOAD PROJECT
+//==================================================
+//
+// Converts saved JSON back into the structures used
+// by the editor.
+//
+// This is deliberately handled as ONE action.
+// Project loading should not create a huge sequence
+// of undo history entries.
+//==================================================
+
+case "LOAD_PROJECT": {
+
+    if (state.walkthroughMode) {
+        return state;
+    }
+
+    const project =
+        action.payload;
+
+
+    //==================================================
+    // REBUILD CORNERS
+    //==================================================
+
+    const cornersById =
+        new Map<
+            string,
+            Corner
+        >();
+
+    const restoredCorners:
+        Corner[] = [];
+
+
+    for (
+        const savedCorner
+        of project.corners
+    ) {
+
+        const corner: Corner = {
+
+            id:
+                savedCorner.id,
+
+            position:
+                new Vector3(
+
+                    savedCorner.position.x,
+
+                    savedCorner.position.y,
+
+                    savedCorner.position.z
+
+                )
+
+        };
+
+
+        cornersById.set(
+            corner.id,
+            corner
+        );
+
+
+        restoredCorners.push(
+            corner
+        );
+    }
+
+
+    //==================================================
+    // REBUILD WALLS
+    //==================================================
+    //
+    // Walls must reference the SAME Corner objects
+    // stored in cornersById.
+    //==================================================
+
+    const restoredWalls:
+        Wall[] = [];
+
+
+    for (
+        const savedWall
+        of project.walls
+    ) {
+
+        let startCorner =
+            cornersById.get(
+                savedWall.start.id
+            );
+
+        let endCorner =
+            cornersById.get(
+                savedWall.end.id
+            );
+
+
+        //--------------------------------------------------
+        // Safety fallback:
+        //
+        // If an old project contains a wall corner that
+        // isn't present in the corners array, create it.
+        //--------------------------------------------------
+
+        if (
+            !startCorner
+        ) {
+
+            startCorner = {
+
+                id:
+                    savedWall.start.id,
+
+                position:
+                    new Vector3(
+
+                        savedWall.start.position.x,
+
+                        savedWall.start.position.y,
+
+                        savedWall.start.position.z
+
+                    )
 
             };
 
+
+            cornersById.set(
+                startCorner.id,
+                startCorner
+            );
+
+
+            restoredCorners.push(
+                startCorner
+            );
         }
 
 
+        if (
+            !endCorner
+        ) {
+
+            endCorner = {
+
+                id:
+                    savedWall.end.id,
+
+                position:
+                    new Vector3(
+
+                        savedWall.end.position.x,
+
+                        savedWall.end.position.y,
+
+                        savedWall.end.position.z
+
+                    )
+
+            };
+
+
+            cornersById.set(
+                endCorner.id,
+                endCorner
+            );
+
+
+            restoredCorners.push(
+                endCorner
+            );
+        }
+
+
+        restoredWalls.push({
+
+            id:
+                savedWall.id,
+
+            start:
+                startCorner,
+
+            end:
+                endCorner
+
+        });
+    }
+
+
+    //==================================================
+    // REBUILD DOORS
+    //==================================================
+
+    const restoredDoors:
+        Door[] =
+
+        project.doors.map(
+            savedDoor => ({
+
+                id:
+                    savedDoor.id,
+
+                assetId:
+                    savedDoor.assetId,
+
+                wallId:
+                    savedDoor.wallId,
+
+                position:
+                    new Vector3(
+
+                        savedDoor.position.x,
+
+                        savedDoor.position.y,
+
+                        savedDoor.position.z
+
+                    ),
+
+                rotationY:
+                    savedDoor.rotationY,
+
+                width:
+                    savedDoor.width,
+
+                height:
+                    savedDoor.height,
+
+                depth:
+                    savedDoor.depth
+
+            })
+        );
+
+
+    //==================================================
+    // REBUILD WINDOWS
+    //==================================================
+
+    const restoredWindows:
+        Window[] =
+
+        project.windows.map(
+            savedWindow => ({
+
+                id:
+                    savedWindow.id,
+
+                assetId:
+                    savedWindow.assetId,
+
+                wallId:
+                    savedWindow.wallId,
+
+                position:
+                    new Vector3(
+
+                        savedWindow.position.x,
+
+                        savedWindow.position.y,
+
+                        savedWindow.position.z
+
+                    ),
+
+                rotationY:
+                    savedWindow.rotationY,
+
+                width:
+                    savedWindow.width,
+
+                height:
+                    savedWindow.height,
+
+                depth:
+                    savedWindow.depth
+
+            })
+        );
+
+
+    //==================================================
+    // REBUILD FURNITURE
+    //==================================================
+
+    const restoredFurniture:
+        Furniture[] =
+
+        project.furniture.map(
+            savedFurniture => ({
+
+                id:
+                    savedFurniture.id,
+
+                assetId:
+                    savedFurniture.assetId,
+
+                position:
+                    new Vector3(
+
+                        savedFurniture.position.x,
+
+                        savedFurniture.position.y,
+
+                        savedFurniture.position.z
+
+                    ),
+
+                rotationY:
+                    savedFurniture.rotationY,
+
+                modelOffset:
+                    new Vector3(
+
+                        savedFurniture.modelOffset.x,
+
+                        savedFurniture.modelOffset.y,
+
+                        savedFurniture.modelOffset.z
+
+                    ),
+
+                width:
+                    savedFurniture.width,
+
+                depth:
+                    savedFurniture.depth,
+
+                height:
+                    savedFurniture.height
+
+            })
+        );
+
+
+    //==================================================
+    // REBUILD OPENINGS
+    //==================================================
+
+    const restoredOpenings:
+        Opening[] =
+
+        project.openings.map(
+            savedOpening => ({
+
+                id:
+                    savedOpening.id,
+
+                wallId:
+                    savedOpening.wallId,
+
+                shape:
+                    savedOpening.shape,
+
+                position:
+                    new Vector3(
+
+                        savedOpening.position.x,
+
+                        savedOpening.position.y,
+
+                        savedOpening.position.z
+
+                    ),
+
+                width:
+                    savedOpening.width,
+
+                height:
+                    savedOpening.height,
+
+                depth:
+                    savedOpening.depth,
+
+                archRise:
+                    savedOpening.archRise
+
+            })
+        );
+
+
+    //==================================================
+    // RESTORE PROJECT
+    //==================================================
+    //
+    // Start from initialState so temporary editor state
+    // such as selections and moving objects is cleared.
+    //==================================================
+
+    return {
+
+        ...initialState,
+
+
+        //==================================================
+        // FLOOR PLAN
+        //==================================================
+
+        walls:
+            restoredWalls,
+
+        corners:
+            restoredCorners,
+
+
+        //==================================================
+        // ARCHITECTURAL ELEMENTS
+        //==================================================
+
+        doors:
+            restoredDoors,
+
+        windows:
+            restoredWindows,
+
+        furniture:
+            restoredFurniture,
+
+        openings:
+            restoredOpenings,
+
+
+        //==================================================
+        // WALL SETTINGS
+        //==================================================
+
+        wallHeight:
+            project.wallHeight,
+
+        wallThickness:
+            project.wallThickness,
+
+
+        //==================================================
+        // GRID
+        //==================================================
+
+        gridSize:
+            project.gridSize,
+
+        snapEnabled:
+            project.snapEnabled,
+
+
+        //==================================================
+        // LAYOUT
+        //==================================================
+
+        layoutConfirmed:
+            project.layoutConfirmed,
+
+
+        //==================================================
+        // FINISHES
+        //==================================================
+
+        floorFinishes:
+            {
+                ...project.floorFinishes
+            },
+
+        wallFinishes:
+            Object.fromEntries(
+
+                Object.entries(
+                    project.wallFinishes
+                )
+                    .map(
+                        (
+                            [
+                                regionId,
+                                walls
+                            ]
+                        ) => [
+
+                            regionId,
+
+                            {
+                                ...walls
+                            }
+
+                        ]
+                    )
+
+            ),
+
+
+        //==================================================
+        // OPENING SETTINGS
+        //==================================================
+
+        archRise:
+            project.archRise,
+
+        openingWidth:
+            project.openingWidth,
+
+        openingHeight:
+            project.openingHeight,
+
+
+        //==================================================
+        // BLUEPRINT
+        //==================================================
+
+        blueprint:
+            project.blueprint
+                ? {
+                    ...project.blueprint
+                }
+                : null,
+
+
+        //==================================================
+        // TAB
+        //==================================================
+        //
+        // Saved project JSON does not store the temporary
+        // active tab, so derive it from layoutConfirmed.
+        //==================================================
+
+        activeTab:
+            project.layoutConfirmed
+                ? "build"
+                : "floorplan"
+
+    };
+}
         //==================================================
         // DEFAULT
         //==================================================
 
         default:
-
             return state;
-
     }
-
 }

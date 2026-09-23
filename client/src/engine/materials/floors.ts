@@ -40,7 +40,8 @@ import localDefaultFloorTexture from "../../../uploads/default_floor/assets_floo
 // name: Terrazo Tiles
 //
 // IMPORTANT:
-// The actual default floor texture is now LOCAL.
+//
+// The actual default floor texture is LOCAL.
 //
 // This means a newly created room does NOT need to wait
 // for Firebase Storage before showing its floor.
@@ -91,6 +92,10 @@ interface FirebaseFloorAsset {
     name:
         string;
 
+    //--------------------------------------------------
+    // OLD STORAGE PATH
+    //--------------------------------------------------
+
     diffuse_path?:
         string;
 
@@ -99,6 +104,23 @@ interface FirebaseFloorAsset {
 
     thumbnail_path?:
         string;
+
+    //--------------------------------------------------
+    // NEW DIRECT URL FIELDS
+    //
+    // These should contain the actual HTTPS Firebase
+    // Storage download URLs.
+    //--------------------------------------------------
+
+    diffuse_url?:
+        string;
+
+    thumbnail_url?:
+        string;
+
+    //--------------------------------------------------
+    // MATERIAL SETTINGS
+    //--------------------------------------------------
 
     color?:
         string;
@@ -180,7 +202,8 @@ const floorTexturePromises =
 // Price is temporarily 0 until the Firebase catalog
 // provides the real metadata for A-26015.
 //
-// The actual texture is ALWAYS the local PNG.
+// The actual default floor texture is ALWAYS the
+// local PNG.
 //==================================================
 
 function createLocalDefaultFloorMaterial(
@@ -229,6 +252,13 @@ function createLocalDefaultFloorMaterial(
 
 //==================================================
 // RESOLVE STORAGE URL
+//==================================================
+//
+// This remains only as a FALLBACK for older Firestore
+// records that still contain diffuse_path or
+// thumbnail_path.
+//
+// New records should use diffuse_url and thumbnail_url.
 //==================================================
 
 async function resolveStorageUrl(
@@ -304,10 +334,18 @@ async function buildFloorMaterial(
 
 
     //--------------------------------------------------
-    // Load diffuse texture URL.
+    // LOAD DIFFUSE TEXTURE URL
+    //
+    // NEW:
+    // Prefer diffuse_url directly from Firestore.
+    //
+    // FALLBACK:
+    // If diffuse_url does not exist, resolve
+    // diffuse_path through Firebase Storage.
     //--------------------------------------------------
 
     const texture =
+        data.diffuse_url?.trim() ||
         await resolveStorageUrl(
             data.diffuse_path
         );
@@ -322,9 +360,10 @@ async function buildFloorMaterial(
     ) {
 
         console.warn(
-            "Skipping floor without a usable diffuse_path:",
+            "Skipping floor without a usable diffuse_url or diffuse_path:",
             materialId,
-            data.diffuse_path
+            data.diffuse_url ??
+                data.diffuse_path
         );
 
         return null;
@@ -343,7 +382,26 @@ async function buildFloorMaterial(
         includeThumbnail
     ) {
 
+        //------------------------------------------------
+        // NEW:
+        // Prefer thumbnail_url directly from Firestore.
+        //------------------------------------------------
+
         if (
+            data.thumbnail_url?.trim()
+        ) {
+
+            thumbnail =
+                data.thumbnail_url.trim();
+
+        }
+
+        //------------------------------------------------
+        // FALLBACK:
+        // Use old thumbnail_path.
+        //------------------------------------------------
+
+        else if (
             data.thumbnail_path
         ) {
 
@@ -353,7 +411,14 @@ async function buildFloorMaterial(
                 ) ??
                 texture;
 
-        } else {
+        }
+
+        //------------------------------------------------
+        // No thumbnail:
+        // Use diffuse texture.
+        //------------------------------------------------
+
+        else {
 
             thumbnail =
                 texture;
@@ -888,9 +953,11 @@ export function preloadFloorTexture(
                         resolve(
                             null
                         );
+
                     }
 
                 );
+
             }
         )
         .finally(

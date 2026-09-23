@@ -1,0 +1,341 @@
+/*==================================================
+  STUDIO PAGE
+==================================================*/
+
+.studio-page {
+    min-height: calc(100vh - 63px);
+    background: #ffffff;
+    padding: 52px 24px 80px;
+    box-sizing: border-box;
+}
+
+
+/*==================================================
+  CONTAINER
+==================================================*/
+
+.studio-container {
+    width: min(100%, 1100px);
+    margin: 0 auto;
+}
+
+
+/*==================================================
+  HEADER
+==================================================*/
+
+.studio-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 32px;
+    margin-bottom: 48px;
+}
+
+.studio-eyebrow {
+    margin: 0 0 8px;
+
+    font-size: 13px;
+    font-weight: 600;
+
+    color: #c9652c;
+}
+
+.studio-header h1 {
+    margin: 0;
+
+    font-size: 34px;
+    line-height: 1.15;
+    font-weight: 700;
+
+    color: #242424;
+}
+
+.studio-description {
+    max-width: 600px;
+
+    margin: 12px 0 0;
+
+    font-size: 14px;
+    line-height: 1.6;
+
+    color: #777777;
+}
+
+
+/*==================================================
+  CREATE PROJECT BUTTON
+==================================================*/
+
+.studio-create-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    flex-shrink: 0;
+
+    padding: 11px 16px;
+
+    border: 1px solid #252525;
+    border-radius: 10px;
+
+    background: #252525;
+    color: #ffffff;
+
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition:
+        background 0.15s ease,
+        border-color 0.15s ease,
+        transform 0.15s ease;
+}
+
+.studio-create-button:hover {
+    background: #3a3a3a;
+    border-color: #3a3a3a;
+}
+
+.studio-create-button:active {
+    transform: translateY(1px);
+}
+
+
+/*==================================================
+  PROJECT SECTION
+==================================================*/
+
+.studio-projects {
+    width: 100%;
+}
+
+.studio-section-heading {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+
+    margin-bottom: 18px;
+}
+
+.studio-section-heading h2 {
+    margin: 0;
+
+    font-size: 18px;
+    font-weight: 650;
+
+    color: #242424;
+}
+
+.studio-section-heading span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-width: 22px;
+    height: 22px;
+
+    padding: 0 6px;
+
+    box-sizing: border-box;
+
+    border-radius: 999px;
+
+    background: #f1f1f1;
+    color: #707070;
+
+    font-size: 11px;
+    font-weight: 600;
+}
+
+
+/*==================================================
+  PROJECT GRID
+==================================================*/
+
+.studio-project-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+
+    gap: 18px;
+}
+
+
+/*==================================================
+  PROJECT CARD
+==================================================*/
+
+.studio-project-card {
+    display: flex;
+    flex-direction: column;
+
+    min-width: 0;
+
+    overflow: hidden;
+
+    border: 1px solid #e5e5e5;
+    border-radius: 14px;
+
+    background: #ffffff;
+
+    box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.04);
+
+    transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease,
+        transform 0.15s ease;
+}
+
+.studio-project-card:hover {
+    border-color: #d5d5d5;
+
+    box-shadow:
+        0 6px 18px rgba(0, 0, 0, 0.07);
+
+    transform: translateY(-2px);
+}
+
+
+/*==================================================
+  PROJECT PREVIEW
+==================================================*/
+
+.studio-project-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    height: 170px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #f5f2ed 0%,
+            #ebe7df 100%
+        );
+
+    color: #777777;
+}
+
+
+/*==================================================
+  PROJECT INFO
+==================================================*/
+
+.studio-project-info {
+    padding: 16px 16px 12px;
+}
+
+.studio-project-info h3 {
+    margin: 0;
+
+    overflow: hidden;
+
+    font-size: 15px;
+    line-height: 1.35;
+    font-weight: 650;
+
+    color: #242424;
+
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.studio-project-info p {
+    margin: 6px 0 0;
+
+    font-size: 12px;
+    line-height: 1.4;
+
+    color: #8a8a8a;
+}
+
+
+/*==================================================
+  LOAD PROJECT BUTTON
+==================================================*/
+
+.studio-load-button {
+    align-self: flex-start;
+
+    margin:
+        0 16px 16px;
+
+    padding: 8px 12px;
+
+    border: 1px solid #dedede;
+    border-radius: 8px;
+
+    background: #ffffff;
+    color: #4a4a4a;
+
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition:
+        background 0.15s ease,
+        border-color 0.15s ease,
+        color 0.15s ease;
+}
+
+.studio-load-button:hover {
+    background: #f7f7f7;
+    border-color: #cfcfcf;
+    color: #242424;
+}
+
+
+/*==================================================
+  RESPONSIVE
+==================================================*/
+
+@media (max-width: 900px) {
+
+    .studio-project-grid {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+}
+
+
+@media (max-width: 650px) {
+
+    .studio-page {
+        padding:
+            36px 18px 60px;
+    }
+
+
+    .studio-header {
+        align-items: flex-start;
+        flex-direction: column;
+        margin-bottom: 36px;
+    }
+
+
+    .studio-header h1 {
+        font-size: 28px;
+    }
+
+
+    .studio-create-button {
+        width: 100%;
+    }
+
+
+    .studio-project-grid {
+        grid-template-columns:
+            1fr;
+    }
+
+}

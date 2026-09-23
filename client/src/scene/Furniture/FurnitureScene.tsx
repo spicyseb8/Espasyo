@@ -26,6 +26,10 @@ import type {
     Furniture
 } from "../../engine/furniture/FurnitureTypes";
 
+import type {
+    Asset
+} from "../../assets/Asset";
+
 import {
     Mesh,
     MeshPhysicalMaterial,
@@ -113,7 +117,9 @@ function setFurnitureHighlight(
                 Array.isArray(
                     child.material
                 )
+
                     ? child.material
+
                     : [
                         child.material
                     ];
@@ -201,10 +207,6 @@ function setFurnitureHighlight(
                         highlighted
                     ) {
 
-                        //--------------------------------------------------
-                        // Standard / Physical material
-                        //--------------------------------------------------
-
                         if (
                             "emissive" in standard &&
                             standard.emissive
@@ -221,10 +223,6 @@ function setFurnitureHighlight(
 
                         }
 
-
-                        //--------------------------------------------------
-                        // Fallback material
-                        //--------------------------------------------------
 
                         if (
                             "color" in material &&
@@ -289,7 +287,7 @@ function setFurnitureHighlight(
 
 
                     //--------------------------------------------------
-                    // Restore emissive
+                    // RESTORE EMISSIVE
                     //--------------------------------------------------
 
                     const originalEmissive =
@@ -343,6 +341,20 @@ function setFurnitureHighlight(
 //======================================================
 // FURNITURE ITEM
 //======================================================
+//
+// IMPORTANT:
+//
+// This component does NOT call useGLTF().
+//
+// It waits until a valid Asset with a valid model URL
+// exists, then mounts FurnitureModel.
+//
+// This prevents:
+//
+//     useGLTF("")
+//
+// which was causing the HTML/JSON error.
+//======================================================
 
 function FurnitureItem({
 
@@ -357,7 +369,6 @@ function FurnitureItem({
     modelOffset
 
 }: FurnitureItemProps) {
-
 
     const {
         state
@@ -391,10 +402,15 @@ function FurnitureItem({
 
 
     //--------------------------------------------------
-    // Asset
+    // Firebase asset
+    //
+    // Firebase is preferred.
+    // Local AssetLibrary remains a fallback.
     //--------------------------------------------------
 
-    const asset =
+    const asset:
+        Asset | undefined =
+
         getCachedFurnitureAsset(
             assetId
         ) ??
@@ -404,13 +420,165 @@ function FurnitureItem({
 
 
     //--------------------------------------------------
+    // Hide while moving
+    //--------------------------------------------------
+
+    if (
+        state.movingFurnitureId ===
+        id
+    ) {
+
+        return null;
+    }
+
+
+    //--------------------------------------------------
+    // Asset is not ready yet
+    //
+    // IMPORTANT:
+    // Do NOT call useGLTF with an empty string.
+    //--------------------------------------------------
+
+    if (
+        !asset
+    ) {
+
+        return null;
+    }
+
+
+    //--------------------------------------------------
+    // Model URL is missing
+    //--------------------------------------------------
+
+    if (
+        typeof asset.model !==
+        "string" ||
+
+        asset.model.trim() === ""
+    ) {
+
+        console.warn(
+
+            "Furniture asset has no valid model URL:",
+
+            {
+                furnitureId:
+                    id,
+
+                assetId:
+                    assetId,
+
+                asset
+            }
+
+        );
+
+        return null;
+    }
+
+
+    //--------------------------------------------------
+    // Only now render the component that uses useGLTF.
+    //--------------------------------------------------
+
+    return (
+
+        <FurnitureModel
+
+            id={
+                id
+            }
+
+            asset={
+                asset
+            }
+
+            position={
+                position
+            }
+
+            rotationY={
+                rotationY
+            }
+
+            modelOffset={
+                modelOffset
+            }
+
+            setHovered={
+                setHovered
+            }
+
+        />
+
+    );
+
+}
+
+
+//======================================================
+// FURNITURE MODEL
+//======================================================
+//
+// useGLTF() is isolated here.
+//
+// This component cannot mount until FurnitureItem
+// confirms that asset.model is a real URL.
+//======================================================
+
+interface FurnitureModelProps {
+
+    id:
+        string;
+
+    asset:
+        Asset;
+
+    position:
+        Furniture["position"];
+
+    rotationY:
+        number;
+
+    modelOffset:
+        Furniture["modelOffset"];
+
+    setHovered:
+        (value: boolean) => void;
+
+}
+
+
+function FurnitureModel({
+
+    id,
+
+    asset,
+
+    position,
+
+    rotationY,
+
+    modelOffset,
+
+    setHovered
+
+}: FurnitureModelProps) {
+
+    const {
+        state
+    } = useEditor();
+
+
+    //--------------------------------------------------
     // GLTF
     //--------------------------------------------------
 
     const {
         scene
     } = useGLTF(
-        asset?.model ?? ""
+        asset.model
     );
 
 
@@ -539,14 +707,15 @@ function FurnitureItem({
         [
             state.movingFurnitureId,
             id,
-            model
+            model,
+            setHovered
         ]
 
     );
 
 
     //--------------------------------------------------
-    // Hover enter
+    // Pointer enter
     //--------------------------------------------------
 
     const handlePointerEnter =
@@ -577,7 +746,7 @@ function FurnitureItem({
 
 
     //--------------------------------------------------
-    // Hover leave
+    // Pointer leave
     //--------------------------------------------------
 
     const handlePointerLeave =
@@ -605,23 +774,6 @@ function FurnitureItem({
             );
 
         };
-
-
-    //--------------------------------------------------
-    // Hide original while moving
-    //
-    // IMPORTANT:
-    // This is AFTER every hook.
-    //--------------------------------------------------
-
-    if (
-        !asset ||
-        state.movingFurnitureId ===
-            id
-    ) {
-
-        return null;
-    }
 
 
     //--------------------------------------------------
@@ -686,14 +838,13 @@ function FurnitureItem({
 
 function FurnitureScene() {
 
-
     const {
         state
     } = useEditor();
 
 
     //--------------------------------------------------
-    // Load Firebase furniture catalog
+    // Firebase catalog loaded
     //--------------------------------------------------
 
     const [
@@ -703,6 +854,10 @@ function FurnitureScene() {
         false
     );
 
+
+    //--------------------------------------------------
+    // Load Firebase catalog
+    //--------------------------------------------------
 
     useEffect(
 
@@ -775,15 +930,15 @@ function FurnitureScene() {
 
 
     //--------------------------------------------------
-    // Intentionally used to re-render after Firebase
-    // catalog loading.
+    // Intentionally used to force a re-render after
+    // the Firebase furniture catalog finishes loading.
     //--------------------------------------------------
 
     void firebaseFurnitureLoaded;
 
 
     //--------------------------------------------------
-    // Render
+    // Render furniture
     //--------------------------------------------------
 
     return (
@@ -836,6 +991,10 @@ function FurnitureScene() {
 
 }
 
+
+//======================================================
+// EXPORT
+//======================================================
 
 export default memo(
     FurnitureScene

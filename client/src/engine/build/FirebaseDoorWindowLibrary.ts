@@ -42,7 +42,13 @@ interface FirebaseBuildAssetDocument {
 
     model_path?: unknown;
 
+    // Preferred: already-generated Firebase Storage download URL.
+    model_url?: unknown;
+
     thumbnail_path?: unknown;
+
+    // Preferred: already-generated Firebase Storage download URL.
+    thumbnail_url?: unknown;
 
     price?: unknown;
 
@@ -125,6 +131,47 @@ async function resolveStorageUrl(
 
         return undefined;
     }
+}
+
+
+//==================================================
+// PREFERRED URL
+//==================================================
+
+async function resolvePreferredUrl(
+    directUrl: unknown,
+    storagePath: unknown
+): Promise<string | undefined> {
+
+    //--------------------------------------------------
+    // Fast path: Firestore already contains the URL.
+    //--------------------------------------------------
+
+    if (
+        typeof directUrl === "string"
+    ) {
+
+        const value =
+            directUrl.trim();
+
+        if (
+            value.startsWith("http://") ||
+            value.startsWith("https://") ||
+            value.startsWith("data:")
+        ) {
+
+            return value;
+        }
+    }
+
+    //--------------------------------------------------
+    // Backward compatibility for old documents that only
+    // store model_path / thumbnail_path.
+    //--------------------------------------------------
+
+    return resolveStorageUrl(
+        storagePath
+    );
 }
 
 
@@ -329,27 +376,23 @@ async function buildAsset(
     }
 
     //--------------------------------------------------
-    // Model path
+    // Model URL / path
+    //--------------------------------------------------
+    //
+    // Preferred field: model_url.
+    //
+    // Backward compatibility: older documents that only have
+    // model_path are still supported through resolveStorageUrl().
     //--------------------------------------------------
 
-    if (
-        typeof data.model_path !== "string" ||
-        data.model_path.trim() === ""
-    ) {
-
-        console.warn(
-            "Skipping Firebase door/window without model_path:",
-            documentId
-        );
-
-        return null;
-    }
-
     const modelPath =
-        data.model_path.trim();
+        typeof data.model_path === "string"
+            ? data.model_path.trim()
+            : "";
 
     const modelUrl =
-        await resolveStorageUrl(
+        await resolvePreferredUrl(
+            data.model_url,
             modelPath
         );
 
@@ -357,16 +400,26 @@ async function buildAsset(
         !modelUrl
     ) {
 
+        console.warn(
+            "Skipping Firebase door/window without a usable model_url/model_path:",
+            documentId,
+            data.model_url ?? data.model_path
+        );
+
         return null;
     }
 
     //--------------------------------------------------
-    // Thumbnail is optional because your current
-    // documents have thumbnail_path="".
+    // Thumbnail URL
+    //--------------------------------------------------
+    //
+    // Optional. Prefer thumbnail_url so the catalog does not
+    // need an extra Storage URL lookup.
     //--------------------------------------------------
 
     const thumbnailUrl =
-        await resolveStorageUrl(
+        await resolvePreferredUrl(
+            data.thumbnail_url,
             data.thumbnail_path
         );
 

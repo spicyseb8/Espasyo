@@ -493,9 +493,97 @@ export default function EditorProvider({
                 const currentState =
                     stateRef.current;
 
-                //--------------------------------------------------
-                // Flush pending history when necessary.
-                //--------------------------------------------------
+                //==================================================
+// LOAD PROJECT
+//==================================================
+//
+// Loading a project establishes a completely new
+// editor state.
+//
+// It must NOT become an undo/redo history entry.
+//==================================================
+
+if (
+    action.type ===
+    "LOAD_PROJECT"
+) {
+
+    //--------------------------------------------------
+    // Cancel pending grouped history.
+    //--------------------------------------------------
+
+    pendingFloorSnapshot.current =
+        null;
+
+    pendingEditorSnapshot.current =
+        null;
+
+    //--------------------------------------------------
+    // Clear old project's history.
+    //--------------------------------------------------
+
+    floorPast.current =
+        [];
+
+    floorFuture.current =
+        [];
+
+    editorPast.current =
+        [];
+
+    editorFuture.current =
+        [];
+
+    //--------------------------------------------------
+    // Invalidate any pending microtask group commits.
+    //--------------------------------------------------
+
+    floorGroupToken.current +=
+        1;
+
+    editorGroupToken.current +=
+        1;
+
+    //--------------------------------------------------
+    // Reconstruct project state.
+    //--------------------------------------------------
+
+    const nextState =
+        editorReducer(
+            currentState,
+            action
+        );
+
+    //--------------------------------------------------
+    // Nothing changed.
+    //--------------------------------------------------
+
+    if (
+        nextState ===
+        currentState
+    ) {
+        return;
+    }
+
+    //--------------------------------------------------
+    // Update state synchronously.
+    //--------------------------------------------------
+
+    stateRef.current =
+        nextState;
+
+    setState(
+        nextState
+    );
+
+    //--------------------------------------------------
+    // Refresh undo/redo UI.
+    //--------------------------------------------------
+
+    refreshHistoryUI();
+
+    return;
+}
 
                 if (
                     isFloorPlanAction(action) &&

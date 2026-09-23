@@ -1,5 +1,5 @@
 import {
-   
+    useEffect,
     useMemo,
     useState
 } from "react";
@@ -20,13 +20,17 @@ import type {
     Door as DoorType
 } from "../../engine/doors/DoorTypes";
 
+import type {
+    Asset
+} from "../../assets/Asset";
+
 import {
     findAsset
 } from "../../assets/AssetLibrary";
 
 import {
     getCachedDoorAsset,
-    
+    getDoorWindowAssets
 } from "../../engine/build/FirebaseDoorWindowLibrary";
 
 import {
@@ -37,12 +41,20 @@ import useEditor
     from "../../context/editor/useEditor";
 
 
+//======================================================
+// PROPS
+//======================================================
+
 interface Props {
 
     door:
         DoorType;
 }
 
+
+//======================================================
+// HIGHLIGHT SETTINGS
+//======================================================
 
 const HOVER_COLOR =
     "#63B8FF";
@@ -51,14 +63,21 @@ const HOVER_EMISSIVE_INTENSITY =
     0.35;
 
 
+//======================================================
+// HIGHLIGHT
+//======================================================
+
 function setDoorHighlight(
     object:
         Object3D,
+
     highlighted:
         boolean
+
 ) {
 
     object.traverse(
+
         child => {
 
             if (
@@ -68,20 +87,32 @@ function setDoorHighlight(
                 return;
             }
 
+
             const materials =
                 Array.isArray(
                     child.material
                 )
+
                     ? child.material
-                    : [child.material];
+
+                    : [
+                        child.material
+                    ];
+
 
             materials.forEach(
+
                 material => {
 
                     const standard =
                         material as
                             | MeshStandardMaterial
                             | MeshPhysicalMaterial;
+
+
+                    //--------------------------------------------------
+                    // EMISSIVE
+                    //--------------------------------------------------
 
                     if (
                         "emissive" in standard &&
@@ -113,6 +144,11 @@ function setDoorHighlight(
                         return;
                     }
 
+
+                    //--------------------------------------------------
+                    // FALLBACK COLOR
+                    //--------------------------------------------------
+
                     if (
                         "color" in material &&
                         material.color &&
@@ -126,12 +162,37 @@ function setDoorHighlight(
                         );
 
                     }
+
                 }
+
             );
+
         }
+
     );
+
 }
 
+
+//======================================================
+// DOOR
+//======================================================
+//
+// IMPORTANT:
+//
+// This component does NOT call useGLTF() directly.
+//
+// It first waits for a usable Asset.
+//
+// This prevents:
+//
+//     useGLTF("")
+//
+// which was causing:
+//
+//     Unexpected token '<'
+//
+//======================================================
 
 export default function Door({
     door
@@ -141,24 +202,135 @@ export default function Door({
         state
     } = useEditor();
 
+
+    //==================================================
+    // HOVER
+    //==================================================
+
     const [
         hovered,
         setHovered
     ] = useState(false);
 
 
-    useCursor(
-        hovered &&
-        !state.walkthroughMode,
-        'url("/cursors/hand.png") 16 16, pointer'
+    //==================================================
+    // CATALOG READY
+    //==================================================
+
+    const [
+        catalogReady,
+        setCatalogReady
+    ] = useState(false);
+
+
+    //==================================================
+    // LOAD DOOR / WINDOW CATALOG
+    //==================================================
+
+    useEffect(
+
+        () => {
+
+            let cancelled =
+                false;
+
+
+            getDoorWindowAssets()
+
+                .then(
+
+                    () => {
+
+                        if (
+                            !cancelled
+                        ) {
+
+                            setCatalogReady(
+                                true
+                            );
+
+                        }
+
+                    }
+
+                )
+
+                .catch(
+
+                    error => {
+
+                        console.error(
+
+                            "Failed to load Firebase door/window catalog:",
+
+                            error
+
+                        );
+
+
+                        if (
+                            !cancelled
+                        ) {
+
+                            setCatalogReady(
+                                true
+                            );
+
+                        }
+
+                    }
+
+                );
+
+
+            return () => {
+
+                cancelled =
+                    true;
+
+            };
+
+        },
+
+        []
+
     );
 
 
     //--------------------------------------------------
-    // Firebase first; local asset remains as fallback.
+    // Intentionally read so the component rerenders
+    // after the Firebase catalog finishes loading.
     //--------------------------------------------------
 
-    const asset =
+    void catalogReady;
+
+
+    //==================================================
+    // CURSOR
+    //==================================================
+
+    useCursor(
+
+        hovered &&
+        !state.walkthroughMode,
+
+        'url("/cursors/hand.png") 16 16, pointer'
+
+    );
+
+
+    //==================================================
+    // ASSET
+    //==================================================
+    //
+    // Firebase asset is preferred.
+    //
+    // Existing local AssetLibrary remains as fallback.
+    //==================================================
+
+    const asset:
+        Asset | undefined =
+
         getCachedDoorAsset(
             door.assetId
         ) ??
@@ -167,24 +339,152 @@ export default function Door({
         );
 
 
-    //--------------------------------------------------
-    // GLTF hook must run consistently.
-    //--------------------------------------------------
+    //==================================================
+    // MOVING
+    //==================================================
+
+    const isMoving =
+        buildInteraction.moveTarget?.type ===
+            "door" &&
+
+        buildInteraction.moveTarget.id ===
+            door.id;
+
+
+    if (
+        isMoving
+    ) {
+
+        return null;
+    }
+
+
+    //==================================================
+    // NO ASSET YET
+    //==================================================
+    //
+    // Firebase catalog may still be loading.
+    //==================================================
+
+    if (
+        !asset
+    ) {
+
+        return null;
+    }
+
+
+    //==================================================
+    // NO VALID MODEL URL
+    //==================================================
+
+    if (
+        typeof asset.model !==
+        "string" ||
+
+        asset.model.trim() === ""
+    ) {
+
+        console.warn(
+
+            "Door asset has no valid model URL:",
+
+            {
+                doorId:
+                    door.id,
+
+                assetId:
+                    door.assetId,
+
+                asset
+            }
+
+        );
+
+        return null;
+    }
+
+
+    //==================================================
+    // ACTUAL GLTF MODEL
+    //==================================================
+
+    return (
+
+        <DoorModel
+
+            door={
+                door
+            }
+
+            asset={
+                asset
+            }
+
+            setHovered={
+                setHovered
+            }
+
+        />
+
+    );
+}
+
+
+//======================================================
+// DOOR MODEL
+//======================================================
+
+interface DoorModelProps {
+
+    door:
+        DoorType;
+
+    asset:
+        Asset;
+
+    setHovered:
+        (value: boolean) => void;
+}
+
+
+function DoorModel({
+
+    door,
+
+    asset,
+
+    setHovered
+
+}: DoorModelProps) {
+
+    const {
+        state
+    } = useEditor();
+
+
+    //==================================================
+    // GLTF
+    //==================================================
+    //
+    // At this point asset.model is guaranteed to be a
+    // non-empty string.
+    //==================================================
 
     const {
         scene
     } = useGLTF(
-        asset?.model ?? ""
+        asset.model
     );
 
 
-    //--------------------------------------------------
-    // Clone before the moving-state return so the hook
-    // order stays stable when a door starts moving.
-    //--------------------------------------------------
+    //==================================================
+    // CLONE MODEL
+    //==================================================
 
     const model =
         useMemo(
+
             () => {
 
                 const clone =
@@ -192,8 +492,15 @@ export default function Door({
                         true
                     );
 
+
+                //--------------------------------------------------
+                // SCALE
+                //--------------------------------------------------
+
                 const scale =
-                    asset?.scale ?? 1;
+                    asset.scale ??
+                    1;
+
 
                 clone.scale.set(
                     scale,
@@ -201,18 +508,36 @@ export default function Door({
                     scale
                 );
 
+
+                //--------------------------------------------------
+                // TRAVERSE
+                //--------------------------------------------------
+
                 clone.traverse(
+
                     child => {
 
                         child.userData = {
+
                             ...child.userData,
+
                             doorId:
                                 door.id
+
                         };
+
+
+                        //--------------------------------------------------
+                        // MESH
+                        //--------------------------------------------------
 
                         if (
                             child instanceof Mesh
                         ) {
+
+                            //------------------------------------------------
+                            // Clone array materials
+                            //------------------------------------------------
 
                             if (
                                 Array.isArray(
@@ -222,11 +547,20 @@ export default function Door({
 
                                 child.material =
                                     child.material.map(
+
                                         material =>
                                             material.clone()
+
                                     );
 
-                            } else if (
+                            }
+
+
+                            //------------------------------------------------
+                            // Clone single material
+                            //------------------------------------------------
+
+                            else if (
                                 child.material
                             ) {
 
@@ -235,6 +569,11 @@ export default function Door({
 
                             }
 
+
+                            //------------------------------------------------
+                            // Shadows
+                            //------------------------------------------------
+
                             child.castShadow =
                                 true;
 
@@ -242,23 +581,28 @@ export default function Door({
                                 true;
 
                         }
+
                     }
+
                 );
+
 
                 return clone;
 
             },
+
             [
                 scene,
                 door.id,
-                asset?.scale
+                asset.scale
             ]
+
         );
 
 
-    //--------------------------------------------------
-    // Hover handlers
-    //--------------------------------------------------
+    //==================================================
+    // POINTER ENTER
+    //==================================================
 
     const handlePointerEnter =
         (event: any) => {
@@ -270,16 +614,26 @@ export default function Door({
                 return;
             }
 
+
             event.stopPropagation();
 
-            setHovered(true);
+
+            setHovered(
+                true
+            );
+
 
             setDoorHighlight(
                 model,
                 true
             );
+
         };
 
+
+    //==================================================
+    // POINTER LEAVE
+    //==================================================
 
     const handlePointerLeave =
         (event: any) => {
@@ -291,41 +645,26 @@ export default function Door({
                 return;
             }
 
+
             event.stopPropagation();
 
-            setHovered(false);
+
+            setHovered(
+                false
+            );
+
 
             setDoorHighlight(
                 model,
                 false
             );
+
         };
 
 
-    //--------------------------------------------------
-    // Hide only the door currently being moved.
-    //--------------------------------------------------
-
-    const isMoving =
-        buildInteraction.moveTarget?.type ===
-            "door" &&
-        buildInteraction.moveTarget.id ===
-            door.id;
-
-    if (
-        !asset ||
-        isMoving
-    ) {
-
-        return null;
-    }
-
-
-    //--------------------------------------------------
-    // Use Firebase/local asset rotation offset when
-    // present. The current local door is Math.PI / 2,
-    // so its behavior remains unchanged.
-    //--------------------------------------------------
+    //==================================================
+    // ROTATION
+    //==================================================
 
     const rotationOffsetY =
         asset.rotationOffsetY ??
@@ -337,27 +676,37 @@ export default function Door({
         rotationOffsetY;
 
 
+    //==================================================
+    // RENDER
+    //==================================================
+
     return (
 
         <group
+
             userData={{
                 doorId:
                     door.id
             }}
+
             position={
                 door.position
             }
+
             rotation={[
                 0,
                 finalRotationY,
                 0
             ]}
+
             onPointerEnter={
                 handlePointerEnter
             }
+
             onPointerLeave={
                 handlePointerLeave
             }
+
         >
 
             <primitive
@@ -367,5 +716,7 @@ export default function Door({
             />
 
         </group>
+
     );
+
 }
