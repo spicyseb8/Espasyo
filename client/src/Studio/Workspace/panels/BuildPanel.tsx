@@ -1,64 +1,287 @@
 import "./BuildPanel.css";
 
-import { useMemo, useState } from "react";
+import {
+    useEffect,
+    useMemo,
+    useState
+} from "react";
 
-import { Search } from "lucide-react";
+import {
+    Search
+} from "lucide-react";
 
-import AssetSection from "./AssetSection";
+import AssetSection
+    from "./AssetSection";
 
-import { AssetLibrary } from "../../../assets/AssetLibrary";
-import type { Asset } from "../../../assets/Asset";
+import {
+    AssetLibrary
+} from "../../../assets/AssetLibrary";
 
-function filterAssets(assets: Asset[], query: string) {
-    if (!query) return assets;
-    const q = query.toLowerCase();
-    return assets.filter(asset => asset.name.toLowerCase().includes(q));
+import type {
+    Asset
+} from "../../../assets/Asset";
+
+import {
+    getDoorAssets,
+    getWindowAssets
+} from "../../../engine/build/FirebaseDoorWindowLibrary";
+
+
+function filterAssets(
+    assets: Asset[],
+    query: string
+) {
+
+    if (
+        !query
+    ) {
+
+        return assets;
+    }
+
+    const q =
+        query.toLowerCase();
+
+    return assets.filter(
+        asset =>
+            asset.name
+                .toLowerCase()
+                .includes(q)
+    );
 }
+
 
 export default function BuildPanel() {
 
-    const [query, setQuery] = useState("");
+    const [
+        query,
+        setQuery
+    ] = useState("");
 
-    const sections = useMemo(() => ([
-        { title: "Openings", assets: AssetLibrary.openings },
-        { title: "Doors", assets: AssetLibrary.doors},
-        { title: "Windows", assets: AssetLibrary.windows },
-    ]), []);
+    const [
+        doors,
+        setDoors
+    ] = useState<Asset[]>([]);
 
-    const isSearching = query.trim().length > 0;
+    const [
+        windows,
+        setWindows
+    ] = useState<Asset[]>([]);
 
-    // NOTE: Confirm Layout button has moved out of BuildPanel - see
-    // FurniturePanel.tsx (pending). The Apply button also moved: it's now
-    // per-section, rendered inside AssetSection.tsx instead of here.
+    const [
+        loading,
+        setLoading
+    ] = useState(true);
+
+
+    //--------------------------------------------------
+    // Load Firebase doors/windows
+    //--------------------------------------------------
+
+    useEffect(
+        () => {
+
+            let cancelled =
+                false;
+
+            setLoading(true);
+
+            Promise.all([
+                getDoorAssets(),
+                getWindowAssets()
+            ])
+                .then(
+                    ([
+                        firebaseDoors,
+                        firebaseWindows
+                    ]) => {
+
+                        if (
+                            cancelled
+                        ) {
+
+                            return;
+                        }
+
+                        setDoors(
+                            firebaseDoors
+                        );
+
+                        setWindows(
+                            firebaseWindows
+                        );
+
+                    }
+                )
+                .catch(
+                    error => {
+
+                        console.error(
+                            "Failed to load Firebase doors/windows:",
+                            error
+                        );
+
+                    }
+                )
+                .finally(
+                    () => {
+
+                        if (
+                            !cancelled
+                        ) {
+
+                            setLoading(false);
+
+                        }
+
+                    }
+                );
+
+            return () => {
+
+                cancelled =
+                    true;
+
+            };
+
+        },
+        []
+    );
+
+
+    const sections =
+        useMemo(
+            () => ([
+
+                // Openings remain local for now.
+                {
+                    title:
+                        "Openings",
+                    assets:
+                        AssetLibrary.openings
+                },
+
+                // Doors now come from Firebase.
+                {
+                    title:
+                        "Doors",
+                    assets:
+                        doors
+                },
+
+                // Windows now come from Firebase.
+                {
+                    title:
+                        "Windows",
+                    assets:
+                        windows
+                }
+
+            ]),
+            [
+                doors,
+                windows
+            ]
+        );
+
+
+    const isSearching =
+        query.trim().length > 0;
+
 
     return (
-        <div className="build-panel">
 
-            <div className="build-panel-search">
-                <Search size={14} className="build-panel-search-icon" />
+        <div
+            className="build-panel"
+        >
+
+            <div
+                className="build-panel-search"
+            >
+
+                <Search
+                    size={14}
+                    className="build-panel-search-icon"
+                />
+
                 <input
                     type="text"
                     placeholder="Search assets"
                     value={query}
-                    onChange={e => setQuery(e.target.value)}
+                    onChange={
+                        event =>
+                            setQuery(
+                                event.target.value
+                            )
+                    }
                 />
+
             </div>
 
-            <div className="build-panel-sections">
+
+            {
+                loading &&
+                doors.length === 0 &&
+                windows.length === 0 && (
+
+                    <div
+                        style={{
+                            padding:
+                                "12px",
+                            fontSize:
+                                "12px",
+                            opacity:
+                                0.65
+                        }}
+                    >
+                        Loading doors and windows...
+                    </div>
+
+                )
+            }
+
+
+            <div
+                className="build-panel-sections"
+            >
+
                 {
-                    sections.map(section => (
-                        <AssetSection
-                            key={section.title}
-                            title={section.title}
+                    sections.map(
+                        section => (
 
-                            assets={filterAssets(section.assets, query)}
-                            defaultOpen={section.title === "Openings"}
-                            forceOpen={isSearching ? true : undefined}
-                        />
-                    ))
+                            <AssetSection
+                                key={
+                                    section.title
+                                }
+
+                                title={
+                                    section.title
+                                }
+
+                                assets={
+                                    filterAssets(
+                                        section.assets,
+                                        query
+                                    )
+                                }
+
+                                defaultOpen={
+                                    section.title ===
+                                    "Openings"
+                                }
+
+                                forceOpen={
+                                    isSearching
+                                        ? true
+                                        : undefined
+                                }
+                            />
+
+                        )
+                    )
                 }
-            </div>
 
+            </div>
 
         </div>
     );

@@ -41,6 +41,7 @@ import type {
 import type {
     BlueprintCalibrationPoint
 } from "./types";
+import type { SavedProjectData } from "./ProjectTypes";
 
 export type EditorAction =
 
@@ -77,7 +78,7 @@ export type EditorAction =
     | { type: "SET_WALL_FINISH"; payload: { regionId: string; wallId: string; materialId: string; }; }
 
     | { type: "CONFIRM_LAYOUT"; }
-
+    | { type: "LOAD_PROJECT"; payload: SavedProjectData; }
     | { type: "ADD_DOOR"; payload: Door; }
     | { type: "UPDATE_DOOR"; payload: { id: string; changes: Partial<Door>; }; }
     | { type: "REMOVE_DOOR"; payload: string; }

@@ -3,7 +3,6 @@ import "./Topbar.css";
 import {
     ChevronDown,
     Receipt,
-    PersonStanding,
     Undo2,
     Redo2
 } from "lucide-react";
@@ -35,7 +34,6 @@ export default function Topbar() {
 
     const {
         state,
-        dispatch,
         undo,
         redo,
         canUndo,
@@ -68,7 +66,6 @@ export default function Topbar() {
         ) {
 
             return "";
-
         }
 
 
@@ -102,189 +99,7 @@ export default function Topbar() {
         );
 
     }
-    function hasClosedRoom(
-    walls: typeof state.walls
-) {
-    const EPSILON = 0.001;
 
-    if (
-        !walls ||
-        walls.length < 3
-    ) {
-        return false;
-    }
-
-    function samePoint(
-        a: { x: number; z: number },
-        b: { x: number; z: number }
-    ) {
-        return (
-            Math.abs(a.x - b.x) <= EPSILON &&
-            Math.abs(a.z - b.z) <= EPSILON
-        );
-    }
-
-    const adjacency =
-        new Map<number, number[]>();
-
-    const points: {
-        x: number;
-        z: number;
-    }[] = [];
-
-    function getPointIndex(
-        point: {
-            x: number;
-            z: number;
-        }
-    ) {
-        const existingIndex =
-            points.findIndex(
-                existing =>
-                    samePoint(
-                        existing,
-                        point
-                    )
-            );
-
-        if (
-            existingIndex !== -1
-        ) {
-            return existingIndex;
-        }
-
-        const newIndex =
-            points.length;
-
-        points.push({
-            x: point.x,
-            z: point.z
-        });
-
-        return newIndex;
-    }
-
-    for (
-        const wall of walls
-    ) {
-
-        const startIndex =
-            getPointIndex(
-                wall.start.position
-            );
-
-        const endIndex =
-            getPointIndex(
-                wall.end.position
-            );
-
-        if (
-            !adjacency.has(
-                startIndex
-            )
-        ) {
-            adjacency.set(
-                startIndex,
-                []
-            );
-        }
-
-        if (
-            !adjacency.has(
-                endIndex
-            )
-        ) {
-            adjacency.set(
-                endIndex,
-                []
-            );
-        }
-
-        adjacency
-            .get(startIndex)!
-            .push(endIndex);
-
-        adjacency
-            .get(endIndex)!
-            .push(startIndex);
-    }
-
-    //--------------------------------------------------
-    // Detect a cycle.
-    //--------------------------------------------------
-
-    const visited =
-        new Set<number>();
-
-    function hasCycle(
-        current: number,
-        parent: number
-    ): boolean {
-
-        visited.add(
-            current
-        );
-
-        const neighbours =
-            adjacency.get(
-                current
-            ) ?? [];
-
-        for (
-            const neighbour of neighbours
-        ) {
-
-            if (
-                !visited.has(
-                    neighbour
-                )
-            ) {
-
-                if (
-                    hasCycle(
-                        neighbour,
-                        current
-                    )
-                ) {
-                    return true;
-                }
-
-            }
-
-            else if (
-                neighbour !== parent
-            ) {
-
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    for (
-        const pointIndex of adjacency.keys()
-    ) {
-
-        if (
-            !visited.has(
-                pointIndex
-            )
-        ) {
-
-            if (
-                hasCycle(
-                    pointIndex,
-                    -1
-                )
-            ) {
-                return true;
-            }
-        }
-    }
-
-    return false;
-}
 
     //==================================================
     // COST ESTIMATION
@@ -456,63 +271,64 @@ export default function Topbar() {
 
 
     //==================================================
-    // WALKTHROUGH
-    //==================================================
-
-    function handleWalkthrough() {
-
-    if (
-        !state.walkthroughMode &&
-        !hasClosedRoom(
-            state.walls
-        )
-    ) {
-
-        alert(
-            "Create a closed room first before entering Walkthrough."
-        );
-
-        return;
-    }
-
-    dispatch({
-        type:
-            "TOGGLE_WALKTHROUGH"
-    });
-}
-
-
-    //==================================================
     // RENDER
     //==================================================
 
     return (
 
-       <header className="topbar">
+        <header
+            className="topbar"
+        >
 
-    {/* LEFT */}
-    <div className="topbar-left">
-        <div className="topbar-brand">
-            ESPASYO
-        </div>
-    </div>
+            {/*==================================================
+                LEFT
+            ==================================================*/}
+
+            <div
+                className="topbar-left"
+            >
+
+                <div
+                    className="topbar-brand"
+                >
+                    ESPASYO
+                </div>
+
+            </div>
 
 
-    {/* CENTER */}
-    <div className="topbar-center">
+            {/*==================================================
+                CENTER
+            ==================================================*/}
 
-        <input
-            type="text"
-            className="project-title-input"
-            placeholder="Project name"
-            value={projectName}
-            onChange={
-                handleProjectNameChange
-            }
-            aria-label="Project name"
-        />
+            <div
+                className="topbar-center"
+            >
 
-    </div>
+                <input
+
+                    type="text"
+
+                    className=
+                        "project-title-input"
+
+                    placeholder=
+                        "Project name"
+
+                    value={
+                        projectName
+                    }
+
+                    onChange={
+                        handleProjectNameChange
+                    }
+
+                    aria-label=
+                        "Project name"
+
+                />
+
+            </div>
 
 
             {/*==================================================
@@ -522,107 +338,67 @@ export default function Topbar() {
             <div
                 className="topbar-actions"
             >
+
                 {/*----------------------------------------------
-    UNDO
-----------------------------------------------*/}
-
-<button
-    type="button"
-    className="history-button"
-    onClick={undo}
-    disabled={!canUndo}
-    title="Undo"
-    aria-label="Undo"
->
-    <Undo2 size={18} />
-</button>
-
-
-{/*----------------------------------------------
-    REDO
-----------------------------------------------*/}
-
-<button
-    type="button"
-    className="history-button"
-    onClick={redo}
-    disabled={!canRedo}
-    title="Redo"
-    aria-label="Redo"
->
-    <Redo2 size={18} />
-</button>
-                {/*----------------------------------------------
-                    WALKTHROUGH
+                    UNDO
                 ----------------------------------------------*/}
 
                 <button
 
-    type="button"
+                    type="button"
 
-    className={
-        state.walkthroughMode
-            ? "walkthrough-button active"
-            : "walkthrough-button"
-    }
+                    className=
+                        "history-button"
 
-    onClick={
-        event => {
+                    onClick={
+                        undo
+                    }
 
-            handleWalkthrough();
+                    disabled={
+                        !canUndo
+                    }
 
-            //--------------------------------------------------
-            // Remove keyboard focus from this button.
-            //
-            // This prevents pressing Space later from
-            // activating the button again.
-            //--------------------------------------------------
+                    title="Undo"
 
-            event.currentTarget.blur();
+                    aria-label="Undo"
 
-        }
-    }
+                >
 
-    onKeyDown={
-        event => {
-
-            //--------------------------------------------------
-            // Space must NOT toggle Walkthrough.
-            //--------------------------------------------------
-
-            if (
-                event.key ===
-                " "
-            ) {
-
-                event.preventDefault();
-                event.stopPropagation();
-
-                return;
-            }
-
-        }
-    }
-
-    aria-pressed={
-        state.walkthroughMode
-    }
-
->
-
-                    <PersonStanding
-                        size={16}
+                    <Undo2
+                        size={18}
                     />
 
-                    <span>
+                </button>
 
-                        {
-                            state.walkthroughMode
-                                ? "Exit Walkthrough"
-                                : "Walkthrough"
-                        }
 
-                    </span>
+                {/*----------------------------------------------
+                    REDO
+                ----------------------------------------------*/}
+
+                <button
+
+                    type="button"
+
+                    className=
+                        "history-button"
+
+                    onClick={
+                        redo
+                    }
+
+                    disabled={
+                        !canRedo
+                    }
+
+                    title="Redo"
+
+                    aria-label="Redo"
+
+                >
+
+                    <Redo2
+                        size={18}
+                    />
 
                 </button>
 
@@ -693,8 +469,10 @@ export default function Topbar() {
                         open && (
 
                             <div
+
                                 className=
                                     "cost-estimator-dropdown"
+
                             >
 
                                 {/*----------------------------------
@@ -723,7 +501,8 @@ export default function Topbar() {
                                             furniture
 
                                             {
-                                                furnitureCount !== 1
+                                                furnitureCount !==
+                                                1
                                                     ? " items"
                                                     : " item"
                                             }
@@ -739,7 +518,8 @@ export default function Topbar() {
                                             cost item
 
                                             {
-                                                estimate.items.length !== 1
+                                                estimate.items.length !==
+                                                1
                                                     ? "s"
                                                     : ""
                                             }
@@ -761,7 +541,9 @@ export default function Topbar() {
                                 >
 
                                     {
-                                        estimate.items.length === 0
+                                        estimate.items.length ===
+                                        0
+
                                             ? (
 
                                                 <div
@@ -772,6 +554,7 @@ export default function Topbar() {
                                                 </div>
 
                                             )
+
                                             : (
 
                                                 (
@@ -827,8 +610,10 @@ export default function Topbar() {
                                                                 ----------------------------------*/}
 
                                                                 <div
+
                                                                     className=
                                                                         "cost-category-header"
+
                                                                 >
 
                                                                     <span>
@@ -840,6 +625,7 @@ export default function Topbar() {
                                                                         }
 
                                                                     </span>
+
 
                                                                     <strong>
 
@@ -877,13 +663,17 @@ export default function Topbar() {
                                                                             >
 
                                                                                 <div
+
                                                                                     className=
                                                                                         "cost-item-info"
+
                                                                                 >
 
                                                                                     <span
+
                                                                                         className=
                                                                                             "cost-item-name"
+
                                                                                     >
 
                                                                                         {
@@ -894,14 +684,16 @@ export default function Topbar() {
 
 
                                                                                     <span
+
                                                                                         className=
                                                                                             "cost-item-quantity"
+
                                                                                     >
 
                                                                                         {
                                                                                             item.quantity.toFixed(
                                                                                                 item.unit ===
-                                                                                                    "m²"
+                                                                                                "m²"
                                                                                                     ? 2
                                                                                                     : 0
                                                                                             )
@@ -931,8 +723,10 @@ export default function Topbar() {
 
 
                                                                                 <span
+
                                                                                     className=
                                                                                         "cost-item-total"
+
                                                                                 >
 
                                                                                     {
@@ -967,13 +761,16 @@ export default function Topbar() {
                                 ----------------------------------*/}
 
                                 <div
+
                                     className=
                                         "cost-estimator-total"
+
                                 >
 
                                     <span>
                                         Estimated Total
                                     </span>
+
 
                                     <strong>
 
@@ -999,5 +796,4 @@ export default function Topbar() {
         </header>
 
     );
-
 }

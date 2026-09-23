@@ -1,3 +1,7 @@
+import {
+    useState
+} from "react";
+
 import "./WorkspaceContent.css";
 
 import FloorPlanPanel from "./panels/FloorPlanPanel";
@@ -18,6 +22,34 @@ export default function WorkspaceContent({
 
 }: Props) {
 
+    const isDesignTab =
+        activeTab === "design";
+
+    const [
+        hasOpenedDesignTab,
+        setHasOpenedDesignTab
+    ] = useState<boolean>(
+        isDesignTab
+    );
+
+    if (
+        isDesignTab &&
+        !hasOpenedDesignTab
+    ) {
+
+        setHasOpenedDesignTab(
+            true
+        );
+    }
+
+
+    //==================================================
+    // OTHER PANELS
+    //
+    // Unchanged behavior: only the active one is
+    // rendered, and it remounts on tab change.
+    //==================================================
+
     const panels = {
 
         floorplan: <FloorPlanPanel />,
@@ -26,18 +58,52 @@ export default function WorkspaceContent({
 
         furniture: <FurniturePanel />,
 
-        design: <DesignPanel />,
         project: <ProjectPanel />
 
     };
 
     return (
 
-        <div key={activeTab} className="workspace-content-inner">
+        <>
 
-            {panels[activeTab as keyof typeof panels]}
+            {!isDesignTab && (
 
-        </div>
+                <div key={activeTab} className="workspace-content-inner">
+
+                    {panels[activeTab as keyof typeof panels]}
+
+                </div>
+
+            )}
+
+            {/*
+                Inline style on purpose: a CSS class such as
+                display:flex on .workspace-content-inner would
+                override the HTML "hidden" attribute.
+            */}
+
+            {hasOpenedDesignTab && (
+
+                <div
+
+                    className="workspace-content-inner"
+
+                    style={{
+                        display:
+                            isDesignTab
+                                ? undefined
+                                : "none"
+                    }}
+
+                >
+
+                    <DesignPanel />
+
+                </div>
+
+            )}
+
+        </>
 
     );
 

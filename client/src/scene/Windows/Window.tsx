@@ -1,14 +1,19 @@
 import {
-    useMemo
+    useEffect,
+    useMemo,
+    useState
 } from "react";
 
 import {
+    useCursor,
     useGLTF
 } from "@react-three/drei";
 
 import {
     Mesh,
     Material,
+    MeshPhysicalMaterial,
+    MeshStandardMaterial,
     Object3D
 } from "three";
 
@@ -16,9 +21,18 @@ import type {
     Window as WindowType
 } from "../../engine/windows/WindowTypes";
 
+import type {
+    Asset
+} from "../../assets/Asset";
+
 import {
     findAsset
 } from "../../assets/AssetLibrary";
+
+import {
+    getCachedWindowAsset,
+    getDoorWindowAssets
+} from "../../engine/build/FirebaseDoorWindowLibrary";
 
 import {
     normalizeWindowModel
@@ -28,29 +42,40 @@ import {
     buildInteraction
 } from "../Build/BuildInteraction";
 
+import useEditor
+    from "../../context/editor/useEditor";
 
-//==================================================
+
+//======================================================
 // PROPS
-//==================================================
+//======================================================
 
 interface Props {
 
-    window: WindowType;
-
+    window:
+        WindowType;
 }
 
 
-//==================================================
-// Check whether a material is likely glass
-//==================================================
+//======================================================
+// HIGHLIGHT SETTINGS
+//======================================================
+
+const HOVER_COLOR =
+    "#63B8FF";
+
+const HOVER_EMISSIVE_INTENSITY =
+    0.35;
+
+
+//======================================================
+// GLASS DETECTION
+//======================================================
 
 function isGlassMaterial(
-    material: Material
+    material:
+        Material
 ): boolean {
-
-    //--------------------------------------------------
-    // Transparent material
-    //--------------------------------------------------
 
     if (
         material.transparent
@@ -59,31 +84,33 @@ function isGlassMaterial(
         return true;
     }
 
-    //--------------------------------------------------
-    // Very low opacity
-    //--------------------------------------------------
 
     if (
-        typeof material.opacity === "number" &&
+        typeof material.opacity ===
+            "number" &&
+
         material.opacity < 0.95
     ) {
 
         return true;
     }
 
+
     return false;
 }
 
 
-//==================================================
-// Configure window shadows
-//==================================================
+//======================================================
+// WINDOW SHADOWS
+//======================================================
 
 function configureWindowShadows(
-    model: Object3D
+    model:
+        Object3D
 ): void {
 
     model.traverse(
+
         child => {
 
             if (
@@ -93,9 +120,6 @@ function configureWindowShadows(
                 return;
             }
 
-            //--------------------------------------------------
-            // Multiple materials
-            //--------------------------------------------------
 
             if (
                 Array.isArray(
@@ -105,16 +129,14 @@ function configureWindowShadows(
 
                 const hasGlass =
                     child.material.some(
+
                         material =>
                             isGlassMaterial(
                                 material
                             )
+
                     );
 
-                //--------------------------------------------------
-                // If this mesh contains glass material,
-                // don't let the whole mesh cast a shadow.
-                //--------------------------------------------------
 
                 child.castShadow =
                     !hasGlass;
@@ -122,96 +144,528 @@ function configureWindowShadows(
                 child.receiveShadow =
                     true;
 
+
                 return;
             }
 
-            //--------------------------------------------------
-            // Single material
-            //--------------------------------------------------
 
             const material =
                 child.material;
+
 
             const glass =
                 isGlassMaterial(
                     material
                 );
 
-            //--------------------------------------------------
-            // Opaque frame/divisions cast shadows.
-            //--------------------------------------------------
 
             child.castShadow =
                 !glass;
 
-            //--------------------------------------------------
-            // Everything can receive shadows.
-            //--------------------------------------------------
-
             child.receiveShadow =
                 true;
+
         }
+
     );
+
 }
 
 
-//==================================================
+//======================================================
+// WINDOW HIGHLIGHT
+//======================================================
+
+function setWindowHighlight(
+    object:
+        Object3D,
+
+    highlighted:
+        boolean
+
+) {
+
+    object.traverse(
+
+        child => {
+
+            if (
+                !(child instanceof Mesh)
+            ) {
+
+                return;
+            }
+
+
+            const materials =
+                Array.isArray(
+                    child.material
+                )
+
+                    ? child.material
+
+                    : [
+                        child.material
+                    ];
+
+
+            materials.forEach(
+
+                material => {
+
+                    //--------------------------------------------------
+                    // Don't highlight glass
+                    //--------------------------------------------------
+
+                    if (
+                        isGlassMaterial(
+                            material
+                        )
+                    ) {
+
+                        return;
+                    }
+
+
+                    const standard =
+                        material as
+                            | MeshStandardMaterial
+                            | MeshPhysicalMaterial;
+
+
+                    //--------------------------------------------------
+                    // EMISSIVE
+                    //--------------------------------------------------
+
+                    if (
+                        "emissive" in standard &&
+                        standard.emissive
+                    ) {
+
+                        if (
+                            highlighted
+                        ) {
+
+                            standard.emissive.set(
+                                HOVER_COLOR
+                            );
+
+                            standard.emissiveIntensity =
+                                HOVER_EMISSIVE_INTENSITY;
+
+                        } else {
+
+                            standard.emissive.set(
+                                0x000000
+                            );
+
+                            standard.emissiveIntensity =
+                                0;
+
+                        }
+
+
+                        return;
+                    }
+
+
+                    //--------------------------------------------------
+                    // FALLBACK COLOR
+                    //--------------------------------------------------
+
+                    if (
+                        "color" in material &&
+                        material.color &&
+                        highlighted
+                    ) {
+
+                        material.color.offsetHSL(
+                            0,
+                            0,
+                            0.12
+                        );
+
+                    }
+
+                }
+
+            );
+
+        }
+
+    );
+
+}
+
+
+//======================================================
 // WINDOW
-//==================================================
+//======================================================
+//
+// IMPORTANT:
+//
+// This component does not call useGLTF() until a valid
+// Firebase/local Asset with a non-empty model URL exists.
+//======================================================
 
 export default function Window({
     window
 }: Props) {
 
-    const asset =
+    const {
+        state
+    } = useEditor();
+
+
+    //==================================================
+    // HOVER
+    //==================================================
+
+    const [
+        hovered,
+        setHovered
+    ] = useState(false);
+
+
+    //==================================================
+    // CATALOG READY
+    //==================================================
+
+    const [
+        catalogReady,
+        setCatalogReady
+    ] = useState(false);
+
+
+    //==================================================
+    // LOAD FIREBASE DOOR/WINDOW CATALOG
+    //==================================================
+
+    useEffect(
+
+        () => {
+
+            let cancelled =
+                false;
+
+
+            getDoorWindowAssets()
+
+                .then(
+
+                    () => {
+
+                        if (
+                            !cancelled
+                        ) {
+
+                            setCatalogReady(
+                                true
+                            );
+
+                        }
+
+                    }
+
+                )
+
+                .catch(
+
+                    error => {
+
+                        console.error(
+
+                            "Failed to load Firebase door/window catalog:",
+
+                            error
+
+                        );
+
+
+                        if (
+                            !cancelled
+                        ) {
+
+                            setCatalogReady(
+                                true
+                            );
+
+                        }
+
+                    }
+
+                );
+
+
+            return () => {
+
+                cancelled =
+                    true;
+
+            };
+
+        },
+
+        []
+
+    );
+
+
+    //--------------------------------------------------
+    // Intentionally used to rerender after catalog
+    // loading.
+    //--------------------------------------------------
+
+    void catalogReady;
+
+
+    //==================================================
+    // CURSOR
+    //==================================================
+
+    useCursor(
+
+        hovered &&
+        !state.walkthroughMode,
+
+        'url("/cursors/hand.png") 16 16, pointer'
+
+    );
+
+
+    //==================================================
+    // ASSET
+    //==================================================
+
+    const asset:
+        Asset | undefined =
+
+        getCachedWindowAsset(
+            window.assetId
+        ) ??
         findAsset(
             window.assetId
         );
 
-    //--------------------------------------------------
+
+    //==================================================
+    // MOVING
+    //==================================================
+
+    const isMoving =
+        buildInteraction.moveTarget?.type ===
+            "window" &&
+
+        buildInteraction.moveTarget.id ===
+            window.id;
+
+
+    if (
+        isMoving
+    ) {
+
+        return null;
+    }
+
+
+    //==================================================
+    // NO ASSET YET
+    //==================================================
+
+    if (
+        !asset
+    ) {
+
+        return null;
+    }
+
+
+    //==================================================
+    // NO VALID MODEL URL
+    //==================================================
+
+    if (
+        typeof asset.model !==
+        "string" ||
+
+        asset.model.trim() === ""
+    ) {
+
+        console.warn(
+
+            "Window asset has no valid model URL:",
+
+            {
+                windowId:
+                    window.id,
+
+                assetId:
+                    window.assetId,
+
+                asset
+            }
+
+        );
+
+        return null;
+    }
+
+
+    //==================================================
+    // ACTUAL GLTF MODEL
+    //==================================================
+
+    return (
+
+        <WindowModel
+
+            window={
+                window
+            }
+
+            asset={
+                asset
+            }
+
+            setHovered={
+                setHovered
+            }
+
+        />
+
+    );
+
+}
+
+
+//======================================================
+// WINDOW MODEL
+//======================================================
+
+interface WindowModelProps {
+
+    window:
+        WindowType;
+
+    asset:
+        Asset;
+
+    setHovered:
+        (value: boolean) => void;
+
+}
+
+
+function WindowModel({
+
+    window,
+
+    asset,
+
+    setHovered
+
+}: WindowModelProps) {
+
+    const {
+        state
+    } = useEditor();
+
+
+    //==================================================
     // GLTF
-    //
-    // Always call the hook before conditional return.
-    //--------------------------------------------------
+    //==================================================
 
     const {
         scene
     } = useGLTF(
-        asset?.model ?? ""
+        asset.model
     );
 
-    //--------------------------------------------------
-    // Normalize window model
-    //--------------------------------------------------
+
+    //==================================================
+    // NORMALIZE WINDOW MODEL
+    //==================================================
 
     const normalized =
         useMemo(
+
             () => {
 
+                const result =
+                    normalizeWindowModel(
+                        scene,
+                        asset
+                    );
+
+
+                //--------------------------------------------------
+                // Clone materials
+                //--------------------------------------------------
+
                 if (
-                    !asset
+                    result?.model
                 ) {
 
-                    return null;
+                    result.model.traverse(
+
+                        child => {
+
+                            if (
+                                !(child instanceof Mesh)
+                            ) {
+
+                                return;
+                            }
+
+
+                            if (
+                                Array.isArray(
+                                    child.material
+                                )
+                            ) {
+
+                                child.material =
+                                    child.material.map(
+                                        material =>
+                                            material.clone()
+                                    );
+
+                            }
+
+                            else if (
+                                child.material
+                            ) {
+
+                                child.material =
+                                    child.material.clone();
+
+                            }
+
+                        }
+
+                    );
+
                 }
 
-                return normalizeWindowModel(
-                    scene,
-                    asset
-                );
+
+                return result;
 
             },
+
             [
                 scene,
                 asset
             ]
+
         );
 
-    //--------------------------------------------------
-    // Configure shadows
-    //--------------------------------------------------
+
+    //==================================================
+    // CONFIGURE SHADOWS
+    //==================================================
 
     useMemo(
+
         () => {
 
             if (
@@ -221,53 +675,97 @@ export default function Window({
                 return;
             }
 
+
             configureWindowShadows(
                 normalized.model
             );
 
         },
+
         [
             normalized
         ]
+
     );
 
-    //--------------------------------------------------
-    // No asset / normalized model
-    //--------------------------------------------------
+
+    //==================================================
+    // NORMALIZATION FAILED
+    //==================================================
 
     if (
-        !asset ||
-        !normalized
+        !normalized?.model
     ) {
 
         return null;
     }
 
-    //--------------------------------------------------
-    // Hide only the window currently being moved
-    //--------------------------------------------------
 
-    const isMoving =
-        buildInteraction
-            .moveTarget
-            ?.type ===
-            "window" &&
+    //==================================================
+    // POINTER ENTER
+    //==================================================
 
-        buildInteraction
-            .moveTarget
-            .id ===
-            window.id;
+    const handlePointerEnter =
+        (event: any) => {
 
-    if (
-        isMoving
-    ) {
+            if (
+                state.walkthroughMode
+            ) {
 
-        return null;
-    }
+                return;
+            }
 
-    //--------------------------------------------------
-    // Final rotation
-    //--------------------------------------------------
+
+            event.stopPropagation();
+
+
+            setHovered(
+                true
+            );
+
+
+            setWindowHighlight(
+                normalized.model,
+                true
+            );
+
+        };
+
+
+    //==================================================
+    // POINTER LEAVE
+    //==================================================
+
+    const handlePointerLeave =
+        (event: any) => {
+
+            if (
+                state.walkthroughMode
+            ) {
+
+                return;
+            }
+
+
+            event.stopPropagation();
+
+
+            setHovered(
+                false
+            );
+
+
+            setWindowHighlight(
+                normalized.model,
+                false
+            );
+
+        };
+
+
+    //==================================================
+    // ROTATION
+    //==================================================
 
     const finalRotationY =
         window.rotationY +
@@ -276,9 +774,10 @@ export default function Window({
             0
         );
 
-    //--------------------------------------------------
-    // Render
-    //--------------------------------------------------
+
+    //==================================================
+    // RENDER
+    //==================================================
 
     return (
 
@@ -301,6 +800,14 @@ export default function Window({
                 0
             ]}
 
+            onPointerEnter={
+                handlePointerEnter
+            }
+
+            onPointerLeave={
+                handlePointerLeave
+            }
+
         >
 
             <primitive
@@ -310,5 +817,7 @@ export default function Window({
             />
 
         </group>
+
     );
+
 }

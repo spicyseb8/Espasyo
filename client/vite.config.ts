@@ -18,4 +18,4 @@ export default defineConfig({
   server: {
     port: 1000,
   },
-});
+}); 

@@ -24,7 +24,7 @@ import {
 
 import {
     findCachedWallMaterial
-} from "../../assets/walls";
+} from "../materials/walls";
 
 import type {
     CostItem

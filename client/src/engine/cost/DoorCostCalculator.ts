@@ -1,4 +1,6 @@
-import type { Door } from "../doors/DoorTypes";
+import type {
+    Door
+} from "../doors/DoorTypes";
 
 import type {
     CostItem
@@ -8,13 +10,14 @@ import {
     findAsset
 } from "../../assets/AssetLibrary";
 
+import {
+    getCachedDoorAsset
+} from "../../engine/build/FirebaseDoorWindowLibrary";
+
+
 export function calculateDoorCosts(
     doors: Door[]
 ): CostItem[] {
-
-    //--------------------------------------------------
-    // Group doors by asset
-    //--------------------------------------------------
 
     const grouped =
         new Map<
@@ -22,40 +25,37 @@ export function calculateDoorCosts(
             CostItem
         >();
 
-    //--------------------------------------------------
-    // Process placed doors
-    //--------------------------------------------------
 
     for (
-        const door
-        of doors
+        const door of doors
     ) {
 
+        //--------------------------------------------------
+        // Firebase first; old local doors remain supported.
+        //--------------------------------------------------
+
         const asset =
+            getCachedDoorAsset(
+                door.assetId
+            ) ??
             findAsset(
                 door.assetId
             );
 
-        //--------------------------------------------------
-        // Ignore missing assets
-        //--------------------------------------------------
 
         if (
             !asset
         ) {
 
             continue;
-
         }
 
-        //--------------------------------------------------
-        // Find existing group
-        //--------------------------------------------------
 
         const existing =
             grouped.get(
                 asset.id
             );
+
 
         if (
             existing
@@ -72,7 +72,6 @@ export function calculateDoorCosts(
             grouped.set(
                 asset.id,
                 {
-
                     category:
                         "doors",
 
@@ -90,18 +89,12 @@ export function calculateDoorCosts(
 
                     subtotal:
                         asset.price
-
                 }
-
             );
 
         }
-
     }
 
-    //--------------------------------------------------
-    // Return grouped items
-    //--------------------------------------------------
 
     return Array.from(
         grouped.values()

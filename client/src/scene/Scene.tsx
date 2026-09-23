@@ -1,6 +1,4 @@
-import {
-    Canvas
-} from "@react-three/fiber";
+import { Canvas } from "@react-three/fiber";
 
 import Camera
     from "./Camera";
@@ -25,6 +23,9 @@ import ClearSelection
 
 import Floors
     from "./Floors/Floors";
+
+import Roof
+    from "./Roof/Roof";
 
 import AssetPreview
     from "./Build/AssetPreview";
@@ -63,53 +64,64 @@ import useEditor
     from "../context/editor/useEditor";
 
 
-export default function Scene() {
+interface SceneProps {
+    onSpawnConfirmed: (
+        confirmed: boolean
+    ) => void;
+
+    walkthroughSpawnConfirmed: boolean;
+}
+
+
+export default function Scene({
+    onSpawnConfirmed,
+    walkthroughSpawnConfirmed
+}: SceneProps) {
 
     const {
         state
     } = useEditor();
 
     return (
-
         <Canvas
-
-            /*==================================================
-                ENABLE THREE.JS SHADOWS
-            ==================================================*/
-
             shadows
-
             camera={{
                 position: [
-                    0,
-                    20,
-                    0
+                    8,
+                    8,
+                    8
                 ],
-
                 fov: 50
             }}
-
+            style={{
+                width: "100%",
+                height: "100%"
+            }}
         >
 
             {/*==================================================
-                BASIC SCENE
+                SCENE LIGHTING
             ==================================================*/}
-
             <Lights />
 
+
+            {/*==================================================
+                EDITOR HELPERS
+            ==================================================*/}
             <Grid />
 
             <BlueprintScene />
 
+
+            {/*==================================================
+                CAMERA
+            ==================================================*/}
             <Camera />
 
 
             {/*==================================================
-                ACTUAL SCENE OBJECTS
-
-                These stay visible during walkthrough.
+                MAIN HOUSE
             ==================================================*/}
-
             <Floors />
 
             <Walls />
@@ -122,15 +134,19 @@ export default function Scene() {
 
 
             {/*==================================================
-                NORMAL EDITOR INTERACTIONS
-
-                Completely disabled during walkthrough.
+                WALKTHROUGH ROOF
             ==================================================*/}
+            {state.walkthroughMode &&
+                walkthroughSpawnConfirmed && (
+                    <Roof />
+                )}
 
+
+            {/*==================================================
+                NORMAL EDITOR INTERACTION
+            ==================================================*/}
             {!state.walkthroughMode && (
-
                 <>
-
                     <SelectionToolbar />
 
                     <ClearSelection />
@@ -148,23 +164,21 @@ export default function Scene() {
                     <FurnitureInteractionEvents />
 
                     <SelectionInteractionEvents />
-
                 </>
-
             )}
 
 
             {/*==================================================
-                WALKTHROUGH MODE
+                WALKTHROUGH CONTROLLER
             ==================================================*/}
-
             {state.walkthroughMode && (
-
-                <WalkthroughController />
-
+                <WalkthroughController
+                    onSpawnConfirmed={
+                        onSpawnConfirmed
+                    }
+                />
             )}
 
         </Canvas>
-
     );
 }

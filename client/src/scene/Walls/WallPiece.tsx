@@ -55,14 +55,20 @@ function WallPiece({
 }: Props) {
 
     const {
+
         state,
+
         dispatch
+
     } = useEditor();
 
 
     const [
+
         hovered,
+
         setHovered
+
     ] = useState(false);
 
 
@@ -71,16 +77,27 @@ function WallPiece({
     //==================================================
 
     const regions =
+
         useMemo(
+
             () =>
+
                 solveRegions(
+
                     state.corners,
+
                     state.walls
+
                 ),
+
             [
+
                 state.corners,
+
                 state.walls
+
             ]
+
         );
 
 
@@ -89,7 +106,9 @@ function WallPiece({
     //==================================================
 
     const selected =
+
         state.selectedWallId ===
+
         wallId;
 
 
@@ -98,6 +117,7 @@ function WallPiece({
     //==================================================
 
     const walkthroughMode =
+
         state.walkthroughMode;
 
 
@@ -106,12 +126,16 @@ function WallPiece({
     //==================================================
 
     const showHovered =
+
         hovered &&
+
         !walkthroughMode;
 
 
     const showSelected =
+
         selected &&
+
         !walkthroughMode;
 
 
@@ -120,44 +144,49 @@ function WallPiece({
     //==================================================
 
     const physicalWall =
+
         state.walls.find(
+
             wall =>
+
                 wall.id ===
+
                 wallId
+
         ) ?? null;
 
 
     //==================================================
     // DETERMINE CLICKED WALL SIDE
     //==================================================
-    //
-    // A shared wall belongs to two rooms.
-    //
-    // We determine which physical side of the wall
-    // the user clicked by comparing the pointer hit
-    // point with the wall's center and normal.
-    //
-    // +1 = normal side
-    // -1 = opposite side
-    //==================================================
 
     const getClickedWallSide =
+
         (
+
             clickPoint: Vector3
+
         ): 1 | -1 | null => {
 
+
             if (
+
                 !physicalWall
+
             ) {
 
                 return null;
+
             }
 
 
             const start =
+
                 physicalWall.start.position;
 
+
             const end =
+
                 physicalWall.end.position;
 
 
@@ -166,23 +195,33 @@ function WallPiece({
             //--------------------------------------------------
 
             const direction =
+
                 new Vector3()
+
                     .subVectors(
+
                         end,
+
                         start
+
                     );
 
 
             const length =
+
                 direction.length();
 
 
             if (
+
                 length <=
+
                 0.001
+
             ) {
 
                 return null;
+
             }
 
 
@@ -195,10 +234,15 @@ function WallPiece({
             //--------------------------------------------------
 
             const normal =
+
                 new Vector3(
+
                     -direction.z,
+
                     0,
+
                     direction.x
+
                 ).normalize();
 
 
@@ -207,13 +251,21 @@ function WallPiece({
             //--------------------------------------------------
 
             const center =
+
                 start.clone()
+
                     .add(
+
                         direction
+
                             .clone()
+
                             .multiplyScalar(
+
                                 length * 0.5
+
                             )
+
                     );
 
 
@@ -222,196 +274,264 @@ function WallPiece({
             //--------------------------------------------------
 
             const toClick =
+
                 clickPoint
+
                     .clone()
+
                     .sub(
+
                         center
+
                     );
 
 
             //--------------------------------------------------
             // Only use X/Z.
-            //
-            // Y is irrelevant because the wall has height.
             //--------------------------------------------------
 
             const sideValue =
+
                 toClick.x *
+
                     normal.x +
 
                 toClick.z *
+
                     normal.z;
 
 
             //--------------------------------------------------
-            // The click may land very close to the center
-            // because of geometry/raycast precision.
+            // Click too close to center
             //--------------------------------------------------
 
             if (
+
                 Math.abs(
+
                     sideValue
+
                 ) < 0.0001
+
             ) {
 
                 return null;
+
             }
 
 
             return sideValue > 0
+
                 ? 1
+
                 : -1;
+
         };
 
 
     //==================================================
     // FIND REGION FOR CLICKED SIDE
     //==================================================
-    //
-    // This is the important part for shared walls.
-    //==================================================
 
     const getRegionForWallClick =
+
         (
+
             clickPoint: Vector3
+
         ) => {
 
+
             if (
+
                 !physicalWall
+
             ) {
 
                 return null;
+
             }
 
 
             //--------------------------------------------------
-            // Determine which side was clicked.
+            // Determine clicked side
             //--------------------------------------------------
 
             const clickedSide =
+
                 getClickedWallSide(
+
                     clickPoint
+
                 );
 
 
             //--------------------------------------------------
-            // If we can determine the side, find the
-            // region whose interior faces that side.
+            // Find matching room side
             //--------------------------------------------------
 
             if (
+
                 clickedSide !== null
+
             ) {
 
                 const matchingRegion =
+
                     regions.find(
+
                         region => {
 
+
                             const belongsToRegion =
+
                                 region.walls.some(
+
                                     regionWall =>
+
                                         regionWall.id ===
+
                                         wallId
+
                                 );
 
 
                             if (
+
                                 !belongsToRegion
+
                             ) {
 
                                 return false;
+
                             }
 
 
                             const regionSide =
+
                                 getRegionWallSide(
+
                                     physicalWall,
+
                                     region
+
                                 );
 
 
                             return (
+
                                 regionSide ===
+
                                 clickedSide
+
                             );
+
                         }
+
                     );
 
 
                 if (
+
                     matchingRegion
+
                 ) {
 
                     return matchingRegion;
+
                 }
+
             }
 
 
             //--------------------------------------------------
             // Fallback:
-            //
-            // If the click is too close to the wall center,
-            // preserve the currently selected room if it
-            // owns this wall.
+            // preserve selected room if it owns wall
             //--------------------------------------------------
 
             if (
+
                 state.selectedRegionId
+
             ) {
 
                 const selectedRegion =
+
                     regions.find(
+
                         region =>
+
                             region.id ===
+
                             state.selectedRegionId
+
                     );
 
 
                 if (
+
                     selectedRegion &&
+
                     selectedRegion.walls.some(
+
                         regionWall =>
+
                             regionWall.id ===
+
                             wallId
+
                     )
+
                 ) {
 
                     return selectedRegion;
+
                 }
+
             }
 
 
             //--------------------------------------------------
-            // Final fallback for a wall belonging to only
-            // one room.
+            // Final fallback:
+            // sole owning region
             //--------------------------------------------------
 
             const owningRegions =
+
                 regions.filter(
+
                     region =>
+
                         region.walls.some(
+
                             regionWall =>
+
                                 regionWall.id ===
+
                                 wallId
+
                         )
+
                 );
 
 
             if (
+
                 owningRegions.length === 1
+
             ) {
 
                 return owningRegions[0];
+
             }
 
 
             //--------------------------------------------------
-            // Shared wall but no reliable side detected.
-            //
-            // Don't guess.
+            // Shared wall unresolved
             //--------------------------------------------------
 
             return null;
+
         };
 
 
@@ -420,15 +540,22 @@ function WallPiece({
     //==================================================
 
     const handleWallClick =
+
         (
+
             e: any
+
         ) => {
 
+
             if (
+
                 walkthroughMode
+
             ) {
 
                 return;
+
             }
 
 
@@ -436,73 +563,82 @@ function WallPiece({
 
 
             //--------------------------------------------------
-            // We need the actual raycast point.
+            // We need actual raycast point
             //--------------------------------------------------
 
             if (
+
                 !e.point
+
             ) {
 
                 return;
+
             }
 
 
             const clickPoint =
+
                 e.point.clone();
 
 
             //--------------------------------------------------
-            // Determine which room side was clicked.
+            // Determine room side
             //--------------------------------------------------
 
             const region =
+
                 getRegionForWallClick(
+
                     clickPoint
+
                 );
 
 
             //--------------------------------------------------
-            // If this is a shared wall and we couldn't
-            // safely determine the side, don't switch
-            // the selected room.
+            // Shared wall with no reliable side
             //--------------------------------------------------
 
             if (
+
                 !region
+
             ) {
 
                 return;
+
             }
 
 
             //--------------------------------------------------
-            // Select the room side first.
-            //
-            // This is what makes DesignPanel know which
-            // side of the wall is being edited.
+            // Select room
             //--------------------------------------------------
 
             dispatch({
 
                 type:
+
                     "SELECT_REGION",
 
                 payload:
+
                     region.id
 
             });
 
 
             //--------------------------------------------------
-            // Then select the wall.
+            // Select wall
             //--------------------------------------------------
 
             dispatch({
 
                 type:
+
                     "SELECT_WALL",
 
                 payload:
+
                     wallId
 
             });
@@ -515,15 +651,22 @@ function WallPiece({
     //==================================================
 
     const handlePointerOver =
+
         (
+
             e: any
+
         ) => {
 
+
             if (
+
                 walkthroughMode
+
             ) {
 
                 return;
+
             }
 
 
@@ -531,35 +674,66 @@ function WallPiece({
 
 
             setHovered(
+
                 true
+
             );
+
         };
 
 
     const handlePointerOut =
+
         () => {
 
+
             if (
+
                 walkthroughMode
+
             ) {
 
                 return;
+
             }
 
 
             setHovered(
+
                 false
+
             );
+
         };
 
 
     //==================================================
-    // ARCH
+    // COMMON MATERIAL COLOR
+    //==================================================
+
+    const wallColor =
+
+        showSelected
+
+            ? "#2196F3"
+
+            : showHovered
+
+            ? "#8CC8FF"
+
+            : "#D9D9D9";
+
+
+    //==================================================
+    // ARCH WALL
     //==================================================
 
     if (
+
         piece.kind === "arch" &&
+
         piece.arch
+
     ) {
 
         const {
@@ -572,82 +746,119 @@ function WallPiece({
 
 
         const radius =
+
             openingWidth *
+
             0.5;
 
 
         const shape =
+
             new Shape();
 
 
         shape.moveTo(
+
             -openingWidth *
+
                 0.5,
 
             openingHeight
+
         );
 
 
         shape.lineTo(
+
             -openingWidth *
+
                 0.5,
 
             piece.height
+
         );
 
 
         shape.lineTo(
+
             openingWidth *
+
                 0.5,
 
             piece.height
+
         );
 
 
         shape.lineTo(
+
             openingWidth *
+
                 0.5,
 
             openingHeight
+
         );
 
 
         const segments =
+
             24;
 
 
         for (
+
             let i = segments;
+
             i >= 0;
+
             i--
+
         ) {
 
             const angle =
+
                 Math.PI *
+
                 (
+
                     i /
+
                     segments
+
                 );
 
 
             const x =
+
                 Math.cos(
+
                     angle
+
                 ) *
+
                 radius;
 
 
             const y =
+
                 openingHeight +
+
                 Math.sin(
+
                     angle
+
                 ) *
+
                 radius;
 
 
             shape.lineTo(
+
                 x,
+
                 y
+
             );
 
         }
@@ -657,20 +868,27 @@ function WallPiece({
 
 
         const geometry =
+
             new ExtrudeGeometry(
+
                 shape,
+
                 {
 
                     depth:
+
                         piece.thickness,
 
                     bevelEnabled:
+
                         false,
 
                     steps:
+
                         1
 
                 }
+
             );
 
 
@@ -681,28 +899,34 @@ function WallPiece({
 
             <group>
 
-                {/* ==========================================
-                    ACTUAL WALL
-                ========================================== */}
-
                 <mesh
 
                     geometry={
+
                         geometry
+
                     }
 
                     position={
+
                         piece.position
+
                     }
 
                     rotation={[
+
                         0,
+
                         -piece.rotationY,
+
                         0
+
                     ]}
 
                     userData={{
+
                         wallId
+
                     }}
 
                     castShadow
@@ -710,15 +934,21 @@ function WallPiece({
                     receiveShadow
 
                     onPointerOver={
+
                         handlePointerOver
+
                     }
 
                     onPointerOut={
+
                         handlePointerOut
+
                     }
 
                     onClick={
+
                         handleWallClick
+
                     }
 
                 >
@@ -727,15 +957,7 @@ function WallPiece({
 
                         color={
 
-                            showSelected
-
-                                ? "#2196F3"
-
-                                : showHovered
-
-                                ? "#8CC8FF"
-
-                                : "#D9D9D9"
+                            wallColor
 
                         }
 
@@ -749,27 +971,37 @@ function WallPiece({
                 ========================================== */}
 
                 {
+
                     finishSides.map(
+
                         finish => (
 
                             <WallFinishSurface
 
                                 key={
+
                                     `${finish.regionId}-${finish.wallId}-arch`
+
                                 }
 
                                 piece={
+
                                     piece
+
                                 }
 
                                 finish={
+
                                     finish
+
                                 }
 
                             />
 
                         )
+
                     )
+
                 }
 
             </group>
@@ -787,24 +1019,28 @@ function WallPiece({
 
         <group>
 
-            {/* ==========================================
-                ACTUAL WALL
-            ========================================== */}
-
             <mesh
 
                 position={
+
                     piece.position
+
                 }
 
                 rotation={[
+
                     0,
+
                     -piece.rotationY,
+
                     0
+
                 ]}
 
                 userData={{
+
                     wallId
+
                 }}
 
                 castShadow
@@ -812,15 +1048,21 @@ function WallPiece({
                 receiveShadow
 
                 onPointerOver={
+
                     handlePointerOver
+
                 }
 
                 onPointerOut={
+
                     handlePointerOut
+
                 }
 
                 onClick={
+
                     handleWallClick
+
                 }
 
             >
@@ -828,9 +1070,13 @@ function WallPiece({
                 <boxGeometry
 
                     args={[
+
                         piece.width,
+
                         piece.height,
+
                         piece.thickness
+
                     ]}
 
                 />
@@ -839,15 +1085,7 @@ function WallPiece({
 
                     color={
 
-                        showSelected
-
-                            ? "#2196F3"
-
-                            : showHovered
-
-                            ? "#8CC8FF"
-
-                            : "#D9D9D9"
+                        wallColor
 
                     }
 
@@ -861,34 +1099,48 @@ function WallPiece({
             ========================================== */}
 
             {
+
                 finishSides.map(
+
                     finish => (
 
                         <WallFinishSurface
 
                             key={
+
                                 `${finish.regionId}-${finish.wallId}`
+
                             }
 
                             piece={
+
                                 piece
+
                             }
 
                             finish={
+
                                 finish
+
                             }
 
                         />
 
                     )
+
                 )
+
             }
 
         </group>
+
     );
+
 }
 
 
 export default memo(
+
     WallPiece
+
 );

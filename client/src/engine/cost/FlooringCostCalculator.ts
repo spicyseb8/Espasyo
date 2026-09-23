@@ -10,6 +10,10 @@ import {
 } from "../regions/Polygon";
 
 import {
+    findCachedFloorMaterial
+} from "../materials/floors";
+
+import {
     MaterialLibrary
 } from "../materials/MaterialLibrary";
 
@@ -60,7 +64,22 @@ export function calculateFlooringCosts(
             continue;
         }
 
+        //--------------------------------------------------
+        // Firebase floor material
+        //--------------------------------------------------
+
+        const firebaseMaterial =
+            findCachedFloorMaterial(
+                materialId
+            );
+
+        //--------------------------------------------------
+        // Keep the old hardcoded library as a fallback
+        // for existing projects using old material IDs.
+        //--------------------------------------------------
+
         const material =
+            firebaseMaterial ??
             MaterialLibrary.find(
                 item =>
                     item.id === materialId &&

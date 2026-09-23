@@ -243,65 +243,6 @@
    WALKTHROUGH BUTTON
    ================================================== */
 
-.walkthrough-button {
-    height: 38px;
-
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    gap: 7px;
-
-    padding: 0 13px;
-
-    border: 1px solid #e1e2e4;
-
-    border-radius: var(--tb-radius-md);
-
-    background: var(--tb-surface);
-
-    color: var(--tb-ink-soft);
-
-    font-size: 12px;
-    font-weight: 600;
-
-    white-space: nowrap;
-
-    cursor: pointer;
-
-    box-sizing: border-box;
-
-    transition:
-        background 0.15s ease,
-        border-color 0.15s ease,
-        color 0.15s ease,
-        box-shadow 0.15s ease,
-        transform 0.1s ease;
-}
-
-.walkthrough-button:hover {
-    background: var(--tb-surface-hover);
-
-    border-color: var(--tb-line-strong);
-}
-
-.walkthrough-button:active {
-    transform: translateY(1px);
-}
-
-.walkthrough-button.active {
-    background: var(--tb-green-tint);
-
-    border-color: var(--tb-green-border);
-
-    color: var(--tb-green-ink);
-
-    box-shadow: var(--tb-shadow-hover);
-}
-
-.walkthrough-button.active svg {
-    stroke-width: 2.2;
-}
 
 
 /* ==================================================
@@ -364,8 +305,7 @@
     transform: translateY(1px);
 }
 
-.cost-estimator-button:focus-visible,
-.walkthrough-button:focus-visible {
+.cost-estimator-button:focus-visible {
     outline: none;
 
     box-shadow: var(--tb-ring);
@@ -689,18 +629,7 @@
         max-width: 220px;
 
         margin-left: 16px;
-    }
 
-    .walkthrough-button span,
-    .cost-estimator-button span {
-        display: none;
-    }
-
-    .walkthrough-button,
-    .cost-estimator-button {
-        width: 38px;
-
-        padding: 0;
     }
 
     .cost-estimator-dropdown {

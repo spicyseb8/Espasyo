@@ -1,4 +1,6 @@
-import type { Window } from "../windows/WindowTypes";
+import type {
+    Window
+} from "../windows/WindowTypes";
 
 import type {
     CostItem
@@ -8,13 +10,14 @@ import {
     findAsset
 } from "../../assets/AssetLibrary";
 
+import {
+    getCachedWindowAsset
+} from "../../engine/build/FirebaseDoorWindowLibrary";
+
+
 export function calculateWindowCosts(
     windows: Window[]
 ): CostItem[] {
-
-    //--------------------------------------------------
-    // Group windows by asset
-    //--------------------------------------------------
 
     const grouped =
         new Map<
@@ -22,40 +25,37 @@ export function calculateWindowCosts(
             CostItem
         >();
 
-    //--------------------------------------------------
-    // Process placed windows
-    //--------------------------------------------------
 
     for (
-        const window
-        of windows
+        const window of windows
     ) {
 
+        //--------------------------------------------------
+        // Firebase first; old local windows remain supported.
+        //--------------------------------------------------
+
         const asset =
+            getCachedWindowAsset(
+                window.assetId
+            ) ??
             findAsset(
                 window.assetId
             );
 
-        //--------------------------------------------------
-        // Ignore missing assets
-        //--------------------------------------------------
 
         if (
             !asset
         ) {
 
             continue;
-
         }
 
-        //--------------------------------------------------
-        // Find existing group
-        //--------------------------------------------------
 
         const existing =
             grouped.get(
                 asset.id
             );
+
 
         if (
             existing
@@ -72,7 +72,6 @@ export function calculateWindowCosts(
             grouped.set(
                 asset.id,
                 {
-
                     category:
                         "windows",
 
@@ -90,18 +89,12 @@ export function calculateWindowCosts(
 
                     subtotal:
                         asset.price
-
                 }
-
             );
 
         }
-
     }
 
-    //--------------------------------------------------
-    // Return grouped items
-    //--------------------------------------------------
 
     return Array.from(
         grouped.values()

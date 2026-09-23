@@ -15,7 +15,6 @@ export const AssetLibrary = {
     ] satisfies Asset[],
 
     windows: [
-
         {
             id: "w-sw02",
             name: "Slim Intersection Sliding Window",
@@ -36,7 +35,7 @@ export const AssetLibrary = {
             rotationOffsetY: 0,
             scale: 0.6
         }
-    ] as Asset[],
+    ] satisfies Asset[],
 
     openings: [
         {
@@ -57,7 +56,7 @@ export const AssetLibrary = {
             price: 0,
             openingShape: "arch"
         }
-    ] as Asset[],
+    ] satisfies Asset[],
 
     furniture: [
         {
@@ -68,12 +67,6 @@ export const AssetLibrary = {
             type: BuildTool.Furniture,
             price: 2500,
             furnitureCategory: "livingRoom",
-            furnitureDimensions: {
-                width: 0.55,
-                depth: 0.55,
-                height: 0.90
-            },
-
             placementSurfaces: ["floor"],
             snapTargets: ["wall", "furniture"]
         },
@@ -86,12 +79,6 @@ export const AssetLibrary = {
             type: BuildTool.Furniture,
             price: 6500,
             furnitureCategory: "bedroom",
-            furnitureDimensions: {
-                width: 1.60,
-                depth: 2.00,
-                height: 0.60
-            },
-
             placementSurfaces: ["floor"],
             snapTargets: ["wall", "furniture"]
         },
@@ -104,12 +91,6 @@ export const AssetLibrary = {
             type: BuildTool.Furniture,
             price: 3000,
             furnitureCategory: "diningRoom",
-            furnitureDimensions: {
-                width: 0.50,
-                depth: 0.50,
-                height: 0.55
-            },
-
             placementSurfaces: ["floor"],
             snapTargets: ["wall", "furniture"]
         },
@@ -122,12 +103,6 @@ export const AssetLibrary = {
             type: BuildTool.Furniture,
             price: 6500,
             furnitureCategory: "office",
-            furnitureDimensions: {
-                width: 1.20,
-                depth: 0.60,
-                height: 0.75
-            },
-
             placementSurfaces: ["floor"],
             snapTargets: ["wall", "furniture"]
         },
@@ -140,12 +115,6 @@ export const AssetLibrary = {
             type: BuildTool.Furniture,
             price: 5500,
             furnitureCategory: "livingRoom",
-            furnitureDimensions: {
-                width: 1.60,
-                depth: 0.45,
-                height: 0.50
-            },
-
             placementSurfaces: ["floor"],
             snapTargets: ["wall", "furniture"]
         },
@@ -158,12 +127,6 @@ export const AssetLibrary = {
             type: BuildTool.Furniture,
             price: 7000,
             furnitureCategory: "livingRoom",
-            furnitureDimensions: {
-                width: 2.10,
-                depth: 0.90,
-                height: 0.85
-            },
-
             placementSurfaces: ["floor"],
             snapTargets: ["wall", "furniture"]
         },
@@ -176,12 +139,6 @@ export const AssetLibrary = {
             type: BuildTool.Furniture,
             price: 2500,
             furnitureCategory: "diningRoom",
-            furnitureDimensions: {
-                width: 0.48,
-                depth: 0.52,
-                height: 0.82
-            },
-
             placementSurfaces: ["floor"],
             snapTargets: ["wall", "furniture"]
         }

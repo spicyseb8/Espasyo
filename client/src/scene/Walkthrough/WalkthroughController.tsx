@@ -15,7 +15,7 @@ import {
 } from "@react-three/fiber";
 
 import {
-    Mesh,
+    Group,
     MeshStandardMaterial,
     Object3D,
     Raycaster,
@@ -38,6 +38,10 @@ import {
     PLAYER_RADIUS
 } from "./WalkthroughCollision";
 
+import {
+    walkthroughSpawnState
+} from "./WalkthroughSpawnState";
+
 
 //==================================================
 // SETTINGS
@@ -45,6 +49,23 @@ import {
 
 const WALK_SPEED =
     2.5;
+
+
+//==================================================
+// ZOOM SETTINGS
+//==================================================
+
+const ORBIT_ZOOM_SPEED =
+    1.0;
+
+const MIN_CAMERA_HEIGHT =
+    3;
+
+const MAX_CAMERA_HEIGHT =
+    60;
+
+const MAX_TRANSITION_ZOOM_OFFSET =
+    30;
 
 
 //==================================================
@@ -59,15 +80,19 @@ function isTypingTarget(
     const element =
         target as HTMLElement | null;
 
+
     if (
         !element
     ) {
 
         return false;
+
     }
+
 
     const tagName =
         element.tagName?.toLowerCase();
+
 
     return (
 
@@ -80,6 +105,7 @@ function isTypingTarget(
         element.isContentEditable
 
     );
+
 }
 
 
@@ -108,6 +134,7 @@ function clearMovementKeys(
 
     keys.current.d =
         false;
+
 }
 
 
@@ -123,6 +150,7 @@ function getFloorObjects(
     const objects:
         Object3D[] = [];
 
+
     scene.traverse(
         object => {
 
@@ -134,11 +162,15 @@ function getFloorObjects(
                 objects.push(
                     object
                 );
+
             }
+
         }
     );
 
+
     return objects;
+
 }
 
 
@@ -159,24 +191,33 @@ function getFloorPoint(
     ) {
 
         return null;
+
     }
+
 
     const hits =
         raycaster.intersectObjects(
+
             floorObjects,
+
             true
+
         );
+
 
     if (
         hits.length === 0
     ) {
 
         return null;
+
     }
+
 
     return hits[0]
         .point
         .clone();
+
 }
 
 
@@ -184,17 +225,41 @@ function getFloorPoint(
 // WALKTHROUGH CONTROLLER
 //==================================================
 
-export default function WalkthroughController() {
+interface WalkthroughControllerProps {
+
+    onSpawnConfirmed?:
+        (
+            confirmed:
+                boolean
+        ) => void;
+
+}
+
+
+export default function WalkthroughController({
+
+    onSpawnConfirmed
+
+}: WalkthroughControllerProps) {
+
 
     const {
+
         camera,
+
         scene,
+
         gl
+
     } = useThree();
 
+
     const {
+
         state,
+
         dispatch
+
     } = useEditor();
 
 
@@ -207,10 +272,12 @@ export default function WalkthroughController() {
             new Vector2()
         );
 
+
     const raycaster =
         useRef(
             new Raycaster()
         );
+
 
     const hasPointer =
         useRef(
@@ -223,30 +290,73 @@ export default function WalkthroughController() {
     //==================================================
 
     const [
+
         spawnConfirmed,
+
         setSpawnConfirmed
+
     ] = useState(
         false
     );
+
 
     const spawnPosition =
         useRef<Vector3 | null>(
             null
         );
 
+
     const spawnValid =
         useRef(
             false
         );
 
-    const spawnPreviewRef =
-        useRef<Mesh | null>(
+
+    //==================================================
+    // PERSON PREVIEW
+    //==================================================
+
+    const personPreviewRef =
+        useRef<Group | null>(
             null
         );
 
 
     //==================================================
-    // POINTER LOCK CONTROLS
+    // PERSON MATERIAL
+    //==================================================
+
+    const personMaterial =
+        useMemo(
+            () =>
+                new MeshStandardMaterial({
+
+                    color:
+                        "#4DA3FF",
+
+                    transparent:
+                        true,
+
+                    opacity:
+                        0.60,
+
+                    depthWrite:
+                        false,
+
+                    roughness:
+                        0.75,
+
+                    metalness:
+                        0
+
+                }),
+
+            []
+        );
+
+
+    //==================================================
+    // POINTER LOCK
     //==================================================
 
     const controlsRef =
@@ -256,7 +366,7 @@ export default function WalkthroughController() {
 
 
     //==================================================
-    // KEYS
+    // WALKTHROUGH KEYS
     //==================================================
 
     const keys =
@@ -274,7 +384,7 @@ export default function WalkthroughController() {
 
 
     //==================================================
-    // BUILD COLLISION WALL PIECES
+    // COLLISION WALL PIECES
     //==================================================
 
     const wallPieces =
@@ -287,7 +397,9 @@ export default function WalkthroughController() {
                 ) {
 
                     return [];
+
                 }
+
 
                 return state.walls.flatMap(
                     wall => {
@@ -312,6 +424,7 @@ export default function WalkthroughController() {
                 );
 
             },
+
             [
 
                 state.walls,
@@ -331,855 +444,1081 @@ export default function WalkthroughController() {
 
 
     //==================================================
-    // RESET WHEN WALKTHROUGH STARTS
+    // START WALKTHROUGH
     //==================================================
 
-    useEffect(
-        () => {
+    useEffect(() => {
 
-            if (
-                !state.walkthroughMode
-            ) {
+        if (
+            !state.walkthroughMode
+        ) {
 
-                return;
-            }
+            return;
+
+        }
 
 
-            //--------------------------------------------------
-            // Start in spawn selection mode.
-            //--------------------------------------------------
+        //--------------------------------------------------
+        // Start in spawn-selection mode.
+        //--------------------------------------------------
 
-            setSpawnConfirmed(
-                false
-            );
+        setSpawnConfirmed(
+            false
+        );
 
-            spawnPosition.current =
-                null;
 
-            spawnValid.current =
+        onSpawnConfirmed?.(
+            false
+        );
+
+
+        spawnPosition.current =
+            null;
+
+
+        spawnValid.current =
+            false;
+
+
+        hasPointer.current =
+            false;
+
+
+        //--------------------------------------------------
+        // Reset shared spawn state.
+        //--------------------------------------------------
+
+        walkthroughSpawnState.offset.set(
+            0,
+            0,
+            0
+        );
+
+        walkthroughSpawnState.confirmed =
+            false;
+
+
+        //--------------------------------------------------
+        // WASD MOVEMENT IS AVAILABLE IMMEDIATELY.
+        //--------------------------------------------------
+
+        clearMovementKeys(
+            keys
+        );
+
+
+        if (
+            personPreviewRef.current
+        ) {
+
+            personPreviewRef.current.visible =
                 false;
 
-            hasPointer.current =
-                false;
+        }
+
+    }, [
+
+        state.walkthroughMode
+
+    ]);
 
 
-            //--------------------------------------------------
-            // Clear movement keys.
-            //--------------------------------------------------
+    //==================================================
+    // EXIT WALKTHROUGH CLEANUP
+    //==================================================
 
-            clearMovementKeys(
-                keys
-            );
+    useEffect(() => {
 
-
-            //--------------------------------------------------
-            // Hide spawn preview.
-            //--------------------------------------------------
-
-            if (
-                spawnPreviewRef.current
-            ) {
-
-                spawnPreviewRef.current.visible =
-                    false;
-            }
-
-        },
-        [
+        if (
             state.walkthroughMode
-        ]
-    );
+        ) {
+
+            return;
+
+        }
 
 
-    //==================================================
-    // EXIT POINTER LOCK WHEN WALKTHROUGH ENDS
-    //==================================================
-
-    useEffect(
-        () => {
-
-            if (
-                state.walkthroughMode
-            ) {
-
-                return;
-            }
+        clearMovementKeys(
+            keys
+        );
 
 
-            //--------------------------------------------------
-            // Clear movement keys.
-            //--------------------------------------------------
+        if (
+            document.pointerLockElement
+        ) {
 
-            clearMovementKeys(
-                keys
-            );
+            document.exitPointerLock();
 
-
-            //--------------------------------------------------
-            // Release pointer lock.
-            //--------------------------------------------------
-
-            if (
-                document.pointerLockElement
-            ) {
-
-                document.exitPointerLock();
-            }
+        }
 
 
-            //--------------------------------------------------
-            // Restore cursor immediately.
-            //--------------------------------------------------
-
-            document.body.style.cursor =
-                "default";
-
-            gl.domElement.style.cursor =
-                "default";
+        document.body.style.cursor =
+            "default";
 
 
-            //--------------------------------------------------
-            // Clear spawn information.
-            //--------------------------------------------------
+        gl.domElement.style.cursor =
+            "default";
 
-            spawnPosition.current =
-                null;
 
-            spawnValid.current =
+        spawnPosition.current =
+            null;
+
+
+        spawnValid.current =
+            false;
+
+
+        hasPointer.current =
+            false;
+
+
+        if (
+            personPreviewRef.current
+        ) {
+
+            personPreviewRef.current.visible =
                 false;
 
-            hasPointer.current =
-                false;
+        }
 
-        },
-        [
-            state.walkthroughMode,
-            gl
-        ]
-    );
+    }, [
+
+        state.walkthroughMode,
+
+        gl
+
+    ]);
 
 
     //==================================================
     // KEYBOARD
     //==================================================
 
-    useEffect(
-        () => {
+    useEffect(() => {
 
-            if (
-                !state.walkthroughMode
-            ) {
+        if (
+            !state.walkthroughMode
+        ) {
 
-                return;
-            }
+            return;
+
+        }
 
 
-            //==================================================
-            // KEY DOWN
-            //==================================================
+        const handleKeyDown =
+            (
+                event:
+                    KeyboardEvent
+            ) => {
 
-            const handleKeyDown =
-                (
-                    event:
-                        KeyboardEvent
-                ) => {
+
+                //--------------------------------------------------
+                // Never control walkthrough while typing.
+                //--------------------------------------------------
+
+                if (
+                    isTypingTarget(
+                        event.target
+                    )
+                ) {
+
+                    return;
+
+                }
+
+
+                //--------------------------------------------------
+                // ESCAPE
+                //--------------------------------------------------
+
+                if (
+                    event.key ===
+                    "Escape"
+                ) {
+
+                    event.preventDefault();
+
+                    event.stopPropagation();
+
+                    event.stopImmediatePropagation();
+
 
                     if (
-                        isTypingTarget(
-                            event.target
-                        )
+                        document.pointerLockElement
                     ) {
 
-                        return;
-                    }
-
-
-                    //==================================================
-                    // ESCAPE
-                    //==================================================
-                    //
-                    // IMPORTANT:
-                    //
-                    // Capture phase is used so this handler gets
-                    // the Escape event before other handlers.
-                    //
-                    // One Escape immediately:
-                    //
-                    // 1. releases pointer lock
-                    // 2. exits walkthrough
-                    // 3. restores cursor
-                    //==================================================
-
-                    if (
-                        event.key ===
-                        "Escape"
-                    ) {
-
-                        event.preventDefault();
-
-                        event.stopPropagation();
-
-                        event.stopImmediatePropagation();
-
-
-                        //--------------------------------------------------
-                        // Release pointer lock first.
-                        //--------------------------------------------------
-
-                        if (
-                            document.pointerLockElement
-                        ) {
-
-                            document.exitPointerLock();
-                        }
-
-
-                        //--------------------------------------------------
-                        // Clear movement keys.
-                        //--------------------------------------------------
-
-                        clearMovementKeys(
-                            keys
-                        );
-
-
-                        //--------------------------------------------------
-                        // Reset spawn state.
-                        //--------------------------------------------------
-
-                        setSpawnConfirmed(
-                            false
-                        );
-
-                        spawnPosition.current =
-                            null;
-
-                        spawnValid.current =
-                            false;
-
-                        hasPointer.current =
-                            false;
-
-
-                        //--------------------------------------------------
-                        // Exit walkthrough.
-                        //--------------------------------------------------
-
-                        dispatch({
-
-                            type:
-                                "TOGGLE_WALKTHROUGH"
-
-                        });
-
-
-                        return;
-                    }
-
-
-                    //==================================================
-                    // SPACEBAR
-                    //==================================================
-                    //
-                    // Space must never toggle walkthrough.
-                    //==================================================
-
-                    if (
-                        event.key ===
-                        " "
-                    ) {
-
-                        event.preventDefault();
-
-                        event.stopPropagation();
-
-                        return;
-                    }
-
-
-                    //==================================================
-                    // MOVEMENT
-                    //==================================================
-
-                    if (
-                        !spawnConfirmed
-                    ) {
-
-                        return;
-                    }
-
-
-                    switch (
-                        event.key.toLowerCase()
-                    ) {
-
-                        case "w":
-
-                            keys.current.w =
-                                true;
-
-                            break;
-
-
-                        case "a":
-
-                            keys.current.a =
-                                true;
-
-                            break;
-
-
-                        case "s":
-
-                            keys.current.s =
-                                true;
-
-                            break;
-
-
-                        case "d":
-
-                            keys.current.d =
-                                true;
-
-                            break;
+                        document.exitPointerLock();
 
                     }
 
-                };
-
-
-            //==================================================
-            // KEY UP
-            //==================================================
-
-            const handleKeyUp =
-                (
-                    event:
-                        KeyboardEvent
-                ) => {
-
-                    switch (
-                        event.key.toLowerCase()
-                    ) {
-
-                        case "w":
-
-                            keys.current.w =
-                                false;
-
-                            break;
-
-
-                        case "a":
-
-                            keys.current.a =
-                                false;
-
-                            break;
-
-
-                        case "s":
-
-                            keys.current.s =
-                                false;
-
-                            break;
-
-
-                        case "d":
-
-                            keys.current.d =
-                                false;
-
-                            break;
-
-                    }
-                };
-
-
-            //==================================================
-            // WINDOW BLUR
-            //==================================================
-
-            const handleWindowBlur =
-                () => {
 
                     clearMovementKeys(
                         keys
                     );
-                };
 
 
-            //==================================================
-            // IMPORTANT:
-            //
-            // keydown uses CAPTURE phase.
-            //==================================================
+                    setSpawnConfirmed(
+                        false
+                    );
 
-            window.addEventListener(
+
+                    onSpawnConfirmed?.(
+                        false
+                    );
+
+
+                    spawnPosition.current =
+                        null;
+
+
+                    spawnValid.current =
+                        false;
+
+
+                    hasPointer.current =
+                        false;
+
+
+                    if (
+                        personPreviewRef.current
+                    ) {
+
+                        personPreviewRef.current.visible =
+                            false;
+
+                    }
+
+
+                    document.body.style.cursor =
+                        "default";
+
+
+                    gl.domElement.style.cursor =
+                        "default";
+
+
+                    dispatch({
+
+                        type:
+                            "TOGGLE_WALKTHROUGH"
+
+                    });
+
+
+                    return;
+
+                }
+
+
+                //--------------------------------------------------
+                // SPACEBAR
+                //--------------------------------------------------
+
+                if (
+                    event.key ===
+                    " "
+                ) {
+
+                    event.preventDefault();
+
+                    event.stopPropagation();
+
+                    return;
+
+                }
+
+
+                //--------------------------------------------------
+                // WALKTHROUGH MOVEMENT
+                //--------------------------------------------------
+
+                switch (
+                    event.key.toLowerCase()
+                ) {
+
+                    case "w":
+
+                        keys.current.w =
+                            true;
+
+                        break;
+
+
+                    case "a":
+
+                        keys.current.a =
+                            true;
+
+                        break;
+
+
+                    case "s":
+
+                        keys.current.s =
+                            true;
+
+                        break;
+
+
+                    case "d":
+
+                        keys.current.d =
+                            true;
+
+                        break;
+
+                }
+
+            };
+
+
+        const handleKeyUp =
+            (
+                event:
+                    KeyboardEvent
+            ) => {
+
+                switch (
+                    event.key.toLowerCase()
+                ) {
+
+                    case "w":
+
+                        keys.current.w =
+                            false;
+
+                        break;
+
+
+                    case "a":
+
+                        keys.current.a =
+                            false;
+
+                        break;
+
+
+                    case "s":
+
+                        keys.current.s =
+                            false;
+
+                        break;
+
+
+                    case "d":
+
+                        keys.current.d =
+                            false;
+
+                        break;
+
+                }
+
+            };
+
+
+        const handleBlur =
+            () => {
+
+                clearMovementKeys(
+                    keys
+                );
+
+            };
+
+
+        window.addEventListener(
+            "keydown",
+            handleKeyDown,
+            true
+        );
+
+
+        window.addEventListener(
+            "keyup",
+            handleKeyUp
+        );
+
+
+        window.addEventListener(
+            "blur",
+            handleBlur
+        );
+
+
+        return () => {
+
+            window.removeEventListener(
                 "keydown",
                 handleKeyDown,
                 true
             );
 
-            window.addEventListener(
+
+            window.removeEventListener(
                 "keyup",
                 handleKeyUp
             );
 
-            window.addEventListener(
+
+            window.removeEventListener(
                 "blur",
-                handleWindowBlur
+                handleBlur
             );
 
+        };
 
-            return () => {
+    }, [
 
-                window.removeEventListener(
-                    "keydown",
-                    handleKeyDown,
-                    true
-                );
+        state.walkthroughMode,
 
-                window.removeEventListener(
-                    "keyup",
-                    handleKeyUp
-                );
+        dispatch,
 
-                window.removeEventListener(
-                    "blur",
-                    handleWindowBlur
-                );
+        gl
 
-            };
-
-        },
-        [
-            state.walkthroughMode,
-            spawnConfirmed,
-            dispatch
-        ]
-    );
+    ]);
 
 
     //==================================================
-    // SPAWN SELECTION POINTER EVENTS
+    // SPAWN POINTER
     //==================================================
 
-    useEffect(
-        () => {
+    useEffect(() => {
+
+        if (
+            !state.walkthroughMode ||
+            spawnConfirmed
+        ) {
+
+            return;
+
+        }
+
+
+        const canvas =
+            gl.domElement;
+
+
+        //--------------------------------------------------
+        // POINTER MOVE
+        //--------------------------------------------------
+
+        function updatePointer(
+            event:
+                PointerEvent
+        ) {
+
+            const rect =
+                canvas.getBoundingClientRect();
+
 
             if (
-                !state.walkthroughMode ||
-                spawnConfirmed
+                rect.width <= 0 ||
+                rect.height <= 0
             ) {
 
                 return;
+
             }
 
 
-            const canvas =
-                gl.domElement;
+            const inside =
+                event.clientX >=
+                    rect.left &&
+
+                event.clientX <=
+                    rect.right &&
+
+                event.clientY >=
+                    rect.top &&
+
+                event.clientY <=
+                    rect.bottom;
 
 
-            //==================================================
-            // POINTER MOVE
-            //==================================================
-
-            function updatePointer(
-                event:
-                    PointerEvent
+            if (
+                !inside
             ) {
-
-                const rect =
-                    canvas.getBoundingClientRect();
-
-
-                if (
-                    rect.width <= 0 ||
-                    rect.height <= 0
-                ) {
-
-                    return;
-                }
-
-
-                const inside =
-                    event.clientX >=
-                        rect.left &&
-
-                    event.clientX <=
-                        rect.right &&
-
-                    event.clientY >=
-                        rect.top &&
-
-                    event.clientY <=
-                        rect.bottom;
-
-
-                if (
-                    !inside
-                ) {
-
-                    hasPointer.current =
-                        false;
-
-                    return;
-                }
-
-
-                pointer.current.x =
-                    (
-                        (
-                            event.clientX -
-                            rect.left
-                        ) /
-                        rect.width
-                    ) *
-                    2 -
-                    1;
-
-
-                pointer.current.y =
-                    -(
-                        (
-                            event.clientY -
-                            rect.top
-                        ) /
-                        rect.height
-                    ) *
-                    2 +
-                    1;
-
 
                 hasPointer.current =
-                    true;
+                    false;
+
+                return;
+
             }
 
 
-            //==================================================
-            // CONFIRM SPAWN
-            //==================================================
+            pointer.current.x =
+                (
 
-            function onPointerDown(
-                event:
-                    PointerEvent
+                    (
+                        event.clientX -
+                        rect.left
+                    ) /
+                    rect.width
+
+                ) *
+                2 -
+                1;
+
+
+            pointer.current.y =
+                -(
+
+                    (
+                        event.clientY -
+                        rect.top
+                    ) /
+                    rect.height
+
+                ) *
+                2 +
+                1;
+
+
+            hasPointer.current =
+                true;
+
+        }
+
+
+        //--------------------------------------------------
+        // CONFIRM SPAWN
+        //--------------------------------------------------
+
+        function handlePointerDown(
+            event:
+                PointerEvent
+        ) {
+
+            if (
+                event.button !==
+                0
             ) {
 
-                if (
-                    event.button !==
-                    0
-                ) {
-
-                    return;
-                }
-
-
-                if (
-                    !spawnValid.current ||
-                    !spawnPosition.current
-                ) {
-
-                    return;
-                }
-
-
-                event.preventDefault();
-
-                event.stopPropagation();
-
-
-                //==================================================
-                // SET CAMERA
-                //==================================================
-
-                camera.position.copy(
-                    spawnPosition.current
-                );
-
-                camera.position.y =
-                    PLAYER_HEIGHT;
-
-
-                //==================================================
-                // CONFIRM SPAWN
-                //==================================================
-
-                setSpawnConfirmed(
-                    true
-                );
-
-
-                //==================================================
-                // POINTER LOCK
-                //==================================================
-
-                if (
-                    canvas.requestPointerLock
-                ) {
-
-                    canvas.requestPointerLock();
-                }
+                return;
 
             }
 
 
-            canvas.addEventListener(
+            if (
+                !spawnValid.current ||
+                !spawnPosition.current
+            ) {
+
+                return;
+
+            }
+
+
+            event.preventDefault();
+
+            event.stopPropagation();
+
+
+            //--------------------------------------------------
+            // Place player at selected position.
+            //--------------------------------------------------
+
+            camera.position.copy(
+                spawnPosition.current
+            );
+
+
+            camera.position.y =
+                PLAYER_HEIGHT;
+
+
+            //--------------------------------------------------
+            // Confirm spawn.
+            //--------------------------------------------------
+
+            setSpawnConfirmed(
+                true
+            );
+
+
+            onSpawnConfirmed?.(
+                true
+            );
+
+
+            //--------------------------------------------------
+            // Tell Camera.tsx to cancel its transition.
+            //--------------------------------------------------
+
+            walkthroughSpawnState.confirmed =
+                true;
+
+
+            //--------------------------------------------------
+            // Hide preview.
+            //--------------------------------------------------
+
+            if (
+                personPreviewRef.current
+            ) {
+
+                personPreviewRef.current.visible =
+                    false;
+
+            }
+
+
+            //--------------------------------------------------
+            // DO NOT requestPointerLock().
+            //
+            // The cursor remains unlocked until the user
+            // clicks the canvas again.
+            //--------------------------------------------------
+
+        }
+
+
+        canvas.addEventListener(
+            "pointermove",
+            updatePointer
+        );
+
+
+        canvas.addEventListener(
+            "pointerdown",
+            handlePointerDown
+        );
+
+
+        return () => {
+
+            canvas.removeEventListener(
                 "pointermove",
                 updatePointer
             );
 
-            canvas.addEventListener(
+
+            canvas.removeEventListener(
                 "pointerdown",
-                onPointerDown
+                handlePointerDown
+            );
+
+        };
+
+    }, [
+
+        gl,
+
+        camera,
+
+        state.walkthroughMode,
+
+        spawnConfirmed,
+
+        onSpawnConfirmed
+
+    ]);
+
+
+   useEffect(() => {
+
+    if (
+        !state.walkthroughMode ||
+        spawnConfirmed
+    ) {
+
+        return;
+
+    }
+
+
+    const canvas =
+        gl.domElement;
+
+
+    function handleWheel(
+        event:
+            WheelEvent
+    ) {
+
+        event.preventDefault();
+
+        event.stopPropagation();
+
+
+        //--------------------------------------------------
+        // Multiplicative dolly, matching OrbitControls.
+        //--------------------------------------------------
+
+        const scrollUnits =
+            event.deltaY *
+            0.01;
+
+        const factor =
+            Math.pow(
+                0.95,
+                scrollUnits *
+                ORBIT_ZOOM_SPEED
             );
 
 
-            return () => {
+        //--------------------------------------------------
+        // Current effective height.
+        //
+        // During transition, use the top-down end Y plus
+        // the accumulated offset (that's where the camera
+        // is heading, so scaling relative to it feels
+        // stable even mid-tilt).
+        //--------------------------------------------------
 
-                canvas.removeEventListener(
-                    "pointermove",
-                    updatePointer
-                );
+        let currentHeight:
+            number;
 
-                canvas.removeEventListener(
-                    "pointerdown",
-                    onPointerDown
-                );
 
-            };
+        if (
+            walkthroughSpawnState.transitionActive
+        ) {
 
-        },
-        [
+            currentHeight =
+                walkthroughSpawnState.topViewY +
+                walkthroughSpawnState.offset.y;
 
-            gl,
+        } else {
 
-            camera,
+            currentHeight =
+                camera.position.y;
 
-            state.walkthroughMode,
+        }
 
-            spawnConfirmed
 
-        ]
+        //--------------------------------------------------
+        // Clamp.
+        //--------------------------------------------------
+
+        const targetHeight =
+            Math.max(
+
+                MIN_CAMERA_HEIGHT,
+
+                Math.min(
+
+                    MAX_CAMERA_HEIGHT,
+
+                    currentHeight *
+                    factor
+
+                )
+
+            );
+
+
+        const deltaY =
+            targetHeight -
+            currentHeight;
+
+
+        //--------------------------------------------------
+        // Apply.
+        //--------------------------------------------------
+
+        if (
+            walkthroughSpawnState.transitionActive
+        ) {
+
+            walkthroughSpawnState.offset.y +=
+                deltaY;
+
+
+            //--------------------------------------------------
+            // Keep offset bounded so it cannot drift far
+            // from the top-down Y.
+            //--------------------------------------------------
+
+            if (
+                walkthroughSpawnState.offset.y <
+                -MAX_TRANSITION_ZOOM_OFFSET
+            ) {
+
+                walkthroughSpawnState.offset.y =
+                    -MAX_TRANSITION_ZOOM_OFFSET;
+
+            }
+
+
+            if (
+                walkthroughSpawnState.offset.y >
+                MAX_TRANSITION_ZOOM_OFFSET
+            ) {
+
+                walkthroughSpawnState.offset.y =
+                    MAX_TRANSITION_ZOOM_OFFSET;
+
+            }
+
+        } else {
+
+            camera.position.y =
+                targetHeight;
+
+        }
+
+    }
+
+
+    canvas.addEventListener(
+        "wheel",
+        handleWheel,
+        { passive: false }
     );
+
+
+    return () => {
+
+        canvas.removeEventListener(
+            "wheel",
+            handleWheel
+        );
+
+    };
+
+}, [
+
+    gl,
+
+    camera,
+
+    state.walkthroughMode,
+
+    spawnConfirmed
+
+]);
 
 
     //==================================================
     // SPAWN PREVIEW
     //==================================================
 
-    useFrame(
-        () => {
+    useFrame(() => {
 
-            //--------------------------------------------------
-            // Preview only before spawn.
-            //--------------------------------------------------
-
-            if (
-                !state.walkthroughMode ||
-                spawnConfirmed
-            ) {
-
-                if (
-                    spawnPreviewRef.current
-                ) {
-
-                    spawnPreviewRef.current.visible =
-                        false;
-                }
-
-                return;
-            }
-
+        if (
+            !state.walkthroughMode ||
+            spawnConfirmed
+        ) {
 
             if (
-                !spawnPreviewRef.current
+                personPreviewRef.current
             ) {
 
-                return;
+                personPreviewRef.current.visible =
+                    false;
+
             }
 
+            return;
 
-            //--------------------------------------------------
-            // Mouse must be inside canvas.
-            //--------------------------------------------------
-
-            if (
-                !hasPointer.current
-            ) {
-
-                spawnPreviewRef.current.visible =
-                    false;
-
-                spawnPosition.current =
-                    null;
-
-                spawnValid.current =
-                    false;
-
-                return;
-            }
+        }
 
 
-            //--------------------------------------------------
-            // Raycast.
-            //--------------------------------------------------
+        if (
+            !personPreviewRef.current
+        ) {
 
-            raycaster.current.setFromCamera(
+            return;
 
-                pointer.current,
-
-                camera
-
-            );
+        }
 
 
-            //--------------------------------------------------
-            // Get current floor objects.
-            //--------------------------------------------------
+        //--------------------------------------------------
+        // No mouse position.
+        //--------------------------------------------------
 
-            const floorObjects =
-                getFloorObjects(
-                    scene
-                );
+        if (
+            !hasPointer.current
+        ) {
 
-
-            //--------------------------------------------------
-            // Get floor point.
-            //--------------------------------------------------
-
-            const floorPoint =
-                getFloorPoint(
-
-                    raycaster.current,
-
-                    floorObjects
-
-                );
-
-
-            if (
-                !floorPoint
-            ) {
-
-                spawnPreviewRef.current.visible =
-                    false;
-
-                spawnPosition.current =
-                    null;
-
-                spawnValid.current =
-                    false;
-
-                return;
-            }
-
-
-            //--------------------------------------------------
-            // Candidate player position.
-            //--------------------------------------------------
-
-            const candidate =
-                floorPoint.clone();
-
-
-            candidate.y =
-                floorPoint.y +
-                PLAYER_HEIGHT;
-
-
-            //--------------------------------------------------
-            // Furniture.
-            //--------------------------------------------------
-
-            const furniture =
-                Array.isArray(
-                    state.furniture
-                )
-                    ? state.furniture
-                    : [];
-
-
-            //--------------------------------------------------
-            // Spawn safety.
-            //--------------------------------------------------
-
-            const valid =
-                canSpawnAt(
-
-                    candidate,
-
-                    wallPieces,
-
-                    furniture
-
-                );
+            personPreviewRef.current.visible =
+                false;
 
 
             spawnPosition.current =
-                candidate;
+                null;
+
 
             spawnValid.current =
-                valid;
+                false;
 
 
-            //--------------------------------------------------
-            // Show preview.
-            //--------------------------------------------------
+            return;
 
-            spawnPreviewRef.current.visible =
-                true;
+        }
 
 
-            spawnPreviewRef.current.position.set(
+        //--------------------------------------------------
+        // Ray from mouse.
+        //--------------------------------------------------
 
-                candidate.x,
+        raycaster.current.setFromCamera(
 
-                floorPoint.y +
-                0.04,
+            pointer.current,
 
-                candidate.z
+            camera
+
+        );
+
+
+        //--------------------------------------------------
+        // Floor.
+        //--------------------------------------------------
+
+        const floorObjects =
+            getFloorObjects(
+                scene
+            );
+
+
+        const floorPoint =
+            getFloorPoint(
+
+                raycaster.current,
+
+                floorObjects
 
             );
 
 
-            //--------------------------------------------------
-            // Color.
-            //--------------------------------------------------
+        if (
+            !floorPoint
+        ) {
 
-            const material =
-                spawnPreviewRef.current
-                    .material;
-
-
-            if (
-                material instanceof
-                MeshStandardMaterial
-            ) {
-
-                material.color.set(
-
-                    valid
-                        ? "#4DA3FF"
-                        : "#D9534F"
-
-                );
+            personPreviewRef.current.visible =
+                false;
 
 
-                material.opacity =
-                    valid
-                        ? 0.65
-                        : 0.50;
-            }
+            spawnPosition.current =
+                null;
+
+
+            spawnValid.current =
+                false;
+
+
+            return;
 
         }
-    );
+
+
+        //--------------------------------------------------
+        // Candidate position.
+        //--------------------------------------------------
+
+        const candidate =
+            floorPoint.clone();
+
+
+        candidate.y =
+            floorPoint.y +
+            PLAYER_HEIGHT;
+
+
+        //--------------------------------------------------
+        // Furniture.
+        //--------------------------------------------------
+
+        const furniture =
+            Array.isArray(
+                state.furniture
+            )
+                ? state.furniture
+                : [];
+
+
+        //--------------------------------------------------
+        // Check spawn.
+        //--------------------------------------------------
+
+        const valid =
+            canSpawnAt(
+
+                candidate,
+
+                wallPieces,
+
+                furniture
+
+            );
+
+
+        spawnPosition.current =
+            candidate;
+
+
+        spawnValid.current =
+            valid;
+
+
+        //--------------------------------------------------
+        // Show preview.
+        //--------------------------------------------------
+
+        personPreviewRef.current.visible =
+            true;
+
+
+        personPreviewRef.current.position.set(
+
+            candidate.x,
+
+            floorPoint.y,
+
+            candidate.z
+
+        );
+
+
+        //--------------------------------------------------
+        // Preview color.
+        //--------------------------------------------------
+
+        personMaterial.color.set(
+
+            valid
+                ? "#4DA3FF"
+                : "#D9534F"
+
+        );
+
+
+        personMaterial.opacity =
+            valid
+                ? 0.60
+                : 0.48;
+
+    });
 
 
     //==================================================
-    // WALK MOVEMENT
+    // WALKTHROUGH MOVEMENT
+    //==================================================
+    //
+    //  SPAWN-SELECTION MODE (spawnConfirmed = false):
+    //
+    //      Axis source: fixed world axes, because the
+    //      top-down view is world-aligned
+    //          screen-up    = world -Z
+    //          screen-right = world +X
+    //
+    //      While Camera.tsx's transition is still active,
+    //      WASD is written into walkthroughSpawnState.offset
+    //      and Camera.tsx adds it to its lerp target — so
+    //      WASD steers the camera during the tilt without
+    //      fighting the lerp.
+    //
+    //      Once the transition settles, WASD moves
+    //      camera.position directly. No collision —
+    //      spawn-selection is a free-flying observer.
+    //
+    //  PLAYER MODE (spawnConfirmed = true):
+    //
+    //      Axis source: camera look direction.
+    //      Collision with walls and furniture active.
     //==================================================
 
     useFrame(
@@ -1189,67 +1528,99 @@ export default function WalkthroughController() {
         ) => {
 
             if (
-                !state.walkthroughMode ||
-                !spawnConfirmed
+                !state.walkthroughMode
             ) {
 
                 return;
+
             }
 
 
-            //------------------------------------------
-            // Keep eye height fixed.
-            //------------------------------------------
+            //--------------------------------------------------
+            // Keep eye height once spawned.
+            //--------------------------------------------------
 
-            camera.position.y =
-                PLAYER_HEIGHT;
+            if (
+                spawnConfirmed
+            ) {
 
+                camera.position.y =
+                    PLAYER_HEIGHT;
 
-            //------------------------------------------
-            // Forward.
-            //------------------------------------------
-
-            const forward =
-                new Vector3();
+            }
 
 
-            camera.getWorldDirection(
-                forward
-            );
+            //--------------------------------------------------
+            // Forward / right axes.
+            //--------------------------------------------------
 
+            let forward:
+                Vector3;
 
-            forward.y =
-                0;
+            let right:
+                Vector3;
 
 
             if (
-                forward.lengthSq() >
-                0
+                spawnConfirmed
             ) {
 
-                forward.normalize();
-            }
+                forward =
+                    new Vector3();
 
 
-            //------------------------------------------
-            // Right.
-            //------------------------------------------
-
-            const right =
-                new Vector3(
-
-                    -forward.z,
-
-                    0,
-
-                    forward.x
-
+                camera.getWorldDirection(
+                    forward
                 );
 
 
-            //------------------------------------------
+                forward.y =
+                    0;
+
+
+                if (
+                    forward.lengthSq() > 0
+                ) {
+
+                    forward.normalize();
+
+                }
+
+
+                right =
+                    new Vector3(
+
+                        -forward.z,
+
+                        0,
+
+                        forward.x
+
+                    );
+
+            } else {
+
+                forward =
+                    new Vector3(
+                        0,
+                        0,
+                        -1
+                    );
+
+
+                right =
+                    new Vector3(
+                        1,
+                        0,
+                        0
+                    );
+
+            }
+
+
+            //--------------------------------------------------
             // Movement.
-            //------------------------------------------
+            //--------------------------------------------------
 
             const movement =
                 new Vector3();
@@ -1262,6 +1633,7 @@ export default function WalkthroughController() {
                 movement.add(
                     forward
                 );
+
             }
 
 
@@ -1272,6 +1644,7 @@ export default function WalkthroughController() {
                 movement.sub(
                     forward
                 );
+
             }
 
 
@@ -1282,6 +1655,7 @@ export default function WalkthroughController() {
                 movement.add(
                     right
                 );
+
             }
 
 
@@ -1292,6 +1666,7 @@ export default function WalkthroughController() {
                 movement.sub(
                     right
                 );
+
             }
 
 
@@ -1301,6 +1676,7 @@ export default function WalkthroughController() {
             ) {
 
                 return;
+
             }
 
 
@@ -1312,9 +1688,48 @@ export default function WalkthroughController() {
                 delta;
 
 
-            //------------------------------------------
-            // Small movement steps.
-            //------------------------------------------
+            //--------------------------------------------------
+            // SPAWN-SELECTION MODE
+            //--------------------------------------------------
+
+            if (
+                !spawnConfirmed
+            ) {
+
+                if (
+                    walkthroughSpawnState.transitionActive
+                ) {
+
+                    walkthroughSpawnState.offset
+                        .addScaledVector(
+
+                            movement,
+
+                            totalDistance
+
+                        );
+
+                } else {
+
+                    camera.position
+                        .addScaledVector(
+
+                            movement,
+
+                            totalDistance
+
+                        );
+
+                }
+
+                return;
+
+            }
+
+
+            //--------------------------------------------------
+            // PLAYER MODE: substep collision.
+            //--------------------------------------------------
 
             const maxStep =
                 PLAYER_RADIUS *
@@ -1327,8 +1742,10 @@ export default function WalkthroughController() {
                     1,
 
                     Math.ceil(
+
                         totalDistance /
                         maxStep
+
                     )
 
                 );
@@ -1345,10 +1762,6 @@ export default function WalkthroughController() {
                     );
 
 
-            //------------------------------------------
-            // Furniture.
-            //------------------------------------------
-
             const furniture =
                 Array.isArray(
                     state.furniture
@@ -1356,10 +1769,6 @@ export default function WalkthroughController() {
                     ? state.furniture
                     : [];
 
-
-            //------------------------------------------
-            // Movement substeps.
-            //------------------------------------------
 
             for (
                 let i = 0;
@@ -1371,9 +1780,9 @@ export default function WalkthroughController() {
                     camera.position.clone();
 
 
-                //------------------------------------------
+                //--------------------------------------------------
                 // Full movement.
-                //------------------------------------------
+                //--------------------------------------------------
 
                 const full =
                     current
@@ -1399,13 +1808,15 @@ export default function WalkthroughController() {
                         full
                     );
 
+
                     continue;
+
                 }
 
 
-                //------------------------------------------
+                //--------------------------------------------------
                 // X slide.
-                //------------------------------------------
+                //--------------------------------------------------
 
                 const xOnly =
                     current.clone();
@@ -1429,12 +1840,13 @@ export default function WalkthroughController() {
 
                     camera.position.x =
                         xOnly.x;
+
                 }
 
 
-                //------------------------------------------
+                //--------------------------------------------------
                 // Z slide.
-                //------------------------------------------
+                //--------------------------------------------------
 
                 const zOnly =
                     camera.position.clone();
@@ -1458,11 +1870,13 @@ export default function WalkthroughController() {
 
                     camera.position.z =
                         zOnly.z;
+
                 }
 
             }
 
         }
+
     );
 
 
@@ -1475,6 +1889,7 @@ export default function WalkthroughController() {
     ) {
 
         return null;
+
     }
 
 
@@ -1487,63 +1902,313 @@ export default function WalkthroughController() {
         <>
 
             {/*==================================================
-                SPAWN PREVIEW
+                PERSON SPAWN PREVIEW
             ==================================================*/}
 
             {
                 !spawnConfirmed && (
 
-                    <mesh
+                    <group
+
                         ref={
-                            spawnPreviewRef
+                            personPreviewRef
                         }
 
                         visible={
                             false
                         }
+
+                        renderOrder={
+                            1000
+                        }
+
                     >
 
-                        <cylinderGeometry
-                            args={[
-                                PLAYER_RADIUS,
-                                PLAYER_RADIUS,
-                                0.06,
-                                32
+                        {/* Spawn circle */}
+
+                        <mesh
+
+                            rotation={[
+                                -Math.PI / 2,
+                                0,
+                                0
                             ]}
-                        />
 
-                        <meshStandardMaterial
-
-                            color={
-                                "#4DA3FF"
+                            renderOrder={
+                                1000
                             }
 
-                            transparent
+                        >
 
-                            opacity={
-                                0.65
-                            }
+                            <circleGeometry
 
-                            depthWrite={
-                                false
-                            }
+                                args={[
+                                    PLAYER_RADIUS *
+                                        1.15,
+                                    32
+                                ]}
 
-                            roughness={
-                                0.8
-                            }
+                            />
 
-                        />
+                            <meshBasicMaterial
 
-                    </mesh>
+                                color={
+                                    "#4DA3FF"
+                                }
+
+                                transparent
+
+                                opacity={
+                                    0.18
+                                }
+
+                                depthWrite={
+                                    false
+                                }
+
+                            />
+
+                        </mesh>
+
+
+                        {/* Left leg */}
+
+                        <mesh
+
+                            position={[
+                                -0.09,
+                                0.43,
+                                0
+                            ]}
+
+                        >
+
+                            <cylinderGeometry
+
+                                args={[
+                                    0.07,
+                                    0.07,
+                                    0.86,
+                                    12
+                                ]}
+
+                            />
+
+                            <primitive
+
+                                object={
+                                    personMaterial
+                                }
+
+                                attach="material"
+
+                            />
+
+                        </mesh>
+
+
+                        {/* Right leg */}
+
+                        <mesh
+
+                            position={[
+                                0.09,
+                                0.43,
+                                0
+                            ]}
+
+                        >
+
+                            <cylinderGeometry
+
+                                args={[
+                                    0.07,
+                                    0.07,
+                                    0.86,
+                                    12
+                                ]}
+
+                            />
+
+                            <primitive
+
+                                object={
+                                    personMaterial
+                                }
+
+                                attach="material"
+
+                            />
+
+                        </mesh>
+
+
+                        {/* Body */}
+
+                        <mesh
+
+                            position={[
+                                0,
+                                1.03,
+                                0
+                            ]}
+
+                        >
+
+                            <cylinderGeometry
+
+                                args={[
+                                    0.18,
+                                    0.21,
+                                    0.68,
+                                    16
+                                ]}
+
+                            />
+
+                            <primitive
+
+                                object={
+                                    personMaterial
+                                }
+
+                                attach="material"
+
+                            />
+
+                        </mesh>
+
+
+                        {/* Left arm */}
+
+                        <mesh
+
+                            position={[
+                                -0.27,
+                                1.05,
+                                0
+                            ]}
+
+                            rotation={[
+                                0,
+                                0,
+                                -0.08
+                            ]}
+
+                        >
+
+                            <cylinderGeometry
+
+                                args={[
+                                    0.055,
+                                    0.055,
+                                    0.58,
+                                    12
+                                ]}
+
+                            />
+
+                            <primitive
+
+                                object={
+                                    personMaterial
+                                }
+
+                                attach="material"
+
+                            />
+
+                        </mesh>
+
+
+                        {/* Right arm */}
+
+                        <mesh
+
+                            position={[
+                                0.27,
+                                1.05,
+                                0
+                            ]}
+
+                            rotation={[
+                                0,
+                                0,
+                                0.08
+                            ]}
+
+                        >
+
+                            <cylinderGeometry
+
+                                args={[
+                                    0.055,
+                                    0.055,
+                                    0.58,
+                                    12
+                                ]}
+
+                            />
+
+                            <primitive
+
+                                object={
+                                    personMaterial
+                                }
+
+                                attach="material"
+
+                            />
+
+                        </mesh>
+
+
+                        {/* Head */}
+
+                        <mesh
+
+                            position={[
+                                0,
+                                1.56,
+                                0
+                            ]}
+
+                        >
+
+                            <sphereGeometry
+
+                                args={[
+                                    0.16,
+                                    16,
+                                    16
+                                ]}
+
+                            />
+
+                            <primitive
+
+                                object={
+                                    personMaterial
+                                }
+
+                                attach="material"
+
+                            />
+
+                        </mesh>
+
+                    </group>
+
                 )
             }
 
 
             {/*==================================================
-                POINTER LOCK
-            ==================================================*/}
+                POINTER LOCK CONTROLS
+                ==================================================*/}
 
             <PointerLockControls
+
                 ref={
                     controlsRef
                 }
@@ -1551,9 +2216,11 @@ export default function WalkthroughController() {
                 enabled={
                     spawnConfirmed
                 }
+
             />
 
         </>
 
     );
+
 }

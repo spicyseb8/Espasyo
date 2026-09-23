@@ -3,17 +3,25 @@
    ========================================================== */
 
 .material-section {
+
     width: 100%;
 
-    background: var(--ws-surface);
+    box-sizing: border-box;
 
-    border: 1px solid var(--ws-border);
+    background:
+        var(--ws-surface);
 
-    border-radius: 12px;
+    border:
+        1px solid var(--ws-border);
 
-    overflow: hidden;
+    border-radius:
+        12px;
 
-    box-shadow: var(--ws-shadow-sm);
+    overflow:
+        hidden;
+
+    box-shadow:
+        var(--ws-shadow-sm);
 }
 
 
@@ -22,9 +30,12 @@
    ========================================================== */
 
 .material-section-header {
+
     width: 100%;
 
     min-height: 46px;
+
+    box-sizing: border-box;
 
     display: flex;
 
@@ -32,25 +43,14 @@
 
     justify-content: space-between;
 
-    padding: 0 14px;
+    padding:
+        0 14px;
 
-    border: none;
-
-    background: var(--ws-surface);
-
-    color: var(--ws-text);
-
-    cursor: pointer;
-
-    text-align: left;
-
-    transition:
-        background 0.15s ease;
-}
-
-.material-section-header:hover {
     background:
-        var(--ws-surface-hover);
+        var(--ws-surface);
+
+    color:
+        var(--ws-text);
 }
 
 
@@ -59,17 +59,22 @@
    ========================================================== */
 
 .material-section-title {
+
     display: flex;
 
     align-items: center;
 
-    gap: 7px;
+    gap:
+        7px;
 
-    font-size: 13px;
+    font-size:
+        13px;
 
-    font-weight: 600;
+    font-weight:
+        600;
 
-    color: var(--ws-text);
+    color:
+        var(--ws-text);
 }
 
 
@@ -78,96 +83,112 @@
    ========================================================== */
 
 .material-section-count {
-    min-width: 20px;
 
-    height: 18px;
+    min-width:
+        20px;
 
-    padding: 0 6px;
+    height:
+        18px;
 
-    display: inline-flex;
+    padding:
+        0 6px;
 
-    align-items: center;
+    box-sizing:
+        border-box;
 
-    justify-content: center;
+    display:
+        inline-flex;
 
-    border-radius: 999px;
+    align-items:
+        center;
 
-    background: var(--ws-accent-soft);
+    justify-content:
+        center;
 
-    color: var(--ws-accent);
+    border-radius:
+        999px;
 
-    font-size: 10px;
-
-    font-weight: 700;
-}
-
-
-/* ==========================================================
-   CHEVRON
-   ========================================================== */
-
-.material-section-chevron {
-    color:
-        var(--ws-text-muted);
-
-    transition:
-        transform 0.2s ease,
-        color 0.2s ease;
-}
-
-.material-section-chevron.open {
-    transform:
-        rotate(180deg);
+    background:
+        var(--ws-accent-soft);
 
     color:
         var(--ws-accent);
+
+    font-size:
+        10px;
+
+    font-weight:
+        700;
 }
 
 
 /* ==========================================================
-   DROPDOWN / COLLAPSE
+   SCROLLABLE MATERIAL AREA
+
+   3 columns x 2 rows visible.
+   Additional materials scroll vertically.
    ========================================================== */
 
-/*
-   Using max-height here instead of the previous
-   grid-template-rows approach.
+.material-scroll {
 
-   This prevents the material cards from being clipped
-   into a very small strip.
-*/
-
-.material-section-collapse {
-    max-height: 0;
-
-    overflow: hidden;
-
-    opacity: 0;
-
-    transition:
-        max-height 0.25s ease,
-        opacity 0.18s ease;
-}
-
-.material-section-collapse.open {
-    max-height: 1000px;
-
-    opacity: 1;
-}
-
-
-/* ==========================================================
-   INNER CONTENT
-   ========================================================== */
-
-.material-section-inner {
     width: 100%;
 
     box-sizing: border-box;
 
     padding:
-        4px 10px 12px;
+        4px 10px 10px;
 
-    overflow: visible;
+    max-height:
+        244px;
+
+    overflow-y:
+        auto;
+
+    overflow-x:
+        hidden;
+
+    scrollbar-width:
+        thin;
+
+    scrollbar-color:
+        var(--ws-border)
+        transparent;
+}
+
+
+/* ==========================================================
+   WEBKIT SCROLLBAR
+   ========================================================== */
+
+.material-scroll::-webkit-scrollbar {
+
+    width:
+        6px;
+
+}
+
+.material-scroll::-webkit-scrollbar-track {
+
+    background:
+        transparent;
+
+}
+
+.material-scroll::-webkit-scrollbar-thumb {
+
+    background:
+        var(--ws-border);
+
+    border-radius:
+        999px;
+
+}
+
+.material-scroll::-webkit-scrollbar-thumb:hover {
+
+    background:
+        var(--ws-text-muted);
+
 }
 
 
@@ -176,14 +197,21 @@
    ========================================================== */
 
 .material-grid {
-    display: grid;
+
+    display:
+        grid;
 
     grid-template-columns:
         repeat(3, minmax(0, 1fr));
 
-    gap: 8px;
+    gap:
+        8px;
 
-    width: 100%;
+    width:
+        100%;
+
+    box-sizing:
+        border-box;
 }
 
 
@@ -192,6 +220,7 @@
    ========================================================== */
 
 .material-empty {
+
     margin:
         10px 4px;
 
@@ -211,6 +240,7 @@
    ========================================================== */
 
 .material-actions {
+
     display:
         flex;
 
@@ -226,8 +256,8 @@
     gap:
         6px;
 
-    margin-top:
-        10px;
+    margin:
+        0 10px 10px;
 
     padding-top:
         9px;
@@ -244,6 +274,7 @@
 .material-apply-button,
 .material-apply-room-button,
 .material-apply-all-button {
+
     min-height:
         32px;
 
@@ -270,18 +301,27 @@
         transform 0.1s ease;
 }
 
+
+/* ==========================================================
+   BUTTON HOVER / ACTIVE
+   ========================================================== */
+
 .material-apply-button:hover:not(:disabled),
 .material-apply-room-button:hover:not(:disabled),
 .material-apply-all-button:hover:not(:disabled) {
+
     transform:
         translateY(-1px);
+
 }
 
 .material-apply-button:active:not(:disabled),
 .material-apply-room-button:active:not(:disabled),
 .material-apply-all-button:active:not(:disabled) {
+
     transform:
         translateY(0);
+
 }
 
 
@@ -290,6 +330,7 @@
    ========================================================== */
 
 .material-apply-button {
+
     display:
         inline-flex;
 
@@ -316,8 +357,10 @@
 }
 
 .material-apply-button:hover:not(:disabled) {
+
     background:
         #f58a30;
+
 }
 
 
@@ -326,6 +369,7 @@
    ========================================================== */
 
 .material-apply-room-button {
+
     border:
         1px solid var(--ws-accent);
 
@@ -337,8 +381,10 @@
 }
 
 .material-apply-room-button:hover:not(:disabled) {
+
     background:
         var(--ws-accent-soft);
+
 }
 
 
@@ -347,6 +393,7 @@
    ========================================================== */
 
 .material-apply-all-button {
+
     border:
         1px solid var(--ws-border);
 
@@ -358,11 +405,13 @@
 }
 
 .material-apply-all-button:hover:not(:disabled) {
+
     background:
         var(--ws-surface-hover);
 
     color:
         var(--ws-text);
+
 }
 
 
@@ -373,6 +422,7 @@
 .material-apply-button:disabled,
 .material-apply-room-button:disabled,
 .material-apply-all-button:disabled {
+
     opacity:
         0.45;
 
@@ -390,12 +440,13 @@
 
 @media (prefers-reduced-motion: reduce) {
 
-    .material-section-collapse,
-    .material-section-chevron,
     .material-apply-button,
     .material-apply-room-button,
     .material-apply-all-button {
-        transition: none;
+
+        transition:
+            none;
+
     }
 
 }

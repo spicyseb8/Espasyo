@@ -5,95 +5,56 @@ import {
     Hammer,
     Sofa,
     Paintbrush,
-    FolderOpen
+    FolderOpen,
 } from "lucide-react";
 
 interface Props {
-
     activeTab: string;
 
     layoutConfirmed: boolean;
 
     walkthroughMode: boolean;
 
-    onTabChange: (
-        tab: string
-    ) => void;
+    panelOpen: boolean;
 
+    onTabChange: (tab: string) => void;
 }
 
 export default function WorkspaceTabs({
-
     activeTab,
-
     walkthroughMode,
-
-    onTabChange
-
+    panelOpen,
+    onTabChange,
 }: Props) {
-
     const tabs = [
-
         {
-            id:
-                "floorplan",
-
-            label:
-                "Floor Plan",
-
-            icon:
-                DraftingCompass
+            id: "floorplan",
+            label: "Floor Plan",
+            icon: DraftingCompass,
         },
-
         {
-            id:
-                "build",
-
-            label:
-                "Build",
-
-            icon:
-                Hammer
+            id: "build",
+            label: "Build",
+            icon: Hammer,
         },
-
         {
-            id:
-                "furniture",
-
-            label:
-                "Furniture",
-
-            icon:
-                Sofa
+            id: "furniture",
+            label: "Furniture",
+            icon: Sofa,
         },
-
         {
-            id:
-                "design",
-
-            label:
-                "Design",
-
-            icon:
-                Paintbrush
+            id: "design",
+            label: "Design",
+            icon: Paintbrush,
         },
-
         {
-            id:
-                "project",
-
-            label:
-                "Project",
-
-            icon:
-                FolderOpen
-        }
-
+            id: "project",
+            label: "Project",
+            icon: FolderOpen,
+        },
     ];
 
-
     return (
-
         <div
             className={
                 walkthroughMode
@@ -101,77 +62,28 @@ export default function WorkspaceTabs({
                     : "workspace-tabs"
             }
         >
+            {tabs.map((tab) => {
+                const Icon = tab.icon;
 
-            {
-                tabs.map(
-                    (
-                        tab
-                    ) => {
+                const isActive = activeTab === tab.id && panelOpen;
 
-                        const Icon =
-                            tab.icon;
+                return (
+                    <button
+                        key={tab.id}
+                        type="button"
+                        aria-label={tab.label}
+                        disabled={walkthroughMode}
+                        className={isActive ? "tab active" : "tab"}
+                        onClick={() => onTabChange(tab.id)}
+                    >
+                        <Icon size={20} />
 
-
-                        return (
-
-                            <button
-
-                                key={
-                                    tab.id
-                                }
-
-                                type="button"
-
-                                aria-label={
-                                    tab.label
-                                }
-
-                                disabled={
-                                    walkthroughMode
-                                }
-
-                                className={
-
-                                    activeTab ===
-                                    tab.id
-
-                                        ? "tab active"
-
-                                        : "tab"
-
-                                }
-
-                                onClick={() =>
-                                    onTabChange(
-                                        tab.id
-                                    )
-                                }
-
-                            >
-
-                                <Icon
-                                    size={20}
-                                />
-
-                                <span
-                                    className="tab-tooltip"
-                                >
-
-                                    {
-                                        tab.label
-                                    }
-
-                                </span>
-
-                            </button>
-
-                        );
-
-                    }
-                )
-            }
-
+                        <span className="tab-tooltip">
+                            {tab.label}
+                        </span>
+                    </button>
+                );
+            })}
         </div>
-
     );
 }
