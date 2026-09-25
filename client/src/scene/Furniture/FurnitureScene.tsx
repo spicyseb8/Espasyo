@@ -2,6 +2,7 @@ import {
     memo,
     useEffect,
     useMemo,
+    useRef,
     useState
 } from "react";
 
@@ -9,6 +10,10 @@ import {
     useCursor,
     useGLTF
 } from "@react-three/drei";
+
+import {
+    useFrame
+} from "@react-three/fiber";
 
 import useEditor
     from "../../context/editor/useEditor";
@@ -22,6 +27,10 @@ import {
     getFurnitureAssets
 } from "../../engine/furniture/FirebaseFurnitureLibrary";
 
+import {
+    furnitureInteraction
+} from "../../scene/Furniture/FurnitureInteraction";
+
 import type {
     Furniture
 } from "../../engine/furniture/FurnitureTypes";
@@ -33,6 +42,7 @@ import type {
 import {
     BackSide,
     DoubleSide,
+    Group,
     Mesh,
     MeshBasicMaterial
 } from "three";
@@ -64,20 +74,6 @@ interface FurnitureItemProps {
 
 //======================================================
 // FURNITURE ITEM
-//======================================================
-//
-// IMPORTANT:
-//
-// This component does NOT call useGLTF().
-//
-// It waits until a valid Asset with a valid model URL
-// exists, then mounts FurnitureModel.
-//
-// This prevents:
-//
-//     useGLTF("")
-//
-// which was causing the HTML/JSON error.
 //======================================================
 
 function FurnitureItem({
@@ -127,9 +123,6 @@ function FurnitureItem({
 
     //--------------------------------------------------
     // Firebase asset
-    //
-    // Firebase is preferred.
-    // Local AssetLibrary remains a fallback.
     //--------------------------------------------------
 
     const asset:
@@ -138,6 +131,7 @@ function FurnitureItem({
         getCachedFurnitureAsset(
             assetId
         ) ??
+
         findAsset(
             assetId
         );
@@ -158,10 +152,7 @@ function FurnitureItem({
 
 
     //--------------------------------------------------
-    // Asset is not ready yet
-    //
-    // IMPORTANT:
-    // Do NOT call useGLTF with an empty string.
+    // Asset unavailable
     //--------------------------------------------------
 
     if (
@@ -174,7 +165,7 @@ function FurnitureItem({
 
 
     //--------------------------------------------------
-    // Model URL is missing
+    // Model URL unavailable
     //--------------------------------------------------
 
     if (
@@ -208,7 +199,7 @@ function FurnitureItem({
 
 
     //--------------------------------------------------
-    // Only now render the component that uses useGLTF.
+    // Only now render FurnitureModel.
     //--------------------------------------------------
 
     return (
@@ -283,12 +274,6 @@ interface FurnitureModelProps {
 //======================================================
 // FURNITURE MODEL
 //======================================================
-//
-// useGLTF() is isolated here.
-//
-// This component cannot mount until FurnitureItem
-// confirms that asset.model is a real URL.
-//======================================================
 
 function FurnitureModel({
 
@@ -314,6 +299,16 @@ function FurnitureModel({
 
 
     //--------------------------------------------------
+    // Main furniture group
+    //--------------------------------------------------
+
+    const groupRef =
+        useRef<Group>(
+            null
+        );
+
+
+    //--------------------------------------------------
     // GLTF
     //--------------------------------------------------
 
@@ -324,9 +319,9 @@ function FurnitureModel({
     );
 
 
-    //--------------------------------------------------
-    // Clone actual furniture model
-    //--------------------------------------------------
+    //==================================================
+    // ACTUAL MODEL
+    //==================================================
 
     const model =
         useMemo(
@@ -338,10 +333,6 @@ function FurnitureModel({
                         true
                     );
 
-
-                //--------------------------------------------------
-                // Furniture ID
-                //--------------------------------------------------
 
                 clone.traverse(
 
@@ -357,20 +348,12 @@ function FurnitureModel({
                         };
 
 
-                        //--------------------------------------------------
-                        // Shadows
-                        //--------------------------------------------------
-
                         child.castShadow =
                             true;
 
                         child.receiveShadow =
                             true;
 
-
-                        //--------------------------------------------------
-                        // Clone materials
-                        //--------------------------------------------------
 
                         if (
                             child instanceof Mesh
@@ -420,12 +403,9 @@ function FurnitureModel({
         );
 
 
-    //--------------------------------------------------
-    // Gray outline model
-    //
-    // VISUAL ONLY:
-    // Every mesh has raycast disabled.
-    //--------------------------------------------------
+    //==================================================
+    // GRAY OUTLINE
+    //==================================================
 
     const outlineModel =
         useMemo(
@@ -445,27 +425,13 @@ function FurnitureModel({
                         if (
                             !(child instanceof Mesh)
                         ) {
-
                             return;
-
                         }
 
-
-                        //--------------------------------------------------
-                        // IMPORTANT:
-                        //
-                        // This mesh must NEVER receive pointer events.
-                        // Otherwise the mouse can alternate between the
-                        // outline and real furniture and cause flicker.
-                        //--------------------------------------------------
 
                         child.raycast =
                             () => null;
 
-
-                        //--------------------------------------------------
-                        // Gray outline material
-                        //--------------------------------------------------
 
                         child.material =
 
@@ -517,20 +483,11 @@ function FurnitureModel({
                                 });
 
 
-                        //--------------------------------------------------
-                        // Visual only
-                        //--------------------------------------------------
-
                         child.castShadow =
                             false;
 
                         child.receiveShadow =
                             false;
-
-
-                        //--------------------------------------------------
-                        // Render behind actual furniture
-                        //--------------------------------------------------
 
                         child.renderOrder =
                             -1;
@@ -551,12 +508,9 @@ function FurnitureModel({
         );
 
 
-    //--------------------------------------------------
-    // Subtle gray highlight model
-    //
-    // VISUAL ONLY:
-    // Every mesh has raycast disabled.
-    //--------------------------------------------------
+    //==================================================
+    // SUBTLE HIGHLIGHT
+    //==================================================
 
     const highlightModel =
         useMemo(
@@ -576,25 +530,13 @@ function FurnitureModel({
                         if (
                             !(child instanceof Mesh)
                         ) {
-
                             return;
-
                         }
 
-
-                        //--------------------------------------------------
-                        // IMPORTANT:
-                        //
-                        // This mesh must NEVER receive pointer events.
-                        //--------------------------------------------------
 
                         child.raycast =
                             () => null;
 
-
-                        //--------------------------------------------------
-                        // Very subtle gray overlay
-                        //--------------------------------------------------
 
                         child.material =
 
@@ -646,16 +588,11 @@ function FurnitureModel({
                                 });
 
 
-                        //--------------------------------------------------
-                        // Visual only
-                        //--------------------------------------------------
-
                         child.castShadow =
                             false;
 
                         child.receiveShadow =
                             false;
-
 
                         child.renderOrder =
                             1;
@@ -676,27 +613,131 @@ function FurnitureModel({
         );
 
 
-    //--------------------------------------------------
-    // Selected furniture
-    //--------------------------------------------------
+    //==================================================
+    // RED ROTATION BLOCKED MODEL
+    //==================================================
+
+    const rotationBlockedModel =
+        useMemo(
+
+            () => {
+
+                const clone =
+                    scene.clone(
+                        true
+                    );
+
+
+                clone.traverse(
+
+                    child => {
+
+                        if (
+                            !(child instanceof Mesh)
+                        ) {
+                            return;
+                        }
+
+
+                        //--------------------------------------------------
+                        // Visual only.
+                        //--------------------------------------------------
+
+                        child.raycast =
+                            () => null;
+
+
+                        child.material =
+
+                            Array.isArray(
+                                child.material
+                            )
+
+                                ? child.material.map(
+
+                                    () =>
+                                        new MeshBasicMaterial({
+
+                                            color:
+                                                "#D9534F",
+
+                                            transparent:
+                                                true,
+
+                                            opacity:
+                                                0.62,
+
+                                            depthWrite:
+                                                false,
+
+                                            side:
+                                                DoubleSide
+
+                                        })
+
+                                )
+
+                                : new MeshBasicMaterial({
+
+                                    color:
+                                        "#D9534F",
+
+                                    transparent:
+                                        true,
+
+                                    opacity:
+                                        0.62,
+
+                                    depthWrite:
+                                        false,
+
+                                    side:
+                                        DoubleSide
+
+                                });
+
+
+                        child.castShadow =
+                            false;
+
+                        child.receiveShadow =
+                            false;
+
+                        child.renderOrder =
+                            5;
+
+                    }
+
+                );
+
+
+                clone.visible =
+                    false;
+
+
+                return clone;
+
+            },
+
+            [
+                scene
+            ]
+
+        );
+
+
+    //==================================================
+    // SELECTED
+    //==================================================
 
     const selected =
         state.selectedFurnitureId ===
         id;
 
 
-    //--------------------------------------------------
-    // Show gray selection state
-    //
-    // Hover:
-    //     gray outline + subtle gray highlight
-    //
-    // Selected:
-    //     gray outline + subtle gray highlight
-    //
-    // Walkthrough:
-    //     no highlight
-    //--------------------------------------------------
+    //==================================================
+    // NORMAL HIGHLIGHT
+    //==================================================
 
     const showHighlight =
 
@@ -708,9 +749,108 @@ function FurnitureModel({
         );
 
 
-    //--------------------------------------------------
-    // Clear hover when furniture starts moving
-    //--------------------------------------------------
+    //==================================================
+    // LIVE ROTATION PREVIEW
+    //==================================================
+
+    useFrame(
+
+        () => {
+
+            if (
+                !groupRef.current
+            ) {
+                return;
+            }
+
+
+            const isRotating =
+                furnitureInteraction
+                    .rotatingFurnitureId ===
+                id;
+
+
+            const previewRotation =
+                furnitureInteraction
+                    .rotationPreviewY;
+
+
+            if (
+
+                isRotating &&
+
+                previewRotation !== null
+
+            ) {
+
+                //--------------------------------------------------
+                // Rotate actual visible furniture visually.
+                // This is preview only until pointer release.
+                //--------------------------------------------------
+
+                groupRef.current.rotation.y =
+                    previewRotation;
+
+
+                //--------------------------------------------------
+                // Hide normal selection effects during rotation.
+                //--------------------------------------------------
+
+                outlineModel.visible =
+                    false;
+
+                highlightModel.visible =
+                    false;
+
+
+                //--------------------------------------------------
+                // Show red overlay only when unsafe.
+                //--------------------------------------------------
+
+                rotationBlockedModel.visible =
+                    !furnitureInteraction
+                        .rotationPreviewValid;
+
+            }
+
+            else {
+
+                //--------------------------------------------------
+                // Return to committed editor rotation.
+                //--------------------------------------------------
+
+                groupRef.current.rotation.y =
+                    rotationY;
+
+
+                //--------------------------------------------------
+                // Hide red blocked preview.
+                //--------------------------------------------------
+
+                rotationBlockedModel.visible =
+                    false;
+
+
+                //--------------------------------------------------
+                // Restore normal selection appearance.
+                //--------------------------------------------------
+
+                outlineModel.visible =
+                    showHighlight;
+
+                highlightModel.visible =
+                    showHighlight;
+
+            }
+
+        }
+
+    );
+
+
+    //==================================================
+    // CLEAR HOVER WHEN MOVING
+    //==================================================
 
     useEffect(
 
@@ -738,9 +878,9 @@ function FurnitureModel({
     );
 
 
-    //--------------------------------------------------
-    // Pointer enter
-    //--------------------------------------------------
+    //==================================================
+    // POINTER ENTER
+    //==================================================
 
     const handlePointerEnter =
         (event: any) => {
@@ -748,15 +888,9 @@ function FurnitureModel({
             if (
                 state.walkthroughMode
             ) {
-
                 return;
-
             }
 
-
-            //--------------------------------------------------
-            // Stop event so parent objects do not interfere.
-            //--------------------------------------------------
 
             event.stopPropagation();
 
@@ -768,9 +902,9 @@ function FurnitureModel({
         };
 
 
-    //--------------------------------------------------
-    // Pointer leave
-    //--------------------------------------------------
+    //==================================================
+    // POINTER LEAVE
+    //==================================================
 
     const handlePointerLeave =
         (event: any) => {
@@ -778,9 +912,7 @@ function FurnitureModel({
             if (
                 state.walkthroughMode
             ) {
-
                 return;
-
             }
 
 
@@ -794,13 +926,17 @@ function FurnitureModel({
         };
 
 
-    //--------------------------------------------------
-    // Render
-    //--------------------------------------------------
+    //==================================================
+    // RENDER
+    //==================================================
 
     return (
 
         <group
+
+            ref={
+                groupRef
+            }
 
             userData={{
                 furnitureId:
@@ -810,9 +946,7 @@ function FurnitureModel({
             position={[
 
                 position.x,
-
                 position.y,
-
                 position.z
 
             ]}
@@ -820,9 +954,7 @@ function FurnitureModel({
             rotation={[
 
                 0,
-
                 rotationY,
-
                 0
 
             ]}
@@ -853,9 +985,7 @@ function FurnitureModel({
                         position={[
 
                             modelOffset.x,
-
                             modelOffset.y,
-
                             modelOffset.z
 
                         ]}
@@ -863,9 +993,7 @@ function FurnitureModel({
                         scale={[
 
                             1.008,
-
                             1.008,
-
                             1.008
 
                         ]}
@@ -877,7 +1005,7 @@ function FurnitureModel({
 
 
             {/*==================================================
-                SUBTLE GRAY HIGHLIGHT
+                GRAY HIGHLIGHT
             ==================================================*/}
 
             {
@@ -892,9 +1020,7 @@ function FurnitureModel({
                         position={[
 
                             modelOffset.x,
-
                             modelOffset.y,
-
                             modelOffset.z
 
                         ]}
@@ -903,6 +1029,27 @@ function FurnitureModel({
 
                 )
             }
+
+
+            {/*==================================================
+                RED UNSAFE ROTATION PREVIEW
+            ==================================================*/}
+
+            <primitive
+
+                object={
+                    rotationBlockedModel
+                }
+
+                position={[
+
+                    modelOffset.x,
+                    modelOffset.y,
+                    modelOffset.z
+
+                ]}
+
+            />
 
 
             {/*==================================================
@@ -918,9 +1065,7 @@ function FurnitureModel({
                 position={[
 
                     modelOffset.x,
-
                     modelOffset.y,
-
                     modelOffset.z
 
                 ]}
@@ -1032,8 +1177,7 @@ function FurnitureScene() {
 
 
     //--------------------------------------------------
-    // Intentionally used to force a re-render after
-    // the Firebase furniture catalog finishes loading.
+    // Force render after Firebase catalog finishes.
     //--------------------------------------------------
 
     void firebaseFurnitureLoaded;

@@ -50,10 +50,6 @@ export default function FurnitureInteractionEvents() {
 
             //--------------------------------------------------
             // Existing furniture move
-            //
-            // IMPORTANT:
-            // Moving furniture does NOT require
-            // BuildTool.Furniture.
             //--------------------------------------------------
 
             if (
@@ -69,6 +65,7 @@ export default function FurnitureInteractionEvents() {
                 return;
             }
 
+
             //--------------------------------------------------
             // New furniture placement
             //--------------------------------------------------
@@ -81,11 +78,13 @@ export default function FurnitureInteractionEvents() {
                 return;
             }
 
+
             furnitureInteraction
                 .updatePointer(
                     e,
                     canvas
                 );
+
         }
 
 
@@ -98,19 +97,21 @@ export default function FurnitureInteractionEvents() {
         ) {
 
             //--------------------------------------------------
-            // Rotate is allowed while:
+            // Rotate shortcut is available while:
             //
-            // 1. New furniture is being placed
-            // 2. Existing furniture is being moved
+            // 1. placing new furniture
+            // 2. moving existing furniture
             //--------------------------------------------------
 
             const furnitureMode =
                 state.buildTool ===
                 BuildTool.Furniture;
 
+
             const movingFurniture =
                 state.movingFurnitureId !==
                 null;
+
 
             if (
                 !furnitureMode &&
@@ -118,14 +119,17 @@ export default function FurnitureInteractionEvents() {
             ) {
 
                 return;
+
             }
 
+
             //--------------------------------------------------
-            // Ignore typing fields
+            // Ignore text fields.
             //--------------------------------------------------
 
             const target =
                 e.target as HTMLElement | null;
+
 
             if (
                 target
@@ -135,6 +139,7 @@ export default function FurnitureInteractionEvents() {
                     target.tagName
                         ?.toLowerCase();
 
+
                 if (
                     tag === "input" ||
                     tag === "textarea" ||
@@ -143,11 +148,14 @@ export default function FurnitureInteractionEvents() {
                 ) {
 
                     return;
+
                 }
+
             }
 
+
             //--------------------------------------------------
-            // Rotate
+            // R = quick 90° rotation
             //--------------------------------------------------
 
             if (
@@ -156,12 +164,16 @@ export default function FurnitureInteractionEvents() {
             ) {
 
                 return;
+
             }
+
 
             e.preventDefault();
 
+
             furnitureInteraction
                 .rotateClockwise();
+
         }
 
 
@@ -182,29 +194,28 @@ export default function FurnitureInteractionEvents() {
             ) {
 
                 return;
+
             }
 
 
             //==================================================
-            // MOVE EXISTING FURNITURE
+            // EXISTING FURNITURE MOVE
             //==================================================
 
             if (
                 state.movingFurnitureId
             ) {
 
-                //--------------------------------------------------
-                // Furniture owns this click
-                //--------------------------------------------------
-
                 e.preventDefault();
                 e.stopPropagation();
+
 
                 furnitureInteraction
                     .suppressPointerUp();
 
+
                 //--------------------------------------------------
-                // Update pointer
+                // Update pointer at exact click location.
                 //--------------------------------------------------
 
                 furnitureInteraction
@@ -213,23 +224,27 @@ export default function FurnitureInteractionEvents() {
                         canvas
                     );
 
+
                 //--------------------------------------------------
-                // Current preview
+                // Get current preview.
                 //--------------------------------------------------
 
                 const result =
                     furnitureInteraction
                         .pointerDown();
 
+
                 if (
                     !result
                 ) {
 
                     return;
+
                 }
 
+
                 //--------------------------------------------------
-                // Invalid position
+                // Invalid move.
                 //--------------------------------------------------
 
                 if (
@@ -243,10 +258,12 @@ export default function FurnitureInteractionEvents() {
                     );
 
                     return;
+
                 }
 
+
                 //--------------------------------------------------
-                // Update existing furniture
+                // Update furniture.
                 //--------------------------------------------------
 
                 dispatch({
@@ -281,15 +298,18 @@ export default function FurnitureInteractionEvents() {
 
                 });
 
+
                 //--------------------------------------------------
-                // Finish move
+                // Finish move.
                 //--------------------------------------------------
 
                 furnitureInteraction
                     .finishEditing();
 
+
                 furnitureInteraction
                     .resetRotation();
+
 
                 dispatch({
 
@@ -301,17 +321,18 @@ export default function FurnitureInteractionEvents() {
 
                 });
 
+
                 //--------------------------------------------------
-                // selectedAsset should remain null
-                // during existing furniture movement.
+                // selectedAsset stays null during move.
                 //--------------------------------------------------
 
                 return;
+
             }
 
 
             //==================================================
-            // NEW FURNITURE
+            // NEW FURNITURE / DUPLICATE PREVIEW
             //==================================================
 
             if (
@@ -320,20 +341,20 @@ export default function FurnitureInteractionEvents() {
             ) {
 
                 return;
+
             }
 
-            //--------------------------------------------------
-            // Furniture owns this click
-            //--------------------------------------------------
 
             e.preventDefault();
             e.stopPropagation();
 
+
             furnitureInteraction
                 .suppressPointerUp();
 
+
             //--------------------------------------------------
-            // Update pointer
+            // Update pointer at exact click location.
             //--------------------------------------------------
 
             furnitureInteraction
@@ -342,8 +363,12 @@ export default function FurnitureInteractionEvents() {
                     canvas
                 );
 
+
             //--------------------------------------------------
-            // Selected asset required
+            // An Asset is required.
+            //
+            // For a duplicate, SelectionToolbar has already
+            // placed the original asset into selectedAsset.
             //--------------------------------------------------
 
             if (
@@ -351,7 +376,9 @@ export default function FurnitureInteractionEvents() {
             ) {
 
                 return;
+
             }
+
 
             if (
                 state.selectedAsset.type !==
@@ -359,25 +386,30 @@ export default function FurnitureInteractionEvents() {
             ) {
 
                 return;
+
             }
 
+
             //--------------------------------------------------
-            // Current preview
+            // Get the current preview.
             //--------------------------------------------------
 
             const result =
                 furnitureInteraction
                     .pointerDown();
 
+
             if (
                 !result
             ) {
 
                 return;
+
             }
 
+
             //--------------------------------------------------
-            // Collision check
+            // Collision.
             //--------------------------------------------------
 
             if (
@@ -391,22 +423,29 @@ export default function FurnitureInteractionEvents() {
                 );
 
                 return;
+
             }
 
-            //--------------------------------------------------
-            // Create furniture
-            //--------------------------------------------------
+
+            //==================================================
+            // CREATE FURNITURE
+            //==================================================
 
             const furniture =
                 placeFurniture(
+
                     state.selectedAsset,
+
                     result.transform,
+
                     result.bounds
+
                 );
 
-            //--------------------------------------------------
-            // Store furniture
-            //--------------------------------------------------
+
+            //==================================================
+            // ADD TO SCENE
+            //==================================================
 
             dispatch({
 
@@ -418,16 +457,35 @@ export default function FurnitureInteractionEvents() {
 
             });
 
+
             //--------------------------------------------------
-            // Keep selectedAsset + BuildTool.Furniture
+            // IMPORTANT:
             //
-            // This preserves continuous placement.
+            // We do NOT explicitly clear selectedAsset or
+            // buildTool here.
+            //
+            // Your FurniturePreview already watches
+            // state.furniture.length and clears the placement
+            // session after a successful ADD_FURNITURE.
+            //
+            // Therefore:
+            //
+            // Duplicate
+            //    ↓
+            // Preview
+            //    ↓
+            // User clicks
+            //    ↓
+            // ADD_FURNITURE
+            //    ↓
+            // Preview disappears
             //--------------------------------------------------
+
         }
 
 
         //==================================================
-        // RIGHT CLICK
+        // RIGHT CLICK / CANCEL
         //==================================================
 
         function onContextMenu(
@@ -435,7 +493,7 @@ export default function FurnitureInteractionEvents() {
         ) {
 
             //==================================================
-            // CANCEL EXISTING FURNITURE MOVE
+            // CANCEL EXISTING MOVE
             //==================================================
 
             if (
@@ -445,18 +503,14 @@ export default function FurnitureInteractionEvents() {
                 e.preventDefault();
                 e.stopPropagation();
 
-                //--------------------------------------------------
-                // Cancel editing
-                //
-                // FurnitureScene will show the original object
-                // again because movingFurnitureId becomes null.
-                //--------------------------------------------------
 
                 furnitureInteraction
                     .cancelEditing();
 
+
                 furnitureInteraction
                     .resetRotation();
+
 
                 dispatch({
 
@@ -468,19 +522,14 @@ export default function FurnitureInteractionEvents() {
 
                 });
 
-                //--------------------------------------------------
-                // selectedFurnitureId stays selected.
-                //
-                // selectedAsset is not touched because Move mode
-                // does not use selectedAsset anymore.
-                //--------------------------------------------------
 
                 return;
+
             }
 
 
             //==================================================
-            // CANCEL NEW FURNITURE PREVIEW
+            // CANCEL NEW / DUPLICATE PREVIEW
             //==================================================
 
             if (
@@ -489,16 +538,21 @@ export default function FurnitureInteractionEvents() {
             ) {
 
                 return;
+
             }
+
 
             e.preventDefault();
             e.stopPropagation();
 
+
             furnitureInteraction
                 .clearPreview();
 
+
             furnitureInteraction
                 .resetRotation();
+
 
             dispatch({
 
@@ -510,6 +564,7 @@ export default function FurnitureInteractionEvents() {
 
             });
 
+
             dispatch({
 
                 type:
@@ -519,6 +574,7 @@ export default function FurnitureInteractionEvents() {
                     BuildTool.None
 
             });
+
         }
 
 
@@ -536,10 +592,13 @@ export default function FurnitureInteractionEvents() {
             ) {
 
                 return;
+
             }
+
 
             e.preventDefault();
             e.stopPropagation();
+
         }
 
 
@@ -552,20 +611,24 @@ export default function FurnitureInteractionEvents() {
             onKeyDown
         );
 
+
         canvas.addEventListener(
             "pointermove",
             onPointerMove
         );
+
 
         canvas.addEventListener(
             "pointerdown",
             onPointerDown
         );
 
+
         canvas.addEventListener(
             "contextmenu",
             onContextMenu
         );
+
 
         window.addEventListener(
             "pointerup",
@@ -585,26 +648,31 @@ export default function FurnitureInteractionEvents() {
                 onKeyDown
             );
 
+
             canvas.removeEventListener(
                 "pointermove",
                 onPointerMove
             );
+
 
             canvas.removeEventListener(
                 "pointerdown",
                 onPointerDown
             );
 
+
             canvas.removeEventListener(
                 "contextmenu",
                 onContextMenu
             );
+
 
             window.removeEventListener(
                 "pointerup",
                 onPointerUp,
                 true
             );
+
         };
 
     }, [
