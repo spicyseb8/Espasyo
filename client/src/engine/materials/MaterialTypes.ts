@@ -16,6 +16,8 @@ export interface Material {
     // Image shown in the material selection UI
     thumbnail?: string;
 
+    sourceCategory?: string; 
+
     // Texture used by Three.js
     texture?: string;
 

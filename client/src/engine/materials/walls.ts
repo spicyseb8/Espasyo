@@ -378,11 +378,19 @@ async function loadWallMaterials():
         ) {
 
             //------------------------------------------------
-            // Ignore materials without a usable texture.
+            // FIX:
+            // Keep materials that have EITHER a texture URL
+            // OR a solid color.
+            //
+            // Your Firebase wall documents only store
+            // `color` (no base_color_path / base_color_url),
+            // so the old "texture only" filter was dropping
+            // every wall. This accepts color-only walls too.
             //------------------------------------------------
 
             if (
-                result.value.texture
+                result.value.texture ||
+                result.value.color
             ) {
 
                 materials.push(
@@ -392,7 +400,7 @@ async function loadWallMaterials():
             } else {
 
                 console.warn(
-                    "Skipping wall material without a usable base color texture:",
+                    "Skipping wall material without a texture or color:",
                     result.value.id,
                     result.value.name
                 );

@@ -30,6 +30,25 @@ import localDefaultFloorTexture from "../../../uploads/default_floor/assets_floo
 
 
 //==================================================
+// EXTENDED FLOOR MATERIAL TYPE
+//==================================================
+//
+// Adds the raw Firebase `category` value (e.g. "brick",
+// "tile", "wood") so the Library page can filter by
+// Wood / Tiles / Bricks without modifying the shared
+// Material interface.
+//
+// FloorMaterial is structurally a Material, so every
+// existing caller of getFloorMaterials() keeps working.
+//==================================================
+
+export type FloorMaterial =
+    Material & {
+        sourceCategory?: string;
+    };
+
+
+//==================================================
 // DEFAULT FLOOR
 //==================================================
 //
@@ -153,13 +172,13 @@ let cachedDefaultFloorMaterial:
 //==================================================
 
 let cachedFloorMaterials:
-    Material[] = [];
+    FloorMaterial[] = [];
 
 let floorCatalogLoaded =
     false;
 
 let floorMaterialsPromise:
-    Promise<Material[]> | null =
+    Promise<FloorMaterial[]> | null =
     null;
 
 
@@ -326,7 +345,8 @@ async function buildFloorMaterial(
     documentId: string,
     data: FirebaseFloorAsset,
     includeThumbnail: boolean
-): Promise<Material | null> {
+): Promise<FloorMaterial | null> {
+    // ← FIX: was Promise<Material | null>
 
     const materialId =
         data.id?.trim() ||
@@ -442,6 +462,11 @@ async function buildFloorMaterial(
         category:
             "flooring",
 
+        sourceCategory:
+            typeof data.category === "string"
+                ? data.category
+                : undefined,
+
         pricePerSquareMeter:
             Number(
                 data.price ?? 0
@@ -460,7 +485,8 @@ async function buildFloorMaterial(
         metalness:
             data.metalness
 
-    } satisfies Material;
+    } satisfies FloorMaterial;
+    // ← FIX: was satisfies Material
 }
 
 
@@ -522,7 +548,8 @@ export async function getDefaultFloorMaterial():
 //==================================================
 
 async function loadFloorMaterials():
-    Promise<Material[]> {
+    Promise<FloorMaterial[]> {
+    // ← FIX: was Promise<Material[]>
 
     const floorQuery =
         query(
@@ -579,7 +606,8 @@ async function loadFloorMaterials():
 
 
     const materials:
-        Material[] = [];
+        FloorMaterial[] = [];
+    // ← FIX: was Material[]
 
 
     //--------------------------------------------------
@@ -707,7 +735,8 @@ async function loadFloorMaterials():
 //==================================================
 
 export async function getFloorMaterials():
-    Promise<Material[]> {
+    Promise<FloorMaterial[]> {
+    // ← FIX: was Promise<Material[]>
 
     //--------------------------------------------------
     // Complete catalog already loaded.
@@ -986,7 +1015,8 @@ export function preloadFloorTexture(
 //==================================================
 
 export async function refreshFloorMaterials():
-    Promise<Material[]> {
+    Promise<FloorMaterial[]> {
+    // ← FIX: was Promise<Material[]>
 
     cachedDefaultFloorMaterial =
         null;
