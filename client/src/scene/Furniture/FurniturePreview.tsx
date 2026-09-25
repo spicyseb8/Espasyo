@@ -552,10 +552,6 @@ function getFurnitureSupport(
         }
 
 
-        //--------------------------------------------------
-        // Never use the furniture currently being moved
-        //--------------------------------------------------
-
         if (
             ignoreFurnitureId &&
 
@@ -627,6 +623,221 @@ function getFurnitureSupport(
 
 
 //======================================================
+// INTERIOR WALL FACE
+//======================================================
+
+function isInteriorWallFace(
+
+    wall: {
+
+        start: {
+
+            position:
+                Vector3;
+
+        };
+
+        end: {
+
+            position:
+                Vector3;
+
+        };
+
+    },
+
+    surfacePoint:
+        Vector3,
+
+    interiorNormal: {
+
+        x:
+            number;
+
+        z:
+            number;
+
+    },
+
+    wallThickness:
+        number
+
+): boolean {
+
+
+    const wallDirection =
+        wall.end.position.clone().sub(
+
+            wall.start.position
+
+        );
+
+
+    wallDirection.y =
+        0;
+
+
+    const wallLength =
+        wallDirection.length();
+
+
+    if (
+        wallLength <=
+        0.0001
+    ) {
+
+        return false;
+
+    }
+
+
+    wallDirection.normalize();
+
+
+    const wallStart =
+        new Vector3(
+
+            wall.start.position.x,
+
+            0,
+
+            wall.start.position.z
+
+        );
+
+
+    const hitPoint =
+        new Vector3(
+
+            surfacePoint.x,
+
+            0,
+
+            surfacePoint.z
+
+        );
+
+
+    const toHit =
+        hitPoint.clone().sub(
+            wallStart
+        );
+
+
+    const alongWall =
+        toHit.dot(
+            wallDirection
+        );
+
+
+    const endMargin =
+        Math.max(
+
+            0.03,
+
+            wallThickness *
+            0.60
+
+        );
+
+
+    if (
+        alongWall <=
+        endMargin
+    ) {
+
+        return false;
+
+    }
+
+
+    if (
+        alongWall >=
+        wallLength -
+        endMargin
+    ) {
+
+        return false;
+
+    }
+
+
+    const centerLinePoint =
+        wallStart.clone().addScaledVector(
+
+            wallDirection,
+
+            alongWall
+
+        );
+
+
+    const offset =
+        hitPoint.clone().sub(
+            centerLinePoint
+        );
+
+
+    const interiorDepth =
+
+        offset.x *
+            interiorNormal.x +
+
+        offset.z *
+            interiorNormal.z;
+
+
+    const minimumInteriorDepth =
+        Math.max(
+
+            0.015,
+
+            wallThickness *
+            0.20
+
+        );
+
+
+    return (
+
+        interiorDepth >=
+        minimumInteriorDepth
+
+    );
+
+}
+
+
+//======================================================
+// WALL FURNITURE ROTATION
+//======================================================
+
+function getWallFurnitureRotation(
+
+    interiorNormal: {
+
+        x:
+            number;
+
+        z:
+            number;
+
+    }
+
+): number {
+
+    return Math.atan2(
+
+        interiorNormal.x,
+
+        interiorNormal.z
+
+    );
+
+}
+
+
+//======================================================
 // PREVIEW MODEL PROPS
 //======================================================
 
@@ -681,8 +892,10 @@ function createPreviewMaterial():
 //======================================================
 
 function preparePreviewMaterials(
+
     model:
         Object3D
+
 ): void {
 
 
@@ -848,10 +1061,6 @@ function FurniturePreviewModel({
 
             () => {
 
-                //--------------------------------------------------
-                // Make sure transforms are current.
-                //--------------------------------------------------
-
                 model.updateMatrixWorld(
                     true
                 );
@@ -936,7 +1145,6 @@ function FurniturePreviewModel({
 
         () => {
 
-
             if (
                 !previewRef.current
             ) {
@@ -946,10 +1154,6 @@ function FurniturePreviewModel({
             }
 
 
-            //--------------------------------------------------
-            // Mouse ray
-            //--------------------------------------------------
-
             raycaster.setFromCamera(
 
                 furnitureInteraction.pointer,
@@ -958,10 +1162,6 @@ function FurniturePreviewModel({
 
             );
 
-
-            //--------------------------------------------------
-            // Placement surfaces
-            //--------------------------------------------------
 
             const placementSurfaces =
                 asset.placementSurfaces ??
@@ -996,19 +1196,11 @@ function FurniturePreviewModel({
                 );
 
 
-            //--------------------------------------------------
-            // Floor objects
-            //--------------------------------------------------
-
             const floorObjects =
                 getFloorObjects(
                     scene
                 );
 
-
-            //--------------------------------------------------
-            // Wall hit
-            //--------------------------------------------------
 
             const wallHit =
                 hitWallByRaycast(
@@ -1022,12 +1214,9 @@ function FurniturePreviewModel({
                 );
 
 
-            //--------------------------------------------------
-            // Furniture support
-            //--------------------------------------------------
-
             let support:
                 {
+
                     furniture:
                         Furniture;
 
@@ -1058,20 +1247,12 @@ function FurniturePreviewModel({
             }
 
 
-            //--------------------------------------------------
-            // Final transform
-            //--------------------------------------------------
-
             let finalTransform:
                 ReturnType<
                     typeof buildFurniturePlacement
                 > | null =
                 null;
 
-
-            //--------------------------------------------------
-            // Collision
-            //--------------------------------------------------
 
             let previewCollision:
                 FurnitureCollisionResult = {
@@ -1085,10 +1266,6 @@ function FurniturePreviewModel({
                 };
 
 
-            //--------------------------------------------------
-            // Whether preview is against wall
-            //--------------------------------------------------
-
             let previewIsWall =
                 false;
 
@@ -1101,11 +1278,14 @@ function FurniturePreviewModel({
                 support
             ) {
 
-
                 const supportY =
                     support.furniture.position.y +
 
                     support.furniture.height;
+
+
+                const surfaceRotationY =
+                    furnitureInteraction.rotationY;
 
 
                 const basePlacement =
@@ -1125,14 +1305,10 @@ function FurniturePreviewModel({
 
                         bounds,
 
-                        furnitureInteraction.rotationY
+                        surfaceRotationY
 
                     );
 
-
-                //--------------------------------------------------
-                // Place directly on support
-                //--------------------------------------------------
 
                 basePlacement.position.y =
                     supportY;
@@ -1198,7 +1374,6 @@ function FurniturePreviewModel({
                 wallHit
             ) {
 
-
                 const frame =
                     getWallFrame(
 
@@ -1209,12 +1384,39 @@ function FurniturePreviewModel({
                     );
 
 
-                //--------------------------------------------------
-                // No wall frame
-                //--------------------------------------------------
-
                 if (
                     !frame
+                ) {
+
+                    furnitureInteraction
+                        .clearPreview();
+
+
+                    previewRef.current.visible =
+                        false;
+
+
+                    return;
+
+                }
+
+
+                const validInteriorFace =
+                    isInteriorWallFace(
+
+                        wallHit.wall,
+
+                        wallHit.surfacePoint,
+
+                        frame.interiorNormal,
+
+                        state.wallThickness
+
+                    );
+
+
+                if (
+                    !validInteriorFace
                 ) {
 
                     furnitureInteraction
@@ -1247,9 +1449,13 @@ function FurniturePreviewModel({
                     frame.tangent;
 
 
-                //--------------------------------------------------
-                // Mouse position along wall
-                //--------------------------------------------------
+                const wallRotationY =
+                    getWallFurnitureRotation(
+
+                        frame.interiorNormal
+
+                    );
+
 
                 const relativeX =
                     wallPoint.x -
@@ -1269,10 +1475,6 @@ function FurniturePreviewModel({
                         tangent.z;
 
 
-                //--------------------------------------------------
-                // Furniture size along the wall
-                //--------------------------------------------------
-
                 const tangentExtent =
                     getFurnitureWallExtent(
 
@@ -1280,25 +1482,17 @@ function FurniturePreviewModel({
 
                         bounds.depth,
 
-                        furnitureInteraction.rotationY,
+                        wallRotationY,
 
                         tangent
 
                     );
 
 
-                //--------------------------------------------------
-                // Furniture too wide for wall
-                //--------------------------------------------------
-
                 const wallTooSmall =
                     frame.wallLength <
                     tangentExtent * 2;
 
-
-                //--------------------------------------------------
-                // Clamp horizontal position
-                //--------------------------------------------------
 
                 if (
                     wallTooSmall
@@ -1331,10 +1525,6 @@ function FurniturePreviewModel({
                 }
 
 
-                //--------------------------------------------------
-                // Center point along wall
-                //--------------------------------------------------
-
                 const wallCenterPoint =
                     new Vector3(
 
@@ -1351,17 +1541,9 @@ function FurniturePreviewModel({
                     );
 
 
-                //--------------------------------------------------
-                // Wall normal
-                //--------------------------------------------------
-
                 const normal =
                     frame.interiorNormal;
 
-
-                //--------------------------------------------------
-                // Furniture extent INTO room
-                //--------------------------------------------------
 
                 const normalExtent =
                     getFurnitureWallExtent(
@@ -1370,51 +1552,36 @@ function FurniturePreviewModel({
 
                         bounds.depth,
 
-                        furnitureInteraction.rotationY,
+                        wallRotationY,
 
                         normal
 
                     );
 
 
-                //--------------------------------------------------
-                // Move away from wall center
-                //--------------------------------------------------
+                const mountedDistance =
+
+                    state.wallThickness *
+                        0.5 +
+
+                    normalExtent +
+
+                    0.02;
+
 
                 const mountedX =
                     wallCenterPoint.x +
 
                     normal.x *
-                    (
-                        state.wallThickness *
-                        0.5 +
-
-                        normalExtent +
-
-                        0.02
-                    );
+                    mountedDistance;
 
 
                 const mountedZ =
                     wallCenterPoint.z +
 
                     normal.z *
-                    (
-                        state.wallThickness *
-                        0.5 +
+                    mountedDistance;
 
-                        normalExtent +
-
-                        0.02
-                    );
-
-
-                //--------------------------------------------------
-                // VERTICAL POSITION
-                //
-                // The mouse controls the CENTER of the furniture.
-                // Then we convert that to its bottom position.
-                //--------------------------------------------------
 
                 const halfHeight =
                     bounds.height *
@@ -1425,10 +1592,6 @@ function FurniturePreviewModel({
                     wallPoint.y -
                     halfHeight;
 
-
-                //--------------------------------------------------
-                // Keep bottom inside wall
-                //--------------------------------------------------
 
                 bottomY =
                     Math.max(
@@ -1447,10 +1610,6 @@ function FurniturePreviewModel({
                     );
 
 
-                //--------------------------------------------------
-                // Base placement
-                //--------------------------------------------------
-
                 const basePlacement =
                     buildFurniturePlacement(
 
@@ -1468,7 +1627,7 @@ function FurniturePreviewModel({
 
                         bounds,
 
-                        furnitureInteraction.rotationY
+                        wallRotationY
 
                     );
 
@@ -1509,13 +1668,13 @@ function FurniturePreviewModel({
                     );
 
 
+                basePlacement.rotationY =
+                    wallRotationY;
+
+
                 finalTransform =
                     basePlacement;
 
-
-                //--------------------------------------------------
-                // Collision
-                //--------------------------------------------------
 
                 previewCollision =
                     checkFurnitureCollision(
@@ -1541,11 +1700,6 @@ function FurniturePreviewModel({
                             height:
                                 bounds.height,
 
-                            //--------------------------------------------------
-                            // Ignore the wall we are mounted against.
-                            // Other walls + furniture are still checked.
-                            //--------------------------------------------------
-
                             ignoreWallId:
                                 wallHit.wall.id,
 
@@ -1558,16 +1712,13 @@ function FurniturePreviewModel({
                     );
 
 
-                //--------------------------------------------------
-                // If furniture itself is taller/wider than wall,
-                // it cannot be a valid placement.
-                //--------------------------------------------------
-
                 if (
+
                     wallTooSmall ||
 
                     bounds.height >
                         state.wallHeight
+
                 ) {
 
                     previewCollision = {
@@ -1593,7 +1744,6 @@ function FurniturePreviewModel({
                 canPlaceOnFloor
             ) {
 
-
                 const floorPoint =
                     new Vector3();
 
@@ -1601,10 +1751,6 @@ function FurniturePreviewModel({
                 let foundFloor =
                     false;
 
-
-                //--------------------------------------------------
-                // Mouse over wall → find floor beneath
-                //--------------------------------------------------
 
                 if (
                     wallHit
@@ -1641,10 +1787,6 @@ function FurniturePreviewModel({
                 }
 
 
-                //--------------------------------------------------
-                // Normal floor hit
-                //--------------------------------------------------
-
                 if (
                     !foundFloor
                 ) {
@@ -1676,10 +1818,6 @@ function FurniturePreviewModel({
                 }
 
 
-                //--------------------------------------------------
-                // No floor
-                //--------------------------------------------------
-
                 if (
                     !foundFloor
                 ) {
@@ -1697,10 +1835,6 @@ function FurniturePreviewModel({
                 }
 
 
-                //--------------------------------------------------
-                // Base placement
-                //--------------------------------------------------
-
                 const transform =
                     buildFurniturePlacement(
 
@@ -1714,10 +1848,6 @@ function FurniturePreviewModel({
 
                     );
 
-
-                //--------------------------------------------------
-                // Snapping
-                //--------------------------------------------------
 
                 finalTransform =
                     snapFurniturePlacement(
@@ -1739,10 +1869,6 @@ function FurniturePreviewModel({
                     );
 
 
-                //--------------------------------------------------
-                // Footprint inside room
-                //--------------------------------------------------
-
                 const insideFloor =
                     isFootprintInsideFloor(
 
@@ -1760,10 +1886,6 @@ function FurniturePreviewModel({
 
                     );
 
-
-                //--------------------------------------------------
-                // Collision
-                //--------------------------------------------------
 
                 if (
                     !insideFloor
@@ -1826,14 +1948,6 @@ function FurniturePreviewModel({
 
             else {
 
-                //--------------------------------------------------
-                // This is particularly important for wall-only
-                // furniture:
-                //
-                // If the cursor is NOT over a wall, the preview
-                // disappears instead of falling back to the floor.
-                //--------------------------------------------------
-
                 furnitureInteraction
                     .clearPreview();
 
@@ -1892,10 +2006,6 @@ function FurniturePreviewModel({
                 true;
 
 
-            //==================================================
-            // POSITION
-            //==================================================
-
             previewRef.current.position.copy(
 
                 finalTransform.position
@@ -1903,20 +2013,9 @@ function FurniturePreviewModel({
             );
 
 
-            //==================================================
-            // ROTATION
-            //==================================================
-
             previewRef.current.rotation.y =
                 finalTransform.rotationY;
 
-
-            //--------------------------------------------------
-            // IMPORTANT:
-            //
-            // Apply the exact same native-model offset used by
-            // actual placed furniture.
-            //--------------------------------------------------
 
             model.position.copy(
 
@@ -1948,10 +2047,6 @@ function FurniturePreviewModel({
                     }
 
 
-                    //--------------------------------------------------
-                    // Single material
-                    //--------------------------------------------------
-
                     if (
                         child.material
                             instanceof
@@ -1981,10 +2076,6 @@ function FurniturePreviewModel({
 
                     }
 
-
-                    //--------------------------------------------------
-                    // Multiple materials
-                    //--------------------------------------------------
 
                     if (
                         Array.isArray(
@@ -2069,15 +2160,15 @@ function FurniturePreviewModel({
 
 export default function FurniturePreview() {
 
-
     const {
-        state
+        state,
+        dispatch
     } = useEditor();
 
 
-    //--------------------------------------------------
+    //==================================================
     // Firebase furniture catalog
-    //--------------------------------------------------
+    //==================================================
 
     const [
         firebaseFurnitureAssets,
@@ -2086,6 +2177,119 @@ export default function FurniturePreview() {
         Asset[]
     >([]);
 
+
+    //==================================================
+    // TRACK FURNITURE COUNT
+    //==================================================
+    //
+    // When furniture is actually placed, state.furniture
+    // increases by one.
+    //
+    // We use this to end the current placement session.
+    //
+    // This means:
+    //
+    //     Select furniture
+    //          ↓
+    //     Place furniture
+    //          ↓
+    //     Selection is cleared
+    //          ↓
+    //     Preview disappears
+    //
+    // To place another furniture item, the user must
+    // select it again from the Furniture panel.
+    //==================================================
+
+    const furnitureCountRef =
+        useRef(
+            state.furniture.length
+        );
+
+
+    useEffect(
+
+        () => {
+
+            const previousCount =
+                furnitureCountRef.current;
+
+
+            const currentCount =
+                state.furniture.length;
+
+
+            //--------------------------------------------------
+            // A new furniture item was added.
+            //--------------------------------------------------
+
+            if (
+                currentCount >
+                previousCount
+            ) {
+
+                //--------------------------------------------------
+                // End the current placement session.
+                //--------------------------------------------------
+
+                dispatch({
+
+                    type:
+                        "SET_SELECTED_ASSET",
+
+                    payload:
+                        null
+
+                });
+
+
+                dispatch({
+
+                    type:
+                        "SET_BUILD_TOOL",
+
+                    payload:
+                        BuildTool.None
+
+                });
+
+
+                //--------------------------------------------------
+                // Clear the preview placement data.
+                //--------------------------------------------------
+
+                furnitureInteraction
+                    .clearPreview();
+
+            }
+
+
+            //--------------------------------------------------
+            // Always remember the latest count.
+            //
+            // This also handles:
+            //
+            // - deleting furniture
+            // - loading a project
+            // - moving existing furniture
+            //--------------------------------------------------
+
+            furnitureCountRef.current =
+                currentCount;
+
+        },
+
+        [
+            state.furniture.length,
+            dispatch
+        ]
+
+    );
+
+
+    //==================================================
+    // LOAD FIREBASE CATALOG
+    //==================================================
 
     useEffect(
 
@@ -2146,14 +2350,13 @@ export default function FurniturePreview() {
     );
 
 
-    //--------------------------------------------------
-    // Find preview furniture asset
-    //--------------------------------------------------
+    //==================================================
+    // FIND PREVIEW FURNITURE ASSET
+    //==================================================
 
     const findPreviewFurnitureAsset =
         (assetId: string):
             Asset | null => {
-
 
             return (
 
@@ -2174,9 +2377,9 @@ export default function FurniturePreview() {
         };
 
 
-    //--------------------------------------------------
-    // Layout required
-    //--------------------------------------------------
+    //==================================================
+    // LAYOUT REQUIRED
+    //==================================================
 
     if (
         !state.layoutConfirmed
@@ -2187,9 +2390,9 @@ export default function FurniturePreview() {
     }
 
 
-    //--------------------------------------------------
-    // Existing furniture being moved
-    //--------------------------------------------------
+    //==================================================
+    // EXISTING FURNITURE BEING MOVED
+    //==================================================
 
     const movingFurniture =
         state.movingFurnitureId
@@ -2205,9 +2408,9 @@ export default function FurniturePreview() {
             : null;
 
 
-    //--------------------------------------------------
-    // Asset for moving furniture
-    //--------------------------------------------------
+    //==================================================
+    // ASSET FOR MOVING FURNITURE
+    //==================================================
 
     const movingAsset =
         movingFurniture
@@ -2221,11 +2424,12 @@ export default function FurniturePreview() {
             : null;
 
 
-    //--------------------------------------------------
-    // New furniture preview
-    //--------------------------------------------------
+    //==================================================
+    // NEW FURNITURE PREVIEW
+    //==================================================
 
     const newFurniturePreview =
+
         state.selectedAsset &&
 
         state.selectedAsset.type ===
@@ -2235,24 +2439,27 @@ export default function FurniturePreview() {
             BuildTool.Furniture;
 
 
-    //--------------------------------------------------
-    // Existing furniture movement
-    //--------------------------------------------------
+    //==================================================
+    // EXISTING FURNITURE MOVEMENT
+    //==================================================
 
     const movingFurniturePreview =
+
         movingFurniture !== null &&
 
         movingAsset !== null;
 
 
-    //--------------------------------------------------
-    // Nothing to render
-    //--------------------------------------------------
+    //==================================================
+    // NOTHING TO RENDER
+    //==================================================
 
     if (
+
         !newFurniturePreview &&
 
         !movingFurniturePreview
+
     ) {
 
         return null;
@@ -2260,11 +2467,12 @@ export default function FurniturePreview() {
     }
 
 
-    //--------------------------------------------------
-    // Select actual asset
-    //--------------------------------------------------
+    //==================================================
+    // SELECT ACTUAL ASSET
+    //==================================================
 
     const previewAsset =
+
         movingFurniturePreview
 
             ? movingAsset
@@ -2272,12 +2480,31 @@ export default function FurniturePreview() {
             : state.selectedAsset;
 
 
-    //--------------------------------------------------
-    // Safety
-    //--------------------------------------------------
+    //==================================================
+    // SAFETY
+    //==================================================
 
     if (
         !previewAsset
+    ) {
+
+        return null;
+
+    }
+
+
+    //==================================================
+    // SAFETY FOR MODEL URL
+    //==================================================
+
+    if (
+
+        typeof previewAsset.model !==
+        "string" ||
+
+        previewAsset.model.trim() ===
+        ""
+
     ) {
 
         return null;
@@ -2328,19 +2555,17 @@ function getFurnitureWallExtent(
         number,
 
     axis: {
+
         x:
             number;
 
         z:
             number;
+
     }
 
 ): number {
 
-
-    //--------------------------------------------------
-    // Furniture local X
-    //--------------------------------------------------
 
     const localX = {
 
@@ -2357,10 +2582,6 @@ function getFurnitureWallExtent(
     };
 
 
-    //--------------------------------------------------
-    // Furniture local Z
-    //--------------------------------------------------
-
     const localZ = {
 
         x:
@@ -2375,10 +2596,6 @@ function getFurnitureWallExtent(
 
     };
 
-
-    //--------------------------------------------------
-    // Projection
-    //--------------------------------------------------
 
     const xDot =
         localX.x *
@@ -2395,10 +2612,6 @@ function getFurnitureWallExtent(
         localZ.z *
             axis.z;
 
-
-    //--------------------------------------------------
-    // Final half-extent
-    //--------------------------------------------------
 
     return (
 

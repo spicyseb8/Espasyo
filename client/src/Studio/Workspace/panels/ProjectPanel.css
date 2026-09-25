@@ -1,0 +1,366 @@
+/* ==========================================================
+   PROJECT PANEL
+   Matches Floor Plan Panel visual style
+   ========================================================== */
+
+.design-sidebar {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 12px;
+
+    padding: 20px;
+
+    box-sizing: border-box;
+
+    width: 100%;
+}
+
+
+/* ==========================================================
+   PROJECT CARD
+   ========================================================== */
+
+.panel-card {
+    width: 100%;
+
+    box-sizing: border-box;
+
+    margin: 0;
+
+    padding: 14px;
+
+    background: #ffffff;
+
+    border: 1px solid var(--ws-border);
+
+    border-radius: 12px;
+
+    box-shadow: var(--ws-shadow-sm);
+}
+
+
+/* ==========================================================
+   SECTION TITLE
+   ========================================================== */
+
+.section-title {
+    margin: 0 0 12px;
+
+    font-size: 12px;
+
+    font-weight: 700;
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.07em;
+
+    color: var(--ws-text-muted);
+}
+
+
+/* ==========================================================
+   PROJECT NAME GROUP
+   ========================================================== */
+
+.setting-group {
+    width: 100%;
+
+    margin: 0;
+
+    padding: 0;
+}
+
+
+/* ==========================================================
+   LABEL
+   ========================================================== */
+
+.setting-label {
+    display: block;
+
+    margin: 0 0 6px;
+
+    font-size: 11px;
+
+    color: var(--ws-text-muted);
+}
+
+
+/* ==========================================================
+   PROJECT NAME INPUT
+   ========================================================== */
+
+.setting-input {
+    width: 100%;
+
+    height: 38px;
+
+    padding:
+        0 10px;
+
+    box-sizing: border-box;
+
+    border:
+        1px solid var(--ws-border);
+
+    border-radius: 10px;
+
+    background:
+        var(--ws-input-bg);
+
+    color:
+        var(--ws-text);
+
+    font-size:
+        12px;
+
+    outline:
+        none;
+
+    transition:
+        border-color .15s ease,
+        box-shadow .15s ease,
+        background .15s ease;
+}
+
+
+/* ==========================================================
+   INPUT FOCUS
+   ========================================================== */
+
+.setting-input:focus {
+    border-color:
+        var(--ws-accent);
+
+    box-shadow:
+        0 0 0 3px
+        var(--ws-accent-soft);
+}
+
+
+/* ==========================================================
+   INPUT PLACEHOLDER
+   ========================================================== */
+
+.setting-input::placeholder {
+    color:
+        var(--ws-text-muted);
+
+    opacity:
+        0.75;
+}
+
+
+/* ==========================================================
+   DISABLED INPUT
+   ========================================================== */
+
+.setting-input:disabled {
+    background:
+        #f5f5f5;
+
+    color:
+        var(--ws-text-muted);
+
+    cursor:
+        not-allowed;
+}
+
+
+/* ==========================================================
+   PROJECT ID
+   ========================================================== */
+
+.project-id-display {
+    width: 100%;
+
+    box-sizing: border-box;
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 5px;
+
+    margin-top: 12px;
+
+    padding: 10px;
+
+    border:
+        1px solid var(--ws-border);
+
+    border-radius: 10px;
+
+    background:
+        var(--ws-input-bg);
+}
+
+
+/* ==========================================================
+   PROJECT ID LABEL
+   ========================================================== */
+
+.project-id-display span:first-child {
+    font-size:
+        10px;
+
+    font-weight:
+        600;
+
+    text-transform:
+        uppercase;
+
+    letter-spacing:
+        0.05em;
+
+    color:
+        var(--ws-text-muted);
+}
+
+
+/* ==========================================================
+   PROJECT ID VALUE
+   ========================================================== */
+
+.project-id-display span:last-child {
+    overflow:
+        hidden;
+
+    white-space:
+        nowrap;
+
+    text-overflow:
+        ellipsis;
+
+    font-family:
+        monospace;
+
+    font-size:
+        10px;
+
+    color:
+        var(--ws-text);
+}
+
+
+/* ==========================================================
+   SAVE BUTTON
+   ========================================================== */
+
+.confirm-layout-button {
+    width:
+        100%;
+
+    min-height:
+        42px;
+
+    margin:
+        12px 0 0;
+
+    padding:
+        0 14px;
+
+    border:
+        0;
+
+    border-radius:
+        10px;
+
+    background:
+        var(--ws-accent);
+
+    color:
+        #ffffff;
+
+    font-size:
+        12px;
+
+    font-weight:
+        700;
+
+    cursor:
+        pointer;
+
+    box-shadow:
+        var(--ws-shadow-sm);
+
+    transition:
+        background .15s ease,
+        transform .05s ease,
+        opacity .15s ease;
+}
+
+
+/* ==========================================================
+   SAVE BUTTON HOVER
+   ========================================================== */
+
+.confirm-layout-button:hover:not(:disabled) {
+    background:
+        #f58a30;
+}
+
+
+/* ==========================================================
+   SAVE BUTTON ACTIVE
+   ========================================================== */
+
+.confirm-layout-button:active:not(:disabled) {
+    transform:
+        translateY(1px);
+}
+
+
+/* ==========================================================
+   SAVE BUTTON DISABLED
+   ========================================================== */
+
+.confirm-layout-button:disabled {
+    opacity:
+        0.6;
+
+    cursor:
+        not-allowed;
+}
+
+
+/* ==========================================================
+   SAVE MESSAGE
+   ========================================================== */
+
+.save-message {
+    width:
+        100%;
+
+    box-sizing:
+        border-box;
+
+    margin-top:
+        10px;
+
+    padding:
+        9px 10px;
+
+    border:
+        1px solid var(--ws-border);
+
+    border-radius:
+        10px;
+
+    background:
+        var(--ws-input-bg);
+
+    color:
+        var(--ws-text-muted);
+
+    font-size:
+        11px;
+
+    line-height:
+        1.4;
+
+    word-break:
+        break-word;
+}

@@ -31,10 +31,10 @@ import type {
 } from "../../assets/Asset";
 
 import {
+    BackSide,
+    DoubleSide,
     Mesh,
-    MeshPhysicalMaterial,
-    MeshStandardMaterial,
-    Object3D
+    MeshBasicMaterial
 } from "three";
 
 
@@ -58,282 +58,6 @@ interface FurnitureItemProps {
 
     modelOffset:
         Furniture["modelOffset"];
-
-}
-
-
-//======================================================
-// HIGHLIGHT SETTINGS
-//======================================================
-
-const HOVER_COLOR =
-    "#63B8FF";
-
-const HOVER_EMISSIVE_INTENSITY =
-    0.35;
-
-
-//======================================================
-// ORIGINAL MATERIAL USER DATA
-//======================================================
-
-const ORIGINAL_COLOR_KEY =
-    "__espasyoOriginalColor";
-
-const ORIGINAL_EMISSIVE_KEY =
-    "__espasyoOriginalEmissive";
-
-const ORIGINAL_EMISSIVE_INTENSITY_KEY =
-    "__espasyoOriginalEmissiveIntensity";
-
-
-//======================================================
-// APPLY HOVER HIGHLIGHT
-//======================================================
-
-function setFurnitureHighlight(
-
-    object:
-        Object3D,
-
-    highlighted:
-        boolean
-
-) {
-
-    object.traverse(
-
-        child => {
-
-            if (
-                !(child instanceof Mesh)
-            ) {
-
-                return;
-            }
-
-
-            const materials =
-                Array.isArray(
-                    child.material
-                )
-
-                    ? child.material
-
-                    : [
-                        child.material
-                    ];
-
-
-            materials.forEach(
-
-                material => {
-
-                    const standard =
-                        material as
-                            MeshStandardMaterial |
-                            MeshPhysicalMaterial;
-
-
-                    //--------------------------------------------------
-                    // SAVE ORIGINAL COLOR
-                    //--------------------------------------------------
-
-                    if (
-                        "color" in material &&
-                        material.color
-                    ) {
-
-                        if (
-                            standard.userData[
-                                ORIGINAL_COLOR_KEY
-                            ] === undefined
-                        ) {
-
-                            standard.userData[
-                                ORIGINAL_COLOR_KEY
-                            ] =
-                                material.color.getHex();
-
-                        }
-
-                    }
-
-
-                    //--------------------------------------------------
-                    // SAVE ORIGINAL EMISSIVE
-                    //--------------------------------------------------
-
-                    if (
-                        "emissive" in standard &&
-                        standard.emissive
-                    ) {
-
-                        if (
-                            standard.userData[
-                                ORIGINAL_EMISSIVE_KEY
-                            ] === undefined
-                        ) {
-
-                            standard.userData[
-                                ORIGINAL_EMISSIVE_KEY
-                            ] =
-                                standard.emissive.getHex();
-
-                        }
-
-
-                        if (
-                            standard.userData[
-                                ORIGINAL_EMISSIVE_INTENSITY_KEY
-                            ] === undefined
-                        ) {
-
-                            standard.userData[
-                                ORIGINAL_EMISSIVE_INTENSITY_KEY
-                            ] =
-                                standard.emissiveIntensity;
-
-                        }
-
-                    }
-
-
-                    //--------------------------------------------------
-                    // HIGHLIGHT
-                    //--------------------------------------------------
-
-                    if (
-                        highlighted
-                    ) {
-
-                        if (
-                            "emissive" in standard &&
-                            standard.emissive
-                        ) {
-
-                            standard.emissive.set(
-                                HOVER_COLOR
-                            );
-
-                            standard.emissiveIntensity =
-                                HOVER_EMISSIVE_INTENSITY;
-
-                            return;
-
-                        }
-
-
-                        if (
-                            "color" in material &&
-                            material.color
-                        ) {
-
-                            const originalColor =
-                                standard.userData[
-                                    ORIGINAL_COLOR_KEY
-                                ];
-
-
-                            if (
-                                typeof originalColor ===
-                                "number"
-                            ) {
-
-                                material.color.setHex(
-                                    originalColor
-                                );
-
-                            }
-
-
-                            material.color.offsetHSL(
-                                0,
-                                0,
-                                0.12
-                            );
-
-                        }
-
-
-                        return;
-
-                    }
-
-
-                    //--------------------------------------------------
-                    // RESTORE ORIGINAL
-                    //--------------------------------------------------
-
-                    const originalColor =
-                        standard.userData[
-                            ORIGINAL_COLOR_KEY
-                        ];
-
-
-                    if (
-                        typeof originalColor ===
-                        "number" &&
-
-                        "color" in material &&
-                        material.color
-                    ) {
-
-                        material.color.setHex(
-                            originalColor
-                        );
-
-                    }
-
-
-                    //--------------------------------------------------
-                    // RESTORE EMISSIVE
-                    //--------------------------------------------------
-
-                    const originalEmissive =
-                        standard.userData[
-                            ORIGINAL_EMISSIVE_KEY
-                        ];
-
-
-                    if (
-                        typeof originalEmissive ===
-                        "number" &&
-
-                        "emissive" in standard &&
-                        standard.emissive
-                    ) {
-
-                        standard.emissive.setHex(
-                            originalEmissive
-                        );
-
-
-                        const originalIntensity =
-                            standard.userData[
-                                ORIGINAL_EMISSIVE_INTENSITY_KEY
-                            ];
-
-
-                        if (
-                            typeof originalIntensity ===
-                            "number"
-                        ) {
-
-                            standard.emissiveIntensity =
-                                originalIntensity;
-
-                        }
-
-                    }
-
-                }
-
-            );
-
-        }
-
-    );
 
 }
 
@@ -429,6 +153,7 @@ function FurnitureItem({
     ) {
 
         return null;
+
     }
 
 
@@ -444,6 +169,7 @@ function FurnitureItem({
     ) {
 
         return null;
+
     }
 
 
@@ -463,6 +189,7 @@ function FurnitureItem({
             "Furniture asset has no valid model URL:",
 
             {
+
                 furnitureId:
                     id,
 
@@ -470,11 +197,13 @@ function FurnitureItem({
                     assetId,
 
                 asset
+
             }
 
         );
 
         return null;
+
     }
 
 
@@ -506,6 +235,10 @@ function FurnitureItem({
                 modelOffset
             }
 
+            hovered={
+                hovered
+            }
+
             setHovered={
                 setHovered
             }
@@ -518,13 +251,7 @@ function FurnitureItem({
 
 
 //======================================================
-// FURNITURE MODEL
-//======================================================
-//
-// useGLTF() is isolated here.
-//
-// This component cannot mount until FurnitureItem
-// confirms that asset.model is a real URL.
+// FURNITURE MODEL PROPS
 //======================================================
 
 interface FurnitureModelProps {
@@ -544,11 +271,24 @@ interface FurnitureModelProps {
     modelOffset:
         Furniture["modelOffset"];
 
+    hovered:
+        boolean;
+
     setHovered:
         (value: boolean) => void;
 
 }
 
+
+//======================================================
+// FURNITURE MODEL
+//======================================================
+//
+// useGLTF() is isolated here.
+//
+// This component cannot mount until FurnitureItem
+// confirms that asset.model is a real URL.
+//======================================================
 
 function FurnitureModel({
 
@@ -561,6 +301,8 @@ function FurnitureModel({
     rotationY,
 
     modelOffset,
+
+    hovered,
 
     setHovered
 
@@ -583,7 +325,7 @@ function FurnitureModel({
 
 
     //--------------------------------------------------
-    // Clone model
+    // Clone actual furniture model
     //--------------------------------------------------
 
     const model =
@@ -679,6 +421,294 @@ function FurnitureModel({
 
 
     //--------------------------------------------------
+    // Gray outline model
+    //
+    // VISUAL ONLY:
+    // Every mesh has raycast disabled.
+    //--------------------------------------------------
+
+    const outlineModel =
+        useMemo(
+
+            () => {
+
+                const clone =
+                    scene.clone(
+                        true
+                    );
+
+
+                clone.traverse(
+
+                    child => {
+
+                        if (
+                            !(child instanceof Mesh)
+                        ) {
+
+                            return;
+
+                        }
+
+
+                        //--------------------------------------------------
+                        // IMPORTANT:
+                        //
+                        // This mesh must NEVER receive pointer events.
+                        // Otherwise the mouse can alternate between the
+                        // outline and real furniture and cause flicker.
+                        //--------------------------------------------------
+
+                        child.raycast =
+                            () => null;
+
+
+                        //--------------------------------------------------
+                        // Gray outline material
+                        //--------------------------------------------------
+
+                        child.material =
+
+                            Array.isArray(
+                                child.material
+                            )
+
+                                ? child.material.map(
+
+                                    () =>
+                                        new MeshBasicMaterial({
+
+                                            color:
+                                                "#666666",
+
+                                            transparent:
+                                                true,
+
+                                            opacity:
+                                                0.90,
+
+                                            depthWrite:
+                                                false,
+
+                                            side:
+                                                BackSide
+
+                                        })
+
+                                )
+
+                                : new MeshBasicMaterial({
+
+                                    color:
+                                        "#666666",
+
+                                    transparent:
+                                        true,
+
+                                    opacity:
+                                        0.90,
+
+                                    depthWrite:
+                                        false,
+
+                                    side:
+                                        BackSide
+
+                                });
+
+
+                        //--------------------------------------------------
+                        // Visual only
+                        //--------------------------------------------------
+
+                        child.castShadow =
+                            false;
+
+                        child.receiveShadow =
+                            false;
+
+
+                        //--------------------------------------------------
+                        // Render behind actual furniture
+                        //--------------------------------------------------
+
+                        child.renderOrder =
+                            -1;
+
+                    }
+
+                );
+
+
+                return clone;
+
+            },
+
+            [
+                scene
+            ]
+
+        );
+
+
+    //--------------------------------------------------
+    // Subtle gray highlight model
+    //
+    // VISUAL ONLY:
+    // Every mesh has raycast disabled.
+    //--------------------------------------------------
+
+    const highlightModel =
+        useMemo(
+
+            () => {
+
+                const clone =
+                    scene.clone(
+                        true
+                    );
+
+
+                clone.traverse(
+
+                    child => {
+
+                        if (
+                            !(child instanceof Mesh)
+                        ) {
+
+                            return;
+
+                        }
+
+
+                        //--------------------------------------------------
+                        // IMPORTANT:
+                        //
+                        // This mesh must NEVER receive pointer events.
+                        //--------------------------------------------------
+
+                        child.raycast =
+                            () => null;
+
+
+                        //--------------------------------------------------
+                        // Very subtle gray overlay
+                        //--------------------------------------------------
+
+                        child.material =
+
+                            Array.isArray(
+                                child.material
+                            )
+
+                                ? child.material.map(
+
+                                    () =>
+                                        new MeshBasicMaterial({
+
+                                            color:
+                                                "#888888",
+
+                                            transparent:
+                                                true,
+
+                                            opacity:
+                                                0.055,
+
+                                            depthWrite:
+                                                false,
+
+                                            side:
+                                                DoubleSide
+
+                                        })
+
+                                )
+
+                                : new MeshBasicMaterial({
+
+                                    color:
+                                        "#888888",
+
+                                    transparent:
+                                        true,
+
+                                    opacity:
+                                        0.055,
+
+                                    depthWrite:
+                                        false,
+
+                                    side:
+                                        DoubleSide
+
+                                });
+
+
+                        //--------------------------------------------------
+                        // Visual only
+                        //--------------------------------------------------
+
+                        child.castShadow =
+                            false;
+
+                        child.receiveShadow =
+                            false;
+
+
+                        child.renderOrder =
+                            1;
+
+                    }
+
+                );
+
+
+                return clone;
+
+            },
+
+            [
+                scene
+            ]
+
+        );
+
+
+    //--------------------------------------------------
+    // Selected furniture
+    //--------------------------------------------------
+
+    const selected =
+        state.selectedFurnitureId ===
+        id;
+
+
+    //--------------------------------------------------
+    // Show gray selection state
+    //
+    // Hover:
+    //     gray outline + subtle gray highlight
+    //
+    // Selected:
+    //     gray outline + subtle gray highlight
+    //
+    // Walkthrough:
+    //     no highlight
+    //--------------------------------------------------
+
+    const showHighlight =
+
+        !state.walkthroughMode &&
+
+        (
+            hovered ||
+            selected
+        );
+
+
+    //--------------------------------------------------
     // Clear hover when furniture starts moving
     //--------------------------------------------------
 
@@ -695,11 +725,6 @@ function FurnitureModel({
                     false
                 );
 
-                setFurnitureHighlight(
-                    model,
-                    false
-                );
-
             }
 
         },
@@ -707,7 +732,6 @@ function FurnitureModel({
         [
             state.movingFurnitureId,
             id,
-            model,
             setHovered
         ]
 
@@ -726,19 +750,18 @@ function FurnitureModel({
             ) {
 
                 return;
+
             }
 
+
+            //--------------------------------------------------
+            // Stop event so parent objects do not interfere.
+            //--------------------------------------------------
 
             event.stopPropagation();
 
 
             setHovered(
-                true
-            );
-
-
-            setFurnitureHighlight(
-                model,
                 true
             );
 
@@ -757,6 +780,7 @@ function FurnitureModel({
             ) {
 
                 return;
+
             }
 
 
@@ -764,12 +788,6 @@ function FurnitureModel({
 
 
             setHovered(
-                false
-            );
-
-
-            setFurnitureHighlight(
-                model,
                 false
             );
 
@@ -790,15 +808,23 @@ function FurnitureModel({
             }}
 
             position={[
+
                 position.x,
+
                 position.y,
+
                 position.z
+
             ]}
 
             rotation={[
+
                 0,
+
                 rotationY,
+
                 0
+
             ]}
 
             onPointerEnter={
@@ -811,6 +837,78 @@ function FurnitureModel({
 
         >
 
+            {/*==================================================
+                GRAY OUTLINE
+            ==================================================*/}
+
+            {
+                showHighlight && (
+
+                    <primitive
+
+                        object={
+                            outlineModel
+                        }
+
+                        position={[
+
+                            modelOffset.x,
+
+                            modelOffset.y,
+
+                            modelOffset.z
+
+                        ]}
+
+                        scale={[
+
+                            1.008,
+
+                            1.008,
+
+                            1.008
+
+                        ]}
+
+                    />
+
+                )
+            }
+
+
+            {/*==================================================
+                SUBTLE GRAY HIGHLIGHT
+            ==================================================*/}
+
+            {
+                showHighlight && (
+
+                    <primitive
+
+                        object={
+                            highlightModel
+                        }
+
+                        position={[
+
+                            modelOffset.x,
+
+                            modelOffset.y,
+
+                            modelOffset.z
+
+                        ]}
+
+                    />
+
+                )
+            }
+
+
+            {/*==================================================
+                ACTUAL FURNITURE
+            ==================================================*/}
+
             <primitive
 
                 object={
@@ -818,9 +916,13 @@ function FurnitureModel({
                 }
 
                 position={[
+
                     modelOffset.x,
+
                     modelOffset.y,
+
                     modelOffset.z
+
                 ]}
 
             />

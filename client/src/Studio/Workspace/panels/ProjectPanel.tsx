@@ -28,7 +28,7 @@ import {
     ref,
     uploadString
 } from "firebase/storage";
-
+import "./ProjectPanel.css";
 
 //==================================================
 // PROJECT JSON

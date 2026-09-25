@@ -1,4 +1,5 @@
 import {
+    useEffect,
     useState
 } from "react";
 
@@ -18,6 +19,15 @@ import useEditor
     from "../context/editor/useEditor";
 
 import {
+    findAsset
+} from "../assets/AssetLibrary";
+
+import {
+    getCachedFurnitureAsset,
+    getFurnitureAssets
+} from "../engine/furniture/FirebaseFurnitureLibrary";
+
+import {
     furnitureInteraction
 } from "./Furniture/FurnitureInteraction";
 
@@ -35,8 +45,16 @@ import {
 //======================================================
 
 function RotateIcon() {
+
     return (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+
+        <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+        >
+
             <path
                 d="M20 11a8 8 0 1 0-2.6 6.2"
                 stroke="currentColor"
@@ -44,6 +62,7 @@ function RotateIcon() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
             />
+
             <path
                 d="M20 5v6h-6"
                 stroke="currentColor"
@@ -51,13 +70,25 @@ function RotateIcon() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
             />
+
         </svg>
+
     );
+
 }
 
+
 function MoveIcon() {
+
     return (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+
+        <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+        >
+
             <path
                 d="M12 3v18M3 12h18M6 6l-3 3 3 3M18 6l3 3-3 3M6 18l-3-3 3-3M18 18l3-3-3-3"
                 stroke="currentColor"
@@ -65,13 +96,25 @@ function MoveIcon() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
             />
+
         </svg>
+
     );
+
 }
 
+
 function TrashIcon() {
+
     return (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+
+        <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+        >
+
             <path
                 d="M4 7h16M9 7V4.8c0-.44.36-.8.8-.8h4.4c.44 0 .8.36.8.8V7m-9 0 .9 12.1c.05.65.6 1.15 1.25 1.15h6.7c.65 0 1.2-.5 1.25-1.15L18 7"
                 stroke="currentColor"
@@ -79,8 +122,11 @@ function TrashIcon() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
             />
+
         </svg>
+
     );
+
 }
 
 
@@ -89,68 +135,178 @@ function TrashIcon() {
 //======================================================
 
 const TOOLBAR_STYLES = `
+
 .est-toolbar {
-    animation: est-pop 120ms ease-out;
+    animation:
+        est-pop
+        120ms
+        ease-out;
 }
+
 @keyframes est-pop {
-    from { opacity: 0; transform: translateY(-50%) scale(0.9); }
-    to   { opacity: 1; transform: translateY(-50%) scale(1); }
+
+    from {
+        opacity: 0;
+        transform:
+            translateY(-50%)
+            scale(0.9);
+    }
+
+    to {
+        opacity: 1;
+        transform:
+            translateY(-50%)
+            scale(1);
+    }
+
 }
+
 .est-btn {
+
     position: relative;
+
     display: flex;
+
     align-items: center;
+
     justify-content: center;
+
     width: 34px;
+
     height: 34px;
+
     border: none;
+
     background: transparent;
+
     color: #52525b;
+
     border-radius: 9px;
+
     cursor: pointer;
-    transition: background 120ms ease, color 120ms ease, transform 80ms ease;
+
+    transition:
+        background 120ms ease,
+        color 120ms ease,
+        transform 80ms ease;
 }
+
 .est-btn:hover {
-    background: #f4f4f5;
-    color: #18181b;
+
+    background:
+        #f4f4f5;
+
+    color:
+        #18181b;
 }
+
 .est-btn:active {
-    transform: scale(0.92);
+
+    transform:
+        scale(0.92);
 }
+
 .est-btn-delete:hover {
-    background: #fdecec;
-    color: #e0483f;
+
+    background:
+        #fdecec;
+
+    color:
+        #e0483f;
 }
+
 .est-tooltip {
+
     position: absolute;
-    right: calc(100% + 8px);
-    top: 50%;
-    transform: translateY(-50%);
-    background: #18181b;
-    color: #fafafa;
-    font-size: 11px;
-    font-weight: 500;
-    line-height: 1;
-    white-space: nowrap;
-    padding: 5px 8px;
-    border-radius: 6px;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 120ms ease;
+
+    right:
+        calc(100% + 8px);
+
+    top:
+        50%;
+
+    transform:
+        translateY(-50%);
+
+    background:
+        #18181b;
+
+    color:
+        #fafafa;
+
+    font-size:
+        11px;
+
+    font-weight:
+        500;
+
+    line-height:
+        1;
+
+    white-space:
+        nowrap;
+
+    padding:
+        5px 8px;
+
+    border-radius:
+        6px;
+
+    opacity:
+        0;
+
+    pointer-events:
+        none;
+
+    transition:
+        opacity 120ms ease;
 }
+
 .est-btn:hover .est-tooltip {
-    opacity: 1;
+
+    opacity:
+        1;
 }
+
 .est-dialog {
-    animation: est-pop-dialog 110ms ease-out;
-    transform-origin: left center;
+
+    animation:
+        est-pop-dialog
+        110ms
+        ease-out;
+
+    transform-origin:
+        left center;
 }
+
 @keyframes est-pop-dialog {
-    from { opacity: 0; transform: scale(0.94); }
-    to   { opacity: 1; transform: scale(1); }
+
+    from {
+
+        opacity:
+            0;
+
+        transform:
+            scale(0.94);
+    }
+
+    to {
+
+        opacity:
+            1;
+
+        transform:
+            scale(1);
+    }
+
 }
+
 `;
 
+
+//======================================================
+// DELETE DIALOG
+//======================================================
 
 interface DeleteDialogProps {
 
@@ -162,20 +318,27 @@ interface DeleteDialogProps {
 
     onCancel:
         () => void;
+
 }
 
 
 function DeleteDialog({
+
     label,
+
     onConfirm,
+
     onCancel
+
 }: DeleteDialogProps) {
 
     return (
 
         <div
             className="est-dialog"
+
             style={{
+
                 position:
                     "absolute",
 
@@ -214,11 +377,13 @@ function DeleteDialog({
 
                 zIndex:
                     20
+
             }}
         >
 
             <div
                 style={{
+
                     display:
                         "flex",
 
@@ -230,11 +395,13 @@ function DeleteDialog({
 
                     marginBottom:
                         "12px"
+
                 }}
             >
 
                 <div
                     style={{
+
                         flexShrink:
                             0,
 
@@ -261,15 +428,18 @@ function DeleteDialog({
 
                         justifyContent:
                             "center"
+
                     }}
                 >
                     <TrashIcon />
                 </div>
 
+
                 <div>
 
                     <div
                         style={{
+
                             fontSize:
                                 "13px",
 
@@ -278,13 +448,18 @@ function DeleteDialog({
 
                             marginBottom:
                                 "2px"
+
                         }}
                     >
+
                         Delete {label}?
+
                     </div>
+
 
                     <div
                         style={{
+
                             fontSize:
                                 "12px",
 
@@ -293,17 +468,22 @@ function DeleteDialog({
 
                             lineHeight:
                                 1.4
+
                         }}
                     >
+
                         This action can be undone.
+
                     </div>
 
                 </div>
 
             </div>
 
+
             <div
                 style={{
+
                     display:
                         "flex",
 
@@ -312,15 +492,19 @@ function DeleteDialog({
 
                     justifyContent:
                         "flex-end"
+
                 }}
             >
 
                 <button
                     type="button"
+
                     onClick={
                         onCancel
                     }
+
                     style={{
+
                         border:
                             "1px solid #e4e4e7",
 
@@ -344,17 +528,24 @@ function DeleteDialog({
 
                         fontWeight:
                             500
+
                     }}
                 >
+
                     Cancel
+
                 </button>
+
 
                 <button
                     type="button"
+
                     onClick={
                         onConfirm
                     }
+
                     style={{
+
                         border:
                             "none",
 
@@ -378,17 +569,26 @@ function DeleteDialog({
 
                         fontWeight:
                             600
+
                     }}
                 >
+
                     Delete
+
                 </button>
 
             </div>
 
         </div>
+
     );
+
 }
 
+
+//======================================================
+// COMPONENT
+//======================================================
 
 export default function SelectionToolbar() {
 
@@ -397,10 +597,102 @@ export default function SelectionToolbar() {
         dispatch
     } = useEditor();
 
+
     const [
         deleteOpen,
         setDeleteOpen
     ] = useState(false);
+
+
+    //==================================================
+    // Firebase furniture catalog refresh
+    //
+    // This makes sure the toolbar knows whether the
+    // selected furniture is a wall-placement asset.
+    //==================================================
+
+    const [
+        furnitureCatalogLoaded,
+        setFurnitureCatalogLoaded
+    ] = useState(false);
+
+
+    useEffect(
+
+        () => {
+
+            let cancelled =
+                false;
+
+
+            getFurnitureAssets()
+
+                .then(
+
+                    () => {
+
+                        if (
+                            !cancelled
+                        ) {
+
+                            setFurnitureCatalogLoaded(
+                                true
+                            );
+
+                        }
+
+                    }
+
+                )
+
+                .catch(
+
+                    error => {
+
+                        console.error(
+
+                            "Failed to load furniture catalog for selection toolbar:",
+
+                            error
+
+                        );
+
+
+                        if (
+                            !cancelled
+                        ) {
+
+                            setFurnitureCatalogLoaded(
+                                true
+                            );
+
+                        }
+
+                    }
+
+                );
+
+
+            return () => {
+
+                cancelled =
+                    true;
+
+            };
+
+        },
+
+        []
+
+    );
+
+
+    //--------------------------------------------------
+    // Prevent unused-variable warning while still
+    // making catalog loading trigger a render.
+    //--------------------------------------------------
+
+    void furnitureCatalogLoaded;
 
 
     //==================================================
@@ -409,9 +701,11 @@ export default function SelectionToolbar() {
 
     const furniture =
         state.furniture.find(
+
             item =>
                 item.id ===
                 state.selectedFurnitureId
+
         ) ?? null;
 
 
@@ -421,9 +715,11 @@ export default function SelectionToolbar() {
 
     const door =
         state.doors.find(
+
             item =>
                 item.id ===
                 state.selectedDoorId
+
         ) ?? null;
 
 
@@ -433,9 +729,11 @@ export default function SelectionToolbar() {
 
     const window =
         state.windows.find(
+
             item =>
                 item.id ===
                 state.selectedWindowId
+
         ) ?? null;
 
 
@@ -444,12 +742,17 @@ export default function SelectionToolbar() {
     //==================================================
 
     if (
+
         !furniture &&
+
         !door &&
+
         !window
+
     ) {
 
         return null;
+
     }
 
 
@@ -462,6 +765,7 @@ export default function SelectionToolbar() {
         | "door"
         | "window" =
         "furniture";
+
 
     if (
         furniture
@@ -487,7 +791,63 @@ export default function SelectionToolbar() {
 
         selectedType =
             "window";
+
     }
+
+
+    //==================================================
+    // Find selected furniture asset
+    //==================================================
+    //
+    // Firebase cache is preferred.
+    // Local AssetLibrary remains a fallback.
+    //==================================================
+
+    const furnitureAsset =
+        furniture
+
+            ? (
+
+                getCachedFurnitureAsset(
+                    furniture.assetId
+                ) ??
+
+                findAsset(
+                    furniture.assetId
+                ) ??
+
+                null
+
+            )
+
+            : null;
+
+
+    //==================================================
+    // WALL FURNITURE
+    //==================================================
+    //
+    // Furniture whose placement surface includes
+    // "wall" does NOT get a Rotate button.
+    //
+    // Floor furniture still gets Rotate.
+    //==================================================
+
+    const isWallFurniture =
+        selectedType ===
+            "furniture" &&
+
+        Boolean(
+
+            furnitureAsset &&
+
+            furnitureAsset
+                .placementSurfaces
+                ?.includes(
+                    "wall"
+                )
+
+        );
 
 
     //==================================================
@@ -512,6 +872,7 @@ export default function SelectionToolbar() {
         anchor.y +=
             furniture.height *
             0.5;
+
     }
 
     else if (
@@ -525,6 +886,7 @@ export default function SelectionToolbar() {
         anchor.y +=
             door.height *
             0.5;
+
     }
 
     else if (
@@ -538,6 +900,7 @@ export default function SelectionToolbar() {
         anchor.y +=
             window.height *
             0.5;
+
     }
 
 
@@ -546,11 +909,14 @@ export default function SelectionToolbar() {
     //==================================================
 
     const label =
-        selectedType === "furniture"
+
+        selectedType ===
+            "furniture"
 
             ? "Furniture"
 
-            : selectedType === "door"
+            : selectedType ===
+                "door"
 
                 ? "Door"
 
@@ -558,9 +924,10 @@ export default function SelectionToolbar() {
 
 
     //==================================================
-    // Rotate furniture ONLY
+    // Rotate furniture
     //
-    // Door and Window cannot rotate.
+    // ONLY available for furniture that is NOT
+    // wall-mounted.
     //==================================================
 
     function rotateFurniture() {
@@ -569,11 +936,30 @@ export default function SelectionToolbar() {
             false
         );
 
+
         if (
             !furniture
         ) {
+
             return;
+
         }
+
+
+        //--------------------------------------------------
+        // Safety:
+        //
+        // Wall furniture is never allowed to rotate.
+        //--------------------------------------------------
+
+        if (
+            isWallFurniture
+        ) {
+
+            return;
+
+        }
+
 
         dispatch({
 
@@ -596,18 +982,12 @@ export default function SelectionToolbar() {
             }
 
         });
+
     }
 
 
     //==================================================
     // Move furniture
-    //
-    // IMPORTANT:
-    //
-    // Do NOT set selectedAsset.
-    // Do NOT set BuildTool.Furniture.
-    //
-    // movingFurnitureId is the move state.
     //==================================================
 
     function moveFurniture() {
@@ -616,11 +996,15 @@ export default function SelectionToolbar() {
             false
         );
 
+
         if (
             !furniture
         ) {
+
             return;
+
         }
+
 
         furnitureInteraction.startEditing(
 
@@ -629,6 +1013,7 @@ export default function SelectionToolbar() {
             furniture.rotationY
 
         );
+
 
         dispatch({
 
@@ -639,6 +1024,7 @@ export default function SelectionToolbar() {
                 furniture.id
 
         });
+
     }
 
 
@@ -652,11 +1038,15 @@ export default function SelectionToolbar() {
             false
         );
 
+
         if (
             !door
         ) {
+
             return;
+
         }
+
 
         //--------------------------------------------------
         // Existing door becomes the temporary move target.
@@ -666,10 +1056,8 @@ export default function SelectionToolbar() {
             door.id
         );
 
+
         //--------------------------------------------------
-        // BuildTool is only being used to wake up the
-        // React preview system.
-        //
         // selectedAsset remains NULL.
         //--------------------------------------------------
 
@@ -683,6 +1071,7 @@ export default function SelectionToolbar() {
 
         });
 
+
         dispatch({
 
             type:
@@ -692,6 +1081,7 @@ export default function SelectionToolbar() {
                 BuildTool.Door
 
         });
+
     }
 
 
@@ -705,11 +1095,15 @@ export default function SelectionToolbar() {
             false
         );
 
+
         if (
             !window
         ) {
+
             return;
+
         }
+
 
         //--------------------------------------------------
         // Existing window becomes the temporary move target.
@@ -718,6 +1112,7 @@ export default function SelectionToolbar() {
         buildInteraction.beginWindowMove(
             window.id
         );
+
 
         //--------------------------------------------------
         // selectedAsset remains NULL.
@@ -733,6 +1128,7 @@ export default function SelectionToolbar() {
 
         });
 
+
         dispatch({
 
             type:
@@ -742,6 +1138,7 @@ export default function SelectionToolbar() {
                 BuildTool.Window
 
         });
+
     }
 
 
@@ -761,9 +1158,12 @@ export default function SelectionToolbar() {
         //--------------------------------------------------
 
         if (
+
             selectedType ===
                 "furniture" &&
+
             furniture
+
         ) {
 
             dispatch({
@@ -777,6 +1177,7 @@ export default function SelectionToolbar() {
             });
 
             return;
+
         }
 
 
@@ -785,9 +1186,12 @@ export default function SelectionToolbar() {
         //--------------------------------------------------
 
         if (
+
             selectedType ===
                 "door" &&
+
             door
+
         ) {
 
             dispatch({
@@ -801,6 +1205,7 @@ export default function SelectionToolbar() {
             });
 
             return;
+
         }
 
 
@@ -809,9 +1214,12 @@ export default function SelectionToolbar() {
         //--------------------------------------------------
 
         if (
+
             selectedType ===
                 "window" &&
+
             window
+
         ) {
 
             dispatch({
@@ -823,7 +1231,9 @@ export default function SelectionToolbar() {
                     window.id
 
             });
+
         }
+
     }
 
 
@@ -834,38 +1244,50 @@ export default function SelectionToolbar() {
     return (
 
         <Html
+
             position={[
+
                 anchor.x,
+
                 anchor.y,
+
                 anchor.z
+
             ]}
 
             zIndexRange={[
+
                 10000,
+
                 0
+
             ]}
+
         >
 
             <style>
-                {TOOLBAR_STYLES}
+                {
+                    TOOLBAR_STYLES
+                }
             </style>
+
 
             <div
                 style={{
+
                     position:
                         "relative"
+
                 }}
             >
 
                 {/*==================================================
                     CONNECTOR STEM
-
-                    A small line grounding the toolbar to the
-                    selected object, like a callout.
                 ==================================================*/}
 
                 <div
                     style={{
+
                         position:
                             "absolute",
 
@@ -886,29 +1308,52 @@ export default function SelectionToolbar() {
 
                         transform:
                             "translateY(-50%)"
+
                     }}
                 />
 
+
                 <div
-                    className="selection-toolbar est-toolbar"
+
+                    className=
+                        "selection-toolbar est-toolbar"
+
                     onPointerDown={
+
                         event => {
+
                             event.preventDefault();
+
                             event.stopPropagation();
+
                         }
+
                     }
+
                     onPointerUp={
+
                         event => {
+
                             event.preventDefault();
+
                             event.stopPropagation();
+
                         }
+
                     }
+
                     onClick={
+
                         event => {
+
                             event.stopPropagation();
+
                         }
+
                     }
+
                     style={{
+
                         position:
                             "relative",
 
@@ -950,6 +1395,7 @@ export default function SelectionToolbar() {
 
                         zIndex:
                             10
+
                     }}
                 >
 
@@ -957,80 +1403,153 @@ export default function SelectionToolbar() {
                         FURNITURE TOOLS
                     ==================================================*/}
 
-                    {selectedType ===
-                        "furniture" && (
+                    {
+                        selectedType ===
+                            "furniture" && (
 
-                        <>
+                            <>
 
-                            <button
-                                type="button"
-                                className="est-btn"
-                                onClick={
-                                    rotateFurniture
+                                {/*------------------------------------------
+                                    ROTATE
+
+                                    Only floor furniture can rotate.
+
+                                    Wall furniture:
+                                        placementSurfaces includes "wall"
+                                        → Rotate is hidden.
+                                ------------------------------------------*/}
+
+                                {
+                                    !isWallFurniture && (
+
+                                        <button
+
+                                            type="button"
+
+                                            className="est-btn"
+
+                                            onClick={
+                                                rotateFurniture
+                                            }
+
+                                        >
+
+                                            <RotateIcon />
+
+                                            <span
+                                                className=
+                                                    "est-tooltip"
+                                            >
+                                                Rotate
+                                            </span>
+
+                                        </button>
+
+                                    )
                                 }
-                            >
-                                <RotateIcon />
-                                <span className="est-tooltip">Rotate</span>
-                            </button>
 
 
-                            <button
-                                type="button"
-                                className="est-btn"
-                                onClick={
-                                    moveFurniture
-                                }
-                            >
-                                <MoveIcon />
-                                <span className="est-tooltip">Move</span>
-                            </button>
+                                {/*------------------------------------------
+                                    MOVE
+                                ------------------------------------------*/}
 
-                        </>
-                    )}
+                                <button
+
+                                    type="button"
+
+                                    className="est-btn"
+
+                                    onClick={
+                                        moveFurniture
+                                    }
+
+                                >
+
+                                    <MoveIcon />
+
+                                    <span
+                                        className=
+                                            "est-tooltip"
+                                    >
+                                        Move
+                                    </span>
+
+                                </button>
+
+                            </>
+
+                        )
+                    }
 
 
                     {/*==================================================
                         DOOR TOOLS
-
-                        NO ROTATE
                     ==================================================*/}
 
-                    {selectedType ===
-                        "door" && (
+                    {
+                        selectedType ===
+                            "door" && (
 
-                        <button
-                            type="button"
-                            className="est-btn"
-                            onClick={
-                                moveDoor
-                            }
-                        >
-                            <MoveIcon />
-                            <span className="est-tooltip">Move</span>
-                        </button>
-                    )}
+                            <button
+
+                                type="button"
+
+                                className="est-btn"
+
+                                onClick={
+                                    moveDoor
+                                }
+
+                            >
+
+                                <MoveIcon />
+
+                                <span
+                                    className=
+                                        "est-tooltip"
+                                >
+                                    Move
+                                </span>
+
+                            </button>
+
+                        )
+                    }
 
 
                     {/*==================================================
                         WINDOW TOOLS
-
-                        NO ROTATE
                     ==================================================*/}
 
-                    {selectedType ===
-                        "window" && (
+                    {
+                        selectedType ===
+                            "window" && (
 
-                        <button
-                            type="button"
-                            className="est-btn"
-                            onClick={
-                                moveWindow
-                            }
-                        >
-                            <MoveIcon />
-                            <span className="est-tooltip">Move</span>
-                        </button>
-                    )}
+                            <button
+
+                                type="button"
+
+                                className="est-btn"
+
+                                onClick={
+                                    moveWindow
+                                }
+
+                            >
+
+                                <MoveIcon />
+
+                                <span
+                                    className=
+                                        "est-tooltip"
+                                >
+                                    Move
+                                </span>
+
+                            </button>
+
+                        )
+                    }
 
 
                     {/*==================================================
@@ -1039,6 +1558,7 @@ export default function SelectionToolbar() {
 
                     <div
                         style={{
+
                             height:
                                 "1px",
 
@@ -1047,6 +1567,7 @@ export default function SelectionToolbar() {
 
                             margin:
                                 "3px 4px"
+
                         }}
                     />
 
@@ -1056,17 +1577,30 @@ export default function SelectionToolbar() {
                     ==================================================*/}
 
                     <button
+
                         type="button"
-                        className="est-btn est-btn-delete"
+
+                        className=
+                            "est-btn est-btn-delete"
+
                         onClick={() =>
                             setDeleteOpen(
                                 value =>
                                     !value
                             )
                         }
+
                     >
+
                         <TrashIcon />
-                        <span className="est-tooltip">Delete</span>
+
+                        <span
+                            className=
+                                "est-tooltip"
+                        >
+                            Delete
+                        </span>
+
                     </button>
 
 
@@ -1074,32 +1608,36 @@ export default function SelectionToolbar() {
                         DELETE DIALOG
                     ==================================================*/}
 
-                    {deleteOpen && (
+                    {
+                        deleteOpen && (
 
-                        <DeleteDialog
+                            <DeleteDialog
 
-                            label={
-                                label
-                            }
+                                label={
+                                    label
+                                }
 
-                            onConfirm={
-                                confirmDelete
-                            }
+                                onConfirm={
+                                    confirmDelete
+                                }
 
-                            onCancel={() =>
-                                setDeleteOpen(
-                                    false
-                                )
-                            }
+                                onCancel={() =>
+                                    setDeleteOpen(
+                                        false
+                                    )
+                                }
 
-                        />
+                            />
 
-                    )}
+                        )
+                    }
 
                 </div>
 
             </div>
 
         </Html>
+
     );
+
 }
