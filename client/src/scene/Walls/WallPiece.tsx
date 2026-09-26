@@ -33,16 +33,342 @@ import {
 } from "./WallFinishUtils";
 
 
+//======================================================
+// PROPS
+//======================================================
+
 interface Props {
 
-    wallId: string;
+    wallId:
+        string;
 
-    piece: WallPieceType;
+    piece:
+        WallPieceType;
 
-    finishSides?: WallFinishSide[];
+    finishSides?:
+        WallFinishSide[];
 
 }
 
+
+//======================================================
+// DEFAULT WALL TRIM SETTINGS
+//======================================================
+
+const WALL_TRIM_HEIGHT =
+    0.12;
+
+const WALL_TRIM_DEPTH =
+    0.018;
+
+const WALL_TRIM_CAP_HEIGHT =
+    0.018;
+
+const WALL_TRIM_CAP_DEPTH =
+    0.030;
+
+const WALL_TRIM_COLOR =
+    "#E9E5DE";
+
+
+//======================================================
+// WALL TRIM PROPS
+//======================================================
+
+interface WallTrimProps {
+
+    piece:
+        WallPieceType;
+
+    side:
+        1 | -1;
+
+}
+
+
+//======================================================
+// WALL TRIM
+//======================================================
+//
+// IMPORTANT:
+//
+// The trim is generated only for a wall piece that
+// actually reaches the floor.
+//
+// This prevents trim from appearing at the bottom of
+// upper wall pieces created around:
+// 
+// - doors
+// - windows
+// - openings
+//
+//======================================================
+
+function WallTrim({
+
+    piece,
+
+    side
+
+}: WallTrimProps) {
+
+    //--------------------------------------------------
+    // Arch pieces are not treated as floor-level
+    // rectangular wall pieces.
+    //--------------------------------------------------
+
+    if (
+        piece.kind ===
+        "arch"
+    ) {
+
+        return null;
+
+    }
+
+
+    //--------------------------------------------------
+    // Trim height
+    //--------------------------------------------------
+
+    const trimHeight =
+        Math.min(
+
+            WALL_TRIM_HEIGHT,
+
+            Math.max(
+                0.02,
+                piece.height * 0.25
+            )
+
+        );
+
+
+    const capHeight =
+        Math.min(
+
+            WALL_TRIM_CAP_HEIGHT,
+
+            trimHeight * 0.35
+
+        );
+
+
+    //--------------------------------------------------
+    // Local wall coordinates
+    //
+    // X = along wall
+    // Y = vertical
+    // Z = wall thickness
+    //--------------------------------------------------
+
+    const halfThickness =
+        piece.thickness *
+        0.5;
+
+
+    //--------------------------------------------------
+    // Main baseboard vertical position
+    //--------------------------------------------------
+
+    const trimY =
+
+        -piece.height *
+            0.5 +
+
+        trimHeight *
+            0.5;
+
+
+    //--------------------------------------------------
+    // Small cap above baseboard
+    //--------------------------------------------------
+
+    const capY =
+
+        -piece.height *
+            0.5 +
+
+        trimHeight -
+
+        capHeight *
+            0.5;
+
+
+    //--------------------------------------------------
+    // Positive side = +Z
+    // Negative side = -Z
+    //--------------------------------------------------
+
+    const trimZ =
+
+        side *
+        (
+            halfThickness +
+            WALL_TRIM_DEPTH *
+            0.5
+        );
+
+
+    const capZ =
+
+        side *
+        (
+            halfThickness +
+            WALL_TRIM_CAP_DEPTH *
+            0.5
+        );
+
+
+    return (
+
+        <group
+
+            position={
+                piece.position
+            }
+
+            rotation={[
+
+                0,
+
+                -piece.rotationY,
+
+                0
+
+            ]}
+
+        >
+
+            {/*==================================================
+                MAIN BASEBOARD
+            ==================================================*/}
+
+            <mesh
+
+                position={[
+
+                    0,
+
+                    trimY,
+
+                    trimZ
+
+                ]}
+
+                castShadow
+
+                receiveShadow
+
+                raycast={
+                    () => null
+                }
+
+            >
+
+                <boxGeometry
+
+                    args={[
+
+                        piece.width +
+                            0.004,
+
+                        trimHeight,
+
+                        WALL_TRIM_DEPTH
+
+                    ]}
+
+                />
+
+                <meshStandardMaterial
+
+                    color={
+                        WALL_TRIM_COLOR
+                    }
+
+                    roughness={
+                        0.82
+                    }
+
+                    metalness={
+                        0
+                    }
+
+                />
+
+            </mesh>
+
+
+            {/*==================================================
+                SMALL TOP CAP
+            ==================================================*/}
+
+            <mesh
+
+                position={[
+
+                    0,
+
+                    capY,
+
+                    capZ
+
+                ]}
+
+                castShadow
+
+                receiveShadow
+
+                raycast={
+                    () => null
+                }
+
+            >
+
+                <boxGeometry
+
+                    args={[
+
+                        piece.width +
+                            0.008,
+
+                        capHeight,
+
+                        WALL_TRIM_CAP_DEPTH
+
+                    ]}
+
+                />
+
+                <meshStandardMaterial
+
+                    color={
+                        WALL_TRIM_COLOR
+                    }
+
+                    roughness={
+                        0.78
+                    }
+
+                    metalness={
+                        0
+                    }
+
+                />
+
+            </mesh>
+
+        </group>
+
+    );
+
+}
+
+
+//======================================================
+// WALL PIECE
+//======================================================
 
 function WallPiece({
 
@@ -64,12 +390,11 @@ function WallPiece({
 
 
     const [
-
         hovered,
-
         setHovered
-
-    ] = useState(false);
+    ] = useState(
+        false
+    );
 
 
     //==================================================
@@ -108,7 +433,6 @@ function WallPiece({
     const selected =
 
         state.selectedWallId ===
-
         wallId;
 
 
@@ -150,10 +474,167 @@ function WallPiece({
             wall =>
 
                 wall.id ===
-
                 wallId
 
         ) ?? null;
+
+
+    //==================================================
+    // DETERMINE WHETHER THIS PIECE TOUCHES FLOOR
+    //==================================================
+    //
+    // WallPiece positions are centered vertically.
+    //
+    // Therefore:
+    //
+    // bottom =
+    //     piece.position.y
+    //     - piece.height / 2
+    //
+    // A normal floor-level wall will have a bottom
+    // very close to Y = 0.
+    //
+    // Upper pieces created above:
+    //
+    // - doors
+    // - windows
+    // - openings
+    //
+    // will have a bottom greater than 0.
+    //
+    // Those pieces MUST NOT receive a baseboard.
+    //==================================================
+
+    const pieceBottom =
+
+        piece.position.y -
+
+        piece.height *
+        0.5;
+
+
+    const touchesFloor =
+
+        pieceBottom <=
+            0.02;
+
+
+    //==================================================
+    // DETERMINE WHICH SIDES NEED TRIM
+    //==================================================
+    //
+    // Trim follows the room-facing side of the wall.
+    //
+    // Single room wall:
+    //     one side
+    //
+    // Shared wall:
+    //     two sides
+    //
+    //==================================================
+
+    const trimSides =
+
+        useMemo(
+
+            () => {
+
+                if (
+                    !physicalWall ||
+                    !touchesFloor
+                ) {
+
+                    return [] as (
+                        1 | -1
+                    )[];
+
+                }
+
+
+                const sides =
+                    new Set<
+                        1 | -1
+                    >();
+
+
+                for (
+                    const region
+                    of regions
+                ) {
+
+                    //--------------------------------------------------
+                    // Is this wall part of this region?
+                    //--------------------------------------------------
+
+                    const belongsToRegion =
+
+                        region.walls.some(
+
+                            regionWall =>
+
+                                regionWall.id ===
+                                wallId
+
+                        );
+
+
+                    if (
+                        !belongsToRegion
+                    ) {
+
+                        continue;
+
+                    }
+
+
+                    //--------------------------------------------------
+                    // Which physical side faces the room?
+                    //--------------------------------------------------
+
+                    const side =
+
+                        getRegionWallSide(
+
+                            physicalWall,
+
+                            region
+
+                        );
+
+
+                    if (
+                        side !==
+                        null
+                    ) {
+
+                        sides.add(
+                            side
+                        );
+
+                    }
+
+                }
+
+
+                return Array.from(
+                    sides
+                );
+
+            },
+
+            [
+
+                physicalWall,
+
+                regions,
+
+                wallId,
+
+                touchesFloor
+
+            ]
+
+        );
 
 
     //==================================================
@@ -164,15 +645,14 @@ function WallPiece({
 
         (
 
-            clickPoint: Vector3
+            clickPoint:
+                Vector3
 
         ): 1 | -1 | null => {
 
 
             if (
-
                 !physicalWall
-
             ) {
 
                 return null;
@@ -213,11 +693,8 @@ function WallPiece({
 
 
             if (
-
                 length <=
-
                 0.001
-
             ) {
 
                 return null;
@@ -287,7 +764,7 @@ function WallPiece({
 
 
             //--------------------------------------------------
-            // Only use X/Z.
+            // Only use X/Z
             //--------------------------------------------------
 
             const sideValue =
@@ -337,15 +814,14 @@ function WallPiece({
 
         (
 
-            clickPoint: Vector3
+            clickPoint:
+                Vector3
 
         ) => {
 
 
             if (
-
                 !physicalWall
-
             ) {
 
                 return null;
@@ -371,9 +847,8 @@ function WallPiece({
             //--------------------------------------------------
 
             if (
-
-                clickedSide !== null
-
+                clickedSide !==
+                null
             ) {
 
                 const matchingRegion =
@@ -390,16 +865,13 @@ function WallPiece({
                                     regionWall =>
 
                                         regionWall.id ===
-
                                         wallId
 
                                 );
 
 
                             if (
-
                                 !belongsToRegion
-
                             ) {
 
                                 return false;
@@ -421,7 +893,6 @@ function WallPiece({
                             return (
 
                                 regionSide ===
-
                                 clickedSide
 
                             );
@@ -432,9 +903,7 @@ function WallPiece({
 
 
                 if (
-
                     matchingRegion
-
                 ) {
 
                     return matchingRegion;
@@ -445,14 +914,11 @@ function WallPiece({
 
 
             //--------------------------------------------------
-            // Fallback:
-            // preserve selected room if it owns wall
+            // Fallback: selected room
             //--------------------------------------------------
 
             if (
-
                 state.selectedRegionId
-
             ) {
 
                 const selectedRegion =
@@ -462,14 +928,12 @@ function WallPiece({
                         region =>
 
                             region.id ===
-
                             state.selectedRegionId
 
                     );
 
 
                 if (
-
                     selectedRegion &&
 
                     selectedRegion.walls.some(
@@ -477,11 +941,9 @@ function WallPiece({
                         regionWall =>
 
                             regionWall.id ===
-
                             wallId
 
                     )
-
                 ) {
 
                     return selectedRegion;
@@ -492,8 +954,7 @@ function WallPiece({
 
 
             //--------------------------------------------------
-            // Final fallback:
-            // sole owning region
+            // Final fallback
             //--------------------------------------------------
 
             const owningRegions =
@@ -507,7 +968,6 @@ function WallPiece({
                             regionWall =>
 
                                 regionWall.id ===
-
                                 wallId
 
                         )
@@ -516,19 +976,14 @@ function WallPiece({
 
 
             if (
-
-                owningRegions.length === 1
-
+                owningRegions.length ===
+                1
             ) {
 
                 return owningRegions[0];
 
             }
 
-
-            //--------------------------------------------------
-            // Shared wall unresolved
-            //--------------------------------------------------
 
             return null;
 
@@ -543,15 +998,14 @@ function WallPiece({
 
         (
 
-            e: any
+            e:
+                any
 
         ) => {
 
 
             if (
-
                 walkthroughMode
-
             ) {
 
                 return;
@@ -563,13 +1017,11 @@ function WallPiece({
 
 
             //--------------------------------------------------
-            // We need actual raycast point
+            // Need actual raycast point
             //--------------------------------------------------
 
             if (
-
                 !e.point
-
             ) {
 
                 return;
@@ -596,13 +1048,11 @@ function WallPiece({
 
 
             //--------------------------------------------------
-            // Shared wall with no reliable side
+            // Shared wall unresolved
             //--------------------------------------------------
 
             if (
-
                 !region
-
             ) {
 
                 return;
@@ -617,11 +1067,9 @@ function WallPiece({
             dispatch({
 
                 type:
-
                     "SELECT_REGION",
 
                 payload:
-
                     region.id
 
             });
@@ -634,11 +1082,9 @@ function WallPiece({
             dispatch({
 
                 type:
-
                     "SELECT_WALL",
 
                 payload:
-
                     wallId
 
             });
@@ -654,15 +1100,14 @@ function WallPiece({
 
         (
 
-            e: any
+            e:
+                any
 
         ) => {
 
 
             if (
-
                 walkthroughMode
-
             ) {
 
                 return;
@@ -674,9 +1119,7 @@ function WallPiece({
 
 
             setHovered(
-
                 true
-
             );
 
         };
@@ -688,9 +1131,7 @@ function WallPiece({
 
 
             if (
-
                 walkthroughMode
-
             ) {
 
                 return;
@@ -699,9 +1140,7 @@ function WallPiece({
 
 
             setHovered(
-
                 false
-
             );
 
         };
@@ -730,7 +1169,8 @@ function WallPiece({
 
     if (
 
-        piece.kind === "arch" &&
+        piece.kind ===
+            "arch" &&
 
         piece.arch
 
@@ -748,19 +1188,16 @@ function WallPiece({
         const radius =
 
             openingWidth *
-
             0.5;
 
 
         const shape =
-
             new Shape();
 
 
         shape.moveTo(
 
             -openingWidth *
-
                 0.5,
 
             openingHeight
@@ -771,7 +1208,6 @@ function WallPiece({
         shape.lineTo(
 
             -openingWidth *
-
                 0.5,
 
             piece.height
@@ -782,7 +1218,6 @@ function WallPiece({
         shape.lineTo(
 
             openingWidth *
-
                 0.5,
 
             piece.height
@@ -793,7 +1228,6 @@ function WallPiece({
         shape.lineTo(
 
             openingWidth *
-
                 0.5,
 
             openingHeight
@@ -802,15 +1236,16 @@ function WallPiece({
 
 
         const segments =
-
             24;
 
 
         for (
 
-            let i = segments;
+            let i =
+                segments;
 
-            i >= 0;
+            i >=
+            0;
 
             i--
 
@@ -821,22 +1256,16 @@ function WallPiece({
                 Math.PI *
 
                 (
-
                     i /
-
                     segments
-
                 );
 
 
             const x =
 
                 Math.cos(
-
                     angle
-
                 ) *
-
                 radius;
 
 
@@ -845,11 +1274,8 @@ function WallPiece({
                 openingHeight +
 
                 Math.sin(
-
                     angle
-
                 ) *
-
                 radius;
 
 
@@ -876,15 +1302,12 @@ function WallPiece({
                 {
 
                     depth:
-
                         piece.thickness,
 
                     bevelEnabled:
-
                         false,
 
                     steps:
-
                         1
 
                 }
@@ -902,15 +1325,11 @@ function WallPiece({
                 <mesh
 
                     geometry={
-
                         geometry
-
                     }
 
                     position={
-
                         piece.position
-
                     }
 
                     rotation={[
@@ -934,21 +1353,15 @@ function WallPiece({
                     receiveShadow
 
                     onPointerOver={
-
                         handlePointerOver
-
                     }
 
                     onPointerOut={
-
                         handlePointerOut
-
                     }
 
                     onClick={
-
                         handleWallClick
-
                     }
 
                 >
@@ -956,9 +1369,7 @@ function WallPiece({
                     <meshStandardMaterial
 
                         color={
-
                             wallColor
-
                         }
 
                     />
@@ -966,9 +1377,9 @@ function WallPiece({
                 </mesh>
 
 
-                {/* ==========================================
+                {/*==================================================
                     INTERIOR WALL FINISH
-                ========================================== */}
+                ==================================================*/}
 
                 {
 
@@ -985,15 +1396,11 @@ function WallPiece({
                                 }
 
                                 piece={
-
                                     piece
-
                                 }
 
                                 finish={
-
                                     finish
-
                                 }
 
                             />
@@ -1022,9 +1429,7 @@ function WallPiece({
             <mesh
 
                 position={
-
                     piece.position
-
                 }
 
                 rotation={[
@@ -1048,21 +1453,15 @@ function WallPiece({
                 receiveShadow
 
                 onPointerOver={
-
                     handlePointerOver
-
                 }
 
                 onPointerOut={
-
                     handlePointerOut
-
                 }
 
                 onClick={
-
                     handleWallClick
-
                 }
 
             >
@@ -1084,9 +1483,7 @@ function WallPiece({
                 <meshStandardMaterial
 
                     color={
-
                         wallColor
-
                     }
 
                 />
@@ -1094,9 +1491,52 @@ function WallPiece({
             </mesh>
 
 
-            {/* ==========================================
+            {/*==================================================
+                DEFAULT WALL TRIM
+                ==================================================
+                
+                IMPORTANT:
+
+                Only floor-touching wall pieces receive
+                the trim.
+
+                Upper pieces above doors/windows/openings
+                do NOT receive trim.
+            ==================================================*/}
+
+            {
+                touchesFloor &&
+                trimSides.map(
+
+                    side => (
+
+                        <WallTrim
+
+                            key={
+
+                                `${wallId}-${side}`
+
+                            }
+
+                            piece={
+                                piece
+                            }
+
+                            side={
+                                side
+                            }
+
+                        />
+
+                    )
+
+                )
+            }
+
+
+            {/*==================================================
                 INTERIOR WALL FINISH
-            ========================================== */}
+            ==================================================*/}
 
             {
 
@@ -1113,15 +1553,11 @@ function WallPiece({
                             }
 
                             piece={
-
                                 piece
-
                             }
 
                             finish={
-
                                 finish
-
                             }
 
                         />
@@ -1140,7 +1576,5 @@ function WallPiece({
 
 
 export default memo(
-
     WallPiece
-
 );

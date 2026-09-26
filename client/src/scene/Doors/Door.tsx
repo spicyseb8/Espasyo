@@ -174,6 +174,283 @@ function setDoorHighlight(
 }
 
 
+
+//======================================================
+// DEFAULT DOOR CASING
+//======================================================
+//
+// The casing is generated automatically around every
+// door. It is NOT a Firebase asset.
+//
+// The door position is treated as the floor/bottom of
+// the door opening, matching the editor's wall-placed
+// door coordinate system.
+//
+// Casing is shown on both wall faces so the opening looks
+// finished from either side of the wall.
+//======================================================
+
+interface DoorCasingProps {
+
+    doorId:
+        string;
+
+    width:
+        number;
+
+    height:
+        number;
+
+    wallThickness:
+        number;
+}
+
+
+const DOOR_CASING_WIDTH =
+    0.075;
+
+const DOOR_CASING_DEPTH =
+    0.028;
+
+const DOOR_CASING_GAP =
+    0.004;
+
+const DOOR_CASING_COLOR =
+    "#E9E5DE";
+
+
+function DoorCasing({
+
+    doorId,
+
+    width,
+
+    height,
+
+    wallThickness
+
+}: DoorCasingProps) {
+
+    const sideOffset =
+        wallThickness * 0.5 +
+        DOOR_CASING_DEPTH * 0.5 +
+        DOOR_CASING_GAP;
+
+
+    //--------------------------------------------------
+    // The door does not get a bottom casing because the
+    // floor/baseboard already meets the door jamb.
+    //--------------------------------------------------
+
+    const leftX =
+        -(
+            width * 0.5 +
+            DOOR_CASING_WIDTH * 0.5
+        );
+
+    const rightX =
+        width * 0.5 +
+        DOOR_CASING_WIDTH * 0.5;
+
+    const verticalY =
+        height * 0.5;
+
+    const headY =
+        height +
+        DOOR_CASING_WIDTH * 0.5;
+
+    const headWidth =
+        width +
+        DOOR_CASING_WIDTH * 2;
+
+
+    //--------------------------------------------------
+    // Render one complete casing on each wall face.
+    //--------------------------------------------------
+
+    const sides = [
+        -1,
+        1
+    ] as const;
+
+
+    return (
+
+        <group>
+
+            {sides.map(
+                side => {
+
+                    const z =
+                        side *
+                        sideOffset;
+
+                    return (
+
+                        <group
+
+                            key={
+                                `door-casing-${doorId}-${side}`
+                            }
+
+                        >
+
+                            {/* LEFT JAMB */}
+
+                            <mesh
+
+                                position={[
+                                    leftX,
+                                    verticalY,
+                                    z
+                                ]}
+
+                                userData={{
+                                    doorId
+                                }}
+
+                                castShadow
+
+                                receiveShadow
+
+                            >
+
+                                <boxGeometry
+
+                                    args={[
+                                        DOOR_CASING_WIDTH,
+                                        height,
+                                        DOOR_CASING_DEPTH
+                                    ]}
+
+                                />
+
+                                <meshStandardMaterial
+
+                                    color={
+                                        DOOR_CASING_COLOR
+                                    }
+
+                                    roughness={
+                                        0.78
+                                    }
+
+                                    metalness={
+                                        0
+                                    }
+
+                                />
+
+                            </mesh>
+
+
+                            {/* RIGHT JAMB */}
+
+                            <mesh
+
+                                position={[
+                                    rightX,
+                                    verticalY,
+                                    z
+                                ]}
+
+                                userData={{
+                                    doorId
+                                }}
+
+                                castShadow
+
+                                receiveShadow
+
+                            >
+
+                                <boxGeometry
+
+                                    args={[
+                                        DOOR_CASING_WIDTH,
+                                        height,
+                                        DOOR_CASING_DEPTH
+                                    ]}
+
+                                />
+
+                                <meshStandardMaterial
+
+                                    color={
+                                        DOOR_CASING_COLOR
+                                    }
+
+                                    roughness={
+                                        0.78
+                                    }
+
+                                    metalness={
+                                        0
+                                    }
+
+                                />
+
+                            </mesh>
+
+
+                            {/* HEAD / TOP CASING */}
+
+                            <mesh
+
+                                position={[
+                                    0,
+                                    headY,
+                                    z
+                                ]}
+
+                                userData={{
+                                    doorId
+                                }}
+
+                                castShadow
+
+                                receiveShadow
+
+                            >
+
+                                <boxGeometry
+
+                                    args={[
+                                        headWidth,
+                                        DOOR_CASING_WIDTH,
+                                        DOOR_CASING_DEPTH
+                                    ]}
+
+                                />
+
+                                <meshStandardMaterial
+
+                                    color={
+                                        DOOR_CASING_COLOR
+                                    }
+
+                                    roughness={
+                                        0.78
+                                    }
+
+                                    metalness={
+                                        0
+                                    }
+
+                                />
+
+                            </mesh>
+
+                        </group>
+                    );
+                }
+            )}
+
+        </group>
+
+    );
+}
+
 //======================================================
 // DOOR
 //======================================================
@@ -708,6 +985,31 @@ function DoorModel({
             }
 
         >
+
+            {/*==================================================
+                DEFAULT DOOR CASING
+            ==================================================*/}
+
+            <DoorCasing
+
+                doorId={
+                    door.id
+                }
+
+                width={
+                    door.width
+                }
+
+                height={
+                    door.height
+                }
+
+                wallThickness={
+                    state.wallThickness
+                }
+
+            />
+
 
             <primitive
                 object={

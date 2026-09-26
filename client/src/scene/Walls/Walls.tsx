@@ -88,7 +88,6 @@ function WallOutline({
 
 }: WallOutlineProps) {
 
-
     //--------------------------------------------------
     // Wall direction
     //--------------------------------------------------
@@ -129,11 +128,13 @@ function WallOutline({
     const center =
         start.clone()
             .add(
+
                 direction
                     .clone()
                     .multiplyScalar(
                         length * 0.5
                     )
+
             );
 
 
@@ -165,75 +166,62 @@ function WallOutline({
 
 
     //--------------------------------------------------
-    // Long edges
+    // TOP EDGES ONLY
     //
-    // Explicit Vector3 objects are used here because
-    // Drei Line expects Vector3[].
+    // IMPORTANT:
+    //
+    // The bottom outline has intentionally been removed.
+    //
+    // This prevents a line from appearing across:
+    //
+    // - door openings
+    // - window openings
+    // - other wall openings
+    //
+    // The top wall outline remains.
     //--------------------------------------------------
 
-    const longEdges: Vector3[][] = [
+    const topEdges: Vector3[][] = [
 
         // TOP FRONT
         [
+
             new Vector3(
                 -halfLength,
                 height,
                 halfThickness
             ),
+
             new Vector3(
                 halfLength,
                 height,
                 halfThickness
             )
+
         ],
 
         // TOP BACK
         [
+
             new Vector3(
                 -halfLength,
                 height,
                 -halfThickness
             ),
+
             new Vector3(
                 halfLength,
                 height,
                 -halfThickness
             )
-        ],
 
-        // BOTTOM FRONT
-        [
-            new Vector3(
-                -halfLength,
-                0,
-                halfThickness
-            ),
-            new Vector3(
-                halfLength,
-                0,
-                halfThickness
-            )
-        ],
-
-        // BOTTOM BACK
-        [
-            new Vector3(
-                -halfLength,
-                0,
-                -halfThickness
-            ),
-            new Vector3(
-                halfLength,
-                0,
-                -halfThickness
-            )
         ]
 
     ];
 
 
     //--------------------------------------------------
-    // Render
+    // RENDER
     //--------------------------------------------------
 
     return (
@@ -252,8 +240,12 @@ function WallOutline({
 
         >
 
+            {/*==================================================
+                TOP OUTLINE
+            ==================================================*/}
+
             {
-                longEdges.map(
+                topEdges.map(
                     (
                         edge,
                         index
@@ -262,7 +254,7 @@ function WallOutline({
                         <Line
 
                             key={
-                                `wall-long-edge-${index}`
+                                `wall-top-edge-${index}`
                             }
 
                             points={
@@ -282,9 +274,11 @@ function WallOutline({
             }
 
 
-            {/* ==========================================
-                START END
-            ========================================== */}
+            {/*==================================================
+                START SIDE
+                //
+                // No bottom horizontal edge.
+            ==================================================*/}
 
             {
                 !connectedStart && (
@@ -377,44 +371,17 @@ function WallOutline({
 
                         />
 
-
-                        {/* START - BOTTOM */}
-
-                        <Line
-
-                            points={[
-
-                                new Vector3(
-                                    -halfLength,
-                                    0,
-                                    -halfThickness
-                                ),
-
-                                new Vector3(
-                                    -halfLength,
-                                    0,
-                                    halfThickness
-                                )
-
-                            ]}
-
-                            color="#252525"
-
-                            lineWidth={
-                                1
-                            }
-
-                        />
-
                     </>
 
                 )
             }
 
 
-            {/* ==========================================
-                END END
-            ========================================== */}
+            {/*==================================================
+                END SIDE
+                //
+                // No bottom horizontal edge.
+            ==================================================*/}
 
             {
                 !connectedEnd && (
@@ -494,35 +461,6 @@ function WallOutline({
                                 new Vector3(
                                     halfLength,
                                     height,
-                                    halfThickness
-                                )
-
-                            ]}
-
-                            color="#252525"
-
-                            lineWidth={
-                                1
-                            }
-
-                        />
-
-
-                        {/* END - BOTTOM */}
-
-                        <Line
-
-                            points={[
-
-                                new Vector3(
-                                    halfLength,
-                                    0,
-                                    -halfThickness
-                                ),
-
-                                new Vector3(
-                                    halfLength,
-                                    0,
                                     halfThickness
                                 )
 

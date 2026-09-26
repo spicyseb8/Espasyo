@@ -2707,32 +2707,6 @@ export default function SelectionToolbar() {
                     CONNECTOR
                 ==================================================*/}
 
-                <div
-                    style={{
-
-                        position:
-                            "absolute",
-
-                        left:
-                            0,
-
-                        top:
-                            "50%",
-
-                        width:
-                            "18px",
-
-                        height:
-                            "1px",
-
-                        background:
-                            "#d4d4d8",
-
-                        transform:
-                            "translateY(-50%)"
-
-                    }}
-                />
 
 
                 <div
@@ -2812,7 +2786,7 @@ export default function SelectionToolbar() {
 
                     }}
                 >
-
+                    
                     {/*==================================================
                         FURNITURE
                     ==================================================*/}

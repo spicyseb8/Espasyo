@@ -299,6 +299,445 @@ function setWindowHighlight(
 
 
 //======================================================
+// DEFAULT WINDOW CASING
+//======================================================
+//
+// Generated automatically around every window.
+// It is NOT a Firebase asset.
+//
+// IMPORTANT:
+//
+// The window model is centered around its local Y origin.
+// Therefore the casing must also be centered around Y = 0.
+//
+// This prevents:
+//
+// - casing appearing too high
+// - bottom casing appearing through the middle
+// - incorrect vertical alignment
+//
+// Casing is shown on both wall faces.
+//======================================================
+
+interface WindowCasingProps {
+
+    windowId:
+        string;
+
+    width:
+        number;
+
+    height:
+        number;
+
+    wallThickness:
+        number;
+}
+
+
+//======================================================
+// CASING SETTINGS
+//======================================================
+
+const WINDOW_CASING_WIDTH =
+    0.060;
+
+const WINDOW_CASING_DEPTH =
+    0.025;
+
+const WINDOW_CASING_GAP =
+    0.004;
+
+const WINDOW_CASING_COLOR =
+    "#E9E5DE";
+
+
+//======================================================
+// WINDOW CASING
+//======================================================
+
+function WindowCasing({
+
+    windowId,
+
+    width,
+
+    height,
+
+    wallThickness
+
+}: WindowCasingProps) {
+
+    //--------------------------------------------------
+    // Push casing slightly outside each wall face.
+    //--------------------------------------------------
+
+    const sideOffset =
+        wallThickness * 0.5 +
+        WINDOW_CASING_DEPTH * 0.5 +
+        WINDOW_CASING_GAP;
+
+
+    //--------------------------------------------------
+    // Window is centered around Y = 0.
+    //
+    // Therefore:
+    //
+    // top    = +height / 2
+    // bottom = -height / 2
+    //--------------------------------------------------
+
+    const halfHeight =
+        height * 0.5;
+
+    const halfWidth =
+        width * 0.5;
+
+
+    //--------------------------------------------------
+    // Vertical casing center.
+    //--------------------------------------------------
+
+    const verticalY =
+        0;
+
+
+    //--------------------------------------------------
+    // Bottom casing center.
+    //
+    // Move half a casing width below the window edge.
+    //--------------------------------------------------
+
+    const bottomY =
+        -halfHeight -
+        WINDOW_CASING_WIDTH * 0.5;
+
+
+    //--------------------------------------------------
+    // Top casing center.
+    //--------------------------------------------------
+
+    const topY =
+        halfHeight +
+        WINDOW_CASING_WIDTH * 0.5;
+
+
+    //--------------------------------------------------
+    // Left / right casing center.
+    //--------------------------------------------------
+
+    const leftX =
+        -halfWidth -
+        WINDOW_CASING_WIDTH * 0.5;
+
+
+    const rightX =
+        halfWidth +
+        WINDOW_CASING_WIDTH * 0.5;
+
+
+    //--------------------------------------------------
+    // Horizontal casing width.
+    //--------------------------------------------------
+
+    const horizontalWidth =
+        width +
+        WINDOW_CASING_WIDTH * 2;
+
+
+    //--------------------------------------------------
+    // Render on both wall faces.
+    //--------------------------------------------------
+
+    const sides = [
+        -1,
+        1
+    ] as const;
+
+
+    return (
+
+        <group>
+
+            {
+                sides.map(
+
+                    side => {
+
+                        const z =
+                            side *
+                            sideOffset;
+
+
+                        return (
+
+                            <group
+
+                                key={
+                                    `window-casing-${windowId}-${side}`
+                                }
+
+                            >
+
+                                {/*==================================================
+                                    LEFT CASING
+                                ==================================================*/}
+
+                                <mesh
+
+                                    position={[
+
+                                        leftX,
+
+                                        verticalY,
+
+                                        z
+
+                                    ]}
+
+                                    userData={{
+
+                                        windowId
+
+                                    }}
+
+                                    castShadow
+
+                                    receiveShadow
+
+                                >
+
+                                    <boxGeometry
+
+                                        args={[
+
+                                            WINDOW_CASING_WIDTH,
+
+                                            height,
+
+                                            WINDOW_CASING_DEPTH
+
+                                        ]}
+
+                                    />
+
+                                    <meshStandardMaterial
+
+                                        color={
+                                            WINDOW_CASING_COLOR
+                                        }
+
+                                        roughness={
+                                            0.78
+                                        }
+
+                                        metalness={
+                                            0
+                                        }
+
+                                    />
+
+                                </mesh>
+
+
+                                {/*==================================================
+                                    RIGHT CASING
+                                ==================================================*/}
+
+                                <mesh
+
+                                    position={[
+
+                                        rightX,
+
+                                        verticalY,
+
+                                        z
+
+                                    ]}
+
+                                    userData={{
+
+                                        windowId
+
+                                    }}
+
+                                    castShadow
+
+                                    receiveShadow
+
+                                >
+
+                                    <boxGeometry
+
+                                        args={[
+
+                                            WINDOW_CASING_WIDTH,
+
+                                            height,
+
+                                            WINDOW_CASING_DEPTH
+
+                                        ]}
+
+                                    />
+
+                                    <meshStandardMaterial
+
+                                        color={
+                                            WINDOW_CASING_COLOR
+                                        }
+
+                                        roughness={
+                                            0.78
+                                        }
+
+                                        metalness={
+                                            0
+                                        }
+
+                                    />
+
+                                </mesh>
+
+
+                                {/*==================================================
+                                    BOTTOM CASING
+                                ==================================================*/}
+
+                                <mesh
+
+                                    position={[
+
+                                        0,
+
+                                        bottomY,
+
+                                        z
+
+                                    ]}
+
+                                    userData={{
+
+                                        windowId
+
+                                    }}
+
+                                    castShadow
+
+                                    receiveShadow
+
+                                >
+
+                                    <boxGeometry
+
+                                        args={[
+
+                                            horizontalWidth,
+
+                                            WINDOW_CASING_WIDTH,
+
+                                            WINDOW_CASING_DEPTH
+
+                                        ]}
+
+                                    />
+
+                                    <meshStandardMaterial
+
+                                        color={
+                                            WINDOW_CASING_COLOR
+                                        }
+
+                                        roughness={
+                                            0.78
+                                        }
+
+                                        metalness={
+                                            0
+                                        }
+
+                                    />
+
+                                </mesh>
+
+
+                                {/*==================================================
+                                    TOP CASING
+                                ==================================================*/}
+
+                                <mesh
+
+                                    position={[
+
+                                        0,
+
+                                        topY,
+
+                                        z
+
+                                    ]}
+
+                                    userData={{
+
+                                        windowId
+
+                                    }}
+
+                                    castShadow
+
+                                    receiveShadow
+
+                                >
+
+                                    <boxGeometry
+
+                                        args={[
+
+                                            horizontalWidth,
+
+                                            WINDOW_CASING_WIDTH,
+
+                                            WINDOW_CASING_DEPTH
+
+                                        ]}
+
+                                    />
+
+                                    <meshStandardMaterial
+
+                                        color={
+                                            WINDOW_CASING_COLOR
+                                        }
+
+                                        roughness={
+                                            0.78
+                                        }
+
+                                        metalness={
+                                            0
+                                        }
+
+                                    />
+
+                                </mesh>
+
+                            </group>
+
+                        );
+
+                    }
+
+                )
+            }
+
+        </group>
+
+    );
+
+}
+
+//======================================================
 // WINDOW
 //======================================================
 //
@@ -809,6 +1248,31 @@ function WindowModel({
             }
 
         >
+
+            {/*==================================================
+                DEFAULT WINDOW CASING
+            ==================================================*/}
+
+            <WindowCasing
+
+                windowId={
+                    window.id
+                }
+
+                width={
+                    window.width
+                }
+
+                height={
+                    window.height
+                }
+
+                wallThickness={
+                    state.wallThickness
+                }
+
+            />
+
 
             <primitive
                 object={
