@@ -6,6 +6,10 @@ import {
   resolveStoragePath,
 } from "./preview-textures";
 
+// ==================================================
+// TYPES
+// ==================================================
+
 export interface PreviewTextures {
   diffuse: THREE.Texture | null;
 }
@@ -14,17 +18,44 @@ export interface PreviewTextureURLs {
   diffuseURL: string | null;
 }
 
+export interface PreviewURLs
+  extends PreviewTextureURLs {
+  modelURL: string | null;
+}
+
+// ==================================================
+// URL RESOLUTION
+// ==================================================
+
+/**
+ * Resolves the 3D model storage path
+ * into a usable URL.
+ */
 export async function resolveModelURL(
   asset: Asset
 ): Promise<string | null> {
+  if (!asset.storage_path?.trim()) {
+    return null;
+  }
+
   return resolveStoragePath(
     asset.storage_path
   );
 }
 
+/**
+ * Resolves the diffuse texture storage path
+ * into a usable URL.
+ */
 export async function resolveTextureURLs(
   asset: Asset
 ): Promise<PreviewTextureURLs> {
+  if (!asset.diffuse_path?.trim()) {
+    return {
+      diffuseURL: null,
+    };
+  }
+
   const diffuseURL =
     await resolveStoragePath(
       asset.diffuse_path
@@ -35,47 +66,109 @@ export async function resolveTextureURLs(
   };
 }
 
+/**
+ * Resolves both the model URL and texture URL
+ * at the same time.
+ *
+ * This prevents the model and texture from
+ * being resolved sequentially.
+ */
 export async function resolvePreviewURLs(
   asset: Asset
-) {
+): Promise<PreviewURLs> {
   const [
     modelURL,
-    textureURLs,
+    diffuseURL,
   ] = await Promise.all([
     resolveModelURL(asset),
-    resolveTextureURLs(asset),
+
+    resolveStoragePath(
+      asset.diffuse_path
+    ),
   ]);
 
   return {
     modelURL,
-    ...textureURLs,
+    diffuseURL,
   };
 }
+
+// ==================================================
+// TEXTURE LOADER
+// ==================================================
 
 const textureLoader =
   new THREE.TextureLoader();
 
-/**
- * Completed texture cache.
- *
- * normalizedStoragePath -> THREE.Texture
- */
-const textureCache =
-  new Map<string, THREE.Texture>();
+// ==================================================
+// COMPLETED TEXTURE CACHE
+// ==================================================
 
 /**
- * In-flight texture loading cache.
+ * Normalized storage path
+ * ->
+ * THREE.Texture
  *
- * normalizedStoragePath -> Promise<THREE.Texture | null>
+ * Once a texture has been loaded,
+ * future previews can immediately reuse it.
+ */
+const textureCache =
+  new Map<
+    string,
+    THREE.Texture
+  >();
+
+// ==================================================
+// IN-FLIGHT TEXTURE CACHE
+// ==================================================
+
+/**
+ * Normalized storage path
+ * ->
+ * Promise<THREE.Texture | null>
  *
- * This prevents multiple components/effects from
- * downloading the same texture at the same time.
+ * Prevents multiple components from
+ * downloading the same texture simultaneously.
  */
 const texturePromiseCache =
   new Map<
     string,
     Promise<THREE.Texture | null>
   >();
+
+// ==================================================
+// URL CACHE
+// ==================================================
+
+/**
+ * Normalized storage path
+ * ->
+ * Resolved download URL
+ *
+ * This avoids repeatedly calling
+ * resolveStoragePath() for the same asset.
+ */
+const textureURLCache =
+  new Map<
+    string,
+    string
+  >();
+
+/**
+ * In-flight URL resolution cache.
+ *
+ * This prevents multiple calls to
+ * resolveStoragePath() for the same path.
+ */
+const textureURLPromiseCache =
+  new Map<
+    string,
+    Promise<string | null>
+  >();
+
+// ==================================================
+// PATH NORMALIZATION
+// ==================================================
 
 function normalizeStoragePath(
   path: string
@@ -92,6 +185,104 @@ function normalizeStoragePath(
     );
 }
 
+// ==================================================
+// RESOLVE TEXTURE URL
+// ==================================================
+
+async function resolveTextureURL(
+  normalizedPath: string
+): Promise<string | null> {
+
+  // --------------------------------------------------
+  // 1. Already resolved
+  // --------------------------------------------------
+
+  const cachedURL =
+    textureURLCache.get(
+      normalizedPath
+    );
+
+  if (cachedURL) {
+    return cachedURL;
+  }
+
+  // --------------------------------------------------
+  // 2. Already resolving
+  // --------------------------------------------------
+
+  const existingPromise =
+    textureURLPromiseCache.get(
+      normalizedPath
+    );
+
+  if (existingPromise) {
+    return existingPromise;
+  }
+
+  // --------------------------------------------------
+  // 3. Resolve URL
+  // --------------------------------------------------
+
+  const promise =
+    (async () => {
+
+      try {
+
+        const url =
+          await resolveStoragePath(
+            normalizedPath
+          );
+
+        if (!url) {
+          console.error(
+            "[AssetPreview] Could not resolve texture URL:",
+            normalizedPath
+          );
+
+          return null;
+        }
+
+        textureURLCache.set(
+          normalizedPath,
+          url
+        );
+
+        return url;
+
+      } catch (error) {
+
+        console.error(
+          "[AssetPreview] Failed to resolve texture URL:",
+          {
+            path: normalizedPath,
+            error,
+          }
+        );
+
+        return null;
+
+      } finally {
+
+        textureURLPromiseCache.delete(
+          normalizedPath
+        );
+
+      }
+
+    })();
+
+  textureURLPromiseCache.set(
+    normalizedPath,
+    promise
+  );
+
+  return promise;
+}
+
+// ==================================================
+// LOAD TEXTURE
+// ==================================================
+
 export async function loadTexture(
   path?: string | null,
   options?: {
@@ -99,6 +290,11 @@ export async function loadTexture(
     anisotropy?: number;
   }
 ): Promise<THREE.Texture | null> {
+
+  // --------------------------------------------------
+  // No path
+  // --------------------------------------------------
+
   if (!path?.trim()) {
     return null;
   }
@@ -107,7 +303,9 @@ export async function loadTexture(
     normalizeStoragePath(path);
 
   // --------------------------------------------------
-  // 1. Return already-loaded texture immediately
+  // 1. COMPLETED CACHE
+  //
+  // Fastest possible path.
   // --------------------------------------------------
 
   const cachedTexture =
@@ -120,7 +318,9 @@ export async function loadTexture(
   }
 
   // --------------------------------------------------
-  // 2. Reuse an existing loading request
+  // 2. IN-FLIGHT CACHE
+  //
+  // Another component is already loading it.
   // --------------------------------------------------
 
   const existingPromise =
@@ -133,26 +333,27 @@ export async function loadTexture(
   }
 
   // --------------------------------------------------
-  // 3. Start a new loading request
+  // 3. START LOADING
   // --------------------------------------------------
 
   const loadPromise =
     (async () => {
+
+      // ----------------------------------------------
+      // Resolve URL
+      // ----------------------------------------------
+
       const url =
-        await resolveStoragePath(
+        await resolveTextureURL(
           normalizedPath
         );
 
       if (!url) {
-        console.error(
-          "[AssetPreview] Could not resolve diffuse texture URL:",
-          normalizedPath
-        );
-
         return null;
       }
 
       try {
+
         console.log(
           "[AssetPreview] Loading diffuse texture:",
           {
@@ -161,10 +362,18 @@ export async function loadTexture(
           }
         );
 
+        // --------------------------------------------
+        // Load image
+        // --------------------------------------------
+
         const texture =
           await textureLoader.loadAsync(
             url
           );
+
+        // --------------------------------------------
+        // Texture configuration
+        // --------------------------------------------
 
         texture.wrapS =
           THREE.RepeatWrapping;
@@ -186,7 +395,17 @@ export async function loadTexture(
         texture.colorSpace =
           THREE.SRGBColorSpace;
 
-        texture.needsUpdate = true;
+        texture.needsUpdate =
+          true;
+
+        // --------------------------------------------
+        // Save completed texture
+        // --------------------------------------------
+
+        textureCache.set(
+          normalizedPath,
+          texture
+        );
 
         console.log(
           "[AssetPreview] Diffuse texture loaded:",
@@ -202,14 +421,10 @@ export async function loadTexture(
           }
         );
 
-        // Save completed texture
-        textureCache.set(
-          normalizedPath,
-          texture
-        );
-
         return texture;
+
       } catch (error) {
+
         console.error(
           "[AssetPreview] Failed to load diffuse texture:",
           {
@@ -220,16 +435,22 @@ export async function loadTexture(
         );
 
         return null;
+
       } finally {
-        // The request has finished, so remove it
-        // from the in-flight cache.
+
+        // --------------------------------------------
+        // Loading completed.
+        // --------------------------------------------
+
         texturePromiseCache.delete(
           normalizedPath
         );
+
       }
+
     })();
 
-  // Save the in-flight request immediately.
+  // Save the request immediately.
   texturePromiseCache.set(
     normalizedPath,
     loadPromise
@@ -238,9 +459,20 @@ export async function loadTexture(
   return loadPromise;
 }
 
+// ==================================================
+// LOAD ASSET TEXTURES
+// ==================================================
+
 export async function loadAssetTextures(
   asset: Asset
 ): Promise<PreviewTextures> {
+
+  if (!asset.diffuse_path?.trim()) {
+    return {
+      diffuse: null,
+    };
+  }
+
   const diffuse =
     await loadTexture(
       asset.diffuse_path,
@@ -255,29 +487,98 @@ export async function loadAssetTextures(
   };
 }
 
+// ==================================================
+// TEXTURE HELPERS
+// ==================================================
+
 export function hasTextures(
   asset: Asset
 ): boolean {
+
   return Boolean(
     asset.diffuse_path?.trim()
   );
+
 }
 
 export function hasMaterialProperties(
   asset: Asset
 ): boolean {
+
   return Boolean(
     asset.color != null ||
     asset.roughness != null ||
     asset.metalness != null
   );
+
 }
+
+// ==================================================
+// CACHE ACCESS
+// ==================================================
+
+/**
+ * Returns a texture immediately if it has
+ * already been loaded.
+ *
+ * Does not start a network request.
+ */
+export function getCachedTexture(
+  path?: string | null
+): THREE.Texture | null {
+
+  if (!path?.trim()) {
+    return null;
+  }
+
+  const normalizedPath =
+    normalizeStoragePath(path);
+
+  return (
+    textureCache.get(
+      normalizedPath
+    ) ?? null
+  );
+
+}
+
+/**
+ * Returns a resolved URL immediately if
+ * it has already been resolved.
+ */
+export function getCachedTextureURL(
+  path?: string | null
+): string | null {
+
+  if (!path?.trim()) {
+    return null;
+  }
+
+  const normalizedPath =
+    normalizeStoragePath(path);
+
+  return (
+    textureURLCache.get(
+      normalizedPath
+    ) ?? null
+  );
+
+}
+
+// ==================================================
+// CLEAR SINGLE TEXTURE
+// ==================================================
 
 export function clearTextureCache(
   path: string
 ): void {
+
   const normalizedPath =
     normalizeStoragePath(path);
+
+  // ----------------------------------------------
+  // Dispose THREE.Texture
+  // ----------------------------------------------
 
   const texture =
     textureCache.get(
@@ -288,24 +589,74 @@ export function clearTextureCache(
     texture.dispose();
   }
 
+  // ----------------------------------------------
+  // Remove texture
+  // ----------------------------------------------
+
   textureCache.delete(
     normalizedPath
   );
 
-  // Also cancel reuse of an in-flight
-  // promise for this path.
+  // ----------------------------------------------
+  // Remove URL
+  // ----------------------------------------------
+
+  textureURLCache.delete(
+    normalizedPath
+  );
+
+  // ----------------------------------------------
+  // Remove in-flight requests
+  // ----------------------------------------------
+
   texturePromiseCache.delete(
     normalizedPath
   );
+
+  textureURLPromiseCache.delete(
+    normalizedPath
+  );
+
 }
 
+// ==================================================
+// CLEAR EVERYTHING
+// ==================================================
+
 export function clearAllTextureCache(): void {
+
+  // ----------------------------------------------
+  // Dispose textures
+  // ----------------------------------------------
+
   textureCache.forEach(
-    (texture) => {
+    texture => {
       texture.dispose();
     }
   );
 
+  // ----------------------------------------------
+  // Clear completed textures
+  // ----------------------------------------------
+
   textureCache.clear();
+
+  // ----------------------------------------------
+  // Clear resolved URLs
+  // ----------------------------------------------
+
+  textureURLCache.clear();
+
+  // ----------------------------------------------
+  // Clear in-flight texture requests
+  // ----------------------------------------------
+
   texturePromiseCache.clear();
+
+  // ----------------------------------------------
+  // Clear in-flight URL requests
+  // ----------------------------------------------
+
+  textureURLPromiseCache.clear();
+
 }

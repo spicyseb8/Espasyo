@@ -1,17 +1,16 @@
 import { Routes, Route } from "react-router-dom";
-
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import UserTable from "@/components/pages/UserTable/UserTable";
 import AccountSettings from "@/components/pages/AccountSettings/AccountSettings";
 import AssetLibrary from "@/components/pages/AssetLibrary/AssetLibrary";
 import Login from "@/components/auth/Login";
+import ProjectManagement from "@/components/pages/ProjectManagement/ProjectManagement";
 
 function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
 
-      {/* Customer Account */}
       <Route
         path="/users/:id"
         element={
@@ -21,7 +20,6 @@ function App() {
         }
       />
 
-      {/* Employee Account */}
       <Route
         path="/employees/:id"
         element={
@@ -31,7 +29,6 @@ function App() {
         }
       />
 
-      {/* Main Dashboard */}
       <Route
         path="*"
         element={
@@ -58,20 +55,12 @@ function App() {
               }
 
               if (selectedPage === "projects") {
-                return (
-                  <div>
-                    <h1 className="text-lg font-semibold">
-                      Projects
-                    </h1>
-                  </div>
-                );
+                return <ProjectManagement />;
               }
 
               return (
                 <div>
-                  <h1 className="text-lg font-semibold">
-                    Dashboard
-                  </h1>
+                  <h1 className="text-lg font-semibold">Dashboard</h1>
                 </div>
               );
             }}
