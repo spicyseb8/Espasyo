@@ -1,133 +1,123 @@
-import { adminDb } from "./firebase-admin.js";
+import { db } from "./firebase-admin.js";
 
-const wallPaints = [
-  {
-    name: "Blue Ice",
-    color: "#7C88AA",
-  },
-  {
-    name: "Moonlight Blue",
-    color: "#536D8D",
-  },
-  {
-    name: "Medieval Blue",
-    color: "#2B3455",
-  },
-  {
-    name: "Dark Navy",
-    color: "#292A32",
-  },
-  {
-    name: "Brandy Snifter",
-    color: "#88453F",
-  },
-  {
-    name: "Pale Gold",
-    color: "#BE9A63",
-  },
-  {
-    name: "Whisper White",
-    color: "#B5A994",
-  },
-  {
-    name: "Baby's Breath",
-    color: "#E8E2D1",
-  },
-  {
-    name: "Sun Kiss",
-    color: "#E8CEB9",
-  },
-  {
-    name: "Silver Pine",
-    color: "#58716F",
-  },
-  {
-    name: "Matte Green",
-    color: "#87927A",
-  },
-  {
-    name: "Warm Gray 2 C",
-    color: "#CBC4BC",
-  },
+const ASSET_COLLECTIONS = [
+  "assets",
+  "furniture",
+  "floors",
+  "doors",
+  "windows",
 ];
 
-async function seedWallPaints() {
-  const now = new Date();
+function printValue(value, indent = 0) {
+  const spacing = " ".repeat(indent);
 
-  let createdCount = 0;
-  let skippedCount = 0;
-
-  for (const paint of wallPaints) {
-    // Check if this paint already exists
-    const existingPaint = await adminDb
-      .collection("assets")
-      .where("name", "==", paint.name)
-      .where("asset_type", "==", "wall")
-      .where("category", "==", "paint")
-      .limit(1)
-      .get();
-
-    if (!existingPaint.empty) {
-      console.log(`Skipped: ${paint.name} (already exists)`);
-      skippedCount++;
-      continue;
-    }
-
-    // Let Firestore automatically generate the document ID
-    const assetRef = adminDb.collection("assets").doc();
-
-    const assetData = {
-      id: assetRef.id,
-
-      name: paint.name,
-
-      asset_type: "wall",
-      category: "paint",
-
-      price: 500,
-
-      color: paint.color,
-
-      roughness: 0.8,
-      metalness: 0,
-
-      created_at: now,
-      updated_at: now,
-    };
-
-    await assetRef.set(assetData);
-
-    console.log(`Created: ${paint.name}`);
-    console.log(`ID: ${assetRef.id}`);
-    console.log(`Color: ${paint.color}`);
-    console.log("");
-
-    createdCount++;
+  if (value === null) {
+    console.log(`${spacing}null`);
+    return;
   }
 
-  console.log("======================================");
-  console.log("Wall paint seeding completed.");
-  console.log(`Created: ${createdCount}`);
-  console.log(`Skipped: ${skippedCount}`);
-  console.log(`Total: ${wallPaints.length}`);
-  console.log("======================================");
+  if (value === undefined) {
+    console.log(`${spacing}undefined`);
+    return;
+  }
+
+  if (value?.toDate instanceof Function) {
+    console.log(`${spacing}${value.toDate().toISOString()}`);
+    return;
+  }
+
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      console.log(`${spacing}[]`);
+      return;
+    }
+
+    value.forEach((item, index) => {
+      console.log(`${spacing}[${index}]`);
+      printValue(item, indent + 2);
+    });
+
+    return;
+  }
+
+  if (typeof value === "object") {
+    const keys = Object.keys(value);
+
+    if (keys.length === 0) {
+      console.log(`${spacing}{}`);
+      return;
+    }
+
+    for (const key of keys) {
+      console.log(`${spacing}${key}:`);
+
+      if (typeof value[key] === "object" && value[key] !== null) {
+        printValue(value[key], indent + 2);
+      } else {
+        console.log(`${" ".repeat(indent + 2)}${value[key]}`);
+      }
+    }
+
+    return;
+  }
+
+  console.log(`${spacing}${value}`);
 }
 
-async function main() {
-  console.log("======================================");
-  console.log("Espasyo Asset Seeder");
-  console.log("======================================");
+async function inspectCollection(collectionName) {
   console.log("");
+  console.log("==================================================");
+  console.log(`COLLECTION: ${collectionName}`);
+  console.log("==================================================");
 
-  console.log("Creating wall paints...");
-  console.log("");
+  const snapshot = await db
+    .collection(collectionName)
+    .get();
 
-  await seedWallPaints();
+  if (snapshot.empty) {
+    console.log("No documents found.");
+    return;
+  }
+
+  console.log(`Documents found: ${snapshot.size}`);
+
+  for (const document of snapshot.docs) {
+    console.log("");
+    console.log("----------------------------------------------");
+    console.log(`DOCUMENT ID: ${document.id}`);
+    console.log("----------------------------------------------");
+
+    const data = document.data();
+
+    printValue(data, 2);
+  }
 }
 
-main().catch((error) => {
-  console.error("");
-  console.error("Asset seeding failed.");
-  console.error(error);
-  process.exit(1);
-});
+async function inspectAssets() {
+  console.log("");
+  console.log("==================================================");
+  console.log("ESPASYO ASSET DATABASE INSPECTOR");
+  console.log("==================================================");
+  console.log("READ ONLY - No Firestore data will be modified.");
+  console.log("");
+
+  try {
+    for (const collection of ASSET_COLLECTIONS) {
+      await inspectCollection(collection);
+    }
+
+    console.log("");
+    console.log("==================================================");
+    console.log("ASSET INSPECTION COMPLETE");
+    console.log("==================================================");
+  } catch (error) {
+    console.error("");
+    console.error("==================================================");
+    console.error("ASSET INSPECTION FAILED");
+    console.error("==================================================");
+    console.error(error);
+    console.error("");
+  }
+}
+
+inspectAssets();
