@@ -4,13 +4,16 @@
   "description": "Espasyo Firebase Admin server",
   "type": "module",
   "scripts": {
+    "dev": "node src/main/server.js",
     "verify-superadmin": "node src/create-superadmin.js",
     "seed-test-data": "node src/seed-test-data.js",
     "inspect:firestore": "node src/inspect-firestore.js",
+    "inspect:assets": "node src/inspect-assets.js",
     "seed:assets": "node src/seed-assets.js"
-    
   },
   "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
     "firebase-admin": "^13.10.0"
   }
 }

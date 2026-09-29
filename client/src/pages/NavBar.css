@@ -98,7 +98,7 @@
 
 /* --- Sign in CTA: the single sparing accent on the page --- */
 
-.navbar__cta {
+.navbar__signin-button {
   display: inline-block;
   border-radius: 0.875rem;
   background-color: var(--color-accent);
