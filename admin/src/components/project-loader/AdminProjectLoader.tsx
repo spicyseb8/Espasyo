@@ -88,13 +88,13 @@ export default function AdminProjectLoader() {
                 auth,
                 async user => {
 
-                    //--------------------------------------------------
-                    // PROJECT ID
-                    //--------------------------------------------------
+                    if (
+                        !projectId
+                    ) {
 
-                    if (!projectId) {
-
-                        if (!cancelled) {
+                        if (
+                            !cancelled
+                        ) {
 
                             setError(
                                 "No project was selected."
@@ -111,13 +111,13 @@ export default function AdminProjectLoader() {
                     }
 
 
-                    //--------------------------------------------------
-                    // AUTH
-                    //--------------------------------------------------
+                    if (
+                        !user
+                    ) {
 
-                    if (!user) {
-
-                        if (!cancelled) {
+                        if (
+                            !cancelled
+                        ) {
 
                             setError(
                                 "Please log in before opening a project."
@@ -136,7 +136,9 @@ export default function AdminProjectLoader() {
 
                     try {
 
-                        if (!cancelled) {
+                        if (
+                            !cancelled
+                        ) {
 
                             setLoading(
                                 true
@@ -147,9 +149,9 @@ export default function AdminProjectLoader() {
                         }
 
 
-                        //--------------------------------------------------
-                        // GET FIRESTORE PROJECT METADATA
-                        //--------------------------------------------------
+                        //==================================================
+                        // GET PROJECT METADATA
+                        //==================================================
 
                         const metadata =
                             await getAdminProject(
@@ -157,9 +159,20 @@ export default function AdminProjectLoader() {
                             );
 
 
-                        //--------------------------------------------------
-                        // CHECK JSON URL
-                        //--------------------------------------------------
+                        console.log(
+                            "AdminProjectLoader metadata:",
+                            metadata
+                        );
+
+
+                        //==================================================
+                        // JSON URL
+                        //==================================================
+                        //
+                        // We intentionally use jsonUrl instead of the
+                        // Firebase Storage SDK so this loader does not
+                        // require admin read permission on the Storage path.
+                        //==================================================
 
                         if (
                             !metadata.jsonUrl ||
@@ -167,58 +180,92 @@ export default function AdminProjectLoader() {
                         ) {
 
                             throw new Error(
-                                "This project does not have a valid JSON URL."
+                                "This project does not have a valid JSON download URL."
                             );
 
                         }
 
 
-                        //--------------------------------------------------
-                        // DOWNLOAD PROJECT JSON
-                        //--------------------------------------------------
+                        const jsonUrl =
+                            metadata.jsonUrl.trim();
+
+
+                        console.log(
+                            "AdminProjectLoader downloading JSON from jsonUrl:",
+                            jsonUrl
+                        );
+
+
+                        //==================================================
+                        // DOWNLOAD JSON
+                        //==================================================
 
                         const response =
                             await fetch(
-                                metadata.jsonUrl
+                                jsonUrl,
+                                {
+                                    method:
+                                        "GET",
+
+                                    cache:
+                                        "no-store"
+                                }
                             );
 
 
-                        if (!response.ok) {
+                        if (
+                            !response.ok
+                        ) {
 
                             throw new Error(
-                                `Failed to download project JSON (${response.status}).`
+                                `Project JSON request failed with HTTP ${response.status}.`
                             );
 
                         }
+
+
+                        const contentType =
+                            response.headers.get(
+                                "content-type"
+                            );
+
+
+                        console.log(
+                            "AdminProjectLoader JSON response:",
+                            {
+                                status:
+                                    response.status,
+
+                                contentType
+                            }
+                        );
 
 
                         const data =
                             await response.json();
 
 
-                        //--------------------------------------------------
-                        // BASIC VALIDATION
-                        //--------------------------------------------------
+                        //==================================================
+                        // VALIDATE
+                        //==================================================
 
                         validateProjectData(
                             data
                         );
 
 
-                        //--------------------------------------------------
-                        // CANCEL CHECK
-                        //--------------------------------------------------
-
-                        if (cancelled) {
+                        if (
+                            cancelled
+                        ) {
 
                             return;
 
                         }
 
 
-                        //--------------------------------------------------
-                        // SAVE LOADED PROJECT
-                        //--------------------------------------------------
+                        //==================================================
+                        // STORE
+                        //==================================================
 
                         setLoadedProject({
 
@@ -234,7 +281,9 @@ export default function AdminProjectLoader() {
                             false
                         );
 
-                    } catch (loadError) {
+                    } catch (
+                        loadError
+                    ) {
 
                         console.error(
                             "Failed to load admin project:",
@@ -242,7 +291,9 @@ export default function AdminProjectLoader() {
                         );
 
 
-                        if (cancelled) {
+                        if (
+                            cancelled
+                        ) {
 
                             return;
 
@@ -288,7 +339,9 @@ export default function AdminProjectLoader() {
     // LOADING
     //==================================================
 
-    if (loading) {
+    if (
+        loading
+    ) {
 
         return (
 
@@ -317,32 +370,38 @@ export default function AdminProjectLoader() {
     // ERROR
     //==================================================
 
-    if (error) {
+    if (
+        error
+    ) {
 
         return (
 
             <div className="flex h-screen w-screen items-center justify-center bg-zinc-950 text-white">
 
-                <div className="max-w-md text-center">
+                <div className="max-w-lg text-center">
 
                     <h2 className="text-lg font-semibold">
                         Unable to open project
                     </h2>
 
-
-                    <p className="mt-2 text-sm text-zinc-400">
+                    <p className="mt-2 break-words text-sm text-zinc-400">
                         {error}
                     </p>
 
-
                     <button
+
                         type="button"
+
                         className="mt-5 rounded-md bg-white px-4 py-2 text-sm font-medium text-black hover:bg-zinc-200"
+
                         onClick={() =>
                             navigate(-1)
                         }
+
                     >
+
                         Back to Projects
+
                     </button>
 
                 </div>
@@ -358,7 +417,9 @@ export default function AdminProjectLoader() {
     // NO PROJECT
     //==================================================
 
-    if (!loadedProject) {
+    if (
+        !loadedProject
+    ) {
 
         return null;
 
@@ -388,12 +449,13 @@ export default function AdminProjectLoader() {
 }
 
 
-//======================================================
-// PROJECT JSON VALIDATION
-//======================================================
+//==================================================
+// VALIDATE PROJECT JSON
+//==================================================
 
 function validateProjectData(
-    data: unknown
+    data:
+        unknown
 ): asserts data is SavedProjectData {
 
     if (

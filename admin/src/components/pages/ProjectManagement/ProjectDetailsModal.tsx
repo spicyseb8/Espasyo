@@ -2,7 +2,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, FolderOpen, User, CalendarDays, Clock, PhilippinePeso, FileJson } from "lucide-react";
-import type { AdminProject } from "./ProjectManagement";
+import type {
+    AdminProject
+} from "../../../services/assets/projectService";
 import { formatCost, formatProjectDate } from "./ProjectManagement";
 
 interface ProjectDetailsModalProps {
