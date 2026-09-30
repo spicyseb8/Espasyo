@@ -4,7 +4,7 @@ import type {
 
 import type {
     Wall
-} from "../../engine/walls";
+} from "../../engine/walls/Index";
 
 import {
     PlacementRules
