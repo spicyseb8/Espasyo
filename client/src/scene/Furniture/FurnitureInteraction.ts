@@ -15,6 +15,7 @@ import type {
     FurnitureCollisionResult
 } from "../../engine/furniture/FurnitureCollision";
 
+
 class FurnitureInteraction {
 
     //--------------------------------------------------
@@ -24,12 +25,14 @@ class FurnitureInteraction {
     readonly raycaster =
         new Raycaster();
 
+
     //--------------------------------------------------
-    // Rotation
+    // Rotation for NEW furniture placement
     //--------------------------------------------------
 
     rotationY =
         0;
+
 
     //--------------------------------------------------
     // Pointer
@@ -38,8 +41,9 @@ class FurnitureInteraction {
     readonly pointer =
         new Vector2();
 
+
     //--------------------------------------------------
-    // Preview
+    // Current preview
     //--------------------------------------------------
 
     currentPlacement:
@@ -54,8 +58,9 @@ class FurnitureInteraction {
         FurnitureCollisionResult | null =
         null;
 
+
     //--------------------------------------------------
-    // Existing furniture move
+    // Existing furniture movement
     //--------------------------------------------------
 
     editingFurnitureId:
@@ -66,6 +71,7 @@ class FurnitureInteraction {
         FurniturePlacement | null =
         null;
 
+
     //--------------------------------------------------
     // Pointer-up suppression
     //--------------------------------------------------
@@ -73,8 +79,54 @@ class FurnitureInteraction {
     private suppressNextPointerUp =
         false;
 
+
+    //==================================================
+    // EXISTING FURNITURE ROTATION
+    //==================================================
+
     //--------------------------------------------------
-    // Rotation
+    // Furniture currently being rotated
+    //--------------------------------------------------
+
+    rotatingFurnitureId:
+        string | null =
+        null;
+
+
+    //--------------------------------------------------
+    // Original rotation before rotation begins
+    //--------------------------------------------------
+
+    rotationOriginalY =
+        0;
+
+
+    //--------------------------------------------------
+    // Current live rotation preview
+    //--------------------------------------------------
+
+    rotationPreviewY:
+        number | null =
+        null;
+
+
+    //--------------------------------------------------
+    // Whether current live rotation is valid
+    //--------------------------------------------------
+
+    rotationPreviewValid =
+        true;
+
+
+    //==================================================
+    // NEW FURNITURE ROTATION
+    //==================================================
+
+    //--------------------------------------------------
+    // Quick keyboard rotation.
+    //
+    // This remains a 90° shortcut.
+    // The Rotate toolbar provides free-angle rotation.
     //--------------------------------------------------
 
     rotateClockwise() {
@@ -87,8 +139,9 @@ class FurnitureInteraction {
             (Math.PI * 2);
     }
 
+
     //--------------------------------------------------
-    // Reset rotation
+    // Reset NEW furniture rotation
     //--------------------------------------------------
 
     resetRotation() {
@@ -97,9 +150,70 @@ class FurnitureInteraction {
             0;
     }
 
-    //--------------------------------------------------
-    // Pointer
-    //--------------------------------------------------
+
+    //==================================================
+    // EXISTING FURNITURE ROTATION
+    //==================================================
+
+    startRotation(
+        furnitureId: string,
+        rotationY: number
+    ) {
+
+        this.rotatingFurnitureId =
+            furnitureId;
+
+        this.rotationOriginalY =
+            rotationY;
+
+        this.rotationPreviewY =
+            rotationY;
+
+        this.rotationPreviewValid =
+            true;
+    }
+
+
+    setRotationPreview(
+        furnitureId: string,
+        rotationY: number,
+        valid: boolean
+    ) {
+
+        if (
+            this.rotatingFurnitureId !==
+            furnitureId
+        ) {
+            return;
+        }
+
+        this.rotationPreviewY =
+            rotationY;
+
+        this.rotationPreviewValid =
+            valid;
+    }
+
+
+    clearRotationPreview() {
+
+        this.rotatingFurnitureId =
+            null;
+
+        this.rotationOriginalY =
+            0;
+
+        this.rotationPreviewY =
+            null;
+
+        this.rotationPreviewValid =
+            true;
+    }
+
+
+    //==================================================
+    // POINTER
+    //==================================================
 
     updatePointer(
         event: PointerEvent,
@@ -135,9 +249,10 @@ class FurnitureInteraction {
             ) * 2 + 1;
     }
 
-    //--------------------------------------------------
-    // Start editing
-    //--------------------------------------------------
+
+    //==================================================
+    // START EDITING
+    //==================================================
 
     startEditing(
         furnitureId: string,
@@ -154,11 +269,18 @@ class FurnitureInteraction {
             null;
 
         this.clearPreview();
+
+        //--------------------------------------------------
+        // Make sure an old rotation session is gone.
+        //--------------------------------------------------
+
+        this.clearRotationPreview();
     }
 
-    //--------------------------------------------------
-    // Finish editing
-    //--------------------------------------------------
+
+    //==================================================
+    // FINISH EDITING
+    //==================================================
 
     finishEditing() {
 
@@ -167,11 +289,14 @@ class FurnitureInteraction {
 
         this.editingOriginalPlacement =
             null;
+
+        this.clearRotationPreview();
     }
 
-    //--------------------------------------------------
-    // Cancel editing
-    //--------------------------------------------------
+
+    //==================================================
+    // CANCEL EDITING
+    //==================================================
 
     cancelEditing() {
 
@@ -182,11 +307,14 @@ class FurnitureInteraction {
             null;
 
         this.clearPreview();
+
+        this.clearRotationPreview();
     }
 
-    //--------------------------------------------------
-    // Pointer suppression
-    //--------------------------------------------------
+
+    //==================================================
+    // POINTER SUPPRESSION
+    //==================================================
 
     suppressPointerUp() {
 
@@ -194,12 +322,12 @@ class FurnitureInteraction {
             true;
     }
 
+
     consumePointerUpSuppression(): boolean {
 
         if (
             !this.suppressNextPointerUp
         ) {
-
             return false;
         }
 
@@ -209,9 +337,10 @@ class FurnitureInteraction {
         return true;
     }
 
-    //--------------------------------------------------
-    // Preview result
-    //--------------------------------------------------
+
+    //==================================================
+    // PREVIEW RESULT
+    //==================================================
 
     pointerDown() {
 
@@ -241,9 +370,10 @@ class FurnitureInteraction {
         };
     }
 
-    //--------------------------------------------------
-    // Clear preview
-    //--------------------------------------------------
+
+    //==================================================
+    // CLEAR PREVIEW
+    //==================================================
 
     clearPreview() {
 
@@ -257,6 +387,7 @@ class FurnitureInteraction {
             null;
     }
 }
+
 
 export const furnitureInteraction =
     new FurnitureInteraction();
