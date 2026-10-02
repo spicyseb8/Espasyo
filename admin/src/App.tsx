@@ -11,8 +11,8 @@ import AccountSettings
 import AssetLibrary
   from "@/components/pages/AssetLibrary/AssetLibrary";
 
-import ProjectsTab
-  from "@/components/pages/AccountSettings/ProjectsTab";
+import ProjectManagement
+  from "@/components/pages/ProjectManagement/ProjectManagement";
 
 import AdminProjectLoader
   from "@/components/project-loader/AdminProjectLoader";
@@ -194,7 +194,7 @@ function App() {
               ) {
 
                 return (
-                  <ProjectsTab />
+                  <ProjectManagement />
                 );
 
               }
