@@ -4,7 +4,8 @@ import {
 } from "react";
 
 import {
-    useNavigate
+    useNavigate,
+    useParams
 } from "react-router-dom";
 
 import {
@@ -23,16 +24,43 @@ import {
 } from "@/components/ui/card";
 
 import {
-    getAdminProjects,
+    getProjectsForUserAccount,
     type AdminProject
 } from "../../../services/assets/projectService";
 
+
+//==================================================
+// PROJECTS TAB
+//==================================================
 
 export default function ProjectsTab() {
 
     const navigate =
         useNavigate();
 
+
+    //==================================================
+    // USER ACCOUNT ID
+    //==================================================
+    //
+    // This comes from:
+    //
+    // /users/:id
+    //
+    // It represents the customer account whose
+    // Account Settings page is currently open.
+    //==================================================
+
+    const {
+        id: accountId
+    } = useParams<{
+        id?: string;
+    }>();
+
+
+    //==================================================
+    // STATE
+    //==================================================
 
     const [
         projects,
@@ -67,31 +95,99 @@ export default function ProjectsTab() {
                 auth,
                 async user => {
 
+                    //--------------------------------------------------
+                    // ADMIN AUTH
+                    //--------------------------------------------------
+
                     if (!user) {
 
                         if (!cancelled) {
+
+                            setProjects([]);
 
                             setError(
                                 "Please log in to view projects."
                             );
 
-                            setLoading(false);
+                            setLoading(
+                                false
+                            );
 
                         }
 
                         return;
+                    }
 
+
+                    //--------------------------------------------------
+                    // CUSTOMER ACCOUNT ID
+                    //--------------------------------------------------
+
+                    if (
+                        !accountId ||
+                        accountId.trim() === ""
+                    ) {
+
+                        if (!cancelled) {
+
+                            setProjects([]);
+
+                            setError(
+                                "No customer account was selected."
+                            );
+
+                            setLoading(
+                                false
+                            );
+
+                        }
+
+                        return;
                     }
 
 
                     try {
 
-                        setLoading(true);
-                        setError("");
+                        if (!cancelled) {
 
+                            setLoading(
+                                true
+                            );
+
+                            setError("");
+
+                        }
+
+
+                        console.log(
+                            "ProjectsTab account ID:",
+                            accountId
+                        );
+
+
+                        console.log(
+                            "ProjectsTab admin UID:",
+                            user.uid
+                        );
+
+
+                        //--------------------------------------------------
+                        // IMPORTANT
+                        //
+                        // Resolve the account ID to the actual
+                        // ownerId used by project documents.
+                        //--------------------------------------------------
 
                         const loadedProjects =
-                            await getAdminProjects();
+                            await getProjectsForUserAccount(
+                                accountId
+                            );
+
+
+                        console.log(
+                            "ProjectsTab projects loaded:",
+                            loadedProjects
+                        );
 
 
                         if (!cancelled) {
@@ -107,17 +203,23 @@ export default function ProjectsTab() {
                     ) {
 
                         console.error(
-                            "Failed to load projects:",
+                            "Failed to load customer projects:",
                             loadError
                         );
 
 
                         if (!cancelled) {
 
+                            setProjects([]);
+
                             setError(
+
                                 loadError instanceof Error
+
                                     ? loadError.message
+
                                     : "Failed to load projects."
+
                             );
 
                         }
@@ -126,7 +228,9 @@ export default function ProjectsTab() {
 
                         if (!cancelled) {
 
-                            setLoading(false);
+                            setLoading(
+                                false
+                            );
 
                         }
 
@@ -145,7 +249,9 @@ export default function ProjectsTab() {
 
         };
 
-    }, []);
+    }, [
+        accountId
+    ]);
 
 
     //==================================================
@@ -153,7 +259,8 @@ export default function ProjectsTab() {
     //==================================================
 
     function handleViewProject(
-        project: AdminProject
+        project:
+            AdminProject
     ) {
 
         navigate(
@@ -168,7 +275,8 @@ export default function ProjectsTab() {
     //==================================================
 
     function formatProjectDate(
-        value: unknown
+        value:
+            unknown
     ): string {
 
         if (!value) {
@@ -178,6 +286,10 @@ export default function ProjectsTab() {
         }
 
 
+        //--------------------------------------------------
+        // Firestore Timestamp
+        //--------------------------------------------------
+
         if (
             typeof value === "object" &&
             value !== null &&
@@ -185,7 +297,7 @@ export default function ProjectsTab() {
             typeof (
                 value as {
                     toDate:
-                        unknown
+                        unknown;
                 }
             ).toDate === "function"
         ) {
@@ -194,12 +306,52 @@ export default function ProjectsTab() {
                 (
                     value as {
                         toDate:
-                            () => Date
+                            () => Date;
                     }
                 ).toDate();
 
 
             return date.toLocaleDateString();
+
+        }
+
+
+        //--------------------------------------------------
+        // JavaScript Date
+        //--------------------------------------------------
+
+        if (
+            value instanceof Date
+        ) {
+
+            return value.toLocaleDateString();
+
+        }
+
+
+        //--------------------------------------------------
+        // String date
+        //--------------------------------------------------
+
+        if (
+            typeof value === "string"
+        ) {
+
+            const date =
+                new Date(
+                    value
+                );
+
+
+            if (
+                !Number.isNaN(
+                    date.getTime()
+                )
+            ) {
+
+                return date.toLocaleDateString();
+
+            }
 
         }
 
@@ -213,14 +365,18 @@ export default function ProjectsTab() {
     // LOADING
     //==================================================
 
-    if (loading) {
+    if (
+        loading
+    ) {
 
         return (
 
             <div className="p-6">
 
                 <p className="text-sm text-zinc-400">
+
                     Loading projects...
+
                 </p>
 
             </div>
@@ -234,14 +390,18 @@ export default function ProjectsTab() {
     // ERROR
     //==================================================
 
-    if (error) {
+    if (
+        error
+    ) {
 
         return (
 
             <div className="p-6">
 
                 <p className="text-sm text-red-400">
+
                     {error}
+
                 </p>
 
             </div>
@@ -255,14 +415,18 @@ export default function ProjectsTab() {
     // EMPTY
     //==================================================
 
-    if (projects.length === 0) {
+    if (
+        projects.length === 0
+    ) {
 
         return (
 
             <div className="p-6">
 
                 <p className="text-sm text-zinc-400">
+
                     No projects found.
+
                 </p>
 
             </div>
@@ -280,63 +444,78 @@ export default function ProjectsTab() {
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
 
-            {projects.map(
-                project => (
+            {
+                projects.map(
+                    project => (
 
-                    <Card
-                        key={
-                            project.projectId
-                        }
-                        className="border-zinc-800 bg-zinc-900"
-                    >
+                        <Card
 
-                        <CardHeader>
+                            key={
+                                project.projectId
+                            }
 
-                            <CardTitle className="text-sm text-white">
-                                {
-                                    project.projectName
-                                }
-                            </CardTitle>
+                            className="border-zinc-800 bg-zinc-900"
 
+                        >
 
-                            <CardDescription>
+                            <CardHeader>
 
-                                Owner:{" "}
-                                {
-                                    project.ownerId ||
-                                    "Unknown"
-                                }
+                                <CardTitle className="text-sm text-white">
 
-                                <br />
+                                    {
+                                        project.projectName
+                                    }
 
-                                Updated:{" "}
-                                {
-                                    formatProjectDate(
-                                        project.updatedAt
-                                    )
-                                }
-
-                            </CardDescription>
+                                </CardTitle>
 
 
-                            <button
-                                type="button"
-                                className="mt-3 w-fit rounded-md bg-white px-4 py-2 text-sm font-medium text-black"
-                                onClick={() =>
-                                    handleViewProject(
-                                        project
-                                    )
-                                }
-                            >
-                                View Project
-                            </button>
+                                <CardDescription>
 
-                        </CardHeader>
+                                    Owner:{" "}
 
-                    </Card>
+                                    {
+                                        project.ownerId ||
+                                        "Unknown"
+                                    }
 
+                                    <br />
+
+                                    Updated:{" "}
+
+                                    {
+                                        formatProjectDate(
+                                            project.updatedAt
+                                        )
+                                    }
+
+                                </CardDescription>
+
+
+                                <button
+
+                                    type="button"
+
+                                    className="mt-3 w-fit rounded-md bg-white px-4 py-2 text-sm font-medium text-black"
+
+                                    onClick={() =>
+                                        handleViewProject(
+                                            project
+                                        )
+                                    }
+
+                                >
+
+                                    View Project
+
+                                </button>
+
+                            </CardHeader>
+
+                        </Card>
+
+                    )
                 )
-            )}
+            }
 
         </div>
 
