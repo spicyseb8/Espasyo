@@ -56,11 +56,17 @@ export async function resolveStoragePath(
     return null;
   }
 
+  const trimmedPath = path.trim();
+
+  if (/^(https?:\/\/|data:)/i.test(trimmedPath)) {
+    return trimmedPath;
+  }
+
   let normalizedPath: string;
 
   try {
     normalizedPath =
-      normalizeStoragePath(path);
+      normalizeStoragePath(trimmedPath);
   } catch (error) {
     console.error(
       "[PreviewStorage] Invalid Storage path:",

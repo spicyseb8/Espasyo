@@ -26,6 +26,14 @@ export interface Asset {
     | string
     | null;
 
+  model_path?:
+    | string
+    | null;
+
+  model_url?:
+    | string
+    | null;
+
   thumbnail_path?:
     | string
     | null;

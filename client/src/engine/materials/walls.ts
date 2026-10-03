@@ -38,7 +38,6 @@ interface FirebaseWallAsset {
     price:
         number;
 
-
     //--------------------------------------------------
     // OLD STORAGE PATHS
     //--------------------------------------------------
@@ -55,9 +54,11 @@ interface FirebaseWallAsset {
     roughness_path?:
         string;
 
-
     //--------------------------------------------------
     // NEW DIRECT URLS
+    //
+    // These should contain the actual HTTPS Firebase
+    // Storage download URLs.
     //--------------------------------------------------
 
     thumbnail_url?:
@@ -65,7 +66,6 @@ interface FirebaseWallAsset {
 
     base_color_url?:
         string;
-
 
     //--------------------------------------------------
     // MATERIAL SETTINGS
@@ -100,6 +100,21 @@ let wallMaterialsPromise:
 //==================================================
 // STORAGE URL FALLBACK
 //==================================================
+//
+// This function is kept for backwards compatibility.
+//
+// NEW documents:
+//     base_color_url
+//     thumbnail_url
+//
+// OLD documents:
+//     base_color_path
+//     thumbnail_path
+//
+// New URL fields are used directly and do NOT require
+// getDownloadURL().
+//
+//==================================================
 
 async function resolveStorageUrl(
     value?: string
@@ -113,13 +128,12 @@ async function resolveStorageUrl(
         return undefined;
     }
 
-
     const path =
         value.trim();
 
 
     //--------------------------------------------------
-    // Already a browser URL
+    // Already a normal browser URL
     //--------------------------------------------------
 
     if (
@@ -134,6 +148,9 @@ async function resolveStorageUrl(
 
     //--------------------------------------------------
     // Firebase Storage path
+    //
+    // This is only used for older Firestore documents
+    // that do not have the new *_url fields.
     //--------------------------------------------------
 
     try {
@@ -148,13 +165,9 @@ async function resolveStorageUrl(
     } catch (error) {
 
         console.error(
-
             "Failed to resolve Firebase Storage file:",
-
             path,
-
             error
-
         );
 
         return undefined;
@@ -165,13 +178,18 @@ async function resolveStorageUrl(
 //==================================================
 // GET WALL TEXTURE URL
 //==================================================
+//
+// Prefer the direct URL stored in Firestore.
+//
+// Fall back to base_color_path for older assets.
+//==================================================
 
 async function getWallTextureUrl(
     data: FirebaseWallAsset
 ): Promise<string | undefined> {
 
     //--------------------------------------------------
-    // Direct URL
+    // NEW DIRECT URL
     //--------------------------------------------------
 
     if (
@@ -183,7 +201,7 @@ async function getWallTextureUrl(
 
 
     //--------------------------------------------------
-    // Old Storage path
+    // OLD STORAGE PATH
     //--------------------------------------------------
 
     return resolveStorageUrl(
@@ -195,13 +213,18 @@ async function getWallTextureUrl(
 //==================================================
 // GET WALL THUMBNAIL URL
 //==================================================
+//
+// Prefer the direct URL stored in Firestore.
+//
+// Fall back to thumbnail_path for older assets.
+//==================================================
 
 async function getWallThumbnailUrl(
     data: FirebaseWallAsset
 ): Promise<string | undefined> {
 
     //--------------------------------------------------
-    // Direct URL
+    // NEW DIRECT URL
     //--------------------------------------------------
 
     if (
@@ -213,7 +236,7 @@ async function getWallThumbnailUrl(
 
 
     //--------------------------------------------------
-    // Old Storage path
+    // OLD STORAGE PATH
     //--------------------------------------------------
 
     return resolveStorageUrl(
@@ -228,12 +251,6 @@ async function getWallThumbnailUrl(
 
 async function loadWallMaterials():
     Promise<Material[]> {
-
-    //--------------------------------------------------
-    // IMPORTANT
-    //
-    // asset_type must actually be "wall" in Firestore.
-    //--------------------------------------------------
 
     const q =
         query(
@@ -258,21 +275,21 @@ async function loadWallMaterials():
         );
 
 
-    console.log(
-        "Firebase wall asset documents found:",
-        snapshot.size
-    );
-
-
     //--------------------------------------------------
-    // Convert Firebase documents
+    // Build materials
+    //================================================--
+    //
+    // Direct *_url fields are used immediately.
+    //
+    // Only old records without those fields need
+    // getDownloadURL().
+    //
     //--------------------------------------------------
 
     const results =
         await Promise.allSettled(
 
             snapshot.docs.map(
-
                 async doc => {
 
                     const data =
@@ -291,9 +308,7 @@ async function loadWallMaterials():
 
 
                     //--------------------------------------------------
-                    // Resolve texture
-                    //
-                    // This may be undefined for paint materials.
+                    // Resolve actual wall texture
                     //--------------------------------------------------
 
                     const texture =
@@ -303,15 +318,11 @@ async function loadWallMaterials():
 
 
                     //--------------------------------------------------
-                    // Create Material
-                    //
-                    // IMPORTANT:
-                    //
-                    // We DO NOT require texture anymore.
-                    // A paint material can use "color".
+                    // Convert Firebase asset into
+                    // client Material format.
                     //--------------------------------------------------
 
-                    const material: Material = {
+                    return {
 
                         id:
                             doc.id,
@@ -340,25 +351,16 @@ async function loadWallMaterials():
                         metalness:
                             data.metalness
 
-                    };
+                    } satisfies Material;
 
-
-                    console.log(
-                        "Loaded wall material:",
-                        material
-                    );
-
-
-                    return material;
                 }
-
             )
 
         );
 
 
     //--------------------------------------------------
-    // Keep successful materials
+    // Keep successful materials only
     //--------------------------------------------------
 
     const materials:
@@ -375,46 +377,32 @@ async function loadWallMaterials():
             "fulfilled"
         ) {
 
-            const material =
-                result.value;
-
-
-            //--------------------------------------------------
-            // Accept either:
+            //------------------------------------------------
+            // FIX:
+            // Keep materials that have EITHER a texture URL
+            // OR a solid color.
             //
-            // 1. texture
-            // 2. color
-            //
-            // This allows paint-only materials.
-            //--------------------------------------------------
-
-            const usable =
-                Boolean(
-                    material.texture
-                ) ||
-                Boolean(
-                    material.color
-                );
-
+            // Your Firebase wall documents only store
+            // `color` (no base_color_path / base_color_url),
+            // so the old "texture only" filter was dropping
+            // every wall. This accepts color-only walls too.
+            //------------------------------------------------
 
             if (
-                usable
+                result.value.texture ||
+                result.value.color
             ) {
 
                 materials.push(
-                    material
+                    result.value
                 );
 
             } else {
 
                 console.warn(
-
-                    "Skipping wall material with no texture or color:",
-
-                    material.id,
-
-                    material.name
-
+                    "Skipping wall material without a texture or color:",
+                    result.value.id,
+                    result.value.name
                 );
 
             }
@@ -422,11 +410,8 @@ async function loadWallMaterials():
         } else {
 
             console.error(
-
                 "Failed to load a Firebase wall material:",
-
                 result.reason
-
             );
 
         }
@@ -443,12 +428,6 @@ async function loadWallMaterials():
 
     wallMaterialsLoaded =
         true;
-
-
-    console.log(
-        "Final wall materials:",
-        cachedWallMaterials
-    );
 
 
     return cachedWallMaterials;
@@ -487,7 +466,7 @@ export async function getWallMaterials():
 
 
     //--------------------------------------------------
-    // Start Firebase request
+    // Start one Firebase request
     //--------------------------------------------------
 
     wallMaterialsPromise =
@@ -516,11 +495,9 @@ export function findCachedWallMaterial(
     Material | undefined {
 
     return cachedWallMaterials.find(
-
         material =>
             material.id ===
             materialId
-
     );
 }
 

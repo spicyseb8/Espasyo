@@ -1,14 +1,15 @@
 import { cn } from "@/lib/utils";
+import type { ReactNode } from "react";
 
 interface AssetCardProps {
-  image?: string | null;
+  preview?: ReactNode;
   title: string;
   categories: string[]; // only the first 1-2 are shown
   className?: string;
 }
 
 export default function AssetCard({
-  image,
+  preview,
   title,
   categories,
   className,
@@ -22,14 +23,8 @@ export default function AssetCard({
         className,
       )}
     >
-      <div className="overflow-hidden rounded-xl bg-neutral-100">
-        {image ? (
-          <img
-            src={image}
-            alt={title}
-            className="h-44 w-full object-cover"
-          />
-        ) : (
+      <div className="h-44 w-full overflow-hidden rounded-xl bg-neutral-100">
+        {preview ?? (
           <div className="flex h-44 w-full items-center justify-center">
             <span className="text-xs text-neutral-400">No preview</span>
           </div>

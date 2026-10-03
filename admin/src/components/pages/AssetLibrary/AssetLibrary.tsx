@@ -1,13 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import AssetCard from "@/components/ui/assert-card";
+import AssetThumbnail from "../../asset-preview/AssetThumbnail";
 import PreviewScene from "@/components/asset-preview/PreviewScene";
 import { loadTexture } from "@/components/asset-preview/assetPreviewUtils";
-import { resolveStoragePath } from "@/components/asset-preview/preview-textures";
 import { getFurnitureAssets } from "@/services/assets/furniture";
 import { getWallAssets } from "@/services/assets/walls";
 import { getFloorAssets } from "@/services/assets/floors";
@@ -38,12 +38,7 @@ export default function AssetLibrary({ type, onTypeChange }: AssetLibraryProps) 
   const [editStatus, setEditStatus] = useState<AssetStatus>("available");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
-  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
-  const [thumbnailLoading, setThumbnailLoading] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const thumbnailInputRef = useRef<HTMLInputElement | null>(null);
-  const thumbnailObjectURLRef = useRef<string | null>(null);
   const assetsPerPage = 20;
 
   useEffect(() => {
@@ -82,38 +77,11 @@ export default function AssetLibrary({ type, onTypeChange }: AssetLibraryProps) 
   const handleCategoryChange = (value: string | null) => { if (value === null) return; setCategoryFilter(value); setCurrentPage(1); };
   const goToPage = (page: number) => { if (page >= 1 && page <= totalPages) setCurrentPage(page); };
   const handleTypeChange = (value: AssetType) => { setSearch(""); setCategoryFilter("all"); setCurrentPage(1); setDetailPage(1); onTypeChange?.(value); };
-  const clearThumbnailObjectURL = () => { if (thumbnailObjectURLRef.current) { URL.revokeObjectURL(thumbnailObjectURLRef.current); thumbnailObjectURLRef.current = null; } };
-
-  useEffect(() => {
-    clearThumbnailObjectURL(); setThumbnailFile(null); setThumbnailPreview(null);
-    if (!selectedAsset) return;
-    if (!selectedAsset.thumbnail_path) return;
-    let cancelled = false;
-    async function loadThumbnail() {
-      setThumbnailLoading(true);
-      try { const url = await resolveStoragePath(selectedAsset!.thumbnail_path); if (!cancelled) setThumbnailPreview(url); }
-      catch (error) { console.error("Failed to load asset thumbnail:", error); if (!cancelled) setThumbnailPreview(null); }
-      finally { if (!cancelled) setThumbnailLoading(false); }
-    }
-    loadThumbnail();
-    return () => { cancelled = true; };
-  }, [selectedAsset?.id, selectedAsset?.thumbnail_path]);
-
   const handleSelectAsset = (asset: Asset) => { setSelectedAsset(asset); setSaveError(null); setEditName(asset.name); setEditPrice(String(asset.price)); setEditStatus(asset.asset_status ?? "available"); setDetailPage(1); };
 
   const handleNext = () => { if (!selectedAsset) return; setSaveError(null); setEditName(selectedAsset.name); setEditPrice(String(selectedAsset.price)); setEditStatus(selectedAsset.asset_status ?? "available"); setDetailPage(2); };
 
-  const handleDiscard = () => { if (!selectedAsset) return; clearThumbnailObjectURL(); setThumbnailFile(null); setSaveError(null); setEditName(selectedAsset.name); setEditPrice(String(selectedAsset.price)); setEditStatus(selectedAsset.asset_status ?? "available"); setDetailPage(1); };
-
-  const handleThumbnailChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) { setSaveError("Please select an image file."); return; }
-    clearThumbnailObjectURL();
-    const objectURL = URL.createObjectURL(file);
-    thumbnailObjectURLRef.current = objectURL;
-    setThumbnailFile(file); setThumbnailPreview(objectURL); setSaveError(null);
-  };
+  const handleDiscard = () => { if (!selectedAsset) return; setSaveError(null); setEditName(selectedAsset.name); setEditPrice(String(selectedAsset.price)); setEditStatus(selectedAsset.asset_status ?? "available"); setDetailPage(1); };
 
   const handleSave = async () => {
     if (!selectedAsset) return;
@@ -124,21 +92,13 @@ export default function AssetLibrary({ type, onTypeChange }: AssetLibraryProps) 
     if (!Number.isFinite(numericPrice) || numericPrice < 0) { setSaveError("Price must be a valid number that is 0 or greater."); return; }
     try {
       setSaving(true);
-      await updateAsset(selectedAsset.id, { name: trimmedName, price: numericPrice, asset_status: editStatus }, thumbnailFile, selectedAsset.thumbnail_path);
-      const updatedAsset: Asset = { ...selectedAsset, name: trimmedName, price: numericPrice, asset_status: editStatus, thumbnail_path: thumbnailFile ? `assets/thumbnails/${selectedAsset.id}` : selectedAsset.thumbnail_path };
+      await updateAsset(selectedAsset.id, { name: trimmedName, price: numericPrice, asset_status: editStatus });
+      const updatedAsset: Asset = { ...selectedAsset, name: trimmedName, price: numericPrice, asset_status: editStatus };
       setSelectedAsset(updatedAsset);
       setAssets((current) => current.map((asset) => asset.id === updatedAsset.id ? updatedAsset : asset));
-      clearThumbnailObjectURL(); setThumbnailFile(null); setDetailPage(1);
+      setDetailPage(1);
     } catch (err) { console.error("Failed to update asset:", err); setSaveError("Failed to save changes. Please try again."); } finally { setSaving(false); }
   };
-
-  const getAssetImage = (asset: Asset): string | null => {
-    if (asset.thumbnail_path) return asset.thumbnail_path;
-    if (asset.color) { const encoded = asset.color.replace("#", "%23"); return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect width='100%25' height='100%25' fill='${encoded}'/%3E%3C/svg%3E`; }
-    return null;
-  };
-
-  useEffect(() => { return () => { clearThumbnailObjectURL(); }; }, []);
 
   return (
     <div className="flex h-[calc(100vh-8rem)] flex-col rounded-lg border border-border bg-background">
@@ -165,7 +125,13 @@ export default function AssetLibrary({ type, onTypeChange }: AssetLibraryProps) 
             <div className="flex h-56 items-center justify-center rounded-2xl border border-dashed border-border text-sm text-muted-foreground">Select an asset to preview</div>
           ) : detailPage === 1 ? (
             <div className="flex h-full flex-col">
-              <div className="h-56 shrink-0 overflow-hidden rounded-2xl bg-muted"><PreviewScene asset={selectedAsset} /></div>
+              <div className="h-56 shrink-0 overflow-hidden rounded-2xl bg-muted">
+                {selectedAsset.asset_type === "furniture" ? (
+                  <AssetThumbnail asset={selectedAsset} />
+                ) : (
+                  <PreviewScene asset={selectedAsset} />
+                )}
+              </div>
               <div className="mt-4"><h3 className="text-base font-semibold">{selectedAsset.name}</h3></div>
               <div className="mt-4 grid grid-cols-2 gap-4">
                 <div><p className="text-xs text-muted-foreground">Price</p><p className="mt-1 text-sm font-semibold">${selectedAsset.price}</p></div>
@@ -187,22 +153,10 @@ export default function AssetLibrary({ type, onTypeChange }: AssetLibraryProps) 
               </div>
               <div className="min-h-0 flex-1 overflow-y-auto pr-1">
                 <div className="mb-4">
-                  <label className="mb-2 block text-xs font-medium">Asset Image</label>
-                  <div className="overflow-hidden rounded-xl border border-border bg-muted">
-                    {thumbnailLoading ? (
-                      <div className="flex h-36 items-center justify-center text-xs text-muted-foreground">Loading image...</div>
-                    ) : thumbnailPreview ? (
-                      <div className="relative">
-                        <img src={thumbnailPreview} alt={selectedAsset.name} className="h-36 w-full object-cover" />
-                        <button type="button" onClick={() => thumbnailInputRef.current?.click()} className="absolute bottom-2 right-2 rounded-md bg-background/90 px-3 py-1.5 text-xs font-medium shadow hover:bg-background">Change Image</button>
-                      </div>
-                    ) : (
-                      <button type="button" onClick={() => thumbnailInputRef.current?.click()} className="flex h-36 w-full flex-col items-center justify-center gap-2 text-xs text-muted-foreground transition-colors hover:bg-muted/70">
-                        <span className="text-2xl">+</span><span>Upload Image</span><span className="text-[10px]">PNG, JPG, WEBP</span>
-                      </button>
-                    )}
+                  <label className="mb-2 block text-xs font-medium">Asset Preview</label>
+                  <div className="h-36 overflow-hidden rounded-xl border border-border bg-muted">
+                    <AssetThumbnail asset={selectedAsset} />
                   </div>
-                  <input ref={thumbnailInputRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={handleThumbnailChange} />
                 </div>
 
                 <div className="space-y-2">
@@ -284,7 +238,7 @@ export default function AssetLibrary({ type, onTypeChange }: AssetLibraryProps) 
               <div className="grid grid-cols-5 gap-4">
                 {paginatedAssets.map((asset) => (
                   <button key={asset.id} type="button" onClick={() => handleSelectAsset(asset)} className={`rounded-3xl text-left transition-shadow ${selectedAsset?.id === asset.id ? "ring-2 ring-offset-2 ring-[#6b8050]" : ""}`}>
-                    <AssetCard image={getAssetImage(asset)} title={asset.name} categories={[asset.category]} className="max-w-none" />
+                    <AssetCard preview={<AssetThumbnail asset={asset} />} title={asset.name} categories={[asset.category]} className="max-w-none" />
                   </button>
                 ))}
               </div>
@@ -319,7 +273,7 @@ export default function AssetLibrary({ type, onTypeChange }: AssetLibraryProps) 
           <AlertDialogHeader>
             <AlertDialogTitle>Save changes?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to save these changes to <strong>{selectedAsset?.name}</strong>? This will update the asset information and any new image you selected.
+              Are you sure you want to save these changes to <strong>{selectedAsset?.name}</strong>?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
