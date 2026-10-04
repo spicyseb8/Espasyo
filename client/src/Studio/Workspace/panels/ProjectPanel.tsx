@@ -28,7 +28,13 @@ import {
     ref,
     uploadString
 } from "firebase/storage";
+
+import {
+    calculateCostEstimate
+} from "../../../engine/cost/CostEstimator";
+
 import "./ProjectPanel.css";
+
 
 //==================================================
 // PROJECT JSON
@@ -37,7 +43,9 @@ import "./ProjectPanel.css";
 // Converts the complete editor state into JSON-safe
 // project data.
 //
-// This panel is ONLY responsible for saving the project.
+// This panel is responsible for saving the project
+// and its cost estimate.
+//
 //==================================================
 
 function createProjectData(
@@ -46,6 +54,16 @@ function createProjectData(
     projectName: string,
     ownerId: string
 ) {
+
+    //==================================================
+    // CALCULATE PROJECT COST
+    //==================================================
+
+    const costEstimate =
+        calculateCostEstimate(
+            state
+        );
+
 
     return {
 
@@ -64,6 +82,31 @@ function createProjectData(
 
         savedAt:
             new Date().toISOString(),
+
+
+        //==================================================
+        // COST ESTIMATE
+        //==================================================
+        //
+        // Store the complete cost breakdown inside the
+        // project JSON.
+        //
+        // This allows the project loader/viewer to access
+        // the detailed cost information later.
+        //==================================================
+
+        costEstimate: {
+
+            items:
+                costEstimate.items,
+
+            subtotal:
+                costEstimate.subtotal,
+
+            total:
+                costEstimate.total
+
+        },
 
 
         //==================================================
@@ -405,6 +448,7 @@ function createProjectData(
                 : null
 
     };
+
 }
 
 
@@ -460,11 +504,6 @@ export default function ProjectPanel() {
     //==================================================
     // PROJECT ID
     //==================================================
-    //
-    // Used for NEW projects.
-    //
-    // Existing loaded projects use routeProjectId.
-    //==================================================
 
     const [
         projectId,
@@ -507,26 +546,8 @@ export default function ProjectPanel() {
     //==================================================
     // LOAD EXISTING PROJECT METADATA
     //==================================================
-    //
-    // This loads only the project metadata.
-    //
-    // StudioLoadProject is responsible for loading
-    // the actual saved JSON into the editor.
-    //==================================================
 
     useEffect(() => {
-
-        //--------------------------------------------------
-        // IMPORTANT:
-        //
-        // useParams() returns:
-        //
-        //     string | undefined
-        //
-        // Create a local constant AFTER the check so
-        // TypeScript permanently knows this value is
-        // a string inside the async function.
-        //--------------------------------------------------
 
         if (
             !routeProjectId
@@ -541,18 +562,10 @@ export default function ProjectPanel() {
             routeProjectId;
 
 
-        //--------------------------------------------------
-        // Keep the existing project ID in local state.
-        //--------------------------------------------------
-
         setProjectId(
             existingProjectId
         );
 
-
-        //--------------------------------------------------
-        // Load project name.
-        //--------------------------------------------------
 
         async function loadExistingProjectName() {
 
@@ -623,14 +636,9 @@ export default function ProjectPanel() {
 
     async function handleSave() {
 
-        //--------------------------------------------------
+        //==================================================
         // AUTHENTICATION
-        //--------------------------------------------------
-        //
-        // auth.currentUser may be null.
-        // After this check TypeScript knows that `user`
-        // is a valid Firebase user.
-        //--------------------------------------------------
+        //==================================================
 
         const user =
             auth.currentUser;
@@ -649,9 +657,9 @@ export default function ProjectPanel() {
         }
 
 
-        //--------------------------------------------------
+        //==================================================
         // PROJECT NAME
-        //--------------------------------------------------
+        //==================================================
 
         const trimmedName =
             projectName.trim();
@@ -670,9 +678,9 @@ export default function ProjectPanel() {
         }
 
 
-        //--------------------------------------------------
+        //==================================================
         // PREVENT DUPLICATE CLICKS
-        //--------------------------------------------------
+        //==================================================
 
         if (
             saving
@@ -690,19 +698,12 @@ export default function ProjectPanel() {
             );
 
             setMessage(
-                "Saving..."
+                "Calculating project cost..."
             );
 
 
             //==================================================
             // DETERMINE PROJECT ID
-            //==================================================
-            //
-            // PRIORITY:
-            //
-            // 1. Existing route project ID
-            // 2. Existing local project ID
-            // 3. Generate a new ID
             //==================================================
 
             const currentProjectId =
@@ -710,10 +711,6 @@ export default function ProjectPanel() {
                 projectId ??
                 crypto.randomUUID();
 
-
-            //--------------------------------------------------
-            // Remember generated ID for NEW projects.
-            //--------------------------------------------------
 
             if (
                 !routeProjectId &&
@@ -739,6 +736,10 @@ export default function ProjectPanel() {
             //==================================================
             // CREATE PROJECT DATA
             //==================================================
+            //
+            // This now calculates and embeds the complete
+            // cost estimate inside the saved JSON.
+            //==================================================
 
             const projectData =
                 createProjectData(
@@ -752,6 +753,21 @@ export default function ProjectPanel() {
                     user.uid
 
                 );
+
+
+            //==================================================
+            // EXTRACT COST
+            //==================================================
+            //
+            // The same calculated value will also be stored
+            // directly in Firestore.
+            //
+            // This means ProjectManagement does NOT need to
+            // download the JSON just to show the cost.
+            //==================================================
+
+            const estimatedCost =
+                projectData.costEstimate.total;
 
 
             //==================================================
@@ -784,10 +800,11 @@ export default function ProjectPanel() {
             //==================================================
             // UPLOAD / UPDATE JSON
             //==================================================
-            //
-            // If this is an existing project, this writes
-            // to the same Storage file.
-            //==================================================
+
+            setMessage(
+                "Saving project..."
+            );
+
 
             await uploadString(
 
@@ -822,36 +839,45 @@ export default function ProjectPanel() {
             const projectMetadata:
                 Record<string, unknown> = {
 
-                    projectId:
-                        currentProjectId,
+                projectId:
+                    currentProjectId,
 
-                    projectName:
-                        trimmedName,
+                projectName:
+                    trimmedName,
 
-                    ownerId:
-                        user.uid,
+                ownerId:
+                    user.uid,
 
-                    jsonPath:
-                        storagePath,
+                jsonPath:
+                    storagePath,
 
-                    jsonUrl:
-                        downloadUrl,
+                jsonUrl:
+                    downloadUrl,
 
-                    schemaVersion:
-                        1,
+                schemaVersion:
+                    1,
 
-                    updatedAt:
-                        serverTimestamp()
+                //==================================================
+                // COST
+                //==================================================
+                //
+                // This is the important new field.
+                //
+                // ProjectManagement can read this directly
+                // from Firestore.
+                //==================================================
 
-                };
+                estimatedCost:
+                    estimatedCost,
+
+                updatedAt:
+                    serverTimestamp()
+
+            };
 
 
             //==================================================
             // CREATED AT
-            //==================================================
-            //
-            // Only add createdAt for a genuinely NEW
-            // project.
             //==================================================
 
             if (
@@ -866,10 +892,6 @@ export default function ProjectPanel() {
 
             //==================================================
             // SAVE / UPDATE FIRESTORE
-            //==================================================
-            //
-            // Same project ID = same Firestore document.
-            // merge:true updates its existing fields.
             //==================================================
 
             await setDoc(
@@ -938,6 +960,7 @@ export default function ProjectPanel() {
                 }`
 
             );
+
 
         } finally {
 
@@ -1092,6 +1115,7 @@ export default function ProjectPanel() {
 
                     )
                 }
+
 
             </div>
 
