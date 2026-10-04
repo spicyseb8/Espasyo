@@ -5,14 +5,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import AssetCard from "@/components/ui/assert-card";
+import { Button } from "@/components/ui/button";
 import AssetThumbnail from "../../asset-preview/AssetThumbnail";
 import PreviewScene from "@/components/asset-preview/PreviewScene";
+import CreateAssetModal from "@/components/createfunc/CreateAssetModal";
 import { loadTexture } from "@/components/asset-preview/assetPreviewUtils";
 import { getFurnitureAssets } from "@/services/assets/furniture";
 import { getWallAssets } from "@/services/assets/walls";
 import { getFloorAssets } from "@/services/assets/floors";
 import { updateAsset } from "@/services/assets/update";
 import type { Asset, AssetType, AssetStatus } from "@/services/assets/asset-types";
+import { Plus } from "lucide-react";
 
 interface AssetLibraryProps { type: AssetType; onTypeChange?: (type: AssetType) => void; }
 
@@ -39,6 +42,8 @@ export default function AssetLibrary({ type, onTypeChange }: AssetLibraryProps) 
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createNotice, setCreateNotice] = useState("");
   const assetsPerPage = 20;
 
   useEffect(() => {
@@ -106,8 +111,13 @@ export default function AssetLibrary({ type, onTypeChange }: AssetLibraryProps) 
         <div>
           <h2 className="text-sm font-semibold">{getTitle(type)}</h2>
           <p className="text-xs text-muted-foreground">Manage {getTitle(type).toLowerCase()}</p>
+          {createNotice && <p role="status" className="mt-1 text-xs text-muted-foreground">{createNotice}</p>}
         </div>
         <div className="flex items-center gap-2">
+          <Button type="button" size="sm" onClick={() => { setCreateNotice(""); setCreateOpen(true); }}>
+            <Plus />
+            Create
+          </Button>
           <Select value={categoryFilter} onValueChange={handleCategoryChange}>
             <SelectTrigger className="w-36 bg-background"><SelectValue placeholder="Category" /></SelectTrigger>
             <SelectContent>
@@ -284,6 +294,23 @@ export default function AssetLibrary({ type, onTypeChange }: AssetLibraryProps) 
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <CreateAssetModal
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={(createdAsset) => {
+          setCreateOpen(false);
+          if (createdAsset.asset_type === type) {
+            setAssets((current) => [createdAsset, ...current]);
+            handleSelectAsset(createdAsset);
+            setCreateNotice(`${createdAsset.name} was created.`);
+          } else if (onTypeChange) {
+            handleTypeChange(createdAsset.asset_type);
+          } else {
+            setCreateNotice(`${createdAsset.name} was created. Select ${getTitle(createdAsset.asset_type)} in the sidebar to view it.`);
+          }
+        }}
+      />
     </div>
   );
 }

@@ -34,6 +34,40 @@ export interface Asset {
     | string
     | null;
 
+  diffuse_url?:
+    | string
+    | null;
+
+  base_color_path?:
+    | string
+    | null;
+
+  base_color_url?:
+    | string
+    | null;
+
+  roughness_path?:
+    | string
+    | null;
+
+  placement_surface?:
+    | "floor"
+    | "wall"
+    | "furniture"
+    | null;
+
+  rotation_offset_y?:
+    | number
+    | null;
+
+  depth_offset?:
+    | number
+    | null;
+
+  snap_targets?:
+    | string[]
+    | null;
+
   thumbnail_path?:
     | string
     | null;

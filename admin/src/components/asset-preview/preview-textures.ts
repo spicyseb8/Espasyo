@@ -58,7 +58,7 @@ export async function resolveStoragePath(
 
   const trimmedPath = path.trim();
 
-  if (/^(https?:\/\/|data:)/i.test(trimmedPath)) {
+  if (/^(https?:\/\/|data:|blob:)/i.test(trimmedPath)) {
     return trimmedPath;
   }
 
