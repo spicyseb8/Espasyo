@@ -26,10 +26,18 @@ import {
     walkthroughSpawnState
 } from "./Walkthrough/WalkthroughSpawnState";
 
+import {
+    ADMIN_COMMENT_MARKER_CLICK_EVENT,
+    emitAdminCommentFocusComplete
+} from "../services/adminCommentEvents";
 
-//==================================================
-// CAMERA SETTINGS
-//==================================================
+import type {
+    AdminComment
+} from "../services/adminCommentService";
+
+import {
+    getAdminCommentTargetPoint
+} from "./Comment/AdminCommentTargetUtils";
 
 const MOVE_SPEED =
     0.15;
@@ -40,19 +48,6 @@ const MIN_DISTANCE =
 const MAX_DISTANCE =
     100;
 
-
-//==================================================
-// TRANSITION SPEEDS
-//==================================================
-//
-// Position moves slowly so the "rise to top-down" feels
-// deliberate and calm.
-//
-// Rotation finishes almost instantly so the camera does
-// not visibly spin for a whole second while the user is
-// also pressing WASD.
-//==================================================
-
 const WALKTHROUGH_POSITION_SPEED =
     3.5;
 
@@ -62,10 +57,8 @@ const WALKTHROUGH_ROTATION_SPEED =
 const CAMERA_FINISH_DISTANCE =
     0.03;
 
-
-//==================================================
-// ORBIT CAMERA LIMITS
-//==================================================
+const FOCUS_DISTANCE =
+    3.5;
 
 const MIN_POLAR_ANGLE =
     0;
@@ -74,94 +67,56 @@ const MAX_POLAR_ANGLE =
     Math.PI / 2 -
     MathUtils.degToRad(2);
 
-
-//==================================================
-// CAMERA VIEW SNAPSHOT
-//==================================================
-
 interface CameraViewSnapshot {
-
     position:
         Vector3;
-
     quaternion:
         Quaternion;
-
     target:
         Vector3;
 }
 
-
 interface CameraTransition {
-
     active:
         boolean;
-
     startPosition:
         Vector3;
-
     endPosition:
         Vector3;
-
     startQuaternion:
         Quaternion;
-
     endQuaternion:
         Quaternion;
-
     startTarget:
         Vector3;
-
     endTarget:
         Vector3;
-
 }
-
-
-//==================================================
-// CHECK IF USER IS TYPING
-//==================================================
 
 function isTypingTarget(
     target:
         EventTarget | null
 ): boolean {
-
     const element =
-        target as HTMLElement | null;
-
+        target as
+            HTMLElement | null;
 
     if (
         !element
     ) {
-
         return false;
-
     }
-
 
     const tagName =
         element.tagName?.toLowerCase();
 
-
     return (
-
         tagName === "input" ||
-
         tagName === "textarea" ||
-
         tagName === "select" ||
-
         element.isContentEditable
-
     );
-
 }
-
-
-//==================================================
-// CLEAR MOVEMENT KEYS
-//==================================================
 
 function clearMovementKeys(
     keys:
@@ -172,7 +127,6 @@ function clearMovementKeys(
             d: boolean;
         }>
 ) {
-
     keys.current.w =
         false;
 
@@ -184,38 +138,24 @@ function clearMovementKeys(
 
     keys.current.d =
         false;
-
 }
-
-
-//==================================================
-// CREATE DYNAMIC TOP VIEW
-//==================================================
 
 function createTopView(
     cameraPosition:
         Vector3,
-
     currentTarget:
         Vector3,
-
     up:
         Vector3
 ): CameraViewSnapshot {
-
     const distance =
         MathUtils.clamp(
-
             cameraPosition.distanceTo(
                 currentTarget
             ),
-
             MIN_DISTANCE,
-
             MAX_DISTANCE
-
         );
-
 
     const topPosition =
         currentTarget
@@ -228,18 +168,12 @@ function createTopView(
                 )
             );
 
-
     const lookAtMatrix =
         new Matrix4().lookAt(
-
             topPosition,
-
             currentTarget,
-
             up
-
         );
-
 
     const topQuaternion =
         new Quaternion()
@@ -247,230 +181,165 @@ function createTopView(
                 lookAtMatrix
             );
 
-
     return {
-
         position:
             topPosition,
-
         quaternion:
             topQuaternion,
-
         target:
             currentTarget.clone()
-
     };
-
 }
 
-
-//==================================================
-// CAMERA
-//==================================================
-
-export default function Camera() {
-
+export default function Camera({
+    adminComments = []
+}: {
+    adminComments?:
+        AdminComment[];
+}) {
     const {
         camera
     } = useThree();
-
 
     const {
         state
     } = useEditor();
 
-
     const walkthroughMode =
         state.walkthroughMode;
 
-
     const controlsRef =
         useRef<any>(null);
-
 
     const previousWalkthroughMode =
         useRef(
             walkthroughMode
         );
 
-
-    //==================================================
-    // NORMAL EDITOR WASD
-    //==================================================
-
     const keys =
         useRef({
-
             w: false,
-
             a: false,
-
             s: false,
-
             d: false
-
         });
 
-
-    //==================================================
-    // SAVED EDITOR VIEW
-    //==================================================
-
     const savedEditorView =
-        useRef<CameraViewSnapshot | null>(
-            null
-        );
-
-
-    //==================================================
-    // CAMERA TRANSITION
-    //==================================================
+        useRef<
+            CameraViewSnapshot | null
+        >(null);
 
     const transition =
         useRef<CameraTransition>({
-
             active:
                 false,
-
             startPosition:
                 new Vector3(),
-
             endPosition:
                 new Vector3(),
-
             startQuaternion:
                 new Quaternion(),
-
             endQuaternion:
                 new Quaternion(),
-
             startTarget:
                 new Vector3(),
-
             endTarget:
                 new Vector3()
-
         });
 
+    const focusActive =
+        useRef(false);
 
-    //==================================================
-    // KEYBOARD
-    //==================================================
+    const focusCommentId =
+        useRef<
+            string | null
+        >(null);
+
+    const focusTarget =
+        useRef(
+            new Vector3()
+        );
+
+    const focusCameraPosition =
+        useRef(
+            new Vector3()
+        );
 
     useEffect(() => {
-
         const handleKeyDown =
             (
                 event:
                     KeyboardEvent
             ) => {
-
                 if (
                     isTypingTarget(
                         event.target
                     )
                 ) {
-
                     return;
-
                 }
-
 
                 switch (
                     event.key.toLowerCase()
                 ) {
-
                     case "w":
-
                         keys.current.w =
                             true;
-
                         break;
-
 
                     case "a":
-
                         keys.current.a =
                             true;
-
                         break;
-
 
                     case "s":
-
                         keys.current.s =
                             true;
-
                         break;
-
 
                     case "d":
-
                         keys.current.d =
                             true;
-
                         break;
-
                 }
-
             };
-
 
         const handleKeyUp =
             (
                 event:
                     KeyboardEvent
             ) => {
-
                 switch (
                     event.key.toLowerCase()
                 ) {
-
                     case "w":
-
                         keys.current.w =
                             false;
-
                         break;
-
 
                     case "a":
-
                         keys.current.a =
                             false;
-
                         break;
-
 
                     case "s":
-
                         keys.current.s =
                             false;
-
                         break;
-
 
                     case "d":
-
                         keys.current.d =
                             false;
-
                         break;
-
                 }
-
             };
-
 
         const handleWindowBlur =
             () => {
-
                 clearMovementKeys(
                     keys
                 );
-
             };
-
 
         window.addEventListener(
             "keydown",
@@ -487,9 +356,7 @@ export default function Camera() {
             handleWindowBlur
         );
 
-
         return () => {
-
             window.removeEventListener(
                 "keydown",
                 handleKeyDown
@@ -504,278 +371,329 @@ export default function Camera() {
                 "blur",
                 handleWindowBlur
             );
-
         };
-
     }, []);
 
+    useEffect(() => {
+        const handleCommentFocus =
+            (
+                event:
+                    Event
+            ) => {
+                if (
+                    walkthroughMode
+                ) {
+                    return;
+                }
 
-    //==================================================
-    // NORMAL EDITOR WASD MOVEMENT
-    //==================================================
+                const customEvent =
+                    event as CustomEvent<string>;
+
+                const comment =
+                    adminComments.find(
+                        item =>
+                            item.id ===
+                            customEvent.detail
+                    );
+
+                if (
+                    !comment
+                ) {
+                    return;
+                }
+
+                const target =
+                    getAdminCommentTargetPoint(
+                        state,
+                        comment
+                    );
+
+                if (
+                    !target
+                ) {
+                    return;
+                }
+
+                const direction =
+                    new Vector3()
+                        .subVectors(
+                            camera.position,
+                            target
+                        );
+
+                if (
+                    direction.lengthSq() <
+                    0.000001
+                ) {
+                    direction.set(
+                        0,
+                        0,
+                        1
+                    );
+                }
+
+                direction.normalize();
+
+                focusTarget.current.copy(
+                    target
+                );
+
+                focusCameraPosition.current
+                    .copy(
+                        target
+                    )
+                    .add(
+                        direction.multiplyScalar(
+                            FOCUS_DISTANCE
+                        )
+                    );
+
+                focusCommentId.current =
+                    comment.id;
+
+                focusActive.current =
+                    true;
+
+                if (
+                    controlsRef.current
+                ) {
+                    controlsRef.current.enabled =
+                        false;
+                }
+            };
+
+        window.addEventListener(
+            ADMIN_COMMENT_MARKER_CLICK_EVENT,
+            handleCommentFocus
+        );
+
+        return () => {
+            window.removeEventListener(
+                ADMIN_COMMENT_MARKER_CLICK_EVENT,
+                handleCommentFocus
+            );
+        };
+    }, [
+        adminComments,
+        camera,
+        state,
+        walkthroughMode
+    ]);
 
     useEffect(() => {
-
         if (
             walkthroughMode
         ) {
-
             return;
-
         }
-
 
         let animationFrame =
             0;
 
-
         const moveCamera =
             () => {
-
                 if (
+                    focusActive.current ||
                     transition.current.active
                 ) {
-
                     animationFrame =
                         requestAnimationFrame(
                             moveCamera
                         );
 
                     return;
-
                 }
-
 
                 const forward =
                     new Vector3();
-
 
                 camera.getWorldDirection(
                     forward
                 );
 
-
                 forward.y =
                     0;
 
-
                 if (
-                    forward.lengthSq() > 0
+                    forward.lengthSq() >
+                    0
                 ) {
-
                     forward.normalize();
-
                 }
-
 
                 const right =
                     new Vector3(
-
                         -forward.z,
-
                         0,
-
                         forward.x
-
                     );
-
 
                 const movement =
                     new Vector3();
 
-
-                if (keys.current.w) movement.add(forward);
-                if (keys.current.s) movement.sub(forward);
-                if (keys.current.d) movement.add(right);
-                if (keys.current.a) movement.sub(right);
-
+                if (
+                    keys.current.w
+                ) {
+                    movement.add(
+                        forward
+                    );
+                }
 
                 if (
-                    movement.lengthSq() > 0
+                    keys.current.s
                 ) {
+                    movement.sub(
+                        forward
+                    );
+                }
 
+                if (
+                    keys.current.d
+                ) {
+                    movement.add(
+                        right
+                    );
+                }
+
+                if (
+                    keys.current.a
+                ) {
+                    movement.sub(
+                        right
+                    );
+                }
+
+                if (
+                    movement.lengthSq() >
+                    0
+                ) {
                     movement
                         .normalize()
                         .multiplyScalar(
                             MOVE_SPEED
                         );
 
-
                     camera.position.add(
                         movement
                     );
 
-
                     if (
                         controlsRef.current
                     ) {
-
                         controlsRef.current.target.add(
                             movement
                         );
 
                         controlsRef.current.update();
-
                     }
-
                 }
-
 
                 animationFrame =
                     requestAnimationFrame(
                         moveCamera
                     );
-
             };
-
 
         animationFrame =
             requestAnimationFrame(
                 moveCamera
             );
 
-
         return () => {
-
             cancelAnimationFrame(
                 animationFrame
             );
-
         };
-
     }, [
-
         camera,
-
         walkthroughMode
-
     ]);
 
-
-    //==================================================
-    // WALKTHROUGH MODE CHANGE
-    //==================================================
-
     useEffect(() => {
-
         const wasInWalkthrough =
             previousWalkthroughMode.current;
 
-
         const isNowInWalkthrough =
             walkthroughMode;
-
-
-        //----------------------------------------------
-        // NORMAL → WALKTHROUGH
-        //----------------------------------------------
 
         if (
             !wasInWalkthrough &&
             isNowInWalkthrough
         ) {
-
             const currentTarget =
                 controlsRef.current
                     ? controlsRef.current.target.clone()
                     : new Vector3();
 
-
             savedEditorView.current = {
-
                 position:
                     camera.position.clone(),
-
                 quaternion:
                     camera.quaternion.clone(),
-
                 target:
                     currentTarget.clone()
-
             };
-
 
             const topView =
                 createTopView(
-
                     camera.position,
-
                     currentTarget,
-
                     camera.up
-
                 );
-
-
-            //--------------------------------------------------
-            // Reset shared spawn-selection state.
-            //--------------------------------------------------
 
             walkthroughSpawnState.offset.set(
                 0,
                 0,
                 0
             );
+
             walkthroughSpawnState.topViewY =
-    topView.position.y;
+                topView.position.y;
+
             walkthroughSpawnState.confirmed =
                 false;
 
             walkthroughSpawnState.transitionActive =
                 true;
 
+            focusActive.current =
+                false;
+
+            focusCommentId.current =
+                null;
 
             if (
                 controlsRef.current
             ) {
-
                 controlsRef.current.enabled =
                     false;
-
             }
 
-
             transition.current = {
-
                 active:
                     true,
-
                 startPosition:
                     camera.position.clone(),
-
                 endPosition:
                     topView.position.clone(),
-
                 startQuaternion:
                     camera.quaternion.clone(),
-
                 endQuaternion:
                     topView.quaternion.clone(),
-
                 startTarget:
                     currentTarget.clone(),
-
                 endTarget:
                     topView.target.clone()
-
             };
-
         }
-
-
-        //----------------------------------------------
-        // WALKTHROUGH → NORMAL
-        //----------------------------------------------
 
         if (
             wasInWalkthrough &&
             !isNowInWalkthrough
         ) {
-
             clearMovementKeys(
                 keys
             );
-
 
             walkthroughSpawnState.offset.set(
                 0,
@@ -789,128 +707,142 @@ export default function Camera() {
             walkthroughSpawnState.transitionActive =
                 false;
 
-
             const savedView =
                 savedEditorView.current;
-
 
             if (
                 savedView
             ) {
-
                 const currentTarget =
                     controlsRef.current
                         ? controlsRef.current.target.clone()
                         : new Vector3();
 
-
                 if (
                     controlsRef.current
                 ) {
-
                     controlsRef.current.enabled =
                         false;
-
                 }
 
-
                 transition.current = {
-
                     active:
                         true,
-
                     startPosition:
                         camera.position.clone(),
-
                     endPosition:
                         savedView.position.clone(),
-
                     startQuaternion:
                         camera.quaternion.clone(),
-
                     endQuaternion:
                         savedView.quaternion.clone(),
-
                     startTarget:
                         currentTarget,
-
                     endTarget:
                         savedView.target.clone()
-
                 };
-
             }
-
         }
-
 
         previousWalkthroughMode.current =
             walkthroughMode;
-
-
     }, [
-
         walkthroughMode,
-
         camera
-
     ]);
-
-
-    //==================================================
-    // SMOOTH CAMERA TRANSITION
-    //==================================================
-    //
-    // IMPORTANT — WHY THERE IS NO update() CALL HERE:
-    //
-    // OrbitControls.update() ends with:
-    //
-    //     camera.lookAt(controls.target)
-    //
-    // That line OVERWRITES whatever quaternion we just
-    // slerped. During the top-down transition, if the
-    // camera is off-axis relative to the target (which
-    // happens the moment WASD or scroll feeds the shared
-    // offset), lookAt() wants one orientation and our
-    // slerp wants another. Each frame they overwrite
-    // each other → the camera quaternion oscillates →
-    // the floor and walls appear to vibrate.
-    //
-    // So: we lerp camera.position, slerp camera.quaternion,
-    // and lerp controls.target — but we DO NOT call
-    // controls.update(). We call it once at the finish,
-    // when the camera is aligned with the target and both
-    // orientations agree.
-    //==================================================
 
     useFrame(
         (
             _,
             delta
         ) => {
+            if (
+                focusActive.current
+            ) {
+                const alpha =
+                    1 -
+                    Math.exp(
+                        -4.5 *
+                        delta
+                    );
+
+                camera.position.lerp(
+                    focusCameraPosition.current,
+                    alpha
+                );
+
+                if (
+                    controlsRef.current
+                ) {
+                    controlsRef.current.target.lerp(
+                        focusTarget.current,
+                        alpha
+                    );
+
+                    controlsRef.current.update();
+                }
+
+                const finished =
+                    camera.position.distanceToSquared(
+                        focusCameraPosition.current
+                    ) <=
+                    CAMERA_FINISH_DISTANCE *
+                    CAMERA_FINISH_DISTANCE;
+
+                if (
+                    finished
+                ) {
+                    camera.position.copy(
+                        focusCameraPosition.current
+                    );
+
+                    if (
+                        controlsRef.current
+                    ) {
+                        controlsRef.current.target.copy(
+                            focusTarget.current
+                        );
+
+                        controlsRef.current.update();
+
+                        controlsRef.current.enabled =
+                            true;
+                    }
+
+                    const commentId =
+                        focusCommentId.current;
+
+                    focusActive.current =
+                        false;
+
+                    focusCommentId.current =
+                        null;
+
+                    if (
+                        commentId
+                    ) {
+                        emitAdminCommentFocusComplete(
+                            commentId
+                        );
+                    }
+                }
+
+                return;
+            }
 
             if (
                 !transition.current.active
             ) {
-
                 return;
-
             }
-
 
             const current =
                 transition.current;
-
-
-            //--------------------------------------------------
-            // If spawn was confirmed mid-transition, cancel.
-            //--------------------------------------------------
 
             if (
                 walkthroughMode &&
                 walkthroughSpawnState.confirmed
             ) {
-
                 current.active =
                     false;
 
@@ -924,100 +856,51 @@ export default function Camera() {
                 );
 
                 return;
-
             }
-
-
-            //--------------------------------------------------
-            // Damping (separate rates for position & rotation).
-            //--------------------------------------------------
 
             const positionAlpha =
                 1 -
                 Math.exp(
-
                     -WALKTHROUGH_POSITION_SPEED *
                     delta
-
                 );
-
 
             const rotationAlpha =
                 1 -
                 Math.exp(
-
                     -WALKTHROUGH_ROTATION_SPEED *
                     delta
-
                 );
-
-
-            //--------------------------------------------------
-            // Effective target position
-            //   = top-down end position + user offset
-            //     (WASD + scroll added to offset while
-            //      transitionActive is true).
-            //--------------------------------------------------
 
             const targetPosition =
                 current.endPosition.clone();
 
-
             if (
                 walkthroughMode
             ) {
-
                 targetPosition.add(
                     walkthroughSpawnState.offset
                 );
-
             }
-
-
-            //--------------------------------------------------
-            // Position
-            //--------------------------------------------------
 
             camera.position.lerp(
                 targetPosition,
                 positionAlpha
             );
 
-
-            //--------------------------------------------------
-            // Rotation
-            //--------------------------------------------------
-
             camera.quaternion.slerp(
                 current.endQuaternion,
                 rotationAlpha
             );
 
-
-            //--------------------------------------------------
-            // Target (OrbitControls internal target)
-            //
-            //   Lerped so it arrives smoothly with the camera.
-            //
-            //   DO NOT call controlsRef.current.update() here.
-            //   See the big comment above the useFrame.
-            //--------------------------------------------------
-
             if (
                 controlsRef.current
             ) {
-
                 controlsRef.current.target.lerp(
                     current.endTarget,
                     positionAlpha
                 );
-
             }
-
-
-            //--------------------------------------------------
-            // Completion checks.
-            //--------------------------------------------------
 
             const positionFinished =
                 camera.position.distanceToSquared(
@@ -1026,22 +909,17 @@ export default function Camera() {
                 CAMERA_FINISH_DISTANCE *
                 CAMERA_FINISH_DISTANCE;
 
-
             const rotationFinished =
                 1 -
                 Math.abs(
-
                     camera.quaternion.dot(
                         current.endQuaternion
                     )
-
                 ) <=
                 0.0005;
 
-
             const targetFinished =
                 !controlsRef.current ||
-
                 controlsRef.current.target
                     .distanceToSquared(
                         current.endTarget
@@ -1049,60 +927,38 @@ export default function Camera() {
                 CAMERA_FINISH_DISTANCE *
                 CAMERA_FINISH_DISTANCE;
 
-
-            //--------------------------------------------------
-            // Finish
-            //--------------------------------------------------
-
             if (
                 positionFinished &&
                 rotationFinished &&
                 targetFinished
             ) {
-
                 camera.position.copy(
                     targetPosition
                 );
-
 
                 camera.quaternion.copy(
                     current.endQuaternion
                 );
 
-
                 if (
                     controlsRef.current
                 ) {
-
                     controlsRef.current.target.copy(
                         current.endTarget
                     );
 
-
-                    //--------------------------------------------------
-                    // Single update() — at the moment the camera
-                    // is aligned with the target. lookAt() here
-                    // produces the same orientation we just set,
-                    // so nothing snaps.
-                    //--------------------------------------------------
-
                     controlsRef.current.update();
-
 
                     controlsRef.current.enabled =
                         !walkthroughMode;
-
                 }
-
 
                 current.active =
                     false;
 
-
                 if (
                     walkthroughMode
                 ) {
-
                     walkthroughSpawnState.transitionActive =
                         false;
 
@@ -1111,90 +967,54 @@ export default function Camera() {
                         0,
                         0
                     );
-
                 }
-
             }
-
         }
-
     );
 
-
-    //==================================================
-    // RESET NORMAL EDITOR KEYS
-    //==================================================
-
     useEffect(() => {
-
         clearMovementKeys(
             keys
         );
-
     }, [
-
         walkthroughMode
-
     ]);
 
-
-    //==================================================
-    // ORBIT CONTROLS
-    //==================================================
-
     return (
-
         <OrbitControls
-
             ref={
                 controlsRef
             }
-
             makeDefault
-
-
             enablePan={
                 !walkthroughMode
             }
-
             enableZoom={
                 !walkthroughMode
             }
-
             enableRotate={
                 !walkthroughMode
             }
-
             enabled={
                 !walkthroughMode &&
-                !transition.current.active
+                !transition.current.active &&
+                !focusActive.current
             }
-
-
             screenSpacePanning={
                 false
             }
-
-
             minDistance={
                 MIN_DISTANCE
             }
-
             maxDistance={
                 MAX_DISTANCE
             }
-
-
             minPolarAngle={
                 MIN_POLAR_ANGLE
             }
-
             maxPolarAngle={
                 MAX_POLAR_ANGLE
             }
-
         />
-
     );
-
 }
