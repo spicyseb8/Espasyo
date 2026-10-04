@@ -1,17 +1,35 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { collection, onSnapshot, query, Timestamp } from "firebase/firestore";
+import { ArrowDownAZ, ArrowUpAZ } from "lucide-react";
 import { db } from "@/firebase/firebase";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import CreateAccountModal, { type CreateAccountType } from "@/components/createfunc/CreateAccountModal";
 
-interface User { id: string; full_name: string; email: string; phone_number: string; created_at: string; avatar?: string; }
+interface User { id: string; full_name: string; email: string; phone_number: string; created_at: string; created_ts: number; avatar?: string; }
 interface FirestoreUser { full_name?: string | null; name?: string | null; email?: string | null; phone_number?: string | null; created_at?: Timestamp | string | null; profile_picture?: string | null; avatar?: string | null; role?: string | null; }
 interface UserTableProps { type: "customers" | "employees" | "super_admins"; }
+
+type SortField = "name" | "created";
+type SortDirection = "asc" | "desc";
+
+const SORT_FIELDS: { value: SortField; label: string }[] = [
+  { value: "name", label: "Name" },
+  { value: "created", label: "Date created" },
+];
+
+const toTime = (value: Timestamp | string | null | undefined): number => {
+  if (!value) return 0;
+  try {
+    const time = value instanceof Timestamp ? value.toMillis() : new Date(value).getTime();
+    return Number.isNaN(time) ? 0 : time;
+  } catch { return 0; }
+};
 
 const formatDate = (value: Timestamp | string | null | undefined): string => {
   if (!value) return "—";
@@ -28,6 +46,8 @@ export default function UserTable({ type }: UserTableProps) {
   const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
   const [search, setSearch] = useState("");
+  const [sortField, setSortField] = useState<SortField>("created");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -48,35 +68,67 @@ export default function UserTable({ type }: UserTableProps) {
             email: data.email?.trim() || "—",
             phone_number: data.phone_number?.trim() || "—",
             created_at: formatDate(data.created_at),
+            created_ts: toTime(data.created_at),
             avatar: data.avatar || data.profile_picture || "",
           };
         });
-      firestoreUsers.sort((a, b) => a.created_at === "—" ? 1 : b.created_at === "—" ? -1 : new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setUsers(firestoreUsers); setLoading(false);
     }, (err) => { console.error(`Error loading ${collectionName}:`, err); setError(`Unable to load ${getTitle(type).toLowerCase()} from Firestore.`); setLoading(false); });
     return () => unsubscribe();
   }, [type]);
 
-  const filtered = users.filter(u => `${u.full_name} ${u.email} ${u.phone_number}`.toLowerCase().includes(search.toLowerCase()));
+  const filtered = useMemo(() => {
+    const value = search.toLowerCase();
+    const base = users.filter(u => `${u.full_name} ${u.email} ${u.phone_number}`.toLowerCase().includes(value));
+    return [...base].sort((a, b) => {
+      let comparison = sortField === "name" ? a.full_name.localeCompare(b.full_name) : a.created_ts - b.created_ts;
+      if (comparison === 0) comparison = a.id.localeCompare(b.id);
+      return sortDirection === "asc" ? comparison : -comparison;
+    });
+  }, [users, search, sortField, sortDirection]);
+
   const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
   const startIndex = (currentPage - 1) * rowsPerPage;
   const paginatedUsers = filtered.slice(startIndex, startIndex + rowsPerPage);
 
   const handleSearch = (value: string) => { setSearch(value); setCurrentPage(1); };
+  const handleSortField = (value: SortField) => { setSortField(value); setCurrentPage(1); };
+  const toggleSortDirection = () => { setSortDirection(current => current === "asc" ? "desc" : "asc"); setCurrentPage(1); };
   const goToPage = (page: number) => { if (page >= 1 && page <= totalPages) setCurrentPage(page); };
   const handleView = (id: string) => navigate(type === "customers" ? `/users/${id}` : `/employees/${id}`);
 
   return (
     <>
       <div className="rounded-lg border border-border bg-background">
-        <div className="flex items-center justify-between border-b border-border p-4">
+        <div className="flex items-center justify-between gap-4 border-b border-border p-4">
           <div>
             <h2 className="text-sm font-semibold">{getTitle(type)}</h2>
             <p className="text-xs text-muted-foreground">Manage {getTitle(type).toLowerCase()}</p>
           </div>
           <div className="flex items-center gap-2">
-            <Input placeholder={`Search ${getTitle(type).toLowerCase()}...`} value={search} onChange={e => handleSearch(e.target.value)} className="w-64 bg-background" />
             <Button size="sm" onClick={() => setCreateAccountOpen(true)}>Create</Button>
+            <Input placeholder={`Search ${getTitle(type).toLowerCase()}...`} value={search} onChange={e => handleSearch(e.target.value)} className="w-64 bg-background" />
+            <Select value={sortField} onValueChange={value => handleSortField(value as SortField)}>
+              <SelectTrigger className="w-40 border-border/60">
+                <SelectValue placeholder="Sort by">
+                  {SORT_FIELDS.find(option => option.value === sortField)?.label}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {SORT_FIELDS.map(option => (
+                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <button
+              type="button"
+              onClick={toggleSortDirection}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border/60 bg-background text-muted-foreground hover:bg-muted"
+              title={sortDirection === "asc" ? "Ascending" : "Descending"}
+              aria-label={`Sort ${sortDirection === "asc" ? "ascending" : "descending"}`}
+            >
+              {sortDirection === "asc" ? <ArrowUpAZ size={16} /> : <ArrowDownAZ size={16} />}
+            </button>
           </div>
         </div>
 

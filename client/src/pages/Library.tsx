@@ -1,41 +1,51 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-
-import NavBar from "../pages/NavBar";
 import {
+  Armchair,
   ArrowRight,
-  ChevronRight,
+  ChevronDown,
   ChevronLeft,
+  ChevronRight,
   Info,
   Check,
-  Ruler,
-  Layers,
-  Tag,
 } from "lucide-react";
+
+import { getFurnitureAssets } from "../engine/furniture/FirebaseFurnitureLibrary";
+import { getFloorMaterials } from "../engine/materials/floors";
+import { getWallMaterials } from "../engine/materials/walls";
+
+import type { Asset } from "../assets/Asset";
+import type { Material } from "../engine/materials/MaterialTypes";
+import type { FurnitureCategory } from "../engine/furniture/FurnitureCategory";
+
+import AssetModelThumbnail from "../Studio/Workspace/AssetModelThumbnail";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 type Division = "furniture" | "floors" | "walls";
+type FloorCategory = "Wood" | "Tiles" | "Bricks";
+type FurnitureFilter = "All" | FurnitureCategory;
 
 interface BaseItem {
   id: string;
   name: string;
   description: string;
   type: Division;
-  material: string;
-  size: string;
   price: string;
 }
 
 interface FurnitureItem extends BaseItem {
   type: "furniture";
   image: string;
+  model: string;
+  category?: FurnitureCategory;
 }
 
 interface FloorItem extends BaseItem {
   type: "floors";
   image: string;
+  category?: FloorCategory;
 }
 
 interface WallItem extends BaseItem {
@@ -46,296 +56,122 @@ interface WallItem extends BaseItem {
 type LibraryItem = FurnitureItem | FloorItem | WallItem;
 
 // ---------------------------------------------------------------------------
-// Floor textures
+// Constants
 // ---------------------------------------------------------------------------
-const FLOOR_TEXTURE = {
-  chevronLightOak: "/textures/chevron-light-oak.jpg",
-  chevronWeatheredOak: "/textures/chevron-weathered-oak.jpg",
-  herringboneAgedOak: "/textures/herringbone-aged-oak.jpg",
-  plankWalnut: "/textures/plank-walnut.jpg",
-  plankCherryMahogany: "/textures/plank-cherry-mahogany.jpg",
-  herringboneCherry: "/textures/herringbone-cherry.jpg",
-  darkSlateStone: "/textures/dark-slate-stone.jpg",
-  whiteVeinedMarble: "/textures/white-veined-marble.jpg",
-} as const;
+const DESCRIPTION_FALLBACK = "No description available.";
 
-// ---------------------------------------------------------------------------
-// Furniture
-// ---------------------------------------------------------------------------
-const FURNITURE_ITEMS: FurnitureItem[] = [
-  {
-    id: "f1",
-    type: "furniture",
-    name: "Lounge Sofa",
-    description:
-      "Mid-century modern sofa with walnut legs and soft linen upholstery — designed for everyday comfort in a living room or lounge area.",
-    material: "Linen upholstery, solid walnut legs",
-    size: '84" W × 35" D × 32" H',
-    price: "₱48,500",
-    image:
-      "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?q=80&w=900&auto=format&fit=crop",
-  },
-  {
-    id: "f2",
-    type: "furniture",
-    name: "Club Chair",
-    description:
-      "Classic club chair with velvet upholstery and a dark stained wood frame — a timeless accent piece for reading corners.",
-    material: "Velvet, dark-stained oak",
-    size: '32" W × 34" D × 30" H',
-    price: "₱22,900",
-    image:
-      "https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?q=80&w=900&auto=format&fit=crop",
-  },
-  {
-    id: "f3",
-    type: "furniture",
-    name: "Wooden Table",
-    description:
-      "Modern dining table in solid ash with a minimalist profile and a matte protective finish.",
-    material: "Solid ash, matte PU finish",
-    size: '72" L × 36" W × 30" H',
-    price: "₱31,200",
-    image:
-      "https://static.vecteezy.com/system/resources/thumbnails/051/068/514/small/modern-and-stylish-wooden-table-png.png",
-  },
-  {
-    id: "f4",
-    type: "furniture",
-    name: "Accent Armchair",
-    description:
-      "Sculptural armchair with a curved backrest and boucle fabric — a soft focal point for any room.",
-    material: "Boucle fabric, metal base",
-    size: '30" W × 32" D × 29" H',
-    price: "₱19,800",
-    image:
-      "https://images.unsplash.com/photo-1503602642458-232111445657?q=80&w=900&auto=format&fit=crop",
-  },
-  {
-    id: "f5",
-    type: "furniture",
-    name: "Coffee Table",
-    description:
-      "Low-profile coffee table with a sculpted stone top and solid oak base — quietly elegant.",
-    material: "Travertine top, oak base",
-    size: '48" L × 24" W × 16" H',
-    price: "₱26,400",
-    image:
-      "https://images.unsplash.com/photo-1567016432779-094069958ea5?q=80&w=900&auto=format&fit=crop",
-  },
-  {
-    id: "f6",
-    type: "furniture",
-    name: "Bookshelf",
-    description:
-      "Open shelving unit in warm walnut with slim metal uprights — perfect for displaying objects and books.",
-    material: "Walnut veneer, black metal",
-    size: '36" W × 14" D × 72" H',
-    price: "₱24,600",
-    image:
-      "https://images.unsplash.com/photo-1594026112284-02bb6f3352fe?q=80&w=900&auto=format&fit=crop",
-  },
-  {
-    id: "f7",
-    type: "furniture",
-    name: "Side Table",
-    description:
-      "Compact round side table with a tapered base — a versatile companion to any seating.",
-    material: "Solid beech, satin finish",
-    size: '18" ⌀ × 22" H',
-    price: "₱8,900",
-    image:
-      "https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?q=80&w=900&auto=format&fit=crop",
-  },
-  {
-    id: "f8",
-    type: "furniture",
-    name: "Dining Chair",
-    description:
-      "Slim dining chair with a contoured seat and solid beech legs — understated and sturdy.",
-    material: "Beech wood, woven seat",
-    size: '18" W × 20" D × 32" H',
-    price: "₱6,700",
-    image:
-      "https://images.unsplash.com/photo-1506439773649-6e0eb8cfb237?q=80&w=900&auto=format&fit=crop",
-  },
-  {
-    id: "f9",
-    type: "furniture",
-    name: "Daybed",
-    description:
-      "Dual-purpose daybed with a tufted back and hidden storage — ideal for compact living.",
-    material: "Cotton blend, oak frame",
-    size: '78" L × 38" W × 30" H',
-    price: "₱37,500",
-    image:
-      "https://images.unsplash.com/photo-1540574163026-643ea20ade25?q=80&w=900&auto=format&fit=crop",
-  },
-  {
-    id: "f10",
-    type: "furniture",
-    name: "Ottoman",
-    description:
-      "Upholstered ottoman with a soft top and wooden feet — extra seating or a footrest.",
-    material: "Linen, solid rubberwood",
-    size: '24" ⌀ × 18" H',
-    price: "₱7,400",
-    image:
-      "https://images.unsplash.com/photo-1567016376408-0226e4d0c1ea?q=80&w=900&auto=format&fit=crop",
-  },
+const FLOOR_CATEGORIES: ("All" | FloorCategory)[] = [
+  "All",
+  "Wood",
+  "Tiles",
+  "Bricks",
 ];
 
-// ---------------------------------------------------------------------------
-// Floors — sphere renders with accurate details
-// ---------------------------------------------------------------------------
-const FLOOR_ITEMS: FloorItem[] = [
-  {
-    id: "fl1",
-    type: "floors",
-    name: "Light Oak Chevron",
-    description:
-      "Pale honey-toned oak laid in a chevron pattern with a satin finish. Bright, airy, and classic — well suited to Nordic and transitional interiors.",
-    material: "Engineered oak, chevron, satin lacquer",
-    size: "600 × 120 × 15 mm",
-    price: "₱3,900 / sqm",
-    image: FLOOR_TEXTURE.chevronLightOak,
-  },
-  {
-    id: "fl2",
-    type: "floors",
-    name: "Weathered Grey Oak Chevron",
-    description:
-      "Grey-brown oak with a subtle whitewash in a chevron layout. Rustic yet refined — good for coastal, farmhouse, and modern-rustic schemes.",
-    material: "Engineered oak, chevron, whitewash oil",
-    size: "600 × 120 × 15 mm",
-    price: "₱4,100 / sqm",
-    image: FLOOR_TEXTURE.chevronWeatheredOak,
-  },
-  {
-    id: "fl3",
-    type: "floors",
-    name: "Aged Oak Herringbone",
-    description:
-      "Mid-brown oak herringbone with visible knots and grain variation. Warm, characterful, and timeless — a classic choice for living and dining.",
-    material: "Engineered oak, herringbone, matte lacquer",
-    size: "600 × 120 × 15 mm",
-    price: "₱3,700 / sqm",
-    image: FLOOR_TEXTURE.herringboneAgedOak,
-  },
-  {
-    id: "fl4",
-    type: "floors",
-    name: "Walnut Plank",
-    description:
-      "Cool-toned walnut planks with straight grain and subtle colour play. Sophisticated and quiet — pairs well with both warm and cool palettes.",
-    material: "Engineered walnut, plank, satin oil",
-    size: "1200 × 180 × 15 mm",
-    price: "₱5,400 / sqm",
-    image: FLOOR_TEXTURE.plankWalnut,
-  },
-  {
-    id: "fl5",
-    type: "floors",
-    name: "Cherry Mahogany Plank",
-    description:
-      "Deep reddish-brown planks with a glossy finish. Rich and formal — traditionally used in libraries, studies, and formal dining rooms.",
-    material: "Engineered cherry/mahogany, gloss lacquer",
-    size: "1200 × 180 × 15 mm",
-    price: "₱5,900 / sqm",
-    image: FLOOR_TEXTURE.plankCherryMahogany,
-  },
-  {
-    id: "fl6",
-    type: "floors",
-    name: "Cherry Herringbone",
-    description:
-      "The same rich cherry tones arranged in herringbone — formal geometry with warm colour. Suited to classic and period-inspired interiors.",
-    material: "Engineered cherry, herringbone, gloss lacquer",
-    size: "600 × 120 × 15 mm",
-    price: "₱5,600 / sqm",
-    image: FLOOR_TEXTURE.herringboneCherry,
-  },
-  {
-    id: "fl7",
-    type: "floors",
-    name: "Dark Slate Stone",
-    description:
-      "Charcoal-grey slate with a subtle relief and matte finish. Durable and earthy — ideal for entryways, kitchens, and bathrooms.",
-    material: "Natural slate tile, matte",
-    size: "600 × 300 × 12 mm",
-    price: "₱4,600 / sqm",
-    image: FLOOR_TEXTURE.darkSlateStone,
-  },
-  {
-    id: "fl8",
-    type: "floors",
-    name: "White Veined Marble",
-    description:
-      "Bright white marble with soft grey veining and a polished surface. Luxurious and luminous — a statement floor for formal spaces.",
-    material: "Polished marble slab",
-    size: "600 × 600 × 18 mm",
-    price: "₱6,900 / sqm",
-    image: FLOOR_TEXTURE.whiteVeinedMarble,
-  },
-];
-
-// ---------------------------------------------------------------------------
-// Walls
-// ---------------------------------------------------------------------------
-const WALL_ITEMS: WallItem[] = [
-  { id: "w1", type: "walls", name: "Warm White", description: "Soft warm white — timeless, bright, and endlessly versatile.", material: "Low-VOC latex, eggshell", size: "Per 4L can (covers ~35 sqm)", price: "₱1,850", color: "#f5f0e8" },
-  { id: "w2", type: "walls", name: "Clay Beige", description: "Earthy beige with a hint of clay — grounding and calm.", material: "Low-VOC latex, matte", size: "Per 4L can (covers ~35 sqm)", price: "₱1,850", color: "#d9c7b2" },
-  { id: "w3", type: "walls", name: "Sage Green", description: "Calming sage green — a soft, natural accent.", material: "Low-VOC latex, matte", size: "Per 4L can (covers ~35 sqm)", price: "₱1,950", color: "#b2c2a8" },
-  { id: "w4", type: "walls", name: "Soft Grey", description: "Neutral soft grey — modern, quiet, and easy to live with.", material: "Low-VOC latex, eggshell", size: "Per 4L can (covers ~35 sqm)", price: "₱1,850", color: "#d0cfcd" },
-  { id: "w5", type: "walls", name: "Dusty Rose", description: "Subtle dusty rose — warm and romantic.", material: "Low-VOC latex, matte", size: "Per 4L can (covers ~35 sqm)", price: "₱1,950", color: "#d9b8b0" },
-  { id: "w6", type: "walls", name: "Deep Navy", description: "Deep navy blue — bold, sophisticated, dramatic.", material: "Low-VOC latex, matte", size: "Per 4L can (covers ~35 sqm)", price: "₱2,050", color: "#2c3e50" },
-  { id: "w7", type: "walls", name: "Olive", description: "Muted olive green — organic and quietly luxurious.", material: "Low-VOC latex, matte", size: "Per 4L can (covers ~35 sqm)", price: "₱2,050", color: "#8a8b5c" },
-  { id: "w8", type: "walls", name: "Terracotta", description: "Warm terracotta — earthy and sun-baked.", material: "Low-VOC latex, matte", size: "Per 4L can (covers ~35 sqm)", price: "₱2,050", color: "#c1795a" },
-  { id: "w9", type: "walls", name: "Charcoal", description: "Rich charcoal grey — moody and refined.", material: "Low-VOC latex, eggshell", size: "Per 4L can (covers ~35 sqm)", price: "₱2,150", color: "#4a4a4a" },
-  { id: "w10", type: "walls", name: "Blush Pink", description: "Soft blush pink — gentle and inviting.", material: "Low-VOC latex, matte", size: "Per 4L can (covers ~35 sqm)", price: "₱1,950", color: "#e8c4c4" },
-  { id: "w11", type: "walls", name: "Greige", description: "Grey-beige hybrid — modern neutral.", material: "Low-VOC latex, matte", size: "Per 4L can (covers ~35 sqm)", price: "₱1,900", color: "#c8c0b6" },
-  { id: "w12", type: "walls", name: "Mushroom", description: "Warm taupe with a hint of brown — sophisticated.", material: "Low-VOC latex, matte", size: "Per 4L can (covers ~35 sqm)", price: "₱1,950", color: "#a89a8c" },
-  { id: "w13", type: "walls", name: "Powder Blue", description: "Soft powder blue — calm and refreshing.", material: "Low-VOC latex, matte", size: "Per 4L can (covers ~35 sqm)", price: "₱1,950", color: "#b8ccd9" },
-  { id: "w14", type: "walls", name: "Forest Green", description: "Deep forest green — rich and elegant.", material: "Low-VOC latex, matte", size: "Per 4L can (covers ~35 sqm)", price: "₱2,150", color: "#3f5e4a" },
-  { id: "w15", type: "walls", name: "Sand", description: "Warm sandy beige — light and natural.", material: "Low-VOC latex, eggshell", size: "Per 4L can (covers ~35 sqm)", price: "₱1,900", color: "#e0d4b8" },
-  { id: "w16", type: "walls", name: "Mustard", description: "Bold mustard yellow — energetic and warm.", material: "Low-VOC latex, matte", size: "Per 4L can (covers ~35 sqm)", price: "₱2,100", color: "#c9a227" },
-  { id: "w17", type: "walls", name: "Burgundy", description: "Deep burgundy red — dramatic and luxurious.", material: "Low-VOC latex, matte", size: "Per 4L can (covers ~35 sqm)", price: "₱2,200", color: "#6b2737" },
-  { id: "w18", type: "walls", name: "Lavender", description: "Soft lavender — calming and contemporary.", material: "Low-VOC latex, matte", size: "Per 4L can (covers ~35 sqm)", price: "₱1,950", color: "#c3b8d9" },
-  { id: "w19", type: "walls", name: "Slate Blue", description: "Muted slate blue — cool and grounded.", material: "Low-VOC latex, matte", size: "Per 4L can (covers ~35 sqm)", price: "₱2,050", color: "#5f7488" },
-  { id: "w20", type: "walls", name: "Cream", description: "Classic cream — brighter than beige, warmer than white.", material: "Low-VOC latex, eggshell", size: "Per 4L can (covers ~35 sqm)", price: "₱1,850", color: "#f0e8d5" },
-];
-
-const ALL_ITEMS: Record<Division, LibraryItem[]> = {
-  furniture: FURNITURE_ITEMS,
-  floors: FLOOR_ITEMS,
-  walls: WALL_ITEMS,
+const FURNITURE_CATEGORY_LABELS: Record<FurnitureCategory, string> = {
+  livingRoom: "Living Room",
+  bedroom: "Bedroom",
+  diningRoom: "Dining Room",
+  kitchen: "Kitchen",
+  bathroom: "Bathroom",
+  office: "Office",
 };
 
-const DIVISION_META: Record<
-  Division,
-  { label: string; title: string; blurb: string }
-> = {
-  furniture: {
-    label: "",
-    title: "Furniture Library",
-    blurb:
-      "Browse our curated furniture pieces. Scroll to see more options — click any item to see its details on the right.",
-  },
-  floors: {
-    label: "",
-    title: "Floor Finishes",
-    blurb:
-      "PBR sphere previews — five at a time. Use the next button below the row to see more finishes.",
-  },
-  walls: {
-    label: "",
-    title: "Wall Finishes",
-    blurb:
-      "Interior paint colours commonly chosen by clients. Click a swatch to see details.",
-  },
-};
+const FURNITURE_CATEGORIES: FurnitureFilter[] = [
+  "All",
+  "livingRoom",
+  "bedroom",
+  "diningRoom",
+  "kitchen",
+  "bathroom",
+  "office",
+];
 
-const FLOORS_PER_PAGE = 5;
+const ASSETS_PER_PAGE = 20;
+
+// ---------------------------------------------------------------------------
+// Firebase → Library mapping helpers
+// ---------------------------------------------------------------------------
+function formatFurniturePrice(price: number): string {
+  return `₱${Number.isFinite(price) ? price.toLocaleString() : "0"}`;
+}
+
+function formatFloorPrice(price: number): string {
+  return `₱${Number.isFinite(price) ? price.toLocaleString() : "0"} / sqm`;
+}
+
+function formatWallPrice(price: number): string {
+  return `₱${Number.isFinite(price) ? price.toLocaleString() : "0"}`;
+}
+
+function normalizeFloorCategory(
+  raw?: string,
+): FloorCategory | undefined {
+  if (typeof raw !== "string") return undefined;
+
+  const value = raw.trim().toLowerCase().replace(/[\s_-]+/g, "");
+
+  switch (value) {
+    case "wood":
+    case "hardwood":
+      return "Wood";
+    case "tile":
+    case "tiles":
+    case "ceramic":
+    case "porcelain":
+      return "Tiles";
+    case "brick":
+    case "bricks":
+      return "Bricks";
+    default:
+      return undefined;
+  }
+}
+
+function mapFurnitureAsset(asset: Asset): FurnitureItem {
+  return {
+    id: asset.id,
+    type: "furniture",
+    name: asset.name,
+    description: DESCRIPTION_FALLBACK,
+    price: formatFurniturePrice(asset.price ?? 0),
+    image: asset.thumbnail ?? "",
+    model: asset.model ?? "",
+    category: asset.furnitureCategory,
+  };
+}
+
+function mapFloorMaterial(material: Material): FloorItem | null {
+  const image =
+    material.thumbnail?.trim() ||
+    material.texture?.trim() ||
+    "";
+
+  if (!image) return null;
+
+  return {
+    id: material.id,
+    type: "floors",
+    name: material.name,
+    description: DESCRIPTION_FALLBACK,
+    price: formatFloorPrice(material.pricePerSquareMeter ?? 0),
+    image,
+    category: normalizeFloorCategory(material.sourceCategory),
+  };
+}
+
+function mapWallMaterial(material: Material): WallItem {
+  const color =
+    (material.color && material.color.trim()) || "#cccccc";
+
+  return {
+    id: material.id,
+    type: "walls",
+    name: material.name,
+    description: DESCRIPTION_FALLBACK,
+    price: formatWallPrice(material.pricePerSquareMeter ?? 0),
+    color,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Fade-blur transition veil
@@ -388,7 +224,7 @@ function Reveal({
       className={`transform-gpu transition-all duration-700 ease-out ${
         visible
           ? "translate-y-0 opacity-100 blur-0"
-          : "translate-y-6 opacity-0 blur-md"
+          : "translate-y-4 opacity-0 blur-sm"
       } ${className}`}
     >
       {children}
@@ -397,16 +233,86 @@ function Reveal({
 }
 
 // ---------------------------------------------------------------------------
-// Detail panel with local fade-blur on item change
+// Loading state
+// ---------------------------------------------------------------------------
+function LoadingState() {
+  return (
+    <div className="flex h-full min-h-[200px] flex-col items-center justify-center gap-2 text-[13px] text-ink/45">
+      <span
+        className="h-5 w-5 animate-spin rounded-full border-2 border-ink/15 border-t-ink/60"
+        aria-hidden
+      />
+      Loading…
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Pager
+// ---------------------------------------------------------------------------
+function Pager({
+  currentPage,
+  totalPages,
+  onChange,
+}: {
+  currentPage: number;
+  totalPages: number;
+  onChange: (page: number) => void;
+}) {
+  if (totalPages <= 1) return null;
+
+  const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+
+  return (
+    <div className="flex items-center gap-1">
+      <button
+        onClick={() => onChange(Math.max(1, currentPage - 1))}
+        disabled={currentPage === 1}
+        className="flex h-8 w-8 items-center justify-center rounded-lg border border-ink/10 bg-white text-ink/60 transition hover:border-ink/30 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
+        aria-label="Previous page"
+      >
+        <ChevronLeft className="h-3.5 w-3.5" strokeWidth={2} />
+      </button>
+
+      {pages.map((page) => (
+        <button
+          key={page}
+          onClick={() => onChange(page)}
+          className={`flex h-8 min-w-[32px] items-center justify-center rounded-lg border px-2 text-[12px] font-medium transition ${
+            currentPage === page
+              ? "border-ink bg-ink text-white"
+              : "border-ink/10 bg-white text-ink/60 hover:border-ink/30 hover:text-ink"
+          }`}
+        >
+          {page}
+        </button>
+      ))}
+
+      <button
+        onClick={() => onChange(Math.min(totalPages, currentPage + 1))}
+        disabled={currentPage === totalPages}
+        className="flex h-8 w-8 items-center justify-center rounded-lg border border-ink/10 bg-white text-ink/60 transition hover:border-ink/30 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
+        aria-label="Next page"
+      >
+        <ChevronRight className="h-3.5 w-3.5" strokeWidth={2} />
+      </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Detail panel
 // ---------------------------------------------------------------------------
 function DetailPanel({ item }: { item: LibraryItem | null }) {
   const [veil, setVeil] = useState(false);
+  const [thumbError, setThumbError] = useState(false);
   const lastId = useRef<string | null>(null);
 
   useEffect(() => {
     const id = item?.id ?? null;
     if (id === lastId.current) return;
     lastId.current = id;
+    setThumbError(false);
     setVeil(true);
     const t = setTimeout(() => setVeil(false), 260);
     return () => clearTimeout(t);
@@ -414,95 +320,241 @@ function DetailPanel({ item }: { item: LibraryItem | null }) {
 
   if (!item) {
     return (
-      <div className="flex h-full min-h-[420px] flex-col items-center justify-center rounded-3xl border border-dashed border-ink/15 bg-white/50 p-10 text-center">
+      <div className="flex h-full min-h-[360px] flex-col items-center justify-center rounded-3xl border border-dashed border-ink/15 bg-white/50 p-10 text-center">
         <Info className="mb-3 h-6 w-6 text-ink/30" strokeWidth={1.5} />
         <p className="text-sm font-medium text-ink/60">No item selected</p>
-        <p className="mt-1 max-w-xs text-xs leading-relaxed text-ink/40">
-          Click any item to see its materials, size, and price.
+        <p className="mt-1 max-w-xs text-[13px] leading-relaxed text-ink/40">
+          Click any item to see its details.
         </p>
       </div>
     );
   }
 
+  const isWall = item.type === "walls";
+  const hasThumb =
+    (item.type === "furniture" || item.type === "floors") &&
+    Boolean(item.image?.trim()) &&
+    !thumbError;
+
   return (
-    <div className="relative flex h-full flex-col rounded-3xl border border-ink/10 bg-white/70 p-6 backdrop-blur-md">
+    <div className="relative flex h-full flex-col rounded-3xl border border-ink/8 bg-white/80 p-7 shadow-[0_1px_2px_rgba(0,0,0,0.02)] backdrop-blur-md">
       <div
         className={`flex h-full flex-col transition-all duration-300 ${
           veil ? "opacity-0 blur-sm" : "opacity-100 blur-0"
         }`}
       >
-        {/* FULL-WIDTH PREVIEW — no padding, no border, edge-to-edge */}
-        <div className="mb-5 overflow-hidden rounded-2xl bg-cream">
-          {item.type === "walls" ? (
+        {/* Preview */}
+        <div className="mb-6 overflow-hidden rounded-2xl bg-cream">
+          {isWall ? (
             <div
-              className="h-56 w-full"
+              className="h-52 w-full"
               style={{ backgroundColor: item.color }}
             />
-          ) : item.type === "floors" ? (
+          ) : hasThumb ? (
             <img
               src={item.image}
               alt={item.name}
-              className="h-56 w-full scale-125 object-cover transition-transform duration-500"
+              onError={() => setThumbError(true)}
+              className="h-52 w-full object-cover transition-transform duration-500"
             />
+          ) : item.type === "furniture" && item.model ? (
+            <div className="h-52 w-full">
+              <AssetModelThumbnail model={item.model} />
+            </div>
           ) : (
-            <img
-              src={item.image}
-              alt={item.name}
-              className="h-56 w-full object-cover transition-transform duration-500"
-            />
+            <div className="flex h-52 w-full items-center justify-center text-[11px] uppercase tracking-wider text-ink/30">
+              No preview
+            </div>
           )}
         </div>
 
-        <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-clay-500">
-          {DIVISION_META[item.type].title}
-        </p>
-        <h3 className="mt-1 font-display text-2xl font-semibold text-ink">
-          {item.name}
-        </h3>
-        <p className="mt-3 text-sm leading-relaxed text-ink/60">
+        {/* Name + price row */}
+        <div className="flex items-start justify-between gap-3">
+          <h3 className="text-2xl font-semibold tracking-tight text-ink">
+            {item.name}
+          </h3>
+          <span className="text-lg font-semibold text-ink underline underline-offset-4">
+            {item.price}
+          </span>
+        </div>
+
+        {/* Category chip */}
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          <span className="rounded-full bg-ink/5 px-2.5 py-1 text-[11px] font-medium uppercase tracking-wider text-ink/50">
+            {item.type === "walls"
+              ? "Paint"
+              : item.type === "floors"
+                ? "Floor"
+                : "Furniture"}
+          </span>
+        </div>
+
+        <p className="mt-4 text-[14px] leading-relaxed text-ink/65">
           {item.description}
         </p>
 
-        <dl className="mt-6 space-y-3 border-t border-ink/10 pt-5 text-sm">
-          <div className="flex items-start gap-3">
-            <Layers
-              className="mt-0.5 h-4 w-4 flex-shrink-0 text-clay-500"
-              strokeWidth={1.75}
-            />
+        {/* Details */}
+        {isWall && (
+          <dl className="mt-6 space-y-4 border-t border-ink/10 pt-5">
             <div>
-              <dt className="text-[10px] font-semibold uppercase tracking-widest text-ink/40">
-                Material
+              <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-ink/40">
+                Color
               </dt>
-              <dd className="text-ink/80">{item.material}</dd>
+              <dd className="mt-2 flex items-center gap-2">
+                <span
+                  className="h-6 w-6 rounded-full border border-ink/10"
+                  style={{ backgroundColor: item.color }}
+                />
+                <span className="text-[13px] text-ink/80">{item.color}</span>
+              </dd>
             </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <Ruler
-              className="mt-0.5 h-4 w-4 flex-shrink-0 text-clay-500"
-              strokeWidth={1.75}
-            />
-            <div>
-              <dt className="text-[10px] font-semibold uppercase tracking-widest text-ink/40">
-                Size
-              </dt>
-              <dd className="text-ink/80">{item.size}</dd>
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <Tag
-              className="mt-0.5 h-4 w-4 flex-shrink-0 text-clay-500"
-              strokeWidth={1.75}
-            />
-            <div>
-              <dt className="text-[10px] font-semibold uppercase tracking-widest text-ink/40">
-                Price
-              </dt>
-              <dd className="font-semibold text-ink">{item.price}</dd>
-            </div>
-          </div>
-        </dl>
+          </dl>
+        )}
       </div>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Generic category dropdown
+// ---------------------------------------------------------------------------
+function CategoryDropdown<T extends string>({
+  value,
+  options,
+  onChange,
+  formatLabel,
+}: {
+  value: T;
+  options: readonly T[];
+  onChange: (v: T) => void;
+  formatLabel?: (v: T) => string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const display = (v: T) => (formatLabel ? formatLabel(v) : v);
+
+  return (
+    <div ref={ref} className="relative inline-block">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center gap-2 rounded-lg border border-ink/15 bg-white px-3.5 py-2 text-[12px] font-medium text-ink/75 transition hover:border-ink/30 hover:text-ink"
+      >
+        {display(value)}
+        <ChevronDown
+          className={`h-3.5 w-3.5 transition-transform duration-200 ${
+            open ? "rotate-180" : "rotate-0"
+          }`}
+          strokeWidth={2}
+        />
+      </button>
+
+      {open && (
+        <div
+          className="absolute left-0 top-full z-20 mt-2 min-w-[150px] overflow-hidden rounded-xl border border-ink/10 bg-white shadow-lg"
+          style={{ animation: "fadeBlur 220ms ease" }}
+        >
+          {options.map((c) => (
+            <button
+              key={c}
+              onClick={() => {
+                onChange(c);
+                setOpen(false);
+              }}
+              className={`block w-full px-4 py-2.5 text-left text-[12px] font-medium transition ${
+                value === c
+                  ? "bg-clay-500/10 text-clay-600"
+                  : "text-ink/70 hover:bg-ink/5 hover:text-ink"
+              }`}
+            >
+              {display(c)}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Asset tile (floors + walls)
+// ---------------------------------------------------------------------------
+function AssetTile({
+  item,
+  active,
+  onClick,
+  showColorBlock,
+}: {
+  item: LibraryItem;
+  active: boolean;
+  onClick: () => void;
+  showColorBlock: boolean;
+}) {
+  const [thumbError, setThumbError] = useState(false);
+
+  const hasThumb =
+    item.type === "floors" &&
+    Boolean(item.image?.trim()) &&
+    !thumbError;
+
+  return (
+    <button
+      onClick={onClick}
+      className={`group flex flex-col overflow-hidden rounded-2xl border-2 bg-white text-left transition-all duration-300 ${
+        active
+          ? "border-[#6b8050] shadow-[0_0_0_3px_rgba(107,128,80,0.15)]"
+          : "border-transparent hover:-translate-y-0.5 hover:shadow-md"
+      }`}
+    >
+      <div className="relative aspect-square w-full overflow-hidden bg-cream">
+        {showColorBlock && item.type === "walls" ? (
+          <div
+            className="h-full w-full"
+            style={{ backgroundColor: item.color }}
+          />
+        ) : hasThumb && item.type === "floors" ? (
+          <img
+            src={item.image}
+            alt={item.name}
+            onError={() => setThumbError(true)}
+            className="h-full w-full scale-110 object-cover transition-transform duration-500 group-hover:scale-125"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-[10px] uppercase tracking-wider text-ink/30">
+            No preview
+          </div>
+        )}
+
+        {active && (
+          <span className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-[#6b8050] text-white shadow-md">
+            <Check className="h-3.5 w-3.5" strokeWidth={3} />
+          </span>
+        )}
+      </div>
+
+      <div className="p-3">
+        <p className="truncate text-[13px] font-semibold text-ink">
+          {item.name}
+        </p>
+        <span className="mt-1.5 inline-block rounded-full bg-ink/5 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-ink/45">
+          {item.type === "walls"
+            ? "paint"
+            : item.type === "floors"
+              ? "floor"
+              : "furniture"}
+        </span>
+      </div>
+    </button>
   );
 }
 
@@ -518,31 +570,42 @@ function FurnitureTile({
   active: boolean;
   onClick: () => void;
 }) {
+  const [thumbError, setThumbError] = useState(false);
+  const hasThumb = Boolean(item.image?.trim()) && !thumbError;
+
   return (
     <button
       onClick={onClick}
-      className={`group flex flex-col overflow-hidden rounded-2xl border-2 bg-white p-2 text-left transition-all duration-300 ${
+      className={`group flex flex-col overflow-hidden rounded-2xl border bg-white p-2.5 text-left transition-all duration-300 ${
         active
-          ? "border-clay-500 shadow-[0_0_0_4px_rgba(178,107,75,0.12)]"
-          : "border-transparent hover:-translate-y-0.5 hover:border-ink/15 hover:shadow-lg"
+          ? "border-clay-500 shadow-[0_0_0_3px_rgba(178,107,75,0.12)]"
+          : "border-ink/8 hover:-translate-y-0.5 hover:border-ink/20 hover:shadow-md"
       }`}
     >
       <div className="relative h-32 w-full overflow-hidden rounded-xl bg-cream">
-        <img
-          src={item.image}
-          alt={item.name}
-          className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-        />
+        {hasThumb ? (
+          <img
+            src={item.image}
+            alt={item.name}
+            onError={() => setThumbError(true)}
+            className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+          />
+        ) : item.model ? (
+          <AssetModelThumbnail model={item.model} />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-[10px] uppercase tracking-wider text-ink/30">
+            No preview
+          </div>
+        )}
         {active && (
-          <span className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-clay-500 text-white shadow-md">
+          <span className="absolute right-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-clay-500 text-white shadow-md">
             <Check className="h-3.5 w-3.5" strokeWidth={3} />
           </span>
         )}
       </div>
-      <div className="mt-2 px-1 pb-1">
-        <p className="truncate text-xs font-semibold text-ink">{item.name}</p>
-        <p className="mt-0.5 truncate text-[10px] uppercase tracking-wider text-ink/40">
-          {item.material}
+      <div className="mt-3 px-1 pb-1">
+        <p className="truncate text-[13px] font-semibold text-ink">
+          {item.name}
         </p>
       </div>
     </button>
@@ -550,98 +613,45 @@ function FurnitureTile({
 }
 
 // ---------------------------------------------------------------------------
-// Floor tile — sphere render, zoomed, no border, checkmark outside
-// ---------------------------------------------------------------------------
-function FloorTile({
-  item,
-  active,
-  onClick,
-}: {
-  item: FloorItem;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`group flex flex-col items-center overflow-visible rounded-2xl border-2 bg-white p-3 text-center transition-all duration-300 ${
-        active
-          ? "border-clay-500 shadow-[0_0_0_4px_rgba(178,107,75,0.12)]"
-          : "border-transparent hover:-translate-y-0.5 hover:border-ink/15 hover:shadow-lg"
-      }`}
-    >
-      <div className="relative flex h-28 w-28 items-center justify-center overflow-visible rounded-full bg-cream">
-        <div className="h-full w-full overflow-hidden rounded-full">
-          <img
-            src={item.image}
-            alt={item.name}
-            className="h-full w-full scale-125 object-cover transition-transform duration-500 group-hover:scale-150"
-          />
-        </div>
-        {active && (
-          <span className="absolute -right-1 -top-1 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-clay-500 text-white shadow-md">
-            <Check className="h-3.5 w-3.5" strokeWidth={3} />
-          </span>
-        )}
-      </div>
-      <div className="mt-3 w-full px-1 pb-1">
-        <p className="truncate text-xs font-semibold text-ink">{item.name}</p>
-      </div>
-    </button>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Wall swatch
-// ---------------------------------------------------------------------------
-function WallSwatch({
-  item,
-  active,
-  onClick,
-}: {
-  item: WallItem;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`group flex flex-col items-center gap-2 rounded-2xl border-2 bg-white p-3 transition-all duration-300 ${
-        active
-          ? "border-clay-500 shadow-[0_0_0_4px_rgba(178,107,75,0.12)]"
-          : "border-transparent hover:-translate-y-0.5 hover:border-ink/15 hover:shadow-lg"
-      }`}
-    >
-      <div className="relative">
-        <div
-          className="h-14 w-14 rounded-full border border-ink/10 transition-transform duration-300 group-hover:scale-105"
-          style={{ backgroundColor: item.color }}
-        />
-        {active && (
-          <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-clay-500 text-white shadow-md">
-            <Check className="h-3 w-3" strokeWidth={3} />
-          </span>
-        )}
-      </div>
-      <p className="text-[11px] font-semibold text-ink">{item.name}</p>
-    </button>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Section header
 // ---------------------------------------------------------------------------
+const DIVISION_META: Record<
+  Division,
+  { label: string; title: string; blurb: string }
+> = {
+  furniture: {
+    label: "",
+    title: "Furniture Library",
+    blurb:
+      "Browse our curated furniture pieces. Scroll to see more options — click any item to see its details.",
+  },
+  floors: {
+    label: "",
+    title: "Floor Finishes",
+    blurb:
+      "Manage floor finishes — filter by type and click any finish to preview.",
+  },
+  walls: {
+    label: "",
+    title: "Wall Finishes",
+    blurb:
+      "Manage wall finishes — click any swatch to preview its colour.",
+  },
+};
+
 function SectionHeader({ division }: { division: Division }) {
   const meta = DIVISION_META[division];
   return (
-    <div className="mb-6 max-w-xl">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-clay-500">
+    <div className="mb-7 max-w-2xl">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-clay-500">
         {meta.label}
       </p>
-      <h2 className="mt-1 font-display text-3xl font-semibold text-ink md:text-4xl">
+      <h2 className="mt-2 text-3xl font-semibold tracking-tight text-ink md:text-4xl">
         {meta.title}
       </h2>
-      <p className="mt-2 text-sm leading-relaxed text-ink/50">{meta.blurb}</p>
+      <p className="mt-2.5 text-[15px] leading-relaxed text-ink/55">
+        {meta.blurb}
+      </p>
     </div>
   );
 }
@@ -651,32 +661,66 @@ function SectionHeader({ division }: { division: Division }) {
 // ---------------------------------------------------------------------------
 function FurnitureSection({
   items,
+  loading,
   activeItem,
   onSelect,
 }: {
   items: FurnitureItem[];
+  loading: boolean;
   activeItem: LibraryItem | null;
   onSelect: (item: LibraryItem) => void;
 }) {
+  const [category, setCategory] = useState<FurnitureFilter>("All");
+
+  const filtered = useMemo(() => {
+    if (category === "All") return items;
+    return items.filter((i) => i.category === category);
+  }, [items, category]);
+
   const active =
     activeItem && activeItem.type === "furniture" ? activeItem : null;
+
   return (
     <section className="scroll-mt-24">
       <SectionHeader division="furniture" />
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_380px]">
-        <div className="rounded-3xl border border-ink/10 bg-white/40 p-4 sm:p-5">
-          <div className="grid max-h-[560px] grid-cols-2 gap-3 overflow-y-auto pr-1 sm:grid-cols-3">
-            {items.map((item) => (
-              <FurnitureTile
-                key={item.id}
-                item={item}
-                active={active?.id === item.id}
-                onClick={() => onSelect(item)}
-              />
-            ))}
+      <div className="grid grid-cols-1 gap-7 lg:grid-cols-[1fr_380px]">
+        <div className="rounded-3xl border border-ink/8 bg-white/40 p-5 sm:p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-[14px] font-semibold text-ink">
+              Browse pieces
+            </h3>
+            <CategoryDropdown<FurnitureFilter>
+              value={category}
+              options={FURNITURE_CATEGORIES}
+              onChange={setCategory}
+              formatLabel={(v) =>
+                v === "All" ? "All" : FURNITURE_CATEGORY_LABELS[v]
+              }
+            />
           </div>
+
+          {loading ? (
+            <div className="h-[520px]">
+              <LoadingState />
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="flex h-[520px] items-center justify-center text-[13px] text-ink/40">
+              No furniture in this category.
+            </div>
+          ) : (
+            <div className="grid max-h-[580px] grid-cols-2 gap-3.5 overflow-y-auto pr-1 sm:grid-cols-3">
+              {filtered.map((item) => (
+                <FurnitureTile
+                  key={item.id}
+                  item={item}
+                  active={active?.id === item.id}
+                  onClick={() => onSelect(item)}
+                />
+              ))}
+            </div>
+          )}
         </div>
-        <div className="lg:sticky lg:top-6 lg:h-[560px]">
+        <div className="lg:sticky lg:top-6 lg:h-[580px]">
           <DetailPanel item={active} />
         </div>
       </div>
@@ -685,23 +729,37 @@ function FurnitureSection({
 }
 
 // ---------------------------------------------------------------------------
-// Floors section — detail LEFT, sphere renders RIGHT, one row + pager below
+// Floors section
 // ---------------------------------------------------------------------------
 function FloorsSection({
   items,
+  loading,
   activeItem,
   onSelect,
 }: {
   items: FloorItem[];
+  loading: boolean;
   activeItem: LibraryItem | null;
   onSelect: (item: LibraryItem) => void;
 }) {
-  const [page, setPage] = useState(0);
-  const totalPages = Math.max(1, Math.ceil(items.length / FLOORS_PER_PAGE));
-  const visible = useMemo(
-    () => items.slice(page * FLOORS_PER_PAGE, (page + 1) * FLOORS_PER_PAGE),
-    [items, page],
+  const [category, setCategory] = useState<"All" | FloorCategory>("All");
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    setPage(1);
+  }, [category]);
+
+  const filtered = useMemo(
+    () =>
+      category === "All"
+        ? items
+        : items.filter((i) => i.category === category),
+    [items, category],
   );
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ASSETS_PER_PAGE));
+  const startIndex = (page - 1) * ASSETS_PER_PAGE;
+  const paginated = filtered.slice(startIndex, startIndex + ASSETS_PER_PAGE);
 
   const active = activeItem && activeItem.type === "floors" ? activeItem : null;
 
@@ -709,52 +767,74 @@ function FloorsSection({
     <section className="scroll-mt-24">
       <SectionHeader division="floors" />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[380px_1fr]">
-        {/* LEFT — description / details */}
-        <div className="lg:sticky lg:top-6 lg:h-[420px]">
+      <div className="flex h-[640px] overflow-hidden rounded-3xl border border-ink/8 bg-white/40">
+        {/* LEFT — selected preview */}
+        <div className="w-[320px] shrink-0 overflow-y-auto border-r border-ink/8 p-5">
           <DetailPanel item={active} />
         </div>
 
-        {/* RIGHT — one row of 5 sphere renders + pager below */}
-        <div className="rounded-3xl border border-ink/10 bg-white/40 p-4 sm:p-5">
-          <div
-            key={`floors-${page}`}
-            className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5"
-            style={{ animation: "fadeBlur 420ms ease" }}
-          >
-            {visible.map((item) => (
-              <FloorTile
-                key={item.id}
-                item={item}
-                active={active?.id === item.id}
-                onClick={() => onSelect(item)}
-              />
-            ))}
+        {/* RIGHT — catalogue */}
+        <div className="flex flex-1 flex-col overflow-hidden">
+          {/* toolbar */}
+          <div className="flex items-center justify-between border-b border-ink/8 px-5 py-4">
+            <div>
+              <h3 className="text-[15px] font-semibold text-ink">
+                Floor finishes
+              </h3>
+              <p className="mt-0.5 text-[12px] text-ink/45">
+                Filter and browse by type
+              </p>
+            </div>
+            <CategoryDropdown<"All" | FloorCategory>
+              value={category}
+              options={FLOOR_CATEGORIES}
+              onChange={setCategory}
+            />
           </div>
 
-          {totalPages > 1 && (
-            <div className="mt-5 flex items-center justify-center gap-3">
-              <button
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                disabled={page === 0}
-                aria-label="Previous"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-ink/10 bg-white text-ink/70 transition hover:border-ink/30 hover:text-ink disabled:cursor-not-allowed disabled:opacity-30"
+          {/* scrollable grid */}
+          <div className="flex-1 overflow-y-auto p-5">
+            {loading ? (
+              <LoadingState />
+            ) : paginated.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-[13px] text-ink/40">
+                No finishes in this category.
+              </div>
+            ) : (
+              <div
+                key={`floors-${category}-${page}`}
+                className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+                style={{ animation: "fadeBlur 420ms ease" }}
               >
-                <ChevronLeft className="h-4 w-4" strokeWidth={2} />
-              </button>
-              <span className="text-[10px] font-medium uppercase tracking-widest text-ink/40">
-                {page + 1} / {totalPages}
-              </span>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-                disabled={page >= totalPages - 1}
-                aria-label="Next"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-ink/10 bg-white text-ink/70 transition hover:border-ink/30 hover:text-ink disabled:cursor-not-allowed disabled:opacity-30"
-              >
-                <ChevronRight className="h-4 w-4" strokeWidth={2} />
-              </button>
-            </div>
-          )}
+                {paginated.map((item) => (
+                  <AssetTile
+                    key={item.id}
+                    item={item}
+                    active={active?.id === item.id}
+                    onClick={() => onSelect(item)}
+                    showColorBlock={false}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* footer */}
+          <div className="flex items-center justify-between border-t border-ink/8 px-5 py-3">
+            <p className="text-[12px] text-ink/45">
+              {filtered.length > 0
+                ? `Showing ${startIndex + 1}-${Math.min(
+                    startIndex + ASSETS_PER_PAGE,
+                    filtered.length,
+                  )} of ${filtered.length}`
+                : "Showing 0 of 0"}
+            </p>
+            <Pager
+              currentPage={page}
+              totalPages={totalPages}
+              onChange={setPage}
+            />
+          </div>
         </div>
       </div>
     </section>
@@ -766,32 +846,90 @@ function FloorsSection({
 // ---------------------------------------------------------------------------
 function WallsSection({
   items,
+  loading,
   activeItem,
   onSelect,
 }: {
   items: WallItem[];
+  loading: boolean;
   activeItem: LibraryItem | null;
   onSelect: (item: LibraryItem) => void;
 }) {
+  const [page, setPage] = useState(1);
+
+  const totalPages = Math.max(1, Math.ceil(items.length / ASSETS_PER_PAGE));
+  const startIndex = (page - 1) * ASSETS_PER_PAGE;
+  const paginated = items.slice(startIndex, startIndex + ASSETS_PER_PAGE);
+
   const active = activeItem && activeItem.type === "walls" ? activeItem : null;
+
   return (
     <section className="scroll-mt-24">
       <SectionHeader division="walls" />
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_380px]">
-        <div className="rounded-3xl border border-ink/10 bg-white/40 p-4 sm:p-5">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-            {items.map((item) => (
-              <WallSwatch
-                key={item.id}
-                item={item}
-                active={active?.id === item.id}
-                onClick={() => onSelect(item)}
-              />
-            ))}
-          </div>
-        </div>
-        <div className="lg:sticky lg:top-6 lg:h-[560px]">
+
+      <div className="flex h-[640px] overflow-hidden rounded-3xl border border-ink/8 bg-white/40">
+        {/* LEFT — selected preview */}
+        <div className="w-[320px] shrink-0 overflow-y-auto border-r border-ink/8 p-5">
           <DetailPanel item={active} />
+        </div>
+
+        {/* RIGHT — catalogue */}
+        <div className="flex flex-1 flex-col overflow-hidden">
+          {/* toolbar */}
+          <div className="flex items-center justify-between border-b border-ink/8 px-5 py-4">
+            <div>
+              <h3 className="text-[15px] font-semibold text-ink">
+                Wall finishes
+              </h3>
+              <p className="mt-0.5 text-[12px] text-ink/45">
+                Browse all interior paint colours
+              </p>
+            </div>
+          </div>
+
+          {/* scrollable grid */}
+          <div className="flex-1 overflow-y-auto p-5">
+            {loading ? (
+              <LoadingState />
+            ) : paginated.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-[13px] text-ink/40">
+                No wall finishes available.
+              </div>
+            ) : (
+              <div
+                key={`walls-${page}`}
+                className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+                style={{ animation: "fadeBlur 420ms ease" }}
+              >
+                {paginated.map((item) => (
+                  <AssetTile
+                    key={item.id}
+                    item={item}
+                    active={active?.id === item.id}
+                    onClick={() => onSelect(item)}
+                    showColorBlock={true}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* footer */}
+          <div className="flex items-center justify-between border-t border-ink/8 px-5 py-3">
+            <p className="text-[12px] text-ink/45">
+              {items.length > 0
+                ? `Showing ${startIndex + 1}-${Math.min(
+                    startIndex + ASSETS_PER_PAGE,
+                    items.length,
+                  )} of ${items.length}`
+                : "Showing 0 of 0"}
+            </p>
+            <Pager
+              currentPage={page}
+              totalPages={totalPages}
+              onChange={setPage}
+            />
+          </div>
         </div>
       </div>
     </section>
@@ -801,11 +939,87 @@ function WallsSection({
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
+const NAV_LINKS = [
+  { label: "Home", to: "/" },
+  { label: "Library", to: "/library" },
+  { label: "Studio", to: "/studio" },
+];
+
 export default function LibraryPage() {
   const [activeItems, setActiveItems] = useState<
     Partial<Record<Division, LibraryItem>>
   >({});
   const [veil, setVeil] = useState(false);
+
+  //--------------------------------------------------
+  // Firebase-backed state
+  //--------------------------------------------------
+  const [furnitureItems, setFurnitureItems] = useState<FurnitureItem[]>([]);
+  const [floorItems, setFloorItems] = useState<FloorItem[]>([]);
+  const [wallItems, setWallItems] = useState<WallItem[]>([]);
+
+  const [furnitureLoading, setFurnitureLoading] = useState(true);
+  const [floorLoading, setFloorLoading] = useState(true);
+  const [wallLoading, setWallLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    //--------------------------------------------------
+    // Furniture
+    //--------------------------------------------------
+    getFurnitureAssets()
+      .then((assets) => {
+        if (cancelled) return;
+        setFurnitureItems(assets.map(mapFurnitureAsset));
+      })
+      .catch((err) => {
+        console.error("Failed to load furniture assets:", err);
+        if (!cancelled) setFurnitureItems([]);
+      })
+      .finally(() => {
+        if (!cancelled) setFurnitureLoading(false);
+      });
+
+    //--------------------------------------------------
+    // Floors
+    //--------------------------------------------------
+    getFloorMaterials()
+      .then((materials) => {
+        if (cancelled) return;
+        const mapped = materials
+          .map(mapFloorMaterial)
+          .filter((x): x is FloorItem => Boolean(x));
+        setFloorItems(mapped);
+      })
+      .catch((err) => {
+        console.error("Failed to load floor materials:", err);
+        if (!cancelled) setFloorItems([]);
+      })
+      .finally(() => {
+        if (!cancelled) setFloorLoading(false);
+      });
+
+    //--------------------------------------------------
+    // Walls
+    //--------------------------------------------------
+    getWallMaterials()
+      .then((materials) => {
+        if (cancelled) return;
+        setWallItems(materials.map(mapWallMaterial));
+      })
+      .catch((err) => {
+        console.error("Failed to load wall materials:", err);
+        if (!cancelled) setWallItems([]);
+      })
+      .finally(() => {
+        if (!cancelled) setWallLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleSelect = (item: LibraryItem) => {
     setVeil(true);
@@ -814,48 +1028,89 @@ export default function LibraryPage() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-cream">
+    <div className="min-h-screen w-full bg-cream font-sans text-ink antialiased">
       <TransitionVeil active={veil} />
 
-      {/* Shared animated NavBar (Home / Library / Studio + Sign In) */}
-      <NavBar />
+      {/* Nav */}
+      <header className="border-b border-ink/8 bg-white/80 backdrop-blur-md">
+        <div className="mx-auto flex max-w-[1400px] items-center justify-between px-6 py-5 md:px-10">
+          <Link to="/" className="flex items-center gap-2.5">
+            <Armchair className="h-5 w-5 text-ink" strokeWidth={1.5} />
+            <span className="text-[15px] font-semibold uppercase tracking-[0.14em] text-ink">
+              Espasyo
+            </span>
+          </Link>
+
+          <nav className="hidden items-center gap-10 sm:flex">
+            {NAV_LINKS.map((link) => {
+              const active = link.label === "Library";
+              return (
+                <Link
+                  key={link.label}
+                  to={link.to}
+                  className={`relative text-[12px] font-medium uppercase tracking-[0.14em] transition ${
+                    active ? "text-ink" : "text-ink/55 hover:text-ink"
+                  }`}
+                >
+                  {link.label}
+                  <span
+                    className={`absolute -bottom-1.5 left-0 h-[2px] w-full origin-left bg-ink transition-transform duration-300 ${
+                      active ? "scale-x-100" : "scale-x-0"
+                    }`}
+                  />
+                </Link>
+              );
+            })}
+          </nav>
+
+          <Link
+            to="/login"
+            className="rounded-lg bg-ink px-5 py-2.5 text-[12px] font-medium uppercase tracking-[0.12em] text-white transition hover:bg-clay-700"
+          >
+            Sign In
+          </Link>
+        </div>
+      </header>
 
       {/* Intro */}
-      <main className="mx-auto max-w-[1400px] px-6 py-12 md:px-10">
+      <main className="mx-auto max-w-[1400px] px-6 py-14 md:px-10">
         <Reveal>
-          <div className="mb-12 max-w-2xl">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-clay-500">
+          <div className="mb-14 max-w-2xl">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-clay-500">
               Material Library
             </p>
-            <h1 className="mt-2 font-display text-4xl font-semibold text-ink md:text-5xl">
+            <h1 className="mt-3 text-4xl font-semibold tracking-tight text-ink md:text-5xl">
               Build your palette.
             </h1>
-            <p className="mt-3 text-sm leading-relaxed text-ink/60">
+            <p className="mt-4 text-[15px] leading-relaxed text-ink/60">
               Three divisions — furniture, floors, and walls — each with a
               browsing panel and a detail panel. Click any item to see its
-              materials, size, and price.
+              details.
             </p>
           </div>
         </Reveal>
 
-        <div className="space-y-24">
+        <div className="space-y-28">
           <Reveal>
             <FurnitureSection
-              items={ALL_ITEMS.furniture as FurnitureItem[]}
+              items={furnitureItems}
+              loading={furnitureLoading}
               activeItem={activeItems.furniture ?? null}
               onSelect={handleSelect}
             />
           </Reveal>
           <Reveal>
             <FloorsSection
-              items={ALL_ITEMS.floors as FloorItem[]}
+              items={floorItems}
+              loading={floorLoading}
               activeItem={activeItems.floors ?? null}
               onSelect={handleSelect}
             />
           </Reveal>
           <Reveal>
             <WallsSection
-              items={ALL_ITEMS.walls as WallItem[]}
+              items={wallItems}
+              loading={wallLoading}
               activeItem={activeItems.walls ?? null}
               onSelect={handleSelect}
             />
@@ -863,10 +1118,10 @@ export default function LibraryPage() {
         </div>
 
         <Reveal>
-          <div className="mt-20 flex justify-center">
+          <div className="mt-24 flex justify-center">
             <Link
               to="/studio"
-              className="inline-flex items-center gap-2 rounded-xl bg-ink px-6 py-3 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-clay-700"
+              className="inline-flex items-center gap-2 rounded-xl bg-ink px-6 py-3.5 text-[12px] font-medium uppercase tracking-[0.12em] text-white transition hover:bg-clay-700"
             >
               Continue to studio
               <ArrowRight className="h-4 w-4" strokeWidth={2} />

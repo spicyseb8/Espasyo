@@ -3,12 +3,12 @@ export type MaterialCategory =
     | "wallFinish";
 
 export interface Material {
-
     id: string;
-
     name: string;
-
     category: MaterialCategory;
+
+    // Original category from the source data, if available
+    sourceCategory?: string;
 
     // Cost per square meter
     pricePerSquareMeter: number;
@@ -24,6 +24,5 @@ export interface Material {
 
     // Three.js material properties
     roughness?: number;
-
     metalness?: number;
 }

@@ -157,6 +157,19 @@ export default function AccountSettings({
 
 
   //==================================================
+  // SHOW PROJECTS TAB?
+  //==================================================
+  //
+  // Only customers (type === "user") have
+  // projects. Employees do not, so we hide
+  // the Projects tab for them.
+  //==================================================
+
+  const showProjectsTab =
+    type === "user";
+
+
+  //==================================================
   // SUSPEND ACCOUNT
   //==================================================
 
@@ -350,22 +363,26 @@ export default function AccountSettings({
             </TabsTrigger>
 
 
-            {/* PROJECTS */}
+            {/* PROJECTS — customers only */}
 
-            <TabsTrigger
-              value="projects"
-              className={
-                tabTriggerClass
-              }
-            >
+            {showProjectsTab && (
 
-              <FolderKanban
-                className="h-4 w-4"
-              />
+              <TabsTrigger
+                value="projects"
+                className={
+                  tabTriggerClass
+                }
+              >
 
-              Projects
+                <FolderKanban
+                  className="h-4 w-4"
+                />
 
-            </TabsTrigger>
+                Projects
+
+              </TabsTrigger>
+
+            )}
 
 
             {/* RECENT ACTIVITIES */}
@@ -417,19 +434,23 @@ export default function AccountSettings({
 
 
           {/*==================================================
-              PROJECTS TAB
+              PROJECTS TAB — customers only
           ================================================== */}
 
-          <TabsContent
-            value="projects"
-            className="mt-6"
-          >
+          {showProjectsTab && (
 
-            <ProjectsTab
-              ownerId={ownerId}
-            />
+            <TabsContent
+              value="projects"
+              className="mt-6"
+            >
 
-          </TabsContent>
+              <ProjectsTab
+                ownerId={ownerId}
+              />
+
+            </TabsContent>
+
+          )}
 
 
           {/*==================================================
