@@ -1,30 +1,40 @@
 import "./Topbar.css";
+
 import {
+    ArrowLeft,
     ChevronDown,
     Receipt,
     Undo2,
     Redo2
 } from "lucide-react";
+
 import {
     useEffect,
     useMemo,
     useRef,
     useState
 } from "react";
+
 import type {
     ChangeEvent
 } from "react";
+
 import {
+    useNavigate,
     useParams
 } from "react-router-dom";
+
 import useEditor
     from "../../context/editor/useEditor";
+
 import {
     calculateCostEstimate
 } from "../../engine/cost/CostEstimator";
+
 import type {
     CostCategory
 } from "../../engine/cost/CostTypes";
+
 import AdminComments
     from "../../scene/Comment/AdminComments";
 
@@ -36,6 +46,9 @@ export default function Topbar() {
         canUndo,
         canRedo
     } = useEditor();
+
+    const navigate =
+        useNavigate();
 
     const {
         projectId:
@@ -89,6 +102,11 @@ export default function Topbar() {
             setProjectName(
                 event.target.value
             );
+        };
+
+    const handleBack =
+        () => {
+            window.history.back();
         };
 
     const estimate =
@@ -208,9 +226,21 @@ export default function Topbar() {
     return (
         <header className="topbar">
             <div className="topbar-left">
-                <div className="topbar-brand">
-                    ESPASYO
-                </div>
+                <button
+                    type="button"
+                    className="history-button"
+                    onClick={
+                        handleBack
+                    }
+                    title="Back"
+                    aria-label="Back"
+                >
+                    <ArrowLeft
+                        size={
+                            18
+                        }
+                    />
+                </button>
             </div>
 
             <div className="topbar-center">
@@ -242,7 +272,9 @@ export default function Topbar() {
                     aria-label="Undo"
                 >
                     <Undo2
-                        size={18}
+                        size={
+                            18
+                        }
                     />
                 </button>
 
@@ -259,20 +291,28 @@ export default function Topbar() {
                     aria-label="Redo"
                 >
                     <Redo2
-                        size={18}
+                        size={
+                            18
+                        }
                     />
                 </button>
 
-                <AdminComments
-                    projectId={
-                        routeProjectId ??
-                        null
-                    }
-                />
+                <div
+                    className="admin-comments-icon-only"
+                >
+                    <AdminComments
+                        projectId={
+                            routeProjectId ??
+                            null
+                        }
+                    />
+                </div>
 
                 <div
                     className="cost-estimator"
-                    ref={dropdownRef}
+                    ref={
+                        dropdownRef
+                    }
                 >
                     <button
                         type="button"
@@ -288,13 +328,19 @@ export default function Topbar() {
                         }
                     >
                         <Receipt
-                            size={17}
+                            size={
+                                17
+                            }
                         />
+
                         <span>
                             Cost Estimation
                         </span>
+
                         <ChevronDown
-                            size={16}
+                            size={
+                                16
+                            }
                             className={
                                 open
                                     ? "cost-chevron open"
@@ -303,175 +349,185 @@ export default function Topbar() {
                         />
                     </button>
 
-                    {open && (
-                        <div className="cost-estimator-dropdown">
-                            <div className="cost-estimator-header">
-                                <div>
-                                    <strong>
-                                        Cost Estimation
-                                    </strong>
-                                    <span>
-                                        {
-                                            furnitureCount
-                                        }
-                                        {" "}
-                                        furniture
-                                        {
-                                            furnitureCount !==
-                                            1
-                                                ? " items"
-                                                : " item"
-                                        }
-                                        {" · "}
-                                        {
-                                            estimate.items.length
-                                        }
-                                        {" "}
-                                        cost item
-                                        {
-                                            estimate.items.length !==
-                                            1
-                                                ? "s"
-                                                : ""
-                                        }
-                                    </span>
-                                </div>
-                            </div>
+                    {
+                        open && (
+                            <div className="cost-estimator-dropdown">
+                                <div className="cost-estimator-header">
+                                    <div>
+                                        <strong>
+                                            Cost Estimation
+                                        </strong>
 
-                            <div className="cost-estimator-list">
-                                {estimate.items.length ===
-                                    0 ? (
-                                    <div className="cost-empty">
-                                        No cost items yet.
-                                    </div>
-                                ) : (
-                                    (
-                                        Object.keys(
-                                            groupedItems
-                                        ) as CostCategory[]
-                                    ).map(
-                                        category => {
-                                            const items =
-                                                groupedItems[
-                                                    category
-                                                ];
-
-                                            if (
-                                                items.length ===
-                                                0
-                                            ) {
-                                                return null;
+                                        <span>
+                                            {
+                                                furnitureCount
                                             }
+                                            {" "}
+                                            furniture
+                                            {
+                                                furnitureCount !==
+                                                1
+                                                    ? " items"
+                                                    : " item"
+                                            }
+                                            {" · "}
+                                            {
+                                                estimate.items.length
+                                            }
+                                            {" "}
+                                            cost item
+                                            {
+                                                estimate.items.length !==
+                                                1
+                                                    ? "s"
+                                                    : ""
+                                            }
+                                        </span>
+                                    </div>
+                                </div>
 
-                                            const categoryTotal =
-                                                items.reduce(
-                                                    (
-                                                        sum,
-                                                        item
-                                                    ) =>
-                                                        sum +
-                                                        item.subtotal,
-                                                    0
-                                                );
+                                <div className="cost-estimator-list">
+                                    {
+                                        estimate.items.length ===
+                                        0 ? (
+                                            <div className="cost-empty">
+                                                No cost items yet.
+                                            </div>
+                                        ) : (
+                                            (
+                                                Object.keys(
+                                                    groupedItems
+                                                ) as CostCategory[]
+                                            ).map(
+                                                category => {
+                                                    const items =
+                                                        groupedItems[
+                                                            category
+                                                        ];
 
-                                            return (
-                                                <div
-                                                    key={
-                                                        category
+                                                    if (
+                                                        items.length ===
+                                                        0
+                                                    ) {
+                                                        return null;
                                                     }
-                                                    className="cost-category"
-                                                >
-                                                    <div className="cost-category-header">
-                                                        <span>
-                                                            {
-                                                                categoryLabels[
-                                                                    category
-                                                                ]
-                                                            }
-                                                        </span>
-                                                        <strong>
-                                                            {
-                                                                formatCurrency(
-                                                                    categoryTotal
-                                                                )
-                                                            }
-                                                        </strong>
-                                                    </div>
 
-                                                    {items.map(
-                                                        (
-                                                            item,
-                                                            index
-                                                        ) => (
-                                                            <div
-                                                                key={
-                                                                    `${item.name}-${index}`
-                                                                }
-                                                                className="cost-item"
-                                                            >
-                                                                <div className="cost-item-info">
-                                                                    <span className="cost-item-name">
-                                                                        {
-                                                                            item.name
-                                                                        }
-                                                                    </span>
-                                                                    <span className="cost-item-quantity">
-                                                                        {
-                                                                            item.quantity.toFixed(
-                                                                                item.unit ===
-                                                                                "m²"
-                                                                                    ? 2
-                                                                                    : 0
-                                                                            )
-                                                                        }
-                                                                        {" "}
-                                                                        {
-                                                                            item.unit
-                                                                        }
-                                                                        {" × "}
-                                                                        {
-                                                                            formatCurrency(
-                                                                                item.rate
-                                                                            )
-                                                                        }
-                                                                        /
-                                                                        {
-                                                                            item.unit
-                                                                        }
-                                                                    </span>
-                                                                </div>
+                                                    const categoryTotal =
+                                                        items.reduce(
+                                                            (
+                                                                sum,
+                                                                item
+                                                            ) =>
+                                                                sum +
+                                                                item.subtotal,
+                                                            0
+                                                        );
 
-                                                                <span className="cost-item-total">
+                                                    return (
+                                                        <div
+                                                            key={
+                                                                category
+                                                            }
+                                                            className="cost-category"
+                                                        >
+                                                            <div className="cost-category-header">
+                                                                <span>
                                                                     {
-                                                                        formatCurrency(
-                                                                            item.subtotal
-                                                                        )
+                                                                        categoryLabels[
+                                                                            category
+                                                                        ]
                                                                     }
                                                                 </span>
-                                                            </div>
-                                                        )
-                                                    )}
-                                                </div>
-                                            );
-                                        }
-                                    )
-                                )}
-                            </div>
 
-                            <div className="cost-estimator-total">
-                                <span>
-                                    Estimated Total
-                                </span>
-                                <strong>
-                                    {
-                                        formatCurrency(
-                                            estimate.total
+                                                                <strong>
+                                                                    {
+                                                                        formatCurrency(
+                                                                            categoryTotal
+                                                                        )
+                                                                    }
+                                                                </strong>
+                                                            </div>
+
+                                                            {
+                                                                items.map(
+                                                                    (
+                                                                        item,
+                                                                        index
+                                                                    ) => (
+                                                                        <div
+                                                                            key={
+                                                                                `${item.name}-${index}`
+                                                                            }
+                                                                            className="cost-item"
+                                                                        >
+                                                                            <div className="cost-item-info">
+                                                                                <span className="cost-item-name">
+                                                                                    {
+                                                                                        item.name
+                                                                                    }
+                                                                                </span>
+
+                                                                                <span className="cost-item-quantity">
+                                                                                    {
+                                                                                        item.quantity.toFixed(
+                                                                                            item.unit ===
+                                                                                            "m²"
+                                                                                                ? 2
+                                                                                                : 0
+                                                                                        )
+                                                                                    }
+                                                                                    {" "}
+                                                                                    {
+                                                                                        item.unit
+                                                                                    }
+                                                                                    {" × "}
+                                                                                    {
+                                                                                        formatCurrency(
+                                                                                            item.rate
+                                                                                        )
+                                                                                    }
+                                                                                    /
+                                                                                    {
+                                                                                        item.unit
+                                                                                    }
+                                                                                </span>
+                                                                            </div>
+
+                                                                            <span className="cost-item-total">
+                                                                                {
+                                                                                    formatCurrency(
+                                                                                        item.subtotal
+                                                                                    )
+                                                                                }
+                                                                            </span>
+                                                                        </div>
+                                                                    )
+                                                                )
+                                                            }
+                                                        </div>
+                                                    );
+                                                }
+                                            )
                                         )
                                     }
-                                </strong>
+                                </div>
+
+                                <div className="cost-estimator-total">
+                                    <span>
+                                        Estimated Total
+                                    </span>
+
+                                    <strong>
+                                        {
+                                            formatCurrency(
+                                                estimate.total
+                                            )
+                                        }
+                                    </strong>
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        )
+                    }
                 </div>
             </div>
         </header>

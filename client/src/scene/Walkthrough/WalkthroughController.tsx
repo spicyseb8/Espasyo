@@ -1155,7 +1155,7 @@ export default function WalkthroughController({
         const factor =
             Math.pow(
                 0.95,
-                scrollUnits *
+                -scrollUnits *
                 ORBIT_ZOOM_SPEED
             );
 

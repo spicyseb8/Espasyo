@@ -32,7 +32,8 @@ function formatCommentDate(
         "toDate" in value &&
         typeof (
             value as {
-                toDate: () => Date;
+                toDate:
+                    () => Date;
             }
         ).toDate ===
             "function"
@@ -91,8 +92,13 @@ export default function AdminComments({
         );
 
     useEffect(() => {
-        if (!projectId) {
-            setComments([]);
+        if (
+            !projectId
+        ) {
+            setComments(
+                []
+            );
+
             return;
         }
 
@@ -113,7 +119,8 @@ export default function AdminComments({
     useEffect(() => {
         const handleOutsideClick =
             (
-                event: MouseEvent
+                event:
+                    MouseEvent
             ) => {
                 if (
                     wrapperRef.current &&
@@ -152,12 +159,14 @@ export default function AdminComments({
 
     return (
         <div
-            ref={wrapperRef}
+            ref={
+                wrapperRef
+            }
             className="admin-comments"
         >
             <button
                 type="button"
-                className="admin-comments-button"
+                className="admin-comments-button admin-comments-icon-button"
                 onClick={() =>
                     setOpen(
                         value =>
@@ -168,23 +177,29 @@ export default function AdminComments({
                     open
                 }
                 aria-label="Toggle admin comments"
+                title="Admin Comments"
             >
                 <MessageCircle
-                    size={17}
+                    size={
+                        17
+                    }
                 />
-                <span>
-                    Admin Comments
-                </span>
-                {comments.length >
+
+                {
+                    comments.length >
                     0 && (
-                    <span className="admin-comments-count">
-                        {
-                            comments.length
-                        }
-                    </span>
-                )}
+                        <span className="admin-comments-count">
+                            {
+                                comments.length
+                            }
+                        </span>
+                    )
+                }
+
                 <ChevronDown
-                    size={16}
+                    size={
+                        14
+                    }
                     className={
                         open
                             ? "admin-comments-chevron open"
@@ -193,99 +208,111 @@ export default function AdminComments({
                 />
             </button>
 
-            {open && (
-                <div className="admin-comments-dropdown">
-                    <div className="admin-comments-header">
-                        <strong>
-                            Admin Comments
-                        </strong>
-                        <span>
-                            Read-only project review
-                        </span>
-                    </div>
+            {
+                open && (
+                    <div className="admin-comments-dropdown">
+                        <div className="admin-comments-header">
+                            <strong>
+                                Admin Comments
+                            </strong>
 
-                    <div className="admin-comments-list">
-                        {comments.length ===
-                            0 && (
-                            <div className="admin-comments-empty">
-                                No admin comments yet.
-                            </div>
-                        )}
+                            <span>
+                                Read-only project review
+                            </span>
+                        </div>
 
-                        {comments.map(
-                            comment => {
-                                const specific =
-                                    comment.targetType !==
-                                    "project";
-
-                                return (
-                                    <div
-                                        key={
-                                            comment.id
-                                        }
-                                        className={
-                                            specific
-                                                ? "admin-comment-card specific"
-                                                : "admin-comment-card"
-                                        }
-                                    >
-                                        <div className="admin-comment-top">
-                                            <div className="admin-comment-author">
-                                                <span className="admin-comment-name">
-                                                    {
-                                                        comment.adminName
-                                                    }
-                                                </span>
-                                                <span className="admin-comment-date">
-                                                    {
-                                                        formatCommentDate(
-                                                            comment.createdAt
-                                                        )
-                                                    }
-                                                </span>
-                                            </div>
-
-                                            {specific && (
-                                                <button
-                                                    type="button"
-                                                    className="admin-comment-focus"
-                                                    title="Focus on comment"
-                                                    aria-label="Focus on comment"
-                                                    onClick={() =>
-                                                        handleFocus(
-                                                            comment.id
-                                                        )
-                                                    }
-                                                >
-                                                    <ArrowUpRight
-                                                        size={
-                                                            13
-                                                        }
-                                                    />
-                                                </button>
-                                            )}
-                                        </div>
-
-                                        {specific && (
-                                            <div className="admin-comment-target">
-                                                {
-                                                    comment.targetLabel
-                                                }
-                                            </div>
-                                        )}
-
-                                        <p className="admin-comment-text">
-                                            {
-                                                comment.text
-                                            }
-                                        </p>
+                        <div className="admin-comments-list">
+                            {
+                                comments.length ===
+                                0 && (
+                                    <div className="admin-comments-empty">
+                                        No admin comments yet.
                                     </div>
-                                );
+                                )
                             }
-                        )}
+
+                            {
+                                comments.map(
+                                    comment => {
+                                        const specific =
+                                            comment.targetType !==
+                                            "project";
+
+                                        return (
+                                            <div
+                                                key={
+                                                    comment.id
+                                                }
+                                                className={
+                                                    specific
+                                                        ? "admin-comment-card specific"
+                                                        : "admin-comment-card"
+                                                }
+                                            >
+                                                <div className="admin-comment-top">
+                                                    <div className="admin-comment-author">
+                                                        <span className="admin-comment-name">
+                                                            {
+                                                                comment.adminName
+                                                            }
+                                                        </span>
+
+                                                        <span className="admin-comment-date">
+                                                            {
+                                                                formatCommentDate(
+                                                                    comment.createdAt
+                                                                )
+                                                            }
+                                                        </span>
+                                                    </div>
+
+                                                    {
+                                                        specific && (
+                                                            <button
+                                                                type="button"
+                                                                className="admin-comment-focus"
+                                                                title="Focus on comment"
+                                                                aria-label="Focus on comment"
+                                                                onClick={() =>
+                                                                    handleFocus(
+                                                                        comment.id
+                                                                    )
+                                                                }
+                                                            >
+                                                                <ArrowUpRight
+                                                                    size={
+                                                                        13
+                                                                    }
+                                                                />
+                                                            </button>
+                                                        )
+                                                    }
+                                                </div>
+
+                                                {
+                                                    specific && (
+                                                        <div className="admin-comment-target">
+                                                            {
+                                                                comment.targetLabel
+                                                            }
+                                                        </div>
+                                                    )
+                                                }
+
+                                                <p className="admin-comment-text">
+                                                    {
+                                                        comment.text
+                                                    }
+                                                </p>
+                                            </div>
+                                        );
+                                    }
+                                )
+                            }
+                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
         </div>
     );
 }

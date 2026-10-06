@@ -111,6 +111,10 @@ export default function Scene({
     return (
         <Canvas
             shadows
+            gl={{
+                preserveDrawingBuffer:
+                    true
+            }}
             camera={{
                 position: [
                     8,
@@ -128,67 +132,53 @@ export default function Scene({
             }}
         >
             <Lights />
-
             <Grid />
-
             <BlueprintScene />
-
             <Camera
                 adminComments={
                     comments
                 }
             />
-
             <Floors />
-
             <Walls />
-
             <Doors />
-
             <Windows />
-
             <FurnitureScene />
-
             <AdminCommentMarkers
                 comments={
                     comments
                 }
             />
-
-            {state.walkthroughMode &&
+            {
+                state.walkthroughMode &&
                 walkthroughSpawnConfirmed && (
                     <Roof />
-                )}
-
-            {!state.walkthroughMode && (
-                <>
-                    <SelectionToolbar />
-
-                    <ClearSelection />
-
-                    <BuildInteractionEvents />
-
-                    <WallMeasurements />
-
-                    <AssetPreview />
-
-                    <WallDrawer />
-
-                    <FurniturePreview />
-
-                    <FurnitureInteractionEvents />
-
-                    <SelectionInteractionEvents />
-                </>
-            )}
-
-            {state.walkthroughMode && (
-                <WalkthroughController
-                    onSpawnConfirmed={
-                        onSpawnConfirmed
-                    }
-                />
-            )}
+                )
+            }
+            {
+                !state.walkthroughMode && (
+                    <>
+                        <SelectionToolbar />
+                        <ClearSelection />
+                        <BuildInteractionEvents />
+                        <WallMeasurements />
+                        <AssetPreview />
+                        <WallDrawer />
+                        <FurniturePreview />
+                        <FurnitureInteractionEvents />
+                        <SelectionInteractionEvents />
+                    </>
+                )
+            }
+            {
+                state.walkthroughMode && (
+                    <WalkthroughController
+                        onSpawnConfirmed={
+                            onSpawnConfirmed
+                        }
+                    />
+                )
+            }
         </Canvas>
     );
 }

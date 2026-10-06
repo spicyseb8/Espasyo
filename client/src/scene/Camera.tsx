@@ -49,10 +49,10 @@ const MAX_DISTANCE =
     100;
 
 const WALKTHROUGH_POSITION_SPEED =
-    3.5;
+    8.5;
 
 const WALKTHROUGH_ROTATION_SPEED =
-    22;
+    25;
 
 const CAMERA_FINISH_DISTANCE =
     0.03;
@@ -99,7 +99,8 @@ function isTypingTarget(
 ): boolean {
     const element =
         target as
-            HTMLElement | null;
+            HTMLElement |
+            null;
 
     if (
         !element
@@ -121,10 +122,14 @@ function isTypingTarget(
 function clearMovementKeys(
     keys:
         React.MutableRefObject<{
-            w: boolean;
-            a: boolean;
-            s: boolean;
-            d: boolean;
+            w:
+                boolean;
+            a:
+                boolean;
+            s:
+                boolean;
+            d:
+                boolean;
         }>
 ) {
     keys.current.w =
@@ -191,6 +196,109 @@ function createTopView(
     };
 }
 
+function getDesignCenter(
+    corners:
+        {
+            position:
+                Vector3;
+        }[],
+    fallback:
+        Vector3
+): Vector3 {
+    if (
+        corners.length ===
+        0
+    ) {
+        return fallback.clone();
+    }
+
+    let minX =
+        Infinity;
+
+    let maxX =
+        -Infinity;
+
+    let minZ =
+        Infinity;
+
+    let maxZ =
+        -Infinity;
+
+    for (
+        const corner of
+        corners
+    ) {
+        const x =
+            corner.position.x;
+
+        const z =
+            corner.position.z;
+
+        if (
+            x <
+            minX
+        ) {
+            minX =
+                x;
+        }
+
+        if (
+            x >
+            maxX
+        ) {
+            maxX =
+                x;
+        }
+
+        if (
+            z <
+            minZ
+        ) {
+            minZ =
+                z;
+        }
+
+        if (
+            z >
+            maxZ
+        ) {
+            maxZ =
+                z;
+        }
+    }
+
+    if (
+        !Number.isFinite(
+            minX
+        ) ||
+        !Number.isFinite(
+            maxX
+        ) ||
+        !Number.isFinite(
+            minZ
+        ) ||
+        !Number.isFinite(
+            maxZ
+        )
+    ) {
+        return fallback.clone();
+    }
+
+    return new Vector3(
+        (
+            minX +
+            maxX
+        ) /
+            2,
+        fallback.y,
+        (
+            minZ +
+            maxZ
+        ) /
+            2
+    );
+}
+
 export default function Camera({
     adminComments = []
 }: {
@@ -218,15 +326,20 @@ export default function Camera({
 
     const keys =
         useRef({
-            w: false,
-            a: false,
-            s: false,
-            d: false
+            w:
+                false,
+            a:
+                false,
+            s:
+                false,
+            d:
+                false
         });
 
     const savedEditorView =
         useRef<
-            CameraViewSnapshot | null
+            CameraViewSnapshot |
+            null
         >(null);
 
     const transition =
@@ -248,11 +361,14 @@ export default function Camera({
         });
 
     const focusActive =
-        useRef(false);
+        useRef(
+            false
+        );
 
     const focusCommentId =
         useRef<
-            string | null
+            string |
+            null
         >(null);
 
     const focusTarget =
@@ -634,10 +750,16 @@ export default function Camera({
                     currentTarget.clone()
             };
 
+            const designCenter =
+                getDesignCenter(
+                    state.corners,
+                    currentTarget
+                );
+
             const topView =
                 createTopView(
                     camera.position,
-                    currentTarget,
+                    designCenter,
                     camera.up
                 );
 
@@ -748,7 +870,8 @@ export default function Camera({
             walkthroughMode;
     }, [
         walkthroughMode,
-        camera
+        camera,
+        state.corners
     ]);
 
     useFrame(
