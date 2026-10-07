@@ -2,35 +2,32 @@ import {
     useEffect,
     useMemo
 } from "react";
-
 import {
     useThree
 } from "@react-three/fiber";
-
 import {
     Object3D,
     Raycaster,
     Vector2
 } from "three";
-
 import useEditor
     from "../context/editor/useEditor";
-
 import {
     BuildTool
 } from "../context/BuildTool";
 
 function findSelectionId(
     object: Object3D
-): {
-    type:
-        | "furniture"
-        | "door"
-        | "window";
-
-    id: string;
-} | null {
-
+):
+    | {
+        type:
+            | "furniture"
+            | "door"
+            | "window";
+        id:
+            string;
+    }
+    | null {
     let current:
         Object3D | null =
         object;
@@ -38,52 +35,39 @@ function findSelectionId(
     while (
         current
     ) {
-
         if (
-            typeof current.userData
-                ?.furnitureId ===
+            typeof current.userData?.furnitureId ===
             "string"
         ) {
-
             return {
                 type:
                     "furniture",
-
                 id:
-                    current.userData
-                        .furnitureId
+                    current.userData.furnitureId
             };
         }
 
         if (
-            typeof current.userData
-                ?.doorId ===
+            typeof current.userData?.doorId ===
             "string"
         ) {
-
             return {
                 type:
                     "door",
-
                 id:
-                    current.userData
-                        .doorId
+                    current.userData.doorId
             };
         }
 
         if (
-            typeof current.userData
-                ?.windowId ===
+            typeof current.userData?.windowId ===
             "string"
         ) {
-
             return {
                 type:
                     "window",
-
                 id:
-                    current.userData
-                        .windowId
+                    current.userData.windowId
             };
         }
 
@@ -95,13 +79,15 @@ function findSelectionId(
 }
 
 function isInsideUi(
-    target: EventTarget | null
+    target:
+        EventTarget | null
 ): boolean {
-
     const element =
         target as HTMLElement | null;
 
-    if (!element) {
+    if (
+        !element
+    ) {
         return false;
     }
 
@@ -113,17 +99,18 @@ function isInsideUi(
 }
 
 export default function SelectionInteractionEvents() {
-
     const {
         gl,
         camera,
         scene
-    } = useThree();
+    } =
+        useThree();
 
     const {
         state,
         dispatch
-    } = useEditor();
+    } =
+        useEditor();
 
     const raycaster =
         useMemo(
@@ -141,16 +128,16 @@ export default function SelectionInteractionEvents() {
 
     useEffect(
         () => {
-
             const canvas =
                 gl.domElement;
 
             function onPointerDown(
-                event: PointerEvent
+                event:
+                    PointerEvent
             ) {
-
                 if (
-                    event.button !== 0
+                    event.button !==
+                    0
                 ) {
                     return;
                 }
@@ -161,20 +148,12 @@ export default function SelectionInteractionEvents() {
                     return;
                 }
 
-                //--------------------------------------------------
-                // Do not interfere with active build placement.
-                //--------------------------------------------------
-
                 if (
                     state.buildTool !==
                     BuildTool.None
                 ) {
                     return;
                 }
-
-                //--------------------------------------------------
-                // Do not steal clicks from UI.
-                //--------------------------------------------------
 
                 if (
                     isInsideUi(
@@ -188,8 +167,10 @@ export default function SelectionInteractionEvents() {
                     canvas.getBoundingClientRect();
 
                 if (
-                    rect.width === 0 ||
-                    rect.height === 0
+                    rect.width ===
+                        0 ||
+                    rect.height ===
+                        0
                 ) {
                     return;
                 }
@@ -201,7 +182,9 @@ export default function SelectionInteractionEvents() {
                             rect.left
                         ) /
                         rect.width
-                    ) * 2 - 1;
+                    ) *
+                    2 -
+                    1;
 
                 pointer.y =
                     -(
@@ -210,7 +193,9 @@ export default function SelectionInteractionEvents() {
                             rect.top
                         ) /
                         rect.height
-                    ) * 2 + 1;
+                    ) *
+                    2 +
+                    1;
 
                 raycaster.setFromCamera(
                     pointer,
@@ -224,9 +209,9 @@ export default function SelectionInteractionEvents() {
                     );
 
                 for (
-                    const hit of hits
+                    const hit of
+                    hits
                 ) {
-
                     const selection =
                         findSelectionId(
                             hit.object
@@ -245,11 +230,9 @@ export default function SelectionInteractionEvents() {
                         selection.type ===
                         "furniture"
                     ) {
-
                         dispatch({
                             type:
                                 "SELECT_FURNITURE",
-
                             payload:
                                 selection.id
                         });
@@ -261,11 +244,9 @@ export default function SelectionInteractionEvents() {
                         selection.type ===
                         "door"
                     ) {
-
                         dispatch({
                             type:
                                 "SELECT_DOOR",
-
                             payload:
                                 selection.id
                         });
@@ -277,11 +258,9 @@ export default function SelectionInteractionEvents() {
                         selection.type ===
                         "window"
                     ) {
-
                         dispatch({
                             type:
                                 "SELECT_WINDOW",
-
                             payload:
                                 selection.id
                         });
@@ -289,10 +268,6 @@ export default function SelectionInteractionEvents() {
                         return;
                     }
                 }
-
-                //--------------------------------------------------
-                // Empty canvas.
-                //--------------------------------------------------
 
                 dispatch({
                     type:
@@ -306,13 +281,11 @@ export default function SelectionInteractionEvents() {
             );
 
             return () => {
-
                 canvas.removeEventListener(
                     "pointerdown",
                     onPointerDown
                 );
             };
-
         },
         [
             gl,

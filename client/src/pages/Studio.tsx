@@ -10,6 +10,9 @@ import {
     useNavigate
 } from "react-router-dom";
 import {
+    clearProjectSession
+} from "../services/projectEditSessionService";
+import {
     collection,
     getDocs,
     query,
@@ -423,6 +426,7 @@ export default function Studio() {
     }, []);
 
     function handleCreateProject() {
+        clearProjectSession();
         localStorage.removeItem(
             "espasyo_project_name"
         );

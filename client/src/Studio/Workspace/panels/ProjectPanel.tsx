@@ -20,6 +20,9 @@ import {
     serverTimestamp
 } from "firebase/firestore";
 import {
+    saveProjectBaseline
+} from "../../../services/projectEditSessionService";
+import {
     getDownloadURL,
     ref,
     uploadString
@@ -411,7 +414,15 @@ export default function ProjectPanel() {
                         true
                 }
             );
+            saveProjectBaseline(
+    currentProjectId,
+    projectData
+);
 
+localStorage.setItem(
+    "espasyo_project_name",
+    trimmedName
+);
             if (
                 draftId
             ) {

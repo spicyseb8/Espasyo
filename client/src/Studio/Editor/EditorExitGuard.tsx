@@ -1,32 +1,46 @@
 import {
     useEffect,
-    useMemo,
     useRef,
     useState
 } from "react";
+
 import {
     useLocation,
     useNavigate,
+    useParams,
     useSearchParams
 } from "react-router-dom";
+
 import {
     X
 } from "lucide-react";
+
 import useEditor
     from "../../context/editor/useEditor";
+
 import {
     auth
 } from "../../firebase/firebase";
+
 import {
     createProjectData
 } from "../../services/projectSerializer";
+
 import {
     saveDraft,
     getDraft
 } from "../../services/projectDraftService";
+
 import {
     captureSceneThumbnail
 } from "../../services/projectThumbnail";
+
+import {
+    clearProjectSession,
+    getActiveSavedProjectId,
+    getProjectBaseline,
+    getProjectFingerprint
+} from "../../services/projectEditSessionService";
 
 export default function EditorExitGuard() {
     const {
@@ -39,6 +53,14 @@ export default function EditorExitGuard() {
     const navigate =
         useNavigate();
 
+    const {
+        projectId:
+            routeProjectId
+    } = useParams<{
+        projectId?:
+            string;
+    }>();
+
     const [
         searchParams
     ] = useSearchParams();
@@ -46,16 +68,12 @@ export default function EditorExitGuard() {
     const [
         open,
         setOpen
-    ] = useState(
-        false
-    );
+    ] = useState(false);
 
     const [
         saving,
         setSaving
-    ] = useState(
-        false
-    );
+    ] = useState(false);
 
     const [
         pendingDestination,
@@ -65,71 +83,163 @@ export default function EditorExitGuard() {
     );
 
     const allowExit =
-        useRef(
-            false
-        );
+        useRef(false);
 
-    const dirtyRef =
-        useRef(
-            false
-        );
+    const stateRef =
+        useRef(state);
 
-    const projectName =
-        localStorage.getItem(
-            "espasyo_project_name"
-        )?.trim() ??
-        "";
+    const locationRef =
+        useRef(location);
+
+    const routeProjectIdRef =
+        useRef(
+            routeProjectId
+        );
 
     const draftId =
         searchParams.get(
             "draft"
         );
 
-    const hasDesign =
-        useMemo(
-            () =>
-                state.walls.length >
-                    0 ||
-                state.corners.length >
-                    0 ||
-                state.doors.length >
-                    0 ||
-                state.windows.length >
-                    0 ||
-                state.furniture.length >
-                    0 ||
-                state.openings.length >
-                    0 ||
-                Object.keys(
-                    state.floorFinishes
-                ).length >
-                    0 ||
-                Object.keys(
-                    state.wallFinishes
-                ).length >
-                    0 ||
-                Boolean(
-                    state.blueprint
-                ) ||
-                state.layoutConfirmed,
-            [
-                state
-            ]
-        );
+    const draftIdRef =
+        useRef(draftId);
 
-    const isDirty =
-        Boolean(
-            draftId ||
-            projectName ||
-            hasDesign
-        );
+    stateRef.current =
+        state;
 
-    useEffect(() => {
-        dirtyRef.current =
-            isDirty;
-    }, [
-        isDirty
-    ]);
+    locationRef.current =
+        location;
+
+    routeProjectIdRef.current =
+        routeProjectId;
+
+    draftIdRef.current =
+        draftId;
+
+    function getProjectName():
+        string {
+        return (
+            localStorage.getItem(
+                "espasyo_project_name"
+            )?.trim() ??
+            ""
+        );
+    }
+
+    function getSavedProjectId():
+        string | null {
+        return (
+            routeProjectIdRef.current ??
+            getActiveSavedProjectId()
+        );
+    }
+
+    function hasSavedBaseline():
+        boolean {
+        const savedProjectId =
+            getSavedProjectId();
+
+        if (
+            !savedProjectId
+        ) {
+            return false;
+        }
+
+        return (
+            getProjectBaseline(
+                savedProjectId
+            ) !== null
+        );
+    }
+
+    function hasDesign():
+        boolean {
+        const currentState =
+            stateRef.current;
+
+        return (
+            currentState.walls.length >
+                0 ||
+            currentState.corners.length >
+                0 ||
+            currentState.doors.length >
+                0 ||
+            currentState.windows.length >
+                0 ||
+            currentState.furniture.length >
+                0 ||
+            currentState.openings.length >
+                0 ||
+            Object.keys(
+                currentState.floorFinishes
+            ).length >
+                0 ||
+            Object.keys(
+                currentState.wallFinishes
+            ).length >
+                0 ||
+            Boolean(
+                currentState.blueprint
+            ) ||
+            currentState.layoutConfirmed
+        );
+    }
+
+    function hasUnsavedChanges():
+        boolean {
+        const savedProjectId =
+            getSavedProjectId();
+
+        if (
+            savedProjectId
+        ) {
+            const baseline =
+                getProjectBaseline(
+                    savedProjectId
+                );
+
+            if (
+                baseline !==
+                null
+            ) {
+                const user =
+                    auth.currentUser;
+
+                if (
+                    user
+                ) {
+                    const currentProjectData =
+                        createProjectData(
+                            stateRef.current,
+                            savedProjectId,
+                            getProjectName() ||
+                                "Untitled Project",
+                            user.uid
+                        );
+
+                    return (
+                        getProjectFingerprint(
+                            currentProjectData
+                        ) !==
+                        getProjectFingerprint(
+                            baseline
+                        )
+                    );
+                }
+            }
+        }
+
+        return Boolean(
+            draftIdRef.current ||
+            getProjectName() ||
+            hasDesign()
+        );
+    }
+
+    function isSavedProjectMode():
+        boolean {
+        return hasSavedBaseline();
+    }
 
     useEffect(() => {
         const currentUrl =
@@ -157,7 +267,7 @@ export default function EditorExitGuard() {
                 }
 
                 if (
-                    !dirtyRef.current
+                    !hasUnsavedChanges()
                 ) {
                     allowExit.current =
                         true;
@@ -184,10 +294,11 @@ export default function EditorExitGuard() {
 
         const handleBeforeUnload =
             (
-                event: BeforeUnloadEvent
+                event:
+                    BeforeUnloadEvent
             ) => {
                 if (
-                    !dirtyRef.current
+                    !hasUnsavedChanges()
                 ) {
                     return;
                 }
@@ -200,11 +311,12 @@ export default function EditorExitGuard() {
 
         const handleClick =
             (
-                event: MouseEvent
+                event:
+                    MouseEvent
             ) => {
                 if (
-                    !dirtyRef.current ||
-                    event.defaultPrevented
+                    event.defaultPrevented ||
+                    !hasUnsavedChanges()
                 ) {
                     return;
                 }
@@ -249,7 +361,7 @@ export default function EditorExitGuard() {
                     `${url.pathname}${url.search}${url.hash}`;
 
                 const current =
-                    `${location.pathname}${location.search}${location.hash}`;
+                    `${locationRef.current.pathname}${locationRef.current.search}${locationRef.current.hash}`;
 
                 if (
                     destination ===
@@ -345,12 +457,13 @@ export default function EditorExitGuard() {
                 crypto.randomUUID();
 
             const name =
-                projectName ||
+                getProjectName() ||
+                existingDraft?.projectName ||
                 "Untitled Project";
 
             const projectData =
                 createProjectData(
-                    state,
+                    stateRef.current,
                     draftProjectId,
                     name,
                     user.uid
@@ -379,6 +492,8 @@ export default function EditorExitGuard() {
                 draft
             );
 
+            clearProjectSession();
+
             allowExit.current =
                 true;
 
@@ -393,6 +508,16 @@ export default function EditorExitGuard() {
     }
 
     function discardChanges() {
+        if (
+            !isSavedProjectMode()
+        ) {
+            clearProjectSession();
+
+            localStorage.removeItem(
+                "espasyo_project_name"
+            );
+        }
+
         allowExit.current =
             true;
 
@@ -418,6 +543,9 @@ export default function EditorExitGuard() {
     ) {
         return null;
     }
+
+    const savedProject =
+        isSavedProjectMode();
 
     return (
         <div
@@ -456,7 +584,7 @@ export default function EditorExitGuard() {
                     background:
                         "#ffffff",
                     padding:
-                        "24px",
+                        24,
                     boxShadow:
                         "0 24px 70px rgba(0, 0, 0, 0.22)"
                 }}
@@ -494,7 +622,7 @@ export default function EditorExitGuard() {
                         background:
                             "transparent",
                         color:
-                            "#777",
+                            "#777777",
                         cursor:
                             saving
                                 ? "default"
@@ -544,7 +672,11 @@ export default function EditorExitGuard() {
                                 "#777777"
                         }}
                     >
-                        This project hasn't been saved to your account yet.
+                        {
+                            savedProject
+                                ? "You have unsaved changes to this project."
+                                : "This project hasn't been saved to your account yet."
+                        }
                     </p>
                 </div>
 
@@ -552,6 +684,10 @@ export default function EditorExitGuard() {
                     style={{
                         display:
                             "flex",
+                        justifyContent:
+                            savedProject
+                                ? "flex-end"
+                                : "stretch",
                         gap:
                             10,
                         marginTop:
@@ -567,10 +703,14 @@ export default function EditorExitGuard() {
                             saving
                         }
                         style={{
+                            width:
+                                savedProject
+                                    ? 130
+                                    : "auto",
                             flex:
-                                1,
-                            minWidth:
-                                0,
+                                savedProject
+                                    ? "0 0 130px"
+                                    : 1,
                             height:
                                 42,
                             padding:
@@ -598,51 +738,55 @@ export default function EditorExitGuard() {
                         Discard
                     </button>
 
-                    <button
-                        type="button"
-                        onClick={
-                            saveDraftAndExit
-                        }
-                        disabled={
-                            saving
-                        }
-                        style={{
-                            flex:
-                                1,
-                            minWidth:
-                                0,
-                            height:
-                                42,
-                            padding:
-                                "0 16px",
-                            border:
-                                "none",
-                            borderRadius:
-                                9,
-                            background:
-                                "#ff7a00",
-                            color:
-                                "#ffffff",
-                            cursor:
-                                saving
-                                    ? "default"
-                                    : "pointer",
-                            fontSize:
-                                14,
-                            fontWeight:
-                                600,
-                            whiteSpace:
-                                "nowrap",
-                            boxShadow:
-                                "0 2px 6px rgba(255, 122, 0, 0.18)"
-                        }}
-                    >
-                        {
-                            saving
-                                ? "Saving..."
-                                : "Save Draft & Exit"
-                        }
-                    </button>
+                    {
+                        !savedProject && (
+                            <button
+                                type="button"
+                                onClick={
+                                    saveDraftAndExit
+                                }
+                                disabled={
+                                    saving
+                                }
+                                style={{
+                                    flex:
+                                        1,
+                                    minWidth:
+                                        0,
+                                    height:
+                                        42,
+                                    padding:
+                                        "0 16px",
+                                    border:
+                                        "none",
+                                    borderRadius:
+                                        9,
+                                    background:
+                                        "#ff7a00",
+                                    color:
+                                        "#ffffff",
+                                    cursor:
+                                        saving
+                                            ? "default"
+                                            : "pointer",
+                                    fontSize:
+                                        14,
+                                    fontWeight:
+                                        600,
+                                    whiteSpace:
+                                        "nowrap",
+                                    boxShadow:
+                                        "0 2px 6px rgba(255, 122, 0, 0.18)"
+                                }}
+                            >
+                                {
+                                    saving
+                                        ? "Saving..."
+                                        : "Save Draft & Exit"
+                                }
+                            </button>
+                        )
+                    }
                 </div>
             </div>
         </div>

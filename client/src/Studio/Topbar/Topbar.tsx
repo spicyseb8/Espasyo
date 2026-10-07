@@ -20,7 +20,7 @@ import type {
 } from "react";
 
 import {
-    useNavigate,
+    Link,
     useParams
 } from "react-router-dom";
 
@@ -47,8 +47,7 @@ export default function Topbar() {
         canRedo
     } = useEditor();
 
-    const navigate =
-        useNavigate();
+    
 
     const {
         projectId:
@@ -104,10 +103,6 @@ export default function Topbar() {
             );
         };
 
-    const handleBack =
-        () => {
-            window.history.back();
-        };
 
     const estimate =
         useMemo(
@@ -226,21 +221,18 @@ export default function Topbar() {
     return (
         <header className="topbar">
             <div className="topbar-left">
-                <button
-                    type="button"
-                    className="history-button"
-                    onClick={
-                        handleBack
-                    }
-                    title="Back"
-                    aria-label="Back"
-                >
-                    <ArrowLeft
-                        size={
-                            18
-                        }
-                    />
-                </button>
+                <Link
+    to="/studio"
+    className="history-button"
+    title="Back"
+    aria-label="Back"
+>
+    <ArrowLeft
+        size={
+            18
+        }
+    />
+</Link>
             </div>
 
             <div className="topbar-center">

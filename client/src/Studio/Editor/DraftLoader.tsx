@@ -11,7 +11,9 @@ import useEditor
 import {
     getDraft
 } from "../../services/projectDraftService";
-
+import {
+    clearProjectSession
+} from "../../services/projectEditSessionService";
 export default function DraftLoader() {
     const {
         dispatch
@@ -86,7 +88,7 @@ export default function DraftLoader() {
             "espasyo_project_name",
             draft.projectName
         );
-
+        clearProjectSession();
         dispatch({
             type:
                 "LOAD_PROJECT",
