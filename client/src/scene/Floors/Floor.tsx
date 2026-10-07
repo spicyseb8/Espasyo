@@ -3,6 +3,7 @@ import {
     useEffect,
     useState
 } from "react";
+
 import {
     CanvasTexture,
     Shape,
@@ -11,35 +12,44 @@ import {
     DoubleSide,
     Vector3
 } from "three";
+
 import {
     Line
 } from "@react-three/drei";
+
 import type {
     Texture
 } from "three";
+
 import useEditor
     from "../../context/editor/useEditor";
+
 import type {
     Region
 } from "../../engine/regions/Polygon";
+
 import {
     pointInPolygon
 } from "../../engine/regions/Polygon";
+
 import type {
     Material
 } from "../../engine/materials/MaterialTypes";
+
 import {
     DEFAULT_FLOOR_MATERIAL_ID,
     LOCAL_DEFAULT_FLOOR_TEXTURE,
     getCachedFloorTexture,
     preloadFloorTexture
 } from "../../engine/materials/floors";
+
 interface FloorProps {
     region:
         Region;
     materials:
         Material[];
 }
+
 function distanceToSegment(
     p:
         Vector3,
@@ -47,15 +57,20 @@ function distanceToSegment(
         Vector3,
     b:
         Vector3
-): number {
+):
+    number {
     const abx =
-        b.x - a.x;
+        b.x -
+        a.x;
     const abz =
-        b.z - a.z;
+        b.z -
+        a.z;
     const apx =
-        p.x - a.x;
+        p.x -
+        a.x;
     const apz =
-        p.z - a.z;
+        p.z -
+        a.z;
     const lengthSq =
         abx * abx +
         abz * abz;
@@ -80,20 +95,24 @@ function distanceToSegment(
         a.z +
         t * abz;
     const dx =
-        p.x - cx;
+        p.x -
+        cx;
     const dz =
-        p.z - cz;
+        p.z -
+        cz;
     return Math.sqrt(
         dx * dx +
         dz * dz
     );
 }
+
 function distanceToPolygonBoundary(
     point:
         Vector3,
     polygon:
         Vector3[]
-): number {
+):
+    number {
     let minDist =
         Infinity;
     for (
@@ -124,15 +143,17 @@ function distanceToPolygonBoundary(
     }
     return minDist;
 }
+
 function computeLabelAnchor(
     region:
         Region
-): {
-    point:
-        Vector3;
-    clearance:
-        number;
-} {
+):
+    {
+        point:
+            Vector3;
+        clearance:
+            number;
+    } {
     const outer =
         (region.corners ?? [])
             .filter(Boolean);
@@ -291,10 +312,12 @@ function computeLabelAnchor(
         }
     );
 }
+
 function useFloorTexture(
     url?:
         string
-): Texture | null {
+):
+    Texture | null {
     const [
         loadedTexture,
         setLoadedTexture
@@ -342,6 +365,7 @@ function useFloorTexture(
         loadedTexture
     );
 }
+
 function useFloorOutlineLoops(
     region:
         Region,
@@ -349,7 +373,8 @@ function useFloorOutlineLoops(
         number,
     inset:
         number = 0.03
-): Vector3[][] {
+):
+    Vector3[][] {
     return useMemo(() => {
         const loops =
             region.boundaryLoops ??
@@ -441,37 +466,45 @@ function useFloorOutlineLoops(
         inset
     ]);
 }
+
 export default function Floor({
     region,
     materials
-}: FloorProps) {
+}:
+    FloorProps) {
     const {
         state,
         dispatch
     } = useEditor();
+
     const isChildRegion =
         Boolean(
             region.parentRegionId
         );
+
     const isSelected =
         state.selectedRegionId ===
         region.id;
+
     const selectedMaterialId =
         state.floorFinishes[
             region.id
         ];
+
     const selectedMaterial =
         materials.find(
             material =>
                 material.id ===
                 selectedMaterialId
         );
+
     const firebaseDefaultMaterial =
         materials.find(
             material =>
                 material.id ===
                 DEFAULT_FLOOR_MATERIAL_ID
         );
+
     const defaultFloorMaterial =
         firebaseDefaultMaterial
             ? {
@@ -502,15 +535,19 @@ export default function Floor({
                 metalness:
                     0
             };
+
     const displayMaterial =
         selectedMaterial ??
         defaultFloorMaterial;
+
     const textureUrl =
         displayMaterial?.texture;
+
     const floorTexture =
         useFloorTexture(
             textureUrl
         );
+
     const geometry =
         useMemo(() => {
             const loops =
@@ -597,6 +634,7 @@ export default function Floor({
         }, [
             region.boundaryLoops
         ]);
+
     const labelAnchor =
         useMemo(
             () =>
@@ -608,27 +646,33 @@ export default function Floor({
                 region.boundaryLoops
             ]
         );
+
     const floorArea =
         Math.abs(
             region.area ||
             0
         );
+
     const FLOOR_LABEL_WIDTH =
         0.9;
+
     const FLOOR_LABEL_HEIGHT =
         0.45;
+
     const labelWidth =
         Math.min(
             FLOOR_LABEL_WIDTH,
             labelAnchor.clearance *
-            1.7
+                1.7
         );
+
     const labelHeight =
         Math.min(
             FLOOR_LABEL_HEIGHT,
             labelAnchor.clearance *
-            0.85
+                0.85
         );
+
     const measurementTexture =
         useMemo(() => {
             const canvas =
@@ -695,24 +739,27 @@ export default function Floor({
         }, [
             floorArea
         ]);
-const floorY =
-    isChildRegion
-        ? 0.02
-        : 0;
-const floorOutlineLoops =
-    useFloorOutlineLoops(
-        region,
-        floorY,
-        0.1
-    );
+
+    const floorY =
+        isChildRegion
+            ? 0.02
+            : 0;
+
+    const floorOutlineLoops =
+        useFloorOutlineLoops(
+            region,
+            floorY,
+            0.1
+        );
+
     if (
         !geometry
     ) {
         return null;
     }
+
     return (
         <group>
-            {}
             <mesh
                 geometry={
                     geometry
@@ -735,22 +782,16 @@ const floorOutlineLoops =
                 ]}
                 receiveShadow
                 onClick={(e) => {
-                    e.stopPropagation();
-                    dispatch({
-                        type:
-                            "SELECT_REGION",
-                        payload:
-                            region.id
-                    });
-                    dispatch({
-                        type:
-                            "SELECT_WALL",
-                        payload:
-                            null
-                    });
-                }}
+    e.stopPropagation();
+
+    dispatch({
+        type:
+            "SELECT_REGION",
+        payload:
+            region.id
+    });
+}}
             >
-                {}
                 <meshStandardMaterial
                     key={
                         floorTexture
@@ -793,35 +834,42 @@ const floorOutlineLoops =
                     }
                 />
             </mesh>
-                {}
-{
-    isSelected && (
-        <mesh
-            geometry={
-                geometry
+
+            {
+                isSelected && (
+                    <mesh
+                        geometry={
+                            geometry
+                        }
+                        position={[
+                            0,
+                            floorY +
+                                0.008,
+                            0
+                        ]}
+                        rotation={[
+                            -Math.PI / 2,
+                            0,
+                            0
+                        ]}
+                    >
+                        <meshBasicMaterial
+                            color="#808080"
+                            transparent
+                            opacity={
+                                0.25
+                            }
+                            depthWrite={
+                                false
+                            }
+                            side={
+                                DoubleSide
+                            }
+                        />
+                    </mesh>
+                )
             }
-            position={[
-                0,
-                floorY + 0.008,
-                0
-            ]}
-            rotation={[
-                -Math.PI / 2,
-                0,
-                0
-            ]}
-        >
-            <meshBasicMaterial
-                color="#808080"
-                transparent
-                opacity={0.25}
-                depthWrite={false}
-                side={DoubleSide}
-            />
-        </mesh>
-    )
-}
-            {}
+
             {
                 isSelected &&
                 floorOutlineLoops.map(
@@ -833,12 +881,10 @@ const floorOutlineLoops =
                             key={
                                 `floor-outline-${index}`
                             }
-                            points={
-                                [
-                                    ...points,
-                                    points[0]
-                                ]
-                            }
+                            points={[
+                                ...points,
+                                points[0]
+                            ]}
                             color={
                                 "#7e7d7d"
                             }
@@ -855,7 +901,7 @@ const floorOutlineLoops =
                     )
                 )
             }
-            {}
+
             {
                 measurementTexture && (
                     <mesh
