@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Package, FolderKanban } from "lucide-react";
+import { House, Users, Package, FolderKanban } from "lucide-react";
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -23,8 +23,8 @@ export default function Navigation({ selectedPage, onPageChange }: NavigationPro
               className={`inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm font-medium ${selectedPage === "dashboard" ? "bg-accent text-accent-foreground" : "hover:bg-accent hover:text-accent-foreground"}`}
               onClick={() => onPageChange("dashboard")}
             >
-              <LayoutDashboard className="h-4 w-4" />
-              Dashboard
+              <House className="h-4 w-4" />
+              Home
             </NavigationMenuLink>
           </NavigationMenuItem>
 

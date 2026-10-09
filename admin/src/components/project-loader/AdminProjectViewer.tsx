@@ -18,6 +18,7 @@ import {
     type AdminComment
 } from "@/services/assets/adminCommentService";
 import { requestAdminCommentFocus } from "@/services/assets/adminCommentEvents";
+import { useAuth } from "@/context/AuthContext";
 
 interface AdminProjectViewerProps {
     metadata: AdminProject;
@@ -118,6 +119,8 @@ export default function AdminProjectViewer({
     projectData
 }: AdminProjectViewerProps) {
     const navigate = useNavigate();
+    const { role } = useAuth();
+    const canComment = role === "admin";
 
     const [
         comments,
@@ -194,7 +197,7 @@ export default function AdminProjectViewer({
         const handleTarget = (
             event: Event
         ) => {
-            if (!commentMode) {
+            if (!canComment || !commentMode) {
                 return;
             }
 
@@ -226,6 +229,7 @@ export default function AdminProjectViewer({
             );
         };
     }, [
+        canComment,
         commentMode
     ]);
 
@@ -383,6 +387,10 @@ export default function AdminProjectViewer({
     ]);
 
     const startSpecificComment = () => {
+        if (!canComment) {
+            return;
+        }
+
         setCommentMode(
             true
         );
@@ -415,6 +423,11 @@ export default function AdminProjectViewer({
     };
 
     const handleSaveComment = async () => {
+        if (!canComment) {
+            setCommentError("Only admins can comment on projects.");
+            return;
+        }
+
         const user =
             auth.currentUser;
 
@@ -482,12 +495,7 @@ export default function AdminProjectViewer({
                         target.targetLabel,
                     regionId:
                         target.regionId,
-                    text,
-                    adminId:
-                        user.uid,
-                    adminName:
-                        user.displayName?.trim() ||
-                        "Admin"
+                    text
                 });
 
             setCommentText(
@@ -648,6 +656,16 @@ export default function AdminProjectViewer({
                         )
                     }
 
+                    {
+                        commentError && (
+                            <p className="mb-2 text-[10px] text-red-500">
+                                {
+                                    commentError
+                                }
+                            </p>
+                        )
+                    }
+
                     <div className="space-y-2">
                         {
                             comments.map(
@@ -729,6 +747,7 @@ export default function AdminProjectViewer({
                     </div>
                 </div>
 
+                {canComment && (
                 <div className="border-t border-[#e7e7e3] bg-white px-3 py-3">
                     {
                         commentMode && (
@@ -757,16 +776,6 @@ export default function AdminProjectViewer({
                                     Cancel
                                 </button>
                             </div>
-                        )
-                    }
-
-                    {
-                        commentError && (
-                            <p className="mb-2 text-[10px] text-red-500">
-                                {
-                                    commentError
-                                }
-                            </p>
                         )
                     }
 
@@ -857,6 +866,7 @@ export default function AdminProjectViewer({
                         )
                     }
                 </div>
+                )}
             </div>
         </div>
     );
