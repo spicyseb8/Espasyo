@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import CreateAccountModal, { type CreateAccountType } from "@/components/createfunc/CreateAccountModal";
+import { useAuth } from "@/context/AuthContext";
 
 interface User { id: string; full_name: string; email: string; phone_number: string; created_at: string; created_ts: number; avatar?: string; }
 interface FirestoreUser { full_name?: string | null; name?: string | null; email?: string | null; phone_number?: string | null; created_at?: Timestamp | string | null; profile_picture?: string | null; avatar?: string | null; role?: string | null; }
@@ -44,6 +45,8 @@ const getCreateAccountType = (type: UserTableProps["type"]): CreateAccountType =
 
 export default function UserTable({ type }: UserTableProps) {
   const navigate = useNavigate();
+  const { role } = useAuth();
+  const canCreateAccounts = role === "superadmin";
   const [users, setUsers] = useState<User[]>([]);
   const [search, setSearch] = useState("");
   const [sortField, setSortField] = useState<SortField>("created");
@@ -106,7 +109,9 @@ export default function UserTable({ type }: UserTableProps) {
             <p className="text-xs text-muted-foreground">Manage {getTitle(type).toLowerCase()}</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button size="sm" onClick={() => setCreateAccountOpen(true)}>Create</Button>
+            {canCreateAccounts && (
+              <Button size="sm" onClick={() => setCreateAccountOpen(true)}>Create</Button>
+            )}
             <Input placeholder={`Search ${getTitle(type).toLowerCase()}...`} value={search} onChange={e => handleSearch(e.target.value)} className="w-64 bg-background" />
             <Select value={sortField} onValueChange={value => handleSortField(value as SortField)}>
               <SelectTrigger className="w-40 border-border/60">
@@ -188,7 +193,13 @@ export default function UserTable({ type }: UserTableProps) {
         </div>
       </div>
 
-      <CreateAccountModal open={createAccountOpen} onOpenChange={setCreateAccountOpen} accountType={getCreateAccountType(type)} />
+      {canCreateAccounts && (
+        <CreateAccountModal
+          open={createAccountOpen}
+          onOpenChange={setCreateAccountOpen}
+          accountType={getCreateAccountType(type)}
+        />
+      )}
     </>
   );
 }

@@ -1,12 +1,10 @@
 import {
-    addDoc,
     collection,
     onSnapshot,
     query,
-    serverTimestamp,
     where
 } from "firebase/firestore";
-import { db } from "@/firebase/firebase";
+import { auth, db } from "@/firebase/firebase";
 import type { AdminCommentTargetType } from "./adminCommentEvents";
 
 export interface CreateAdminCommentInput {
@@ -16,8 +14,6 @@ export interface CreateAdminCommentInput {
     targetLabel: string;
     regionId?: string;
     text: string;
-    adminId: string;
-    adminName: string;
 }
 
 export interface AdminComment {
@@ -47,23 +43,41 @@ export async function createAdminComment(
         throw new Error("Comment cannot be empty.");
     }
 
-    const commentReference = await addDoc(
-        collection(db, "adminComments"),
+    const user = auth.currentUser;
+    if (!user) {
+        throw new Error("Sign in with an admin account to comment.");
+    }
+
+    const token = await user.getIdToken();
+    const response = await fetch(
+        `http://localhost:5000/api/projects/${encodeURIComponent(input.projectId.trim())}/comments`,
         {
-            projectId: input.projectId.trim(),
-            targetType: input.targetType,
-            targetId: input.targetId,
-            targetLabel: input.targetLabel.trim(),
-            regionId: input.regionId?.trim() || null,
-            text,
-            adminId: input.adminId.trim(),
-            adminName: input.adminName.trim() || "Admin",
-            status: "open",
-            createdAt: serverTimestamp()
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                targetType: input.targetType,
+                targetId: input.targetId,
+                targetLabel: input.targetLabel,
+                regionId: input.regionId,
+                text
+            })
         }
     );
 
-    return commentReference.id;
+    const result = await response.json() as {
+        success?: boolean;
+        message?: string;
+        commentId?: string;
+    };
+
+    if (!response.ok || !result.success || !result.commentId) {
+        throw new Error(result.message || "Failed to save comment.");
+    }
+
+    return result.commentId;
 }
 
 export function subscribeToAdminComments(

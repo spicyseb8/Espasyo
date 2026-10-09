@@ -4,9 +4,24 @@ import {
   signInWithEmailAndPassword,
   signOut,
 } from "firebase/auth";
+import {
+  collection,
+  getDocs,
+  query,
+  where,
+} from "firebase/firestore";
 
 import { cn } from "cn";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -23,9 +38,13 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
-import { auth } from "@/firebase/firebase";
+import { isAdminRole } from "@/lib/adminRole";
+import { auth, db } from "@/firebase/firebase";
 
-interface LoginFormProps extends React.ComponentProps<"div"> {}
+// Served from admin/public/images/white-brackground.jpg
+const BACKGROUND_IMAGE = "/images/white-brackground.jpg";
+
+type LoginFormProps = React.ComponentProps<"div">;
 
 function LoginForm({ className, ...props }: LoginFormProps) {
   const [email, setEmail] = useState("");
@@ -33,6 +52,7 @@ function LoginForm({ className, ...props }: LoginFormProps) {
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [unauthorizedOpen, setUnauthorizedOpen] = useState(false);
 
   const handleSubmit = async (
     event: React.FormEvent<HTMLFormElement>
@@ -62,7 +82,31 @@ function LoginForm({ className, ...props }: LoginFormProps) {
 
       const user = userCredential.user;
 
-      // Get the latest email verification status.
+      const employeeSnapshot = await getDocs(
+        query(
+          collection(db, "adminEmployees"),
+          where("uid", "==", user.uid)
+        )
+      );
+      const isAuthorized = employeeSnapshot.docs.some((document) =>
+        isAdminRole(document.data().role)
+      );
+
+      if (!isAuthorized) {
+        try {
+          await signOut(auth);
+        } catch (signOutError) {
+          console.error(
+            "Unable to sign out an unauthorized account:",
+            signOutError
+          );
+        }
+
+        setUnauthorizedOpen(true);
+        return;
+      }
+
+      // Only authorized admin accounts may continue past this point.
       await reload(user);
 
       const currentUser = auth.currentUser;
@@ -72,7 +116,6 @@ function LoginForm({ className, ...props }: LoginFormProps) {
         return;
       }
 
-      // Admin and Superadmin accounts must have verified emails.
       if (!currentUser.emailVerified) {
         await signOut(auth);
 
@@ -143,20 +186,34 @@ function LoginForm({ className, ...props }: LoginFormProps) {
     }
   };
 
+  const glassInput =
+    "h-10 border-black/10 bg-white/50 text-neutral-900 placeholder:text-neutral-500 " +
+    "dark:bg-white/50 focus-visible:border-neutral-900/40 focus-visible:ring-neutral-900/10";
+
   return (
     <div
       className={cn(
-        "flex min-h-screen items-center justify-center p-6",
+        "relative flex min-h-screen items-center justify-center overflow-hidden bg-white bg-cover bg-center bg-no-repeat p-6",
         className
       )}
+      style={{ backgroundImage: `url("${BACKGROUND_IMAGE}")` }}
       {...props}
     >
-      <div className="w-full max-w-sm">
-        <Card>
-          <CardHeader>
-            <CardTitle>Admin Login</CardTitle>
+      {/* Light wash so the card and text stay readable on any part of the image */}
+      <div className="pointer-events-none absolute inset-0 bg-white/20" aria-hidden="true" />
 
-            <CardDescription>
+      <div className="relative z-10 w-full max-w-sm">
+        <Card
+          className={cn(
+            "rounded-2xl border border-white/70 bg-white/40 text-neutral-900 ring-0",
+            "shadow-[0_8px_32px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.9)]",
+            "backdrop-blur-xl backdrop-saturate-150"
+          )}
+        >
+          <CardHeader>
+            <CardTitle className="text-neutral-900">Admin Login</CardTitle>
+
+            <CardDescription className="text-neutral-600">
               Sign in to access the Espasyo admin dashboard.
             </CardDescription>
           </CardHeader>
@@ -165,7 +222,7 @@ function LoginForm({ className, ...props }: LoginFormProps) {
             <form onSubmit={handleSubmit}>
               <FieldGroup>
                 <Field>
-                  <FieldLabel htmlFor="email">
+                  <FieldLabel htmlFor="email" className="text-neutral-800">
                     Email
                   </FieldLabel>
 
@@ -179,11 +236,12 @@ function LoginForm({ className, ...props }: LoginFormProps) {
                     }
                     disabled={loading}
                     autoComplete="email"
+                    className={glassInput}
                   />
                 </Field>
 
                 <Field>
-                  <FieldLabel htmlFor="password">
+                  <FieldLabel htmlFor="password" className="text-neutral-800">
                     Password
                   </FieldLabel>
 
@@ -197,11 +255,12 @@ function LoginForm({ className, ...props }: LoginFormProps) {
                     }
                     disabled={loading}
                     autoComplete="current-password"
+                    className={glassInput}
                   />
                 </Field>
 
                 {error && (
-                  <FieldDescription className="text-destructive">
+                  <FieldDescription className="text-red-600">
                     {error}
                   </FieldDescription>
                 )}
@@ -209,7 +268,7 @@ function LoginForm({ className, ...props }: LoginFormProps) {
                 <Field>
                   <Button
                     type="submit"
-                    className="w-full"
+                    className="w-full bg-neutral-900 font-semibold text-white shadow-lg shadow-black/20 hover:bg-neutral-800"
                     disabled={loading}
                   >
                     {loading ? "Signing in..." : "Sign in"}
@@ -220,6 +279,23 @@ function LoginForm({ className, ...props }: LoginFormProps) {
           </CardContent>
         </Card>
       </div>
+
+      <AlertDialog
+        open={unauthorizedOpen}
+        onOpenChange={setUnauthorizedOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Access denied</AlertDialogTitle>
+            <AlertDialogDescription>
+              youre not authorized to access this page
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction>OK</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

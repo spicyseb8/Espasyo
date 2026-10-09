@@ -16,6 +16,7 @@ import { getFloorAssets } from "@/services/assets/floors";
 import { updateAsset } from "@/services/assets/update";
 import type { Asset, AssetType, AssetStatus } from "@/services/assets/asset-types";
 import { Plus } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 interface AssetLibraryProps { type: AssetType; onTypeChange?: (type: AssetType) => void; }
 
@@ -28,6 +29,8 @@ const ASSET_TYPES: { value: AssetType; label: string }[] = [
 const getTitle = (type: AssetType) => ASSET_TYPES.find((option) => option.value === type)?.label ?? "";
 
 export default function AssetLibrary({ type, onTypeChange }: AssetLibraryProps) {
+  const { role } = useAuth();
+  const canCreateAssets = role === "superadmin";
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
@@ -114,10 +117,12 @@ export default function AssetLibrary({ type, onTypeChange }: AssetLibraryProps) 
           {createNotice && <p role="status" className="mt-1 text-xs text-muted-foreground">{createNotice}</p>}
         </div>
         <div className="flex items-center gap-2">
-          <Button type="button" size="sm" onClick={() => { setCreateNotice(""); setCreateOpen(true); }}>
-            <Plus />
-            Create
-          </Button>
+          {canCreateAssets && (
+            <Button type="button" size="sm" onClick={() => { setCreateNotice(""); setCreateOpen(true); }}>
+              <Plus />
+              Create
+            </Button>
+          )}
           <Select value={categoryFilter} onValueChange={handleCategoryChange}>
             <SelectTrigger className="w-36 bg-background"><SelectValue placeholder="Category" /></SelectTrigger>
             <SelectContent>
@@ -295,22 +300,24 @@ export default function AssetLibrary({ type, onTypeChange }: AssetLibraryProps) 
         </AlertDialogContent>
       </AlertDialog>
 
-      <CreateAssetModal
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        onCreated={(createdAsset) => {
-          setCreateOpen(false);
-          if (createdAsset.asset_type === type) {
-            setAssets((current) => [createdAsset, ...current]);
-            handleSelectAsset(createdAsset);
-            setCreateNotice(`${createdAsset.name} was created.`);
-          } else if (onTypeChange) {
-            handleTypeChange(createdAsset.asset_type);
-          } else {
-            setCreateNotice(`${createdAsset.name} was created. Select ${getTitle(createdAsset.asset_type)} in the sidebar to view it.`);
-          }
-        }}
-      />
+      {canCreateAssets && (
+        <CreateAssetModal
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          onCreated={(createdAsset) => {
+            setCreateOpen(false);
+            if (createdAsset.asset_type === type) {
+              setAssets((current) => [createdAsset, ...current]);
+              handleSelectAsset(createdAsset);
+              setCreateNotice(`${createdAsset.name} was created.`);
+            } else if (onTypeChange) {
+              handleTypeChange(createdAsset.asset_type);
+            } else {
+              setCreateNotice(`${createdAsset.name} was created. Select ${getTitle(createdAsset.asset_type)} in the sidebar to view it.`);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

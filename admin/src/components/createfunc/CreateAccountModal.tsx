@@ -18,6 +18,8 @@ import {
   Shield,
   Loader2,
 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { auth } from "@/firebase/firebase";
 
 export type CreateAccountType =
   | "user"
@@ -55,6 +57,7 @@ export default function CreateAccountModal({
   accountType,
   onCreated,
 }: CreateAccountModalProps) {
+  const { role } = useAuth();
   const [form, setForm] = useState<FormData>(initialForm);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -154,6 +157,11 @@ export default function CreateAccountModal({
   ) => {
     event.preventDefault();
 
+    if (role !== "superadmin") {
+      setError("Only superadmins can create accounts.");
+      return;
+    }
+
     setError("");
     setSuccess("");
 
@@ -167,12 +175,19 @@ export default function CreateAccountModal({
     setLoading(true);
 
     try {
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error("Sign in with a superadmin account to create accounts.");
+      }
+
+      const token = await user.getIdToken();
       const response = await fetch(
         "http://localhost:5000/api/accounts",
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
             accountType:
