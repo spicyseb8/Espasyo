@@ -1,7 +1,8 @@
 import {
     memo,
     useMemo,
-    useState
+    useState,
+    useEffect
 } from "react";
 import {
     ExtrudeGeometry,
@@ -31,23 +32,11 @@ interface Props {
     finishSides?: WallFinishSide[];
 }
 
-const WALL_TRIM_HEIGHT =
-    0.12;
 
-const WALL_TRIM_DEPTH =
-    0.008;
-
-const WALL_TRIM_CAP_HEIGHT =
-    0.018;
-
-const WALL_TRIM_CAP_DEPTH =
-    0.012;
-
-const WALL_TRIM_COLOR =
-    "#E9E5DE";
-
-const WALL_FINISH_OUTER_OFFSET =
-    0.007;
+const WALL_TRIM_HEIGHT = 0.20;
+const WALL_TRIM_DEPTH = 0.045;
+const WALL_TRIM_COLOR = "#E9E5DE";
+const WALL_FINISH_OUTER_OFFSET = 0.007;
 
 interface WallTrimProps {
     piece: WallPieceType;
@@ -58,71 +47,168 @@ function WallTrim({
     piece,
     side
 }: WallTrimProps) {
-    if (
-        piece.kind ===
-        "arch"
-    ) {
+    const trimHeight = Math.min(
+        WALL_TRIM_HEIGHT,
+        Math.max(0.02, piece.height * 0.25)
+    );
+
+    const profileScale = trimHeight / WALL_TRIM_HEIGHT;
+    const baseY = -piece.height * 0.5;
+    const trimLength = piece.width + 0.008;
+
+    const mountZ = side * (
+        piece.thickness * 0.5 +
+        WALL_FINISH_OUTER_OFFSET
+    );
+
+    const geometry = useMemo(() => {
+        const shape = new Shape();
+
+        const profileDepth = (ratio: number) =>
+            -side * WALL_TRIM_DEPTH * ratio * profileScale;
+
+        const profileY = (height: number) =>
+            baseY + height * profileScale;
+
+        shape.moveTo(
+            profileDepth(0),
+            profileY(0)
+        );
+
+        shape.lineTo(
+            profileDepth(0),
+            profileY(WALL_TRIM_HEIGHT)
+        );
+
+        shape.lineTo(
+            profileDepth(0.20),
+            profileY(WALL_TRIM_HEIGHT)
+        );
+
+        shape.bezierCurveTo(
+            profileDepth(0.35),
+            profileY(0.20),
+            profileDepth(0.48),
+            profileY(0.194),
+            profileDepth(0.48),
+            profileY(0.182)
+        );
+
+        shape.bezierCurveTo(
+            profileDepth(0.48),
+            profileY(0.171),
+            profileDepth(0.37),
+            profileY(0.166),
+            profileDepth(0.28),
+            profileY(0.161)
+        );
+
+        shape.bezierCurveTo(
+            profileDepth(0.23),
+            profileY(0.157),
+            profileDepth(0.24),
+            profileY(0.149),
+            profileDepth(0.34),
+            profileY(0.145)
+        );
+
+        shape.bezierCurveTo(
+            profileDepth(0.48),
+            profileY(0.142),
+            profileDepth(0.56),
+            profileY(0.135),
+            profileDepth(0.59),
+            profileY(0.126)
+        );
+
+        shape.bezierCurveTo(
+            profileDepth(0.63),
+            profileY(0.115),
+            profileDepth(0.78),
+            profileY(0.110),
+            profileDepth(0.90),
+            profileY(0.095)
+        );
+
+        shape.bezierCurveTo(
+            profileDepth(1.0),
+            profileY(0.083),
+            profileDepth(0.98),
+            profileY(0.063),
+            profileDepth(0.87),
+            profileY(0.050)
+        );
+
+        shape.bezierCurveTo(
+            profileDepth(0.78),
+            profileY(0.040),
+            profileDepth(0.68),
+            profileY(0.036),
+            profileDepth(0.72),
+            profileY(0.027)
+        );
+
+        shape.lineTo(
+            profileDepth(0.85),
+            profileY(0.022)
+        );
+
+        shape.bezierCurveTo(
+            profileDepth(0.88),
+            profileY(0.012),
+            profileDepth(0.81),
+            profileY(0.004),
+            profileDepth(0.65),
+            profileY(0)
+        );
+
+        shape.lineTo(
+            profileDepth(0),
+            profileY(0)
+        );
+
+        shape.closePath();
+
+        const result = new ExtrudeGeometry(
+            shape,
+            {
+                depth: trimLength,
+                bevelEnabled: false,
+                steps: 1,
+                curveSegments: 20
+            }
+        );
+
+        result.rotateY(Math.PI / 2);
+
+        result.translate(
+            -trimLength * 0.5,
+            0,
+            mountZ
+        );
+
+        return result;
+    }, [
+        baseY,
+        mountZ,
+        profileScale,
+        side,
+        trimLength
+    ]);
+
+    useEffect(() => {
+        return () => {
+            geometry.dispose();
+        };
+    }, [geometry]);
+
+    if (piece.kind === "arch") {
         return null;
     }
 
-    const trimHeight =
-        Math.min(
-            WALL_TRIM_HEIGHT,
-            Math.max(
-                0.02,
-                piece.height *
-                    0.25
-            )
-        );
-
-    const capHeight =
-        Math.min(
-            WALL_TRIM_CAP_HEIGHT,
-            trimHeight *
-                0.35
-        );
-
-    const halfThickness =
-        piece.thickness *
-        0.5;
-
-    const trimY =
-        -piece.height *
-            0.5 +
-        trimHeight *
-            0.5;
-
-    const capY =
-        -piece.height *
-            0.5 +
-        trimHeight -
-        capHeight *
-            0.5;
-
-    const trimZ =
-        side *
-        (
-            halfThickness +
-            WALL_FINISH_OUTER_OFFSET -
-            WALL_TRIM_DEPTH *
-                0.5
-        );
-
-    const capZ =
-        side *
-        (
-            halfThickness +
-            WALL_FINISH_OUTER_OFFSET +
-            0.001 -
-            WALL_TRIM_CAP_DEPTH *
-                0.5
-        );
-
     return (
         <group
-            position={
-                piece.position
-            }
+            position={piece.position}
             rotation={[
                 0,
                 -piece.rotationY,
@@ -130,80 +216,27 @@ function WallTrim({
             ]}
         >
             <mesh
-                position={[
-                    0,
-                    trimY,
-                    trimZ
-                ]}
+                geometry={geometry}
                 castShadow
                 receiveShadow
                 raycast={() => null}
                 renderOrder={3}
             >
-                <boxGeometry
-                    args={[
-                        piece.width +
-                            0.004,
-                        trimHeight,
-                        WALL_TRIM_DEPTH
-                    ]}
-                />
-                <meshStandardMaterial
-                    color={
-                        WALL_TRIM_COLOR
-                    }
-                    roughness={
-                        0.82
-                    }
-                    metalness={0}
-                    polygonOffset
-                    polygonOffsetFactor={
-                        -1
-                    }
-                    polygonOffsetUnits={
-                        -1
-                    }
-                />
-            </mesh>
-            <mesh
-                position={[
-                    0,
-                    capY,
-                    capZ
-                ]}
-                castShadow
-                receiveShadow
-                raycast={() => null}
-                renderOrder={4}
-            >
-                <boxGeometry
-                    args={[
-                        piece.width +
-                            0.008,
-                        capHeight,
-                        WALL_TRIM_CAP_DEPTH
-                    ]}
-                />
-                <meshStandardMaterial
-                    color={
-                        WALL_TRIM_COLOR
-                    }
-                    roughness={
-                        0.78
-                    }
-                    metalness={0}
-                    polygonOffset
-                    polygonOffsetFactor={
-                        -1
-                    }
-                    polygonOffsetUnits={
-                        -1
-                    }
-                />
+                
+<meshStandardMaterial
+    color={WALL_TRIM_COLOR}
+    roughness={0.72}
+    metalness={0}
+    emissive="#8C8272"
+    emissiveIntensity={0.3}
+    toneMapped={false}
+/>
+
             </mesh>
         </group>
     );
 }
+
 
 function WallPiece({
     wallId,

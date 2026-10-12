@@ -22,20 +22,20 @@ type Variant = "straight" | "left" | "right";
 const KEYFRAMES: Record<Variant, { x: number[]; y: number[]; s: number[]; r: number[] }> = {
   straight: {
     x: [0, 0, 0, 0, 0],
-    y: [1.2, 0.6, -0.2, -1.1, -1.9],
-    s: [1, 0.95, 0.75, 0.4, 0],
+    y: [0.9, 0.4, -0.2, -0.9, -1.5],
+    s: [1, 0.92, 0.7, 0.35, 0],
     r: [0, 0, 0, 0, 0],
   },
   left: {
-    x: [-1.1, -0.85, -0.5, -0.2, 0],
-    y: [1.2, 0.6, -0.2, -1.1, -1.9],
-    s: [1, 0.95, 0.75, 0.4, 0],
+    x: [-0.9, -0.7, -0.4, -0.15, 0],
+    y: [0.9, 0.4, -0.2, -0.9, -1.5],
+    s: [1, 0.92, 0.7, 0.35, 0],
     r: [0, -8, -16, -24, -32],
   },
   right: {
-    x: [1.1, 0.85, 0.5, 0.2, 0],
-    y: [1.2, 0.6, -0.2, -1.1, -1.9],
-    s: [1, 0.95, 0.75, 0.4, 0],
+    x: [0.9, 0.7, 0.4, 0.15, 0],
+    y: [0.9, 0.4, -0.2, -0.9, -1.5],
+    s: [1, 0.92, 0.7, 0.35, 0],
     r: [0, 8, 16, 24, 32],
   },
 };
@@ -44,7 +44,7 @@ const STOPS = [0, 0.25, 0.5, 0.75, 1];
 // Quick fade-in at the top, fade out as it vanishes at the bottom.
 const OPACITY = [0, 1, 1, 0.9, 0];
 /** Size of each model at its largest (was 1). Bump to make models bigger. */
-const TARGET_SIZE = 1.5;
+const TARGET_SIZE = 2.2;
 
 // Linear interpolation between keyframe stops, exactly like CSS `linear`.
 function sample(keys: number[], t: number) {
@@ -102,16 +102,70 @@ function FallingModel({ url, delay, variant }: { url: string; delay: number; var
   );
 }
 
+// ── Animated "Loading Project . . ." label ──────────────────────────────
+// The dots pulse in sequence. With reduced motion they simply stay visible.
+function LoadingLabel() {
+  return (
+    <p className="flex items-center text-lg font-bold tracking-tight text-neutral-700">
+      <span>Loading Project</span>
+      <span aria-hidden="true" className="ml-2 flex gap-2">
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            className="inline-block animate-pulse motion-reduce:animate-none"
+            style={{ animationDelay: `${i * 200}ms`, animationDuration: "1.2s" }}
+          >
+            .
+          </span>
+        ))}
+      </span>
+    </p>
+  );
+}
+
+// ── Black indeterminate loading bar ─────────────────────────────────────
+// A black segment slides across a faint track, easing in and out.
+// With reduced motion it becomes a static, gently-pulsing bar instead.
+function LoadingBar() {
+  return (
+    <>
+      <style>{`
+        @keyframes loader-bar-slide {
+          0%   { transform: translateX(-100%); }
+          100% { transform: translateX(300%); }
+        }
+        .loader-bar-fill {
+          animation: loader-bar-slide 1.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .loader-bar-fill {
+            animation: none;
+            transform: none;
+            width: 100%;
+            opacity: 0.6;
+          }
+        }
+      `}</style>
+      <div
+        aria-hidden="true"
+        className="h-1.5 w-56 overflow-hidden rounded-full bg-black/10"
+      >
+        <div className="loader-bar-fill h-full w-1/3 rounded-full bg-black" />
+      </div>
+    </>
+  );
+}
+
 // ── Drop-in replacement for your old LoadingScreen ──────────────────────
 export default function LoadingScreen() {
   return (
     <main
-      className="flex min-h-screen items-center justify-center"
+      className="relative flex min-h-screen items-center justify-center overflow-hidden bg-white"
       aria-live="polite"
       aria-busy="true"
     >
-      <div className="flex flex-col items-center gap-3 text-muted-foreground">
-        <div className="h-[300px] w-[260px]" role="status" aria-label="Loading">
+      <div className="relative z-10 flex flex-col items-center gap-4">
+        <div className="h-[340px] w-[340px]" role="status" aria-label="Loading project">
           <Canvas
             gl={{ alpha: true, antialias: true }}
             camera={{ position: [0, 0, 4.5], fov: 50 }}
@@ -128,7 +182,11 @@ export default function LoadingScreen() {
             </Suspense>
           </Canvas>
         </div>
-        <p className="text-sm">Loading...</p>
+
+        <div className="flex flex-col items-center gap-4">
+          <LoadingLabel />
+          <LoadingBar />
+        </div>
       </div>
     </main>
   );
