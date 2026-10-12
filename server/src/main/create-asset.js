@@ -5,10 +5,10 @@ import express from "express";
 import multer from "multer";
 
 import {
-  adminAuth,
   adminDb,
   adminStorage,
 } from "../firebase-admin.js";
+import { requireRole } from "./authorization.js";
 
 const router = express.Router();
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
@@ -70,53 +70,9 @@ function safeFileName(value) {
   return `${baseName}${extension}`;
 }
 
-async function requireAdmin(req, res, next) {
-  const authorization = req.get("authorization") ?? "";
-  const match = authorization.match(/^Bearer\s+(.+)$/i);
-
-  if (!match) {
-    return res.status(401).json({
-      success: false,
-      message: "Sign in with an admin account to create assets.",
-    });
-  }
-
-  try {
-    const decodedToken = await adminAuth.verifyIdToken(match[1]);
-    if (decodedToken.email_verified !== true) {
-      return res.status(403).json({
-        success: false,
-        message: "Verify your admin account email before creating assets.",
-      });
-    }
-
-    const employeeSnapshot = await adminDb
-      .collection("adminEmployees")
-      .where("uid", "==", decodedToken.uid)
-      .limit(1)
-      .get();
-
-    const role = employeeSnapshot.docs[0]?.data().role;
-    if (role !== "admin" && role !== "superadmin") {
-      return res.status(403).json({
-        success: false,
-        message: "Only admin employees can create assets.",
-      });
-    }
-
-    next();
-  } catch (error) {
-    console.error("Asset create authentication failed:", error);
-    return res.status(401).json({
-      success: false,
-      message: "Your admin session is invalid. Sign in again and retry.",
-    });
-  }
-}
-
 router.post(
   "/assets",
-  requireAdmin,
+  requireRole("superadmin"),
   (req, res, next) => {
     upload(req, res, (error) => {
       if (!error) return next();

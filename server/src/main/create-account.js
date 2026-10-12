@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 
 import { adminAuth, adminDb } from "../firebase-admin.js";
+import { requireRole } from "./authorization.js";
 
 const router = express.Router();
 
@@ -119,7 +120,7 @@ async function generateAccountId() {
 // CREATE ACCOUNT
 // --------------------------------------------------
 
-router.post("/accounts", async (req, res) => {
+router.post("/accounts", requireRole("superadmin"), async (req, res) => {
   try {
     const {
       accountType,
