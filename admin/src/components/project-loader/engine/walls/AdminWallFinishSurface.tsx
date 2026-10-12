@@ -25,7 +25,7 @@ import {
 
 import type {
     AdminWallFinishSide
-} from "./AdminWallFinishUtils";
+} from "../../loader-components/AdminCommentTargetUtils";
 
 import type {
     AdminWallPieceData

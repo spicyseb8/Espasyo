@@ -154,7 +154,27 @@ export interface SavedOpening {
     archRise?: number;
 
 }
+export type CostCategory =
+    | "furniture"
+    | "flooring"
+    | "wallFinish"
+    | "doors"
+    | "windows";
 
+export interface SavedCostItem {
+    category: CostCategory;
+    name: string;
+    quantity: number;
+    unit: string;
+    rate: number;
+    subtotal: number;
+}
+
+export interface SavedCostEstimate {
+    items: SavedCostItem[];
+    subtotal: number;
+    total: number;
+}
 
 //==================================================
 // PROJECT JSON
@@ -209,7 +229,7 @@ export interface SavedProjectData {
 
     openings: SavedOpening[];
 
-
+    costEstimate?: SavedCostEstimate;
     //==================================================
     // FINISHES
     //==================================================

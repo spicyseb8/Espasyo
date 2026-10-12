@@ -95,6 +95,12 @@ export default function AccountTab({
   ] =
     useState(false);
 
+  const [
+    suspendError,
+    setSuspendError,
+  ] =
+    useState("");
+
 
   //==================================================
   // LOADING
@@ -231,6 +237,7 @@ export default function AccountTab({
     try {
 
       setSuspending(true);
+      setSuspendError("");
 
 
       await onSuspend();
@@ -249,6 +256,11 @@ export default function AccountTab({
       console.error(
         "Failed to suspend account:",
         suspendError
+      );
+      setSuspendError(
+        suspendError instanceof Error
+          ? suspendError.message
+          : "Failed to suspend account. Please try again."
       );
 
     }
@@ -660,9 +672,10 @@ export default function AccountTab({
                       hover:text-red-700
                     "
                     onClick={() =>
-                      setShowSuspendDialog(
-                        true
-                      )
+                      {
+                        setSuspendError("");
+                        setShowSuspendDialog(true);
+                      }
                     }
                   >
 
@@ -762,6 +775,11 @@ export default function AccountTab({
 
           </AlertDialogHeader>
 
+          {suspendError && (
+            <p role="alert" className="text-sm text-red-600">
+              {suspendError}
+            </p>
+          )}
 
           <AlertDialogFooter>
 

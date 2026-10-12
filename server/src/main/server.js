@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 
 import accountRoutes from "./create-account.js";
+import assetRoutes from "./create-asset.js";
 
 const app = express();
 
@@ -16,6 +17,8 @@ app.use(
     origin: [
       "http://localhost:5173",
       "http://localhost:5174",
+      "http://127.0.0.1:9999",
+      "http://localhost:9999",
     ],
     credentials: true,
   })
@@ -46,6 +49,11 @@ app.get(
 app.use(
   "/api",
   accountRoutes
+);
+
+app.use(
+  "/api",
+  assetRoutes
 );
 
 // --------------------------------------------------

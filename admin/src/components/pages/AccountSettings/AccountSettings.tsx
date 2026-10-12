@@ -4,12 +4,6 @@ import {
 } from "react-router-dom";
 
 import {
-  doc,
-  updateDoc,
-  serverTimestamp,
-} from "firebase/firestore";
-
-import {
   User,
   FolderKanban,
   Clock3,
@@ -44,7 +38,8 @@ import {
   type EmployeeRecord,
 } from "@/hooks/useUserDetails";
 
-import { db } from "@/firebase/firebase";
+import { auth } from "@/firebase/firebase";
+import { useAuth } from "@/context/AuthContext";
 
 import AccountTab from "./AccountTab";
 import ProjectsTab from "./ProjectsTab";
@@ -89,6 +84,7 @@ export default function AccountSettings({
 
   const navigate =
     useNavigate();
+  const { role } = useAuth();
 
 
   //==================================================
@@ -157,10 +153,29 @@ export default function AccountSettings({
 
 
   //==================================================
+  // SHOW PROJECTS TAB?
+  //==================================================
+  //
+  // Only customers (type === "user") have
+  // projects. Employees do not, so we hide
+  // the Projects tab for them.
+  //==================================================
+
+  const showProjectsTab =
+    type === "user";
+
+
+  //==================================================
   // SUSPEND ACCOUNT
   //==================================================
 
   async function handleSuspend() {
+
+    if (role !== "superadmin") {
+      throw new Error(
+        "Only superadmins can suspend customer accounts."
+      );
+    }
 
     if (!id) {
 
@@ -171,46 +186,37 @@ export default function AccountSettings({
     }
 
 
-    /*
-     * Determine which Firestore collection
-     * this account belongs to.
-     */
-
-    const collectionName =
-      type === "user"
-        ? "users"
-        : "adminEmployees";
-
-
-    /*
-     * Reference the user's Firestore document.
-     */
-
-    const accountReference =
-      doc(
-        db,
-        collectionName,
-        id
+    if (type !== "user") {
+      throw new Error(
+        "Only customer accounts can be suspended."
       );
+    }
 
+    const currentUser = auth.currentUser;
 
-    /*
-     * Update the account status.
-     *
-     * The user's projects and other data
-     * remain untouched.
-     */
+    if (!currentUser) {
+      throw new Error(
+        "Sign in with a superadmin account to suspend customer accounts."
+      );
+    }
 
-    await updateDoc(
-      accountReference,
+    const token = await currentUser.getIdToken();
+    const response = await fetch(
+      `http://localhost:5000/api/accounts/${encodeURIComponent(id)}/suspend`,
       {
-        account_status:
-          "suspended",
-
-        updated_at:
-          serverTimestamp(),
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       }
     );
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      throw new Error(
+        result.message || "Failed to suspend customer account."
+      );
+    }
 
   }
 
@@ -350,22 +356,26 @@ export default function AccountSettings({
             </TabsTrigger>
 
 
-            {/* PROJECTS */}
+            {/* PROJECTS — customers only */}
 
-            <TabsTrigger
-              value="projects"
-              className={
-                tabTriggerClass
-              }
-            >
+            {showProjectsTab && (
 
-              <FolderKanban
-                className="h-4 w-4"
-              />
+              <TabsTrigger
+                value="projects"
+                className={
+                  tabTriggerClass
+                }
+              >
 
-              Projects
+                <FolderKanban
+                  className="h-4 w-4"
+                />
 
-            </TabsTrigger>
+                Projects
+
+              </TabsTrigger>
+
+            )}
 
 
             {/* RECENT ACTIVITIES */}
@@ -408,7 +418,9 @@ export default function AccountSettings({
               error={error}
 
               onSuspend={
-                handleSuspend
+                role === "superadmin"
+                  ? handleSuspend
+                  : undefined
               }
 
             />
@@ -417,19 +429,23 @@ export default function AccountSettings({
 
 
           {/*==================================================
-              PROJECTS TAB
+              PROJECTS TAB — customers only
           ================================================== */}
 
-          <TabsContent
-            value="projects"
-            className="mt-6"
-          >
+          {showProjectsTab && (
 
-            <ProjectsTab
-              ownerId={ownerId}
-            />
+            <TabsContent
+              value="projects"
+              className="mt-6"
+            >
 
-          </TabsContent>
+              <ProjectsTab
+                ownerId={ownerId}
+              />
+
+            </TabsContent>
+
+          )}
 
 
           {/*==================================================

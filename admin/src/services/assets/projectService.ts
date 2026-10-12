@@ -11,83 +11,62 @@ import {
     db
 } from "@/firebase/firebase";
 
-
 export interface AdminProject {
-
     projectId:
         string;
-
     projectName:
         string;
-
     ownerId:
         string;
-
     ownerName?:
         string;
-
     jsonPath:
         string;
-
     jsonUrl:
         string;
-
+    thumbnailPath?:
+        string;
+    thumbnailUrl?:
+        string;
     schemaVersion:
         number;
-
     createdAt?:
         unknown;
-
     updatedAt?:
         unknown;
-
     totalCost?:
         number;
-
     estimatedCost?:
         number;
-
 }
-
-
-//==================================================
-// MAP PROJECT
-//==================================================
 
 function mapProject(
     projectDocument: {
         id:
             string;
-
         data():
             Record<string, unknown>;
     }
 ): AdminProject {
-
     const data =
         projectDocument.data();
-
 
     const totalCost =
         Number(
             data.totalCost
         );
 
-
     const estimatedCost =
         Number(
             data.estimatedCost
         );
 
-
     return {
-
         projectId:
             typeof data.projectId ===
             "string"
                 ? data.projectId
                 : projectDocument.id,
-
 
         projectName:
             typeof data.projectName ===
@@ -95,13 +74,11 @@ function mapProject(
                 ? data.projectName
                 : "Unnamed Project",
 
-
         ownerId:
             typeof data.ownerId ===
             "string"
                 ? data.ownerId
                 : "",
-
 
         ownerName:
             typeof data.ownerName ===
@@ -109,13 +86,11 @@ function mapProject(
                 ? data.ownerName
                 : undefined,
 
-
         jsonPath:
             typeof data.jsonPath ===
             "string"
                 ? data.jsonPath
                 : "",
-
 
         jsonUrl:
             typeof data.jsonUrl ===
@@ -123,6 +98,17 @@ function mapProject(
                 ? data.jsonUrl
                 : "",
 
+        thumbnailPath:
+            typeof data.thumbnailPath ===
+            "string"
+                ? data.thumbnailPath
+                : undefined,
+
+        thumbnailUrl:
+            typeof data.thumbnailUrl ===
+            "string"
+                ? data.thumbnailUrl
+                : undefined,
 
         schemaVersion:
             typeof data.schemaVersion ===
@@ -130,14 +116,11 @@ function mapProject(
                 ? data.schemaVersion
                 : 1,
 
-
         createdAt:
             data.createdAt,
 
-
         updatedAt:
             data.updatedAt,
-
 
         totalCost:
             Number.isFinite(
@@ -146,76 +129,41 @@ function mapProject(
                 ? totalCost
                 : undefined,
 
-
         estimatedCost:
             Number.isFinite(
                 estimatedCost
             )
                 ? estimatedCost
-                : undefined,
-
-
+                : undefined
     };
-
 }
-
-
-//==================================================
-// GET ALL PROJECTS
-//==================================================
-//
-// Used by ProjectManagement.
-// Returns every project.
-//==================================================
-
-//==================================================
-// GET ALL PROJECTS
-//==================================================
-//
-// Used by:
-// ProjectManagement
-//
-// Returns every project and resolves ownerName from:
-// 1. users
-// 2. adminEmployees
-//==================================================
 
 export async function getAdminProjects():
     Promise<AdminProject[]> {
-
     const [
         projectsSnapshot,
         usersSnapshot,
         employeesSnapshot
     ] = await Promise.all([
-
         getDocs(
             collection(
                 db,
                 "projects"
             )
         ),
-
         getDocs(
             collection(
                 db,
                 "users"
             )
         ),
-
         getDocs(
             collection(
                 db,
                 "adminEmployees"
             )
         )
-
     ]);
-
-
-    //==================================================
-    // BUILD OWNER LOOKUP
-    //==================================================
 
     const owners =
         new Map<
@@ -223,167 +171,102 @@ export async function getAdminProjects():
             string
         >();
 
-
-    //--------------------------------------------------
-    // USERS
-    //--------------------------------------------------
-
     usersSnapshot.docs.forEach(
         document => {
-
             const data =
                 document.data();
 
-
             const uid =
-                typeof data.uid === "string" &&
+                typeof data.uid ===
+                "string" &&
                 data.uid.trim() !== ""
-
                     ? data.uid.trim()
-
                     : document.id;
 
-
             const name =
-
                 typeof data.full_name ===
-                    "string" &&
+                "string" &&
                 data.full_name.trim() !== ""
-
                     ? data.full_name.trim()
-
-                    :
-
-                typeof data.name ===
-                    "string" &&
-                data.name.trim() !== ""
-
-                    ? data.name.trim()
-
-                    :
-
-                typeof data.email ===
-                    "string" &&
-                data.email.trim() !== ""
-
-                    ? data.email.trim()
-
-                    : "Unknown User";
-
+                    : typeof data.name ===
+                        "string" &&
+                        data.name.trim() !== ""
+                        ? data.name.trim()
+                        : typeof data.email ===
+                            "string" &&
+                            data.email.trim() !== ""
+                            ? data.email.trim()
+                            : "Unknown User";
 
             owners.set(
                 uid,
                 name
             );
-
         }
     );
-
-
-    //--------------------------------------------------
-    // ADMIN EMPLOYEES
-    //--------------------------------------------------
 
     employeesSnapshot.docs.forEach(
         document => {
-
             const data =
                 document.data();
 
-
             const uid =
-                typeof data.uid === "string" &&
+                typeof data.uid ===
+                "string" &&
                 data.uid.trim() !== ""
-
                     ? data.uid.trim()
-
                     : document.id;
 
-
             const name =
-
                 typeof data.name ===
-                    "string" &&
+                "string" &&
                 data.name.trim() !== ""
-
                     ? data.name.trim()
-
-                    :
-
-                typeof data.full_name ===
-                    "string" &&
-                data.full_name.trim() !== ""
-
-                    ? data.full_name.trim()
-
-                    :
-
-                typeof data.email ===
-                    "string" &&
-                data.email.trim() !== ""
-
-                    ? data.email.trim()
-
-                    : "Unknown Employee";
-
+                    : typeof data.full_name ===
+                        "string" &&
+                        data.full_name.trim() !== ""
+                        ? data.full_name.trim()
+                        : typeof data.email ===
+                            "string" &&
+                            data.email.trim() !== ""
+                            ? data.email.trim()
+                            : "Unknown Employee";
 
             owners.set(
                 uid,
                 name
             );
-
         }
     );
-
-
-    //==================================================
-    // BUILD PROJECT LIST
-    //==================================================
 
     const projects:
         AdminProject[] = [];
 
-
     projectsSnapshot.docs.forEach(
         projectDocument => {
-
             const data =
                 projectDocument.data();
 
-
             const ownerId =
                 typeof data.ownerId ===
-                    "string"
-
+                "string"
                     ? data.ownerId
-
                     : "";
 
-
             projects.push({
-
                 projectId:
-
                     typeof data.projectId ===
-                        "string"
-
+                    "string"
                         ? data.projectId
-
                         : projectDocument.id,
 
-
                 projectName:
-
                     typeof data.projectName ===
-                        "string"
-
+                    "string"
                         ? data.projectName
-
                         : "Unnamed Project",
 
-
                 ownerId,
-
 
                 ownerName:
                     owners.get(
@@ -391,118 +274,86 @@ export async function getAdminProjects():
                     ) ??
                     "Unknown User",
 
-
                 jsonPath:
-
                     typeof data.jsonPath ===
-                        "string"
-
+                    "string"
                         ? data.jsonPath
-
                         : "",
-
 
                 jsonUrl:
-
                     typeof data.jsonUrl ===
-                        "string"
-
+                    "string"
                         ? data.jsonUrl
-
                         : "",
 
+                thumbnailPath:
+                    typeof data.thumbnailPath ===
+                    "string"
+                        ? data.thumbnailPath
+                        : undefined,
+
+                thumbnailUrl:
+                    typeof data.thumbnailUrl ===
+                    "string"
+                        ? data.thumbnailUrl
+                        : undefined,
 
                 schemaVersion:
-
                     typeof data.schemaVersion ===
-                        "number"
-
+                    "number"
                         ? data.schemaVersion
-
                         : 1,
-
 
                 createdAt:
                     data.createdAt,
 
-
                 updatedAt:
                     data.updatedAt,
 
-
                 totalCost:
-
                     typeof data.totalCost ===
-                        "number"
-
+                    "number"
                         ? data.totalCost
-
                         : undefined,
 
-
                 estimatedCost:
-
                     typeof data.estimatedCost ===
-                        "number"
-
+                    "number"
                         ? data.estimatedCost
-
                         : undefined
-
             });
-
         }
     );
 
-
-    //==================================================
-    // SORT
-    //==================================================
-
     projects.sort(
-
         (
             first,
             second
         ) =>
-
             getProjectTime(
                 second.updatedAt
             ) -
-
             getProjectTime(
                 first.updatedAt
             )
-
     );
 
-
     return projects;
-
 }
-
-
-//==================================================
-// GET USER PROJECTS
-//==================================================
 
 export async function getUserProjects(
     ownerId:
         string
 ): Promise<AdminProject[]> {
-
     const normalizedOwnerId =
         ownerId.trim();
 
-
     if (
-        normalizedOwnerId === ""
+        normalizedOwnerId ===
+        ""
     ) {
-
         return [];
-
     }
-
 
     const projectsQuery =
         query(
@@ -517,29 +368,23 @@ export async function getUserProjects(
             )
         );
 
-
     const snapshot =
         await getDocs(
             projectsQuery
         );
 
-
     const projects:
         AdminProject[] = [];
 
-
     snapshot.docs.forEach(
         projectDocument => {
-
             projects.push(
                 mapProject(
                     projectDocument
                 )
             );
-
         }
     );
-
 
     projects.sort(
         (
@@ -554,33 +399,22 @@ export async function getUserProjects(
             )
     );
 
-
     return projects;
-
 }
-
-
-//==================================================
-// GET PROJECTS FOR ACCOUNT
-//==================================================
 
 export async function getProjectsForUserAccount(
     accountId:
         string
 ): Promise<AdminProject[]> {
-
     const normalizedAccountId =
         accountId.trim();
 
-
     if (
-        normalizedAccountId === ""
+        normalizedAccountId ===
+        ""
     ) {
-
         return [];
-
     }
-
 
     const userReference =
         doc(
@@ -589,75 +423,51 @@ export async function getProjectsForUserAccount(
             normalizedAccountId
         );
 
-
     const userSnapshot =
         await getDoc(
             userReference
         );
 
-
     let ownerId =
         normalizedAccountId;
-
 
     if (
         userSnapshot.exists()
     ) {
-
         const userData =
             userSnapshot.data();
-
 
         if (
             typeof userData.uid ===
             "string" &&
-            userData.uid.trim() !== ""
+            userData.uid.trim() !==
+            ""
         ) {
-
             ownerId =
                 userData.uid.trim();
-
         }
-
     }
-
 
     return getUserProjects(
         ownerId
     );
-
 }
-
-
-//==================================================
-// GET ONE PROJECT
-//==================================================
-//
-// Used by AdminProjectLoader.
-// IMPORTANT:
-// This only reads Firestore metadata.
-// It does NOT attempt to read Storage.
-//==================================================
 
 export async function getAdminProject(
     projectId:
         string
 ): Promise<AdminProject> {
-
     const normalizedProjectId =
         projectId.trim();
 
-
     if (
-        normalizedProjectId === ""
+        normalizedProjectId ===
+        ""
     ) {
-
         throw new Error(
             "Project ID is required."
         );
-
     }
-
 
     const projectReference =
         doc(
@@ -666,51 +476,37 @@ export async function getAdminProject(
             normalizedProjectId
         );
 
-
     const snapshot =
         await getDoc(
             projectReference
         );
 
-
     if (
         !snapshot.exists()
     ) {
-
         throw new Error(
             "Project does not exist."
         );
-
     }
-
 
     return mapProject(
         snapshot
     );
-
 }
-
-
-//==================================================
-// TIMESTAMP
-//==================================================
 
 function getProjectTime(
     value:
         unknown
 ): number {
-
     if (
         !value
     ) {
-
         return 0;
-
     }
 
-
     if (
-        typeof value === "object" &&
+        typeof value ===
+            "object" &&
         value !== null &&
         "toMillis" in value &&
         typeof (
@@ -718,51 +514,40 @@ function getProjectTime(
                 toMillis:
                     unknown;
             }
-        ).toMillis === "function"
+        ).toMillis ===
+            "function"
     ) {
-
         return (
             value as {
                 toMillis:
                     () => number;
             }
         ).toMillis();
-
     }
-
 
     if (
         value instanceof Date
     ) {
-
         return value.getTime();
-
     }
 
-
     if (
-        typeof value === "string"
+        typeof value ===
+        "string"
     ) {
-
         const date =
             new Date(
                 value
             );
-
 
         if (
             !Number.isNaN(
                 date.getTime()
             )
         ) {
-
             return date.getTime();
-
         }
-
     }
 
-
     return 0;
-
 }

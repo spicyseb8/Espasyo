@@ -27,53 +27,44 @@ import useEditor
 import Editor
     from "../Studio/Editor/Editor";
 
+import {
+    clearProjectSession,
+    saveProjectBaseline
+} from "../services/projectEditSessionService";
 
 function LoadProjectContent() {
-
     const {
         projectId
     } = useParams<{
-        projectId: string;
+        projectId:
+            string;
     }>();
-
 
     const {
         dispatch
     } = useEditor();
 
-
     const navigate =
         useNavigate();
-
 
     const [
         loading,
         setLoading
     ] = useState(true);
 
-
     const [
         error,
         setError
     ] = useState("");
 
-
     useEffect(() => {
-
         let cancelled =
             false;
 
-
         async function loadProject() {
-
-            //--------------------------------------------------
-            // Check project ID
-            //--------------------------------------------------
-
             if (
                 !projectId
             ) {
-
                 setError(
                     "No project was selected."
                 );
@@ -85,19 +76,12 @@ function LoadProjectContent() {
                 return;
             }
 
-
-            //--------------------------------------------------
-            // Authentication
-            //--------------------------------------------------
-
             const user =
                 auth.currentUser;
-
 
             if (
                 !user
             ) {
-
                 setError(
                     "Please log in before opening a project."
                 );
@@ -109,21 +93,12 @@ function LoadProjectContent() {
                 return;
             }
 
-
             try {
-
                 setLoading(
                     true
                 );
 
-                setError(
-                    ""
-                );
-
-
-                //==================================================
-                // GET PROJECT METADATA
-                //==================================================
+                setError("");
 
                 const projectReference =
                     doc(
@@ -132,138 +107,109 @@ function LoadProjectContent() {
                         projectId
                     );
 
-
                 const projectSnapshot =
                     await getDoc(
                         projectReference
                     );
 
-
                 if (
                     !projectSnapshot.exists()
                 ) {
-
                     throw new Error(
                         "Project does not exist."
                     );
                 }
 
-
                 const projectMetadata =
                     projectSnapshot.data();
-
-
-                //==================================================
-                // OWNERSHIP CHECK
-                //==================================================
 
                 if (
                     projectMetadata.ownerId !==
                     user.uid
                 ) {
-
                     throw new Error(
                         "You do not have access to this project."
                     );
                 }
 
-
-                //==================================================
-                // JSON URL
-                //==================================================
-
                 const jsonUrl =
                     projectMetadata.jsonUrl;
-
 
                 if (
                     typeof jsonUrl !==
                     "string" ||
-                    jsonUrl.trim() === ""
+                    jsonUrl.trim() ===
+                    ""
                 ) {
-
                     throw new Error(
                         "This project does not have a valid JSON URL."
                     );
                 }
-
-
-                //==================================================
-                // DOWNLOAD PROJECT JSON
-                //==================================================
 
                 const response =
                     await fetch(
                         jsonUrl
                     );
 
-
                 if (
                     !response.ok
                 ) {
-
                     throw new Error(
                         `Failed to download project JSON (${response.status}).`
                     );
                 }
 
-
                 const projectData =
                     await response.json();
-
-
-                //==================================================
-                // CANCEL CHECK
-                //==================================================
 
                 if (
                     cancelled
                 ) {
-
                     return;
                 }
 
-
-                //==================================================
-                // RECONSTRUCT EDITOR
-                //==================================================
+                clearProjectSession();
 
                 dispatch({
-
                     type:
                         "LOAD_PROJECT",
-
                     payload:
                         projectData
-
                 });
 
+                saveProjectBaseline(
+                    projectId,
+                    projectData
+                );
 
-                //==================================================
-                // Finished
-                //==================================================
+                if (
+                    typeof projectData.projectName ===
+                        "string" &&
+                    projectData.projectName.trim() !==
+                        ""
+                ) {
+                    localStorage.setItem(
+                        "espasyo_project_name",
+                        projectData.projectName
+                    );
+                }
 
                 setLoading(
                     false
                 );
-
             } catch (
                 loadError
             ) {
-
                 console.error(
                     "Failed to load project:",
                     loadError
                 );
 
-
                 if (
                     cancelled
                 ) {
-
                     return;
                 }
-
 
                 setError(
                     loadError instanceof Error
@@ -271,46 +217,29 @@ function LoadProjectContent() {
                         : "Failed to load project."
                 );
 
-
                 setLoading(
                     false
                 );
-
             }
-
         }
-
 
         void loadProject();
 
-
         return () => {
-
             cancelled =
                 true;
-
         };
-
     }, [
         projectId,
         dispatch
     ]);
 
-
-    //==================================================
-    // LOADING
-    //==================================================
-
     if (
         loading
     ) {
-
         return (
-
             <div className="project-loading">
-
                 <div>
-
                     <h2>
                         Opening Project
                     </h2>
@@ -318,38 +247,26 @@ function LoadProjectContent() {
                     <p>
                         Reconstructing your interior...
                     </p>
-
                 </div>
-
             </div>
-
         );
-
     }
-
-
-    //==================================================
-    // ERROR
-    //==================================================
 
     if (
         error
     ) {
-
         return (
-
             <div className="project-loading">
-
                 <div>
-
                     <h2>
                         Unable to open project
                     </h2>
 
                     <p>
-                        {error}
+                        {
+                            error
+                        }
                     </p>
-
 
                     <button
                         type="button"
@@ -361,40 +278,20 @@ function LoadProjectContent() {
                     >
                         Back to Projects
                     </button>
-
                 </div>
-
             </div>
-
         );
-
     }
-
-
-    //==================================================
-    // ACTUAL EDITOR
-    //==================================================
 
     return (
         <Editor />
     );
 }
 
-
-//==================================================
-// STUDIO LOAD PROJECT
-//==================================================
-
 export default function StudioLoadProject() {
-
     return (
-
         <EditorProvider>
-
             <LoadProjectContent />
-
         </EditorProvider>
-
     );
-
 }

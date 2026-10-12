@@ -1,247 +1,118 @@
-import {
-    useMemo
-} from "react";
-
-import {
-    useGLTF
-} from "@react-three/drei";
-
-import {
-    Mesh
-} from "three";
-
-import type {
-    Asset
-} from "../engine/assets/Asset";
-
-import type {
-    SavedFurniture
-} from "../ProjectTypes";
-
-
-//==================================================
-// PROPS
-//==================================================
+import { useMemo } from "react";
+import { useGLTF } from "@react-three/drei";
+import { Mesh } from "three";
+import type { Asset } from "../engine/assets/Asset";
+import type { SavedFurniture } from "../ProjectTypes";
+import { emitAdminCommentTarget } from "../../../services/assets/adminCommentEvents";
 
 interface AdminFurnitureProps {
-
-    furniture:
-        SavedFurniture;
-
-    asset:
-        Asset;
-
+    furniture: SavedFurniture;
+    asset: Asset;
 }
-
-
-//==================================================
-// ADMIN FURNITURE
-//==================================================
 
 export default function AdminFurniture({
     furniture,
     asset
 }: AdminFurnitureProps) {
-
-    //--------------------------------------------------
-    // MODEL URL
-    //--------------------------------------------------
-
     if (
         typeof asset.model !== "string" ||
         asset.model.trim() === ""
     ) {
-
         console.warn(
             "Admin furniture has no valid model URL:",
             {
-                furnitureId:
-                    furniture.id,
-
-                assetId:
-                    furniture.assetId
+                furnitureId: furniture.id,
+                assetId: furniture.assetId
             }
         );
 
         return null;
-
     }
 
-
     return (
-
         <AdminFurnitureModel
-
-            furniture={
-                furniture
-            }
-
-            asset={
-                asset
-            }
-
+            furniture={furniture}
+            asset={asset}
         />
-
     );
-
 }
-
-
-//==================================================
-// MODEL
-//==================================================
 
 function AdminFurnitureModel({
     furniture,
     asset
 }: AdminFurnitureProps) {
+    const { scene } = useGLTF(asset.model);
 
-    const {
-        scene
-    } = useGLTF(
-        asset.model
-    );
+    const model = useMemo(() => {
+        const clone = scene.clone(true);
 
+        clone.traverse(child => {
+            child.userData = {
+                ...child.userData,
+                furnitureId: furniture.id
+            };
 
-    const model =
-        useMemo(() => {
-
-            const clone =
-                scene.clone(
-                    true
-                );
-
-
-            clone.traverse(
-                child => {
-
-                    child.userData = {
-
-                        ...child.userData,
-
-                        furnitureId:
-                            furniture.id
-
-                    };
-
-
-                    if (
-                        child instanceof Mesh
-                    ) {
-
-                        if (
-                            Array.isArray(
-                                child.material
-                            )
-                        ) {
-
-                            child.material =
-                                child.material.map(
-                                    material =>
-                                        material.clone()
-                                );
-
-                        }
-
-                        else if (
-                            child.material
-                        ) {
-
-                            child.material =
-                                child.material.clone();
-
-                        }
-
-
-                        child.castShadow =
-                            true;
-
-                        child.receiveShadow =
-                            true;
-
-                    }
-
+            if (child instanceof Mesh) {
+                if (Array.isArray(child.material)) {
+                    child.material = child.material.map(
+                        material => material.clone()
+                    );
+                } else if (child.material) {
+                    child.material = child.material.clone();
                 }
-            );
 
+                child.castShadow = true;
+                child.receiveShadow = true;
+            }
+        });
 
-            return clone;
+        return clone;
+    }, [
+        scene,
+        furniture.id
+    ]);
 
-        }, [
-            scene,
-            furniture.id
-        ]);
-
-
-    //--------------------------------------------------
-    // Saved model offset
-    //--------------------------------------------------
-
-    const modelOffset =
-        furniture.modelOffset;
-
-
-    //--------------------------------------------------
-    // Rotation
-    //--------------------------------------------------
+    const modelOffset = furniture.modelOffset;
 
     const finalRotationY =
         furniture.rotationY +
-        (
-            asset.rotationOffsetY ??
-            0
-        );
+        (asset.rotationOffsetY ?? 0);
 
+    const handleClick = (event: any) => {
+        event.stopPropagation();
 
-    //--------------------------------------------------
-    // Render
-    //--------------------------------------------------
+        emitAdminCommentTarget({
+            targetType: "furniture",
+            targetId: furniture.id,
+            targetLabel: `Furniture: ${asset.name}`
+        });
+    };
 
     return (
-
         <group
-
             position={[
-
                 furniture.position.x,
                 furniture.position.y,
                 furniture.position.z
-
             ]}
-
             rotation={[
-
                 0,
                 finalRotationY,
                 0
-
             ]}
-
             userData={{
-                furnitureId:
-                    furniture.id
+                furnitureId: furniture.id
             }}
-
+            onClick={handleClick}
         >
-
             <primitive
-
-                object={
-                    model
-                }
-
+                object={model}
                 position={[
-
                     modelOffset.x,
                     modelOffset.y,
                     modelOffset.z
-
                 ]}
-
             />
-
         </group>
-
     );
-
 }

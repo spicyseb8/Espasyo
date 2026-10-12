@@ -1,114 +1,85 @@
+import { useEffect, useRef } from "react";
+import { OrbitControls } from "@react-three/drei";
+import { useFrame } from "@react-three/fiber";
+import { MathUtils, Vector3 } from "three";
+import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import {
-    useEffect,
-    useRef
-} from "react";
+    ADMIN_COMMENT_FOCUS_COMPLETE_EVENT,
+    ADMIN_COMMENT_FOCUS_EVENT,
+    type AdminCommentFocusDetail
+} from "@/services/assets/adminCommentEvents";
 
-import {
-    OrbitControls
-} from "@react-three/drei";
-
-import {
-    useFrame
-} from "@react-three/fiber";
-
-import {
-    MathUtils,
-    Vector3
-} from "three";
-
-import type {
-    OrbitControls as OrbitControlsImpl
-} from "three-stdlib";
-
-
-//==================================================
-// CAMERA SETTINGS
-//==================================================
-
-const MIN_DISTANCE =
-    2;
-
-const MAX_DISTANCE =
-    100;
-
-const MIN_POLAR_ANGLE =
-    0;
-
+const MIN_DISTANCE = 2;
+const MAX_DISTANCE = 100;
+const MIN_POLAR_ANGLE = 0;
 const MAX_POLAR_ANGLE =
     Math.PI / 2 -
     MathUtils.degToRad(2);
-
-
-//--------------------------------------------------
-// WASD SPEED
-//--------------------------------------------------
-
-const MOVE_SPEED =
-    4;
-
-const FAST_MOVE_MULTIPLIER =
-    2;
-
-
-//==================================================
-// ADMIN CAMERA
-//==================================================
+const MOVE_SPEED = 4;
+const FAST_MOVE_MULTIPLIER = 2;
+const FOCUS_DISTANCE = 3.5;
+const FOCUS_SPEED = 7;
 
 export default function AdminCamera() {
-
-    //--------------------------------------------------
-    // OrbitControls reference
-    //--------------------------------------------------
-
     const controlsRef =
-        useRef<OrbitControlsImpl | null>(
-            null
-        );
-
-
-    //--------------------------------------------------
-    // Keyboard state
-    //--------------------------------------------------
+        useRef<OrbitControlsImpl | null>(null);
 
     const keys =
-        useRef(
-            new Set<string>()
-        );
-
-
-    //--------------------------------------------------
-    // Movement vectors
-    //--------------------------------------------------
+        useRef(new Set<string>());
 
     const forward =
-        useRef(
-            new Vector3()
-        );
+        useRef(new Vector3());
 
     const right =
-        useRef(
-            new Vector3()
-        );
+        useRef(new Vector3());
 
     const movement =
-        useRef(
-            new Vector3()
-        );
+        useRef(new Vector3());
 
+    const up =
+        useRef(new Vector3(0, 1, 0));
 
-    //==================================================
-    // KEYBOARD EVENTS
-    //==================================================
+    const focusTarget =
+        useRef<Vector3 | null>(null);
+
+    const focusPosition =
+        useRef<Vector3 | null>(null);
+
+    const activeFocusCommentId =
+        useRef<string | null>(null);
 
     useEffect(() => {
+        function isTypingTarget(
+            target: EventTarget | null
+        ) {
+            const element =
+                target as HTMLElement | null;
+
+            if (!element) {
+                return false;
+            }
+
+            return (
+                element instanceof HTMLInputElement ||
+                element instanceof HTMLTextAreaElement ||
+                element.isContentEditable
+            );
+        }
 
         function handleKeyDown(
             event: KeyboardEvent
         ) {
+            if (
+                isTypingTarget(
+                    event.target
+                )
+            ) {
+                keys.current.clear();
+                return;
+            }
 
             const key =
                 event.key.toLowerCase();
-
 
             if (
                 [
@@ -117,43 +88,103 @@ export default function AdminCamera() {
                     "s",
                     "d",
                     "shift"
-                ].includes(
-                    key
-                )
+                ].includes(key)
             ) {
-
                 event.preventDefault();
-
-                keys.current.add(
-                    key
-                );
-
+                keys.current.add(key);
             }
-
         }
-
 
         function handleKeyUp(
             event: KeyboardEvent
         ) {
-
-            const key =
-                event.key.toLowerCase();
-
+            if (
+                isTypingTarget(
+                    event.target
+                )
+            ) {
+                keys.current.clear();
+                return;
+            }
 
             keys.current.delete(
-                key
+                event.key.toLowerCase()
             );
-
         }
-
 
         function handleBlur() {
-
             keys.current.clear();
-
         }
 
+        function handleFocus(
+            event: Event
+        ) {
+            const customEvent =
+                event as CustomEvent<AdminCommentFocusDetail>;
+
+            const point =
+                customEvent.detail?.position;
+
+            const commentId =
+                customEvent.detail?.commentId;
+
+            const controls =
+                controlsRef.current;
+
+            if (
+                !point ||
+                !commentId ||
+                !controls
+            ) {
+                return;
+            }
+
+            const camera =
+                controls.object;
+
+            const target =
+                new Vector3(
+                    point.x,
+                    point.y,
+                    point.z
+                );
+
+            const direction =
+                new Vector3()
+                    .subVectors(
+                        camera.position,
+                        target
+                    );
+
+            if (
+                direction.lengthSq() <
+                0.000001
+            ) {
+                direction.set(
+                    0,
+                    1,
+                    1
+                );
+            }
+
+            direction.normalize();
+
+            focusTarget.current =
+                target;
+
+            focusPosition.current =
+                target.clone().add(
+                    direction.multiplyScalar(
+                        FOCUS_DISTANCE
+                    )
+                );
+
+            activeFocusCommentId.current =
+                commentId;
+
+            controls.enabled =
+                false;
+        }
 
         window.addEventListener(
             "keydown",
@@ -170,9 +201,12 @@ export default function AdminCamera() {
             handleBlur
         );
 
+        window.addEventListener(
+            ADMIN_COMMENT_FOCUS_EVENT,
+            handleFocus
+        );
 
         return () => {
-
             window.removeEventListener(
                 "keydown",
                 handleKeyDown
@@ -188,19 +222,112 @@ export default function AdminCamera() {
                 handleBlur
             );
 
+            window.removeEventListener(
+                ADMIN_COMMENT_FOCUS_EVENT,
+                handleFocus
+            );
         };
-
     }, []);
 
-
-    //==================================================
-    // WASD MOVEMENT
-    //==================================================
-
     useFrame(
-        ({
-            camera
-        }, delta) => {
+        (
+            {
+                camera
+            },
+            delta
+        ) => {
+            const controls =
+                controlsRef.current;
+
+            if (!controls) {
+                return;
+            }
+
+            if (
+                focusTarget.current &&
+                focusPosition.current
+            ) {
+                const target =
+                    focusTarget.current;
+
+                const position =
+                    focusPosition.current;
+
+                const alpha =
+                    1 -
+                    Math.exp(
+                        -FOCUS_SPEED *
+                        delta
+                    );
+
+                camera.position.lerp(
+                    position,
+                    alpha
+                );
+
+                controls.target.lerp(
+                    target,
+                    alpha
+                );
+
+                controls.update();
+
+                const cameraFinished =
+                    camera.position.distanceToSquared(
+                        position
+                    ) <
+                    0.0025;
+
+                const targetFinished =
+                    controls.target.distanceToSquared(
+                        target
+                    ) <
+                    0.0025;
+
+                if (
+                    cameraFinished &&
+                    targetFinished
+                ) {
+                    camera.position.copy(
+                        position
+                    );
+
+                    controls.target.copy(
+                        target
+                    );
+
+                    controls.update();
+
+                    focusTarget.current =
+                        null;
+
+                    focusPosition.current =
+                        null;
+
+                    controls.enabled =
+                        true;
+
+                    const commentId =
+                        activeFocusCommentId.current;
+
+                    activeFocusCommentId.current =
+                        null;
+
+                    if (commentId) {
+                        window.dispatchEvent(
+                            new CustomEvent<string>(
+                                ADMIN_COMMENT_FOCUS_COMPLETE_EVENT,
+                                {
+                                    detail:
+                                        commentId
+                                }
+                            )
+                        );
+                    }
+                }
+
+                return;
+            }
 
             const w =
                 keys.current.has("w");
@@ -220,65 +347,31 @@ export default function AdminCamera() {
                 !a &&
                 !d
             ) {
-
                 return;
-
             }
-
-
-            //--------------------------------------------------
-            // Camera forward direction
-            //--------------------------------------------------
 
             camera.getWorldDirection(
                 forward.current
             );
 
-
-            //--------------------------------------------------
-            // Keep movement horizontal
-            //--------------------------------------------------
-
             forward.current.y =
                 0;
-
 
             if (
                 forward.current.lengthSq() <
                 0.000001
             ) {
-
                 return;
-
             }
-
 
             forward.current.normalize();
 
-
-            //--------------------------------------------------
-            // Camera right direction
-            //--------------------------------------------------
-
             right.current.crossVectors(
-
                 forward.current,
-
-                new Vector3(
-                    0,
-                    1,
-                    0
-                )
-
+                up.current
             );
 
-
             right.current.normalize();
-
-
-            //--------------------------------------------------
-            // Input direction
-            //--------------------------------------------------
 
             movement.current.set(
                 0,
@@ -286,161 +379,76 @@ export default function AdminCamera() {
                 0
             );
 
-
             if (w) {
-
                 movement.current.add(
                     forward.current
                 );
-
             }
-
 
             if (s) {
-
                 movement.current.sub(
                     forward.current
                 );
-
             }
 
-
             if (d) {
-
                 movement.current.add(
                     right.current
                 );
-
             }
 
-
             if (a) {
-
                 movement.current.sub(
                     right.current
                 );
-
             }
-
-
-            //--------------------------------------------------
-            // Prevent diagonal movement from being faster
-            //--------------------------------------------------
 
             if (
                 movement.current.lengthSq() >
                 0.000001
             ) {
-
                 movement.current.normalize();
-
             }
-
-
-            //--------------------------------------------------
-            // Speed
-            //--------------------------------------------------
 
             const speed =
                 MOVE_SPEED *
                 (
-                    keys.current.has("shift")
+                    keys.current.has(
+                        "shift"
+                    )
                         ? FAST_MOVE_MULTIPLIER
                         : 1
                 );
 
-
-            const distance =
-                speed *
-                delta;
-
-
             movement.current.multiplyScalar(
-                distance
+                speed *
+                delta
             );
-
-
-            //--------------------------------------------------
-            // Move camera
-            //--------------------------------------------------
 
             camera.position.add(
                 movement.current
             );
 
+            controls.target.add(
+                movement.current
+            );
 
-            //--------------------------------------------------
-            // Move OrbitControls target too
-            //--------------------------------------------------
-
-            const controls =
-                controlsRef.current;
-
-
-            if (
-                controls
-            ) {
-
-                controls.target.add(
-                    movement.current
-                );
-
-                controls.update();
-
-            }
-
+            controls.update();
         }
     );
 
-
-    //==================================================
-    // RENDER
-    //==================================================
-
     return (
-
         <OrbitControls
-
-            ref={
-                controlsRef
-            }
-
+            ref={controlsRef}
             makeDefault
-
-            enablePan={
-                true
-            }
-
-            enableZoom={
-                true
-            }
-
-            enableRotate={
-                true
-            }
-
-            screenSpacePanning={
-                false
-            }
-
-            minDistance={
-                MIN_DISTANCE
-            }
-
-            maxDistance={
-                MAX_DISTANCE
-            }
-
-            minPolarAngle={
-                MIN_POLAR_ANGLE
-            }
-
-            maxPolarAngle={
-                MAX_POLAR_ANGLE
-            }
-
+            enablePan
+            enableZoom
+            enableRotate
+            screenSpacePanning={false}
+            minDistance={MIN_DISTANCE}
+            maxDistance={MAX_DISTANCE}
+            minPolarAngle={MIN_POLAR_ANGLE}
+            maxPolarAngle={MAX_POLAR_ANGLE}
         />
-
     );
-
 }

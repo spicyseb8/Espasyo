@@ -139,7 +139,8 @@ async function resolveStorageUrl(
     if (
         path.startsWith("http://") ||
         path.startsWith("https://") ||
-        path.startsWith("data:")
+       path.startsWith("data:") ||
+    path.startsWith("blob:")
     ) {
 
         return path;
@@ -187,26 +188,15 @@ async function resolveStorageUrl(
 async function getWallTextureUrl(
     data: FirebaseWallAsset
 ): Promise<string | undefined> {
+    if (data.category === "paint" || data.color?.trim()) {
+        return undefined;
+    }
 
-    //--------------------------------------------------
-    // NEW DIRECT URL
-    //--------------------------------------------------
-
-    if (
-        data.base_color_url?.trim()
-    ) {
-
+    if (data.base_color_url?.trim()) {
         return data.base_color_url.trim();
     }
 
-
-    //--------------------------------------------------
-    // OLD STORAGE PATH
-    //--------------------------------------------------
-
-    return resolveStorageUrl(
-        data.base_color_path
-    );
+    return resolveStorageUrl(data.base_color_path);
 }
 
 

@@ -1,310 +1,94 @@
-import {
-    Vector3
-} from "three";
-
-import type {
-    Wall
-} from "./WallTypes";
-
-import type {
-    Region
-} from "../regions/Polygon";
-
-import {
-    pointInPolygon
-} from "../regions/Polygon";
-
+import { Vector3 } from "three";
+import type { Wall } from "./WallTypes";
+import type { Region } from "../regions/Polygon";
 
 export interface AdminWallFinishSide {
-
-    regionId:
-        string;
-
-    wallId:
-        string;
-
-    materialId:
-        string;
-
-    side:
-        1 | -1;
-
+    regionId: string;
+    wallId: string;
+    materialId: string;
+    side: 1 | -1;
 }
-
-
-//==================================================
-// POINT INSIDE REGION
-//==================================================
-
-function pointInsideRegion(
-    point: Vector3,
-    region: Region
-): boolean {
-
-    const loops =
-        region.boundaryLoops ?? [];
-
-
-    if (
-        loops.length === 0
-    ) {
-
-        return pointInPolygon(
-            point,
-            region.corners
-        );
-
-    }
-
-
-    const outer =
-        loops[0]?.corners ?? [];
-
-
-    if (
-        outer.length < 3 ||
-        !pointInPolygon(
-            point,
-            outer
-        )
-    ) {
-
-        return false;
-
-    }
-
-
-    for (
-        let i = 1;
-        i < loops.length;
-        i++
-    ) {
-
-        const hole =
-            loops[i].corners;
-
-
-        if (
-            hole.length >= 3 &&
-            pointInPolygon(
-                point,
-                hole
-            )
-        ) {
-
-            return false;
-
-        }
-
-    }
-
-
-    return true;
-
-}
-
-
-//==================================================
-// DETERMINE REGION WALL SIDE
-//==================================================
 
 export function getRegionWallSide(
     wall: Wall,
     region: Region
-):
-    1 | -1 | null {
+): 1 | -1 | null {
+    const direction = new Vector3()
+        .subVectors(
+            wall.end.position,
+            wall.start.position
+        );
 
-    const start =
-        wall.start.position;
-
-
-    const end =
-        wall.end.position;
-
-
-    const direction =
-        new Vector3()
-            .subVectors(
-                end,
-                start
-            );
-
-
-    const length =
-        direction.length();
-
-
-    if (
-        length <=
-        0.001
-    ) {
-
+    if (direction.lengthSq() < 0.000001) {
         return null;
-
     }
-
 
     direction.normalize();
 
+    const normal = new Vector3(
+        -direction.z,
+        0,
+        direction.x
+    ).normalize();
 
-    const normal =
-        new Vector3(
-            -direction.z,
-            0,
-            direction.x
-        ).normalize();
-
-
-    const sampleDistances = [
-
-        length * 0.25,
-
-        length * 0.50,
-
-        length * 0.75
-
-    ];
-
-
-    let positiveCount =
-        0;
-
-    let negativeCount =
-        0;
-
-
-    const testOffset =
-        Math.max(
-
-            0.02,
-
-            Math.min(
-                0.08,
-                length * 0.02
+    const wallCenter = wall.start.position
+        .clone()
+        .add(
+            direction.clone().multiplyScalar(
+                wall.start.position.distanceTo(
+                    wall.end.position
+                ) * 0.5
             )
-
         );
 
+    const regionCorners = (
+        region.corners ??
+        []
+    ).filter(Boolean);
 
-    for (
-        const distance
-        of sampleDistances
-    ) {
-
-        const center =
-            start.clone()
-                .add(
-
-                    direction
-                        .clone()
-                        .multiplyScalar(
-                            distance
-                        )
-
-                );
-
-
-        const positivePoint =
-            center.clone()
-                .add(
-
-                    normal
-                        .clone()
-                        .multiplyScalar(
-                            testOffset
-                        )
-
-                );
-
-
-        const negativePoint =
-            center.clone()
-                .sub(
-
-                    normal
-                        .clone()
-                        .multiplyScalar(
-                            testOffset
-                        )
-
-                );
-
-
-        if (
-            pointInsideRegion(
-                positivePoint,
-                region
-            )
-        ) {
-
-            positiveCount++;
-
-        }
-
-
-        if (
-            pointInsideRegion(
-                negativePoint,
-                region
-            )
-        ) {
-
-            negativeCount++;
-
-        }
-
+    if (regionCorners.length === 0) {
+        return null;
     }
 
+    const regionCenter = regionCorners.reduce(
+        (
+            center,
+            point
+        ) => center.add(point),
+        new Vector3()
+    );
 
-    if (
-        positiveCount >
-        negativeCount
-    ) {
+    regionCenter.divideScalar(
+        regionCorners.length
+    );
 
-        return 1;
+    const toRegion = regionCenter
+        .sub(wallCenter);
 
+    const sideValue =
+        toRegion.x * normal.x +
+        toRegion.z * normal.z;
+
+    if (Math.abs(sideValue) < 0.000001) {
+        return null;
     }
 
-
-    if (
-        negativeCount >
-        positiveCount
-    ) {
-
-        return -1;
-
-    }
-
-
-    return null;
-
+    return sideValue > 0
+        ? 1
+        : -1;
 }
-
-
-//==================================================
-// GET WALL FINISH SIDES
-//==================================================
 
 export function getWallFinishSides(
     wall: Wall,
     regions: Region[],
-    wallFinishes:
-        Record<
-            string,
-            Record<string, string>
-        >
-):
-    AdminWallFinishSide[] {
+    wallFinishes: Record<
+        string,
+        Record<string, string>
+    >
+): AdminWallFinishSide[] {
+    const finishes: AdminWallFinishSide[] = [];
 
-    const result:
-        AdminWallFinishSide[] = [];
-
-
-    for (
-        const region
-        of regions
-    ) {
-
+    for (const region of regions) {
         const belongsToRegion =
             region.walls.some(
                 regionWall =>
@@ -312,15 +96,9 @@ export function getWallFinishSides(
                     wall.id
             );
 
-
-        if (
-            !belongsToRegion
-        ) {
-
+        if (!belongsToRegion) {
             continue;
-
         }
-
 
         const materialId =
             wallFinishes[
@@ -329,15 +107,13 @@ export function getWallFinishSides(
                 wall.id
             ];
 
-
         if (
-            !materialId
+            typeof materialId !==
+                "string" ||
+            materialId.trim() === ""
         ) {
-
             continue;
-
         }
-
 
         const side =
             getRegionWallSide(
@@ -345,33 +121,19 @@ export function getWallFinishSides(
                 region
             );
 
-
-        if (
-            side === null
-        ) {
-
+        if (side === null) {
             continue;
-
         }
 
-
-        result.push({
-
+        finishes.push({
             regionId:
                 region.id,
-
             wallId:
                 wall.id,
-
             materialId,
-
             side
-
         });
-
     }
 
-
-    return result;
-
+    return finishes;
 }
