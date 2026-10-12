@@ -11,7 +11,9 @@ import {
   validateConfirmPassword,
   validateContact,
   validateEmail,
-  validateFullName,
+  validateFirstName,
+  validateMiddleInitial,
+  validateSurname,
   validatePassword,
 } from "@/utils/authValidation";
 
@@ -43,7 +45,9 @@ export function SignupForm({
   className,
   ...props
 }: SignupFormProps) {
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [middleInitial, setMiddleInitial] = useState("");
+  const [surname, setSurname] = useState("");
   const [email, setEmail] = useState("");
   const [contact, setContact] = useState("");
   const [password, setPassword] = useState("");
@@ -51,12 +55,16 @@ export function SignupForm({
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (
+    e: FormEvent<HTMLFormElement>
+  ) => {
     e.preventDefault();
     setError("");
 
     const validationError =
-      validateFullName(name) ||
+      validateFirstName(firstName) ||
+      validateMiddleInitial(middleInitial) ||
+      validateSurname(surname) ||
       validateEmail(email) ||
       validateContact(contact) ||
       validatePassword(password) ||
@@ -69,9 +77,31 @@ export function SignupForm({
 
     setLoading(true);
 
-    try {
-      const normalizedEmail = email.trim().toLowerCase();
+    const normalizedEmail = email.trim().toLowerCase();
 
+    const normalizedFirstName = firstName
+      .trim()
+      .replace(/\s+/g, " ");
+
+    const normalizedSurname = surname
+      .trim()
+      .replace(/\s+/g, " ");
+
+    const normalizedMiddleInitial = middleInitial
+      .trim()
+      .replace(/\./g, "");
+
+    const fullName = [
+      normalizedFirstName,
+      normalizedMiddleInitial
+        ? `${normalizedMiddleInitial}.`
+        : "",
+      normalizedSurname,
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    try {
       const credential = await createUserWithEmailAndPassword(
         auth,
         normalizedEmail,
@@ -82,15 +112,19 @@ export function SignupForm({
         localStorage.setItem(
           "pendingEspasyoProfile",
           JSON.stringify({
-            full_name: name.trim(),
+            full_name: fullName,
+            first_name: normalizedFirstName,
+            middle_initial: normalizedMiddleInitial,
+            surname: normalizedSurname,
             email: normalizedEmail,
-            contact,
+            contact: contact.trim(),
           })
         );
 
         await sendEmailVerification(credential.user);
       } catch (verificationError) {
-        // Avoid leaving a signed-in, unverified account.
+        // Remove the newly created account if verification
+        // setup fails, matching the existing registration flow.
         await credential.user.delete().catch(() => undefined);
         throw verificationError;
       }
@@ -108,18 +142,23 @@ export function SignupForm({
         case "auth/email-already-in-use":
           setError("An account with this email already exists.");
           break;
+
         case "auth/invalid-email":
           setError("Please enter a valid email address.");
           break;
+
         case "auth/weak-password":
           setError("Please choose a stronger password.");
           break;
+
         case "auth/network-request-failed":
           setError("Network error. Check your connection.");
           break;
+
         case "auth/too-many-requests":
           setError("Too many requests. Please try again later.");
           break;
+
         default:
           setError(
             "Unable to complete registration. Please try again."
@@ -149,26 +188,55 @@ export function SignupForm({
           <form onSubmit={handleSubmit} noValidate>
             <FieldGroup>
               <Field>
-                <FieldLabel htmlFor="signup-name">
-                  Full Name
+                <FieldLabel htmlFor="signup-first-name">
+                  First Name
                 </FieldLabel>
                 <Input
-                  id="signup-name"
+                  id="signup-first-name"
                   type="text"
-                  autoComplete="name"
-                  placeholder="John Doe"
-                  value={name}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (/^[\p{L}\s]*$/u.test(value)) {
-                      setName(value);
-                    }
-                  }}
+                  autoComplete="given-name"
+                  placeholder="John"
+                  maxLength={50}
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
                   required
                 />
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="signup-middle-initial">
+                  Middle Initial (Optional)
+                </FieldLabel>
+                <Input
+                  id="signup-middle-initial"
+                  type="text"
+                  autoComplete="additional-name"
+                  placeholder="K."
+                  maxLength={2}
+                  value={middleInitial}
+                  onChange={(e) =>
+                    setMiddleInitial(e.target.value)
+                  }
+                />
                 <FieldDescription>
-                  Letters and spaces only.
+                  Enter one letter, such as K.
                 </FieldDescription>
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="signup-surname">
+                  Surname
+                </FieldLabel>
+                <Input
+                  id="signup-surname"
+                  type="text"
+                  autoComplete="family-name"
+                  placeholder="Doe"
+                  maxLength={50}
+                  value={surname}
+                  onChange={(e) => setSurname(e.target.value)}
+                  required
+                />
               </Field>
 
               <Field>

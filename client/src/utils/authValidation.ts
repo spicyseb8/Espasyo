@@ -1,6 +1,8 @@
 
 export interface SignupFormData {
-  fullName: string;
+  firstName: string;
+  middleInitial: string;
+  surname: string;
   email: string;
   contact: string;
   password: string;
@@ -12,17 +14,45 @@ export interface LoginFormData {
   password: string;
 }
 
-export function validateFullName(value: string): string {
-  const name = value.trim();
+// Allows letters, spaces, hyphens, and apostrophes.
+const NAME_REGEX = /^[\p{L}]+(?:[ '-][\p{L}]+)*$/u;
 
-  if (!name) return "Please enter your full name.";
+export function validateFirstName(value: string): string {
+  const name = value.trim().replace(/\s+/g, " ");
 
-  if (!/^[\p{L}\s]+$/u.test(name)) {
-    return "Use letters and spaces only.";
+  if (!name) return "Please enter your first name.";
+  if (name.length > 50) {
+    return "First name must not exceed 50 characters.";
+  }
+  if (!NAME_REGEX.test(name)) {
+    return "Use valid letters, spaces, hyphens, or apostrophes.";
   }
 
-  if (!/\p{L}/u.test(name)) {
-    return "Please enter a valid full name.";
+  return "";
+}
+
+export function validateMiddleInitial(value: string): string {
+  const initial = value.trim().replace(/\./g, "");
+
+  // Middle initial is optional.
+  if (!initial) return "";
+
+  if (!/^\p{L}$/u.test(initial)) {
+    return "Enter only one letter for your middle initial.";
+  }
+
+  return "";
+}
+
+export function validateSurname(value: string): string {
+  const name = value.trim().replace(/\s+/g, " ");
+
+  if (!name) return "Please enter your surname.";
+  if (name.length > 50) {
+    return "Surname must not exceed 50 characters.";
+  }
+  if (!NAME_REGEX.test(name)) {
+    return "Use valid letters, spaces, hyphens, or apostrophes.";
   }
 
   return "";
@@ -44,9 +74,11 @@ export function validateEmail(value: string): string {
 }
 
 export function validateContact(value: string): string {
-  if (!value) return "Please enter your contact number.";
+  const contact = value.trim();
 
-  if (!/^\d{11}$/.test(value)) {
+  if (!contact) return "Please enter your contact number.";
+
+  if (!/^\d{11}$/.test(contact)) {
     return "Contact number must contain exactly 11 digits.";
   }
 
@@ -82,7 +114,9 @@ export function validateSignupForm(
   data: SignupFormData
 ): string {
   return (
-    validateFullName(data.fullName) ||
+    validateFirstName(data.firstName) ||
+    validateMiddleInitial(data.middleInitial) ||
+    validateSurname(data.surname) ||
     validateEmail(data.email) ||
     validateContact(data.contact) ||
     validatePassword(data.password) ||
