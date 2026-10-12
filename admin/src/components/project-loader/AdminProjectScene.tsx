@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Vector3 } from "three";
-import AdminGrid from "./loader-components/AdminGrid";
+
 import AdminLights from "./loader-components/AdminLights";
 import AdminCamera from "./loader-components/AdminCamera";
 import AdminFloors from "./loader-components/AdminFloors";
@@ -10,6 +10,7 @@ import AdminDoors from "./loader-components/AdminDoors";
 import AdminFurnitures from "./loader-components/AdminFurnitures";
 import AdminWindows from "./loader-components/AdminWindows";
 import AdminCommentMarkers from "./AdminCommentMarkers";
+
 import type { Corner } from "./engine/walls/Corner";
 import type { Wall } from "./engine/walls/WallTypes";
 import type {
@@ -17,6 +18,7 @@ import type {
     AdminWindowData,
     AdminOpeningData
 } from "./engine/walls/AdminWallMeshBuilder";
+
 import type {
     SavedProjectData,
     SavedCorner,
@@ -25,16 +27,19 @@ import type {
     SavedWindow,
     SavedOpening
 } from "./ProjectTypes";
+
 import type { AdminComment } from "@/services/assets/adminCommentService";
 import type {
     AdminCommentTargetDetail,
     AdminCommentFocusRequest
 } from "@/services/assets/adminCommentEvents";
+
 import {
     ADMIN_COMMENT_FOCUS_COMPLETE_EVENT,
     ADMIN_COMMENT_FOCUS_REQUEST_EVENT,
     emitAdminCommentFocus
 } from "@/services/assets/adminCommentEvents";
+
 import { getAdminCommentTargetPoint } from "./loader-components/AdminCommentTargetUtils";
 
 interface AdminProjectSceneProps {
@@ -50,32 +55,23 @@ export default function AdminProjectScene({
     activeTarget,
     visibleCommentId
 }: AdminProjectSceneProps) {
-    const [focusedCommentId, setFocusedCommentId] = useState<string | null>(null);
+    const [focusedCommentId, setFocusedCommentId] =
+        useState<string | null>(null);
 
     const corners: Corner[] =
-        projectData.corners.map(
-            convertCorner
-        );
+        projectData.corners.map(convertCorner);
 
     const walls: Wall[] =
-        projectData.walls.map(
-            convertWall
-        );
+        projectData.walls.map(convertWall);
 
     const doors: AdminDoorData[] =
-        projectData.doors.map(
-            convertDoor
-        );
+        projectData.doors.map(convertDoor);
 
     const windows: AdminWindowData[] =
-        projectData.windows.map(
-            convertWindow
-        );
+        projectData.windows.map(convertWindow);
 
     const openings: AdminOpeningData[] =
-        projectData.openings.map(
-            convertOpening
-        );
+        projectData.openings.map(convertOpening);
 
     useEffect(() => {
         const handleFocusRequest = (event: Event) => {
@@ -91,9 +87,7 @@ export default function AdminProjectScene({
 
             const comment =
                 comments.find(
-                    item =>
-                        item.id ===
-                        commentId
+                    item => item.id === commentId
                 );
 
             if (!comment) {
@@ -104,12 +98,9 @@ export default function AdminProjectScene({
                 getAdminCommentTargetPoint(
                     projectData,
                     {
-                        targetType:
-                            comment.targetType,
-                        targetId:
-                            comment.targetId,
-                        regionId:
-                            comment.regionId
+                        targetType: comment.targetType,
+                        targetId: comment.targetId,
+                        regionId: comment.regionId
                     }
                 );
 
@@ -117,9 +108,7 @@ export default function AdminProjectScene({
                 return;
             }
 
-            setFocusedCommentId(
-                commentId
-            );
+            setFocusedCommentId(commentId);
 
             emitAdminCommentFocus({
                 commentId,
@@ -136,12 +125,9 @@ export default function AdminProjectScene({
                 event as CustomEvent<string>;
 
             if (
-                customEvent.detail ===
-                focusedCommentId
+                customEvent.detail === focusedCommentId
             ) {
-                setFocusedCommentId(
-                    null
-                );
+                setFocusedCommentId(null);
             }
         };
 
@@ -176,11 +162,7 @@ export default function AdminProjectScene({
         <Canvas
             shadows
             camera={{
-                position: [
-                    8,
-                    8,
-                    8
-                ],
+                position: [8, 8, 8],
                 fov: 50
             }}
             style={{
@@ -190,100 +172,52 @@ export default function AdminProjectScene({
         >
             <color
                 attach="background"
-                args={[
-                    "#f5f5f3"
-                ]}
+                args={["#ffffff"]}
             />
 
             <AdminLights
-                corners={
-                    corners
-                }
+                corners={corners}
             />
-
-            <AdminGrid />
 
             <AdminCamera />
 
             <AdminFloors
-                corners={
-                    corners
-                }
-                walls={
-                    walls
-                }
-                floorFinishes={
-                    projectData.floorFinishes
-                }
+                corners={corners}
+                walls={walls}
+                floorFinishes={projectData.floorFinishes}
             />
 
             <AdminWalls
-                corners={
-                    corners
-                }
-                walls={
-                    walls
-                }
-                doors={
-                    doors
-                }
-                windows={
-                    windows
-                }
-                openings={
-                    openings
-                }
-                wallHeight={
-                    projectData.wallHeight
-                }
-                wallThickness={
-                    projectData.wallThickness
-                }
-                wallFinishes={
-                    projectData.wallFinishes
-                }
+                corners={corners}
+                walls={walls}
+                doors={doors}
+                windows={windows}
+                openings={openings}
+                wallHeight={projectData.wallHeight}
+                wallThickness={projectData.wallThickness}
+                wallFinishes={projectData.wallFinishes}
             />
 
             <AdminDoors
-                doors={
-                    projectData.doors
-                }
-                wallThickness={
-                    projectData.wallThickness
-                }
+                doors={projectData.doors}
+                wallThickness={projectData.wallThickness}
             />
 
             <AdminWindows
-                windows={
-                    projectData.windows
-                }
-                wallThickness={
-                    projectData.wallThickness
-                }
+                windows={projectData.windows}
+                wallThickness={projectData.wallThickness}
             />
 
             <AdminFurnitures
-                furniture={
-                    projectData.furniture
-                }
+                furniture={projectData.furniture}
             />
 
             <AdminCommentMarkers
-                projectData={
-                    projectData
-                }
-                comments={
-                    comments
-                }
-                focusedCommentId={
-                    focusedCommentId
-                }
-                visibleCommentId={
-                    visibleCommentId
-                }
-                activeTarget={
-                    activeTarget
-                }
+                projectData={projectData}
+                comments={comments}
+                focusedCommentId={focusedCommentId}
+                visibleCommentId={visibleCommentId}
+                activeTarget={activeTarget}
             />
         </Canvas>
     );
@@ -308,9 +242,7 @@ function convertCorner(
 ): Corner {
     return {
         id: corner.id,
-        position: toVector3(
-            corner.position
-        )
+        position: toVector3(corner.position)
     };
 }
 
@@ -340,9 +272,7 @@ function convertDoor(
     return {
         id: door.id,
         wallId: door.wallId,
-        position: toVector3(
-            door.position
-        ),
+        position: toVector3(door.position),
         width: door.width,
         height: door.height
     };
@@ -354,9 +284,7 @@ function convertWindow(
     return {
         id: window.id,
         wallId: window.wallId,
-        position: toVector3(
-            window.position
-        ),
+        position: toVector3(window.position),
         width: window.width,
         height: window.height
     };
@@ -368,11 +296,10 @@ function convertOpening(
     return {
         id: opening.id,
         wallId: opening.wallId,
-        position: toVector3(
-            opening.position
-        ),
+        position: toVector3(opening.position),
         width: opening.width,
         height: opening.height,
         shape: opening.shape
     };
 }
+
