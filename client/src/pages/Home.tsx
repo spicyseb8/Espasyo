@@ -1,119 +1,151 @@
+import { useCallback, useEffect, useRef, useState, lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
-import { motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useProgress } from "@react-three/drei";
 import NavBar from "./NavBar";
+import { WAYPOINTS } from "./Waypoints";
 import "./Home.css";
 
-const HERO_IMAGE =
-  "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?q=80&w=2000&auto=format&fit=crop";
+const RoomScene = lazy(() => import("./Roomscene"));
 
-const RESULT_IMAGE =
-  "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?q=80&w=1800&auto=format&fit=crop";
-
-const PROCESS_STEPS = [
-  {
-    title: "Design Your Space",
-    description:
-      "Sketch your room's layout and drag-and-drop furniture, materials, and fixtures into place.",
-    image:
-      "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?q=80&w=300&auto=format&fit=crop",
-  },
-  {
-    title: "Visualize in 3D",
-    description:
-      "Walk through a photorealistic 3D render of your design before anything is built.",
-    image:
-      "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?q=80&w=300&auto=format&fit=crop",
-  },
-  {
-    title: "Get a Cost Estimate",
-    description:
-      "Our parametric algorithm instantly estimates the total project cost from your design.",
-    image:
-      "https://images.unsplash.com/photo-1503387762-592deb58ef4e?q=80&w=300&auto=format&fit=crop",
-  },
-];
-
-// Critically damped default — everything below is chrome/reveal, not a flick.
 const SPRING = { type: "spring", bounce: 0, duration: 0.4 } as const;
+
+// Lives at module level, so it survives navigating away and back (SPA route changes).
+let hasLoadedOnce = false;
+
+function LoadingOverlay({ ready }: { ready: boolean }) {
+  const { progress } = useProgress();
+  return (
+    <AnimatePresence>
+      {!ready && (
+        <motion.div
+          className="home__loader"
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <p className="home__eyebrow">Loading your space</p>
+          <div className="home__loader-bar">
+            <div
+              className="home__loader-fill"
+              style={{ transform: `scaleX(${progress / 100})` }}
+            />
+          </div>
+          <p className="home__loader-pct">{Math.round(progress)}%</p>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
 
 export default function Home() {
   const prefersReducedMotion = useReducedMotion();
+  const progress = useRef(0); // 0 → WAYPOINTS.length - 1, read by the 3D rig
+  const [active, setActive] = useState(0);
+  const [ready, setReady] = useState(hasLoadedOnce);
+
+  const handleLoaded = useCallback(() => {
+    hasLoadedOnce = true;
+    setReady(true);
+  }, []);
+
+  // Section 0 is the hero; sections 1..N map to waypoints 0..N-1.
+  useEffect(() => {
+    let raf = 0;
+    const update = () => {
+      raf = 0;
+      const vh = window.innerHeight;
+      const p = Math.min(
+        Math.max(window.scrollY / vh - 1, 0),
+        WAYPOINTS.length - 1
+      );
+      progress.current = p;
+      setActive((prev) => {
+        const next = Math.round(p);
+        return prev === next ? prev : next;
+      });
+    };
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, []);
+
+  const goTo = (index: number) => {
+    window.scrollTo({
+      top: (index + 1) * window.innerHeight,
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+    });
+  };
 
   return (
     <div className="home">
+      <div className="home__canvas">
+        <Suspense fallback={null}>
+          <RoomScene progress={progress} onLoaded={handleLoaded} />
+        </Suspense>
+        <div className="home__vignette" />
+      </div>
+
+      <LoadingOverlay ready={ready} />
       <NavBar />
 
-      {/* One orchestrated reveal on load — not a fade-up on every section. */}
-      <motion.section
-        className="home__hero-section"
-        initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={SPRING}
-      >
+      {/* Hero */}
+      <section className="home__panel home__panel--hero">
         <div className="home__container">
-          <div className="home__hero-frame">
-            <img
-              src={HERO_IMAGE}
-              alt="Interior design showcase"
-              className="home__hero-image"
-            />
-          </div>
-
-          <p className="home__eyebrow">Design. Plan. Estimate.</p>
-          <h1 className="home__large-title">
-            3D Interior Design,
-            <br />
-            Planned Smarter.
-          </h1>
-          <p className="home__hero-subhead">
-            Visualize room layouts in 3D, arrange furniture, choose
-            materials, and instantly see an estimated project cost before
-            bringing your design to life.
-          </p>
+          <motion.div
+            initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 12 }}
+            animate={ready ? { opacity: 1, y: 0 } : undefined}
+            transition={SPRING}
+          >
+            <p className="home__eyebrow">Design. Plan. Estimate.</p>
+            <h1 className="home__large-title">
+              3D Interior Design,
+              <br />
+              Planned Smarter.
+            </h1>
+            <p className="home__hero-subhead">
+              Visualize room layouts in 3D, arrange furniture, choose
+              materials, and instantly see an estimated project cost.
+            </p>
+            <p className="home__scroll-hint">Scroll to walk through</p>
+          </motion.div>
         </div>
-      </motion.section>
+      </section>
 
-      <section className="home__process-section">
+      {/* One full-height section per waypoint (drives the scroll length) */}
+      {WAYPOINTS.map((wp, i) => (
+        <section key={wp.id} className="home__panel" aria-label={wp.name}>
+          <div className="home__container">
+            <motion.div
+              className="home__caption"
+              animate={{
+                opacity: active === i ? 1 : 0,
+                y: active === i ? 0 : prefersReducedMotion ? 0 : 16,
+              }}
+              transition={SPRING}
+            >
+              <p className="home__eyebrow">
+                {String(i + 1).padStart(2, "0")} / {String(WAYPOINTS.length).padStart(2, "0")}
+              </p>
+              <h2 className="home__heading-2">{wp.name}</h2>
+              <p className="home__section-subhead">{wp.blurb}</p>
+            </motion.div>
+          </div>
+        </section>
+      ))}
+
+      {/* Closing CTA */}
+      <section className="home__panel home__panel--end">
         <div className="home__container">
-          <p className="home__eyebrow">From Concept to Reality</p>
-          <h2 className="home__heading-2">See the Process</h2>
-          <p className="home__section-subhead">
-            Every finished space starts as a sketch. Here's what it looks
-            like to go from an empty room to a fully designed, cost-estimated
-            interior.
-          </p>
-
-          <div className="home__result-frame">
-            <img
-              src={RESULT_IMAGE}
-              alt="Finished interior design render"
-              className="home__result-image"
-            />
-          </div>
-
-          {/* Grouped list — hairline separators, no card shadows. Pressed
-              state is instant via CSS :active (fires on pointer-down). */}
-          <div className="home__group">
-            {PROCESS_STEPS.map((step) => (
-              <div key={step.title} className="home__row">
-                <img
-                  src={step.image}
-                  alt=""
-                  aria-hidden="true"
-                  className="home__row-thumb"
-                />
-                <div className="home__row-text">
-                  <p className="home__row-title">{step.title}</p>
-                  <p className="home__row-desc">{step.description}</p>
-                </div>
-                <ChevronRight className="home__row-chevron" strokeWidth={2} />
-              </div>
-            ))}
-          </div>
-
-          {/* Chevron nudges toward the destination on hover — hints the
-              direction of the interaction rather than just sitting still. */}
+          <h2 className="home__heading-2">Ready to design yours?</h2>
           <Link to="/signup" className="home__cta-link">
             <span>Start designing your space</span>
             <motion.span
@@ -126,6 +158,22 @@ export default function Home() {
           </Link>
         </div>
       </section>
+
+      {/* Room navigation dots */}
+      <nav className="home__dots" aria-label="Rooms">
+        {WAYPOINTS.map((wp, i) => (
+          <button
+            key={wp.id}
+            type="button"
+            className={`home__dot${active === i ? " is-active" : ""}`}
+            aria-label={`Go to ${wp.name}`}
+            aria-current={active === i}
+            onClick={() => goTo(i)}
+          >
+            <span className="home__dot-label">{wp.name}</span>
+          </button>
+        ))}
+      </nav>
     </div>
   );
 }
