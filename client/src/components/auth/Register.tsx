@@ -1,10 +1,19 @@
-import { useState } from "react";
+
+import { useState, type FormEvent } from "react";
 import {
   createUserWithEmailAndPassword,
   sendEmailVerification,
 } from "firebase/auth";
 
 import { cn } from "cn";
+import { auth } from "@/firebase/firebase";
+import {
+  validateConfirmPassword,
+  validateContact,
+  validateEmail,
+  validateFullName,
+  validatePassword,
+} from "@/utils/authValidation";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -22,9 +31,8 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
-import { auth } from "@/firebase/firebase";
-
-interface SignupFormProps {
+interface SignupFormProps
+  extends React.ComponentProps<"div"> {
   onLogin: () => void;
   onVerify: () => void;
 }
@@ -34,118 +42,87 @@ export function SignupForm({
   onVerify,
   className,
   ...props
-}: SignupFormProps & React.ComponentProps<"div">) {
+}: SignupFormProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [contact, setContact] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] =
-    useState("");
-
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.SubmitEvent) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
     setError("");
 
-    if (!name.trim()) {
-      setError("Please enter your full name.");
-      return;
-    }
+    const validationError =
+      validateFullName(name) ||
+      validateEmail(email) ||
+      validateContact(contact) ||
+      validatePassword(password) ||
+      validateConfirmPassword(password, confirmPassword);
 
-    if (!email.trim()) {
-      setError("Please enter your email.");
-      return;
-    }
-
-    if (!contact.trim()) {
-      setError("Please enter your contact number.");
-      return;
-    }
-
-    if (password.length < 8) {
-      setError(
-        "Password must be at least 8 characters long."
-      );
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
     setLoading(true);
 
     try {
-      const userCredential =
-        await createUserWithEmailAndPassword(
-          auth,
-          email.trim().toLowerCase(),
-          password
-        );
+      const normalizedEmail = email.trim().toLowerCase();
 
-      const user = userCredential.user;
-
-      /*
-       * Temporarily store signup information.
-       * The Firestore profile will only be created
-       * after email verification.
-       */
-      localStorage.setItem(
-        "pendingEspasyoProfile",
-        JSON.stringify({
-          full_name: name.trim(),
-          email: email.trim().toLowerCase(),
-          contact: contact.trim(),
-        })
+      const credential = await createUserWithEmailAndPassword(
+        auth,
+        normalizedEmail,
+        password
       );
 
-      await sendEmailVerification(user);
+      try {
+        localStorage.setItem(
+          "pendingEspasyoProfile",
+          JSON.stringify({
+            full_name: name.trim(),
+            email: normalizedEmail,
+            contact,
+          })
+        );
 
-      /*
-       * Switch the AuthPage to the verification form.
-       */
+        await sendEmailVerification(credential.user);
+      } catch (verificationError) {
+        // Avoid leaving a signed-in, unverified account.
+        await credential.user.delete().catch(() => undefined);
+        throw verificationError;
+      }
+
       onVerify();
-    } catch (error: any) {
-      console.error("Signup error:", error);
+    } catch (err: unknown) {
+      const code =
+        typeof err === "object" &&
+        err !== null &&
+        "code" in err
+          ? String(err.code)
+          : "";
 
-      switch (error.code) {
+      switch (code) {
         case "auth/email-already-in-use":
-          setError(
-            "An account with this email already exists."
-          );
+          setError("An account with this email already exists.");
           break;
-
         case "auth/invalid-email":
-          setError(
-            "Please enter a valid email address."
-          );
+          setError("Please enter a valid email address.");
           break;
-
         case "auth/weak-password":
-          setError(
-            "Password must be at least 8 characters."
-          );
+          setError("Please choose a stronger password.");
           break;
-
         case "auth/network-request-failed":
-          setError(
-            "Network error. Please check your connection."
-          );
+          setError("Network error. Check your connection.");
           break;
-
         case "auth/too-many-requests":
-          setError(
-            "Too many requests. Please try again later."
-          );
+          setError("Too many requests. Please try again later.");
           break;
-
         default:
           setError(
-            "Unable to create your account. Please try again."
+            "Unable to complete registration. Please try again."
           );
       }
     } finally {
@@ -163,173 +140,144 @@ export function SignupForm({
           <CardTitle className="text-xl">
             Create your account
           </CardTitle>
-
           <CardDescription>
-            Enter your information to create your
-            Espasyo account
+            Enter your information to join Espasyo
           </CardDescription>
         </CardHeader>
 
         <CardContent>
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} noValidate>
             <FieldGroup>
-
-              {/* Full Name */}
               <Field>
-                <FieldLabel htmlFor="name">
+                <FieldLabel htmlFor="signup-name">
                   Full Name
                 </FieldLabel>
-
                 <Input
-                  id="name"
+                  id="signup-name"
                   type="text"
+                  autoComplete="name"
                   placeholder="John Doe"
                   value={name}
-                  onChange={(e) =>
-                    setName(e.target.value)
-                  }
-                  autoComplete="name"
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (/^[\p{L}\s]*$/u.test(value)) {
+                      setName(value);
+                    }
+                  }}
                   required
                 />
+                <FieldDescription>
+                  Letters and spaces only.
+                </FieldDescription>
               </Field>
 
-              {/* Email */}
               <Field>
                 <FieldLabel htmlFor="signup-email">
                   Email
                 </FieldLabel>
-
                 <Input
                   id="signup-email"
                   type="email"
-                  placeholder="m@example.com"
-                  value={email}
-                  onChange={(e) =>
-                    setEmail(e.target.value)
-                  }
                   autoComplete="email"
+                  placeholder="name@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </Field>
 
-              {/* Contact */}
               <Field>
-                <FieldLabel htmlFor="contact">
-                  Contact
+                <FieldLabel htmlFor="signup-contact">
+                  Contact Number
                 </FieldLabel>
-
                 <Input
-                  id="contact"
+                  id="signup-contact"
                   type="tel"
-                  placeholder="09XXXXXXXXX"
+                  inputMode="numeric"
+                  autoComplete="tel"
+                  placeholder="09123456789"
+                  maxLength={11}
                   value={contact}
                   onChange={(e) =>
-                    setContact(e.target.value)
+                    setContact(
+                      e.target.value.replace(/\D/g, "").slice(0, 11)
+                    )
                   }
-                  autoComplete="tel"
                   required
                 />
-              </Field>
-
-              {/* Passwords */}
-              <Field>
-                <Field className="grid grid-cols-2 gap-4">
-                  <Field>
-                    <FieldLabel htmlFor="signup-password">
-                      Password
-                    </FieldLabel>
-
-                    <Input
-                      id="signup-password"
-                      type="password"
-                      value={password}
-                      onChange={(e) =>
-                        setPassword(e.target.value)
-                      }
-                      autoComplete="new-password"
-                      required
-                    />
-                  </Field>
-
-                  <Field>
-                    <FieldLabel htmlFor="confirm-password">
-                      Confirm Password
-                    </FieldLabel>
-
-                    <Input
-                      id="confirm-password"
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) =>
-                        setConfirmPassword(
-                          e.target.value
-                        )
-                      }
-                      autoComplete="new-password"
-                      required
-                    />
-                  </Field>
-                </Field>
-
                 <FieldDescription>
-                  Must be at least 8 characters long.
+                  Enter exactly 11 digits.
                 </FieldDescription>
               </Field>
 
-              {/* Error */}
+              <Field>
+                <FieldLabel htmlFor="signup-password">
+                  Password
+                </FieldLabel>
+                <Input
+                  id="signup-password"
+                  type="password"
+                  autoComplete="new-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  minLength={8}
+                  required
+                />
+                <FieldDescription>
+                  At least 8 characters.
+                </FieldDescription>
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="confirm-password">
+                  Confirm Password
+                </FieldLabel>
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  onChange={(e) =>
+                    setConfirmPassword(e.target.value)
+                  }
+                  minLength={8}
+                  required
+                />
+              </Field>
+
               {error && (
-                <FieldDescription className="text-destructive">
+                <FieldDescription
+                  role="alert"
+                  className="text-destructive"
+                >
                   {error}
                 </FieldDescription>
               )}
 
-              {/* Submit */}
               <Field>
                 <Button
                   type="submit"
                   className="w-full"
                   disabled={loading}
                 >
-                  {loading
-                    ? "Creating account..."
-                    : "Create Account"}
+                  {loading ? "Creating account..." : "Create Account"}
                 </Button>
 
                 <FieldDescription className="text-center">
                   Already have an account?{" "}
-
                   <button
                     type="button"
                     onClick={onLogin}
-                    className="cursor-pointer ml-auto text-sm underline-offset-4 hover:underline"
+                    className="underline underline-offset-4"
                   >
                     Sign in
                   </button>
                 </FieldDescription>
               </Field>
-
             </FieldGroup>
           </form>
         </CardContent>
       </Card>
-
-      <FieldDescription className="px-6 text-center">
-        By clicking continue, you agree to our{" "}
-        <a
-          href="#"
-          className="underline underline-offset-4"
-        >
-          Terms of Service
-        </a>{" "}
-        and{" "}
-        <a
-          href="#"
-          className="underline underline-offset-4"
-        >
-          Privacy Policy
-        </a>
-        .
-      </FieldDescription>
     </div>
   );
 }
