@@ -25,8 +25,7 @@ import type {
 
 import type {
     FurnitureCategory
-} from "./FurnitureCategory";
-
+} from "../../engine/furniture/FurnitureCategory";
 
 //==================================================
 // FIREBASE FURNITURE DOCUMENT
@@ -52,74 +51,33 @@ import type {
 //==================================================
 
 interface FirebaseFurnitureAsset {
-
     id?: unknown;
-
     name?: unknown;
-
     asset_type?: unknown;
-
     asset_status?: unknown;
-
     category?: unknown;
-
     price?: unknown;
-
     model_path?: unknown;
-
-    // Preferred: already-generated Firebase Storage download URL.
     model_url?: unknown;
-
     thumbnail_path?: unknown;
-
-    // Preferred: already-generated Firebase Storage download URL.
     thumbnail_url?: unknown;
-
-    //--------------------------------------------------
-    // Current Firebase field is singular:
-    // placement_surface: "wall"
-    //--------------------------------------------------
-
     placement_surface?: unknown;
-
-    //--------------------------------------------------
-    // Keep support for the old plural format too.
-    //--------------------------------------------------
-
     placement_surfaces?: unknown;
-
-    //--------------------------------------------------
-    // Optional fields for future/admin versions.
-    //--------------------------------------------------
-
     rotation_offset_y?: unknown;
-
     depth_offset?: unknown;
-
     snap_target?: unknown;
-
     snap_targets?: unknown;
-
     created_at?: unknown;
-
     updated_at?: unknown;
-
 }
-
 
 //==================================================
 // CACHE
 //==================================================
 
 let cachedFurnitureAssets: Asset[] = [];
-
-let furnitureCatalogLoaded =
-    false;
-
-let furnitureCatalogPromise:
-    Promise<Asset[]> | null =
-    null;
-
+let furnitureCatalogLoaded = false;
+let furnitureCatalogPromise: Promise<Asset[]> | null = null;
 
 //==================================================
 // STORAGE URL
@@ -128,55 +86,29 @@ let furnitureCatalogPromise:
 async function resolveStorageUrl(
     value: unknown
 ): Promise<string | undefined> {
-
-    if (
-        typeof value !== "string"
-    ) {
-
+    if (typeof value !== "string") {
         return undefined;
-
     }
 
-    const path =
-        value.trim();
+    const path = value.trim();
 
-    if (
-        path === ""
-    ) {
-
+    if (path === "") {
         return undefined;
-
     }
-
-    //--------------------------------------------------
-    // Already a URL
-    //--------------------------------------------------
 
     if (
         path.startsWith("http://") ||
         path.startsWith("https://") ||
         path.startsWith("data:")
     ) {
-
         return path;
-
     }
 
-    //--------------------------------------------------
-    // Firebase Storage path
-    //--------------------------------------------------
-
     try {
-
         return await getDownloadURL(
-            ref(
-                storage,
-                path
-            )
+            ref(storage, path)
         );
-
     } catch (error) {
-
         console.error(
             "Failed to resolve Firebase furniture storage file:",
             path,
@@ -184,11 +116,8 @@ async function resolveStorageUrl(
         );
 
         return undefined;
-
     }
-
 }
-
 
 //==================================================
 // PREFERRED URL
@@ -198,38 +127,20 @@ async function resolvePreferredUrl(
     directUrl: unknown,
     storagePath: unknown
 ): Promise<string | undefined> {
-
-    //--------------------------------------------------
-    // Fast path: Firestore already contains the URL.
-    //--------------------------------------------------
-
-    if (
-        typeof directUrl === "string"
-    ) {
-
-        const value =
-            directUrl.trim();
+    if (typeof directUrl === "string") {
+        const value = directUrl.trim();
 
         if (
             value.startsWith("http://") ||
             value.startsWith("https://") ||
             value.startsWith("data:")
         ) {
-
             return value;
         }
     }
 
-    //--------------------------------------------------
-    // Backward compatibility for old documents that only
-    // store model_path / thumbnail_path.
-    //--------------------------------------------------
-
-    return resolveStorageUrl(
-        storagePath
-    );
+    return resolveStorageUrl(storagePath);
 }
-
 
 //==================================================
 // CATEGORY NORMALIZER
@@ -238,28 +149,16 @@ async function resolvePreferredUrl(
 function normalizeFurnitureCategory(
     value: unknown
 ): FurnitureCategory | undefined {
-
-    if (
-        typeof value !== "string"
-    ) {
-
+    if (typeof value !== "string") {
         return undefined;
-
     }
 
-    const category =
-        value
-            .trim()
-            .toLowerCase()
-            .replace(
-                /[\s_-]+/g,
-                ""
-            );
+    const category = value
+        .trim()
+        .toLowerCase()
+        .replace(/[\s_-]+/g, "");
 
-    switch (
-        category
-    ) {
-
+    switch (category) {
         case "livingroom":
         case "living":
             return "livingRoom";
@@ -282,10 +181,6 @@ function normalizeFurnitureCategory(
         case "study":
             return "office";
 
-        //--------------------------------------------------
-        // These are not furniture categories.
-        //--------------------------------------------------
-
         case "door":
         case "doors":
         case "window":
@@ -296,119 +191,52 @@ function normalizeFurnitureCategory(
 
         default:
             return undefined;
-
     }
-
 }
-
 
 //==================================================
 // READ PLACEMENT SURFACE
-//==================================================
-//
-// Supports the CURRENT Firebase format:
-//
-//     placement_surface: "wall"
-//
-// and also the previous/plural format:
-//
-//     placement_surfaces: ["wall"]
-//
-// The Firebase value is converted into the Asset
-// format used by the editor:
-//
-//     placementSurfaces: ["wall"]
 //==================================================
 
 function readPlacementSurfaces(
     data: FirebaseFurnitureAsset
 ): Asset["placementSurfaces"] {
-
-    //--------------------------------------------------
-    // Current singular field
-    //--------------------------------------------------
-
-    if (
-        typeof data.placement_surface ===
-        "string"
-    ) {
-
-        const value =
-            data.placement_surface
-                .trim()
-                .toLowerCase();
+    if (typeof data.placement_surface === "string") {
+        const value = data.placement_surface
+            .trim()
+            .toLowerCase();
 
         if (
             value === "floor" ||
             value === "wall" ||
             value === "furniture"
         ) {
-
-            return [
-                value
-            ];
-
+            return [value];
         }
-
     }
 
+    if (Array.isArray(data.placement_surfaces)) {
+        const values = data.placement_surfaces
+            .filter(
+                item => typeof item === "string"
+            )
+            .map(
+                item => item.trim().toLowerCase()
+            )
+            .filter(
+                item =>
+                    item === "floor" ||
+                    item === "wall" ||
+                    item === "furniture"
+            );
 
-    //--------------------------------------------------
-    // Backward-compatible plural field
-    //--------------------------------------------------
-
-    if (
-        Array.isArray(
-            data.placement_surfaces
-        )
-    ) {
-
-        const values =
-            data.placement_surfaces
-                .filter(
-                    item =>
-                        typeof item ===
-                        "string"
-                )
-                .map(
-                    item =>
-                        item
-                            .trim()
-                            .toLowerCase()
-                )
-                .filter(
-                    item =>
-                        item === "floor" ||
-                        item === "wall" ||
-                        item === "furniture"
-                );
-
-        if (
-            values.length > 0
-        ) {
-
-            return values as Asset[
-                "placementSurfaces"
-            ];
-
+        if (values.length > 0) {
+            return values as Asset["placementSurfaces"];
         }
-
     }
 
-
-    //--------------------------------------------------
-    // Missing placement surface
-    //
-    // Keep floor as a compatibility fallback for old
-    // furniture documents that have no placement field.
-    //--------------------------------------------------
-
-    return [
-        "floor"
-    ];
-
+    return ["floor"];
 }
-
 
 //==================================================
 // READ SNAP TARGETS
@@ -417,88 +245,40 @@ function readPlacementSurfaces(
 function readSnapTargets(
     data: FirebaseFurnitureAsset
 ): Asset["snapTargets"] {
-
-    //--------------------------------------------------
-    // Current singular field
-    //--------------------------------------------------
-
-    if (
-        typeof data.snap_target ===
-        "string"
-    ) {
-
-        const value =
-            data.snap_target
-                .trim()
-                .toLowerCase();
+    if (typeof data.snap_target === "string") {
+        const value = data.snap_target
+            .trim()
+            .toLowerCase();
 
         if (
             value === "wall" ||
             value === "furniture"
         ) {
-
-            return [
-                value
-            ];
-
+            return [value];
         }
-
     }
 
+    if (Array.isArray(data.snap_targets)) {
+        const values = data.snap_targets
+            .filter(
+                item => typeof item === "string"
+            )
+            .map(
+                item => item.trim().toLowerCase()
+            )
+            .filter(
+                item =>
+                    item === "wall" ||
+                    item === "furniture"
+            );
 
-    //--------------------------------------------------
-    // Plural field
-    //--------------------------------------------------
-
-    if (
-        Array.isArray(
-            data.snap_targets
-        )
-    ) {
-
-        const values =
-            data.snap_targets
-                .filter(
-                    item =>
-                        typeof item ===
-                        "string"
-                )
-                .map(
-                    item =>
-                        item
-                            .trim()
-                            .toLowerCase()
-                )
-                .filter(
-                    item =>
-                        item === "wall" ||
-                        item === "furniture"
-                );
-
-        if (
-            values.length > 0
-        ) {
-
-            return values as Asset[
-                "snapTargets"
-            ];
-
+        if (values.length > 0) {
+            return values as Asset["snapTargets"];
         }
-
     }
 
-
-    //--------------------------------------------------
-    // Default
-    //--------------------------------------------------
-
-    return [
-        "wall",
-        "furniture"
-    ];
-
+    return ["wall", "furniture"];
 }
-
 
 //==================================================
 // BUILD ASSET
@@ -508,53 +288,22 @@ async function buildFurnitureAsset(
     documentId: string,
     data: FirebaseFurnitureAsset
 ): Promise<Asset | null> {
-
-    //--------------------------------------------------
-    // Only furniture documents
-    //--------------------------------------------------
-
-    if (
-        data.asset_type !==
-        "furniture"
-    ) {
-
+    if (data.asset_type !== "furniture") {
         return null;
-
     }
 
-
-    //--------------------------------------------------
-    // Only available assets
-    //--------------------------------------------------
-
+    // Only explicitly available furniture is loaded.
     if (
-        typeof data.asset_status ===
-        "string" &&
-        data.asset_status.trim() !== "" &&
-        data.asset_status
-            .trim()
-            .toLowerCase() !==
-        "available"
+        typeof data.asset_status !== "string" ||
+        data.asset_status.trim().toLowerCase() !== "available"
     ) {
-
         return null;
-
     }
-
-
-    //--------------------------------------------------
-    // Furniture category
-    //--------------------------------------------------
 
     const furnitureCategory =
-        normalizeFurnitureCategory(
-            data.category
-        );
+        normalizeFurnitureCategory(data.category);
 
-    if (
-        !furnitureCategory
-    ) {
-
+    if (!furnitureCategory) {
         console.warn(
             "Skipping Firebase furniture asset with unsupported category:",
             documentId,
@@ -562,33 +311,14 @@ async function buildFurnitureAsset(
         );
 
         return null;
-
     }
 
+    const modelUrl = await resolvePreferredUrl(
+        data.model_url,
+        data.model_path
+    );
 
-    //--------------------------------------------------
-    // Model URL
-    //--------------------------------------------------
-    //
-    // Preferred field: model_url
-    //
-    // This avoids calling getDownloadURL() when the URL was
-    // already generated by the admin upload process.
-    //
-    // Backward compatibility: older documents that only have
-    // model_path are still supported through resolveStorageUrl().
-    //--------------------------------------------------
-
-    const modelUrl =
-        await resolvePreferredUrl(
-            data.model_url,
-            data.model_path
-        );
-
-    if (
-        !modelUrl
-    ) {
-
+    if (!modelUrl) {
         console.warn(
             "Skipping Firebase furniture asset without a usable model_url/model_path:",
             documentId,
@@ -596,29 +326,12 @@ async function buildFurnitureAsset(
         );
 
         return null;
-
     }
 
-
-    //--------------------------------------------------
-    // Thumbnail URL
-    //--------------------------------------------------
-    //
-    // An empty thumbnail is allowed.
-    // Prefer thumbnail_url so the catalog does not need a
-    // Storage URL lookup for the thumbnail either.
-    //--------------------------------------------------
-
-    const thumbnailUrl =
-        await resolvePreferredUrl(
-            data.thumbnail_url,
-            data.thumbnail_path
-        );
-
-
-    //--------------------------------------------------
-    // ID
-    //--------------------------------------------------
+    const thumbnailUrl = await resolvePreferredUrl(
+        data.thumbnail_url,
+        data.thumbnail_path
+    );
 
     const assetId =
         typeof data.id === "string" &&
@@ -626,320 +339,127 @@ async function buildFurnitureAsset(
             ? data.id.trim()
             : documentId;
 
-
-    //--------------------------------------------------
-    // Name
-    //--------------------------------------------------
-
     const name =
         typeof data.name === "string" &&
         data.name.trim() !== ""
             ? data.name.trim()
             : assetId;
 
+    const parsedPrice = Number(data.price ?? 0);
 
-    //--------------------------------------------------
-    // Price
-    //--------------------------------------------------
+    const price = Number.isFinite(parsedPrice)
+        ? parsedPrice
+        : 0;
 
-    const parsedPrice =
-        Number(
-            data.price ?? 0
-        );
+    const parsedRotationOffsetY = Number(
+        data.rotation_offset_y ?? 0
+    );
 
+    const rotationOffsetY = Number.isFinite(
+        parsedRotationOffsetY
+    )
+        ? parsedRotationOffsetY
+        : 0;
 
-    const price =
-        Number.isFinite(
-            parsedPrice
-        )
-            ? parsedPrice
-            : 0;
+    const parsedDepthOffset = Number(
+        data.depth_offset ?? 0
+    );
 
-
-    //--------------------------------------------------
-    // Optional rotation
-    //--------------------------------------------------
-
-    const parsedRotationOffsetY =
-        Number(
-            data.rotation_offset_y ?? 0
-        );
-
-
-    const rotationOffsetY =
-        Number.isFinite(
-            parsedRotationOffsetY
-        )
-            ? parsedRotationOffsetY
-            : 0;
-
-
-    //--------------------------------------------------
-    // Optional depth offset
-    //--------------------------------------------------
-
-    const parsedDepthOffset =
-        Number(
-            data.depth_offset ?? 0
-        );
-
-
-    const depthOffset =
-        Number.isFinite(
-            parsedDepthOffset
-        )
-            ? parsedDepthOffset
-            : 0;
-
-
-    //--------------------------------------------------
-    // Placement surface
-    //--------------------------------------------------
+    const depthOffset = Number.isFinite(
+        parsedDepthOffset
+    )
+        ? parsedDepthOffset
+        : 0;
 
     const placementSurfaces =
-        readPlacementSurfaces(
-            data
-        );
-
-
-    //--------------------------------------------------
-    // Snap targets
-    //--------------------------------------------------
+        readPlacementSurfaces(data);
 
     const snapTargets =
-        readSnapTargets(
-            data
-        );
-
-
-    //--------------------------------------------------
-    // Convert Firebase document → Asset
-    //--------------------------------------------------
+        readSnapTargets(data);
 
     return {
-
-        id:
-            assetId,
-
-        name:
-            name,
-
-        thumbnail:
-            thumbnailUrl ?? "",
-
-        model:
-            modelUrl,
-
-        type:
-            BuildTool.Furniture,
-
-        price:
-            price,
-
-        furnitureCategory:
-            furnitureCategory,
-
-        rotationOffsetY:
-            rotationOffsetY,
-
-        depthOffset:
-            depthOffset,
-
-        placementSurfaces:
-            placementSurfaces,
-
-        snapTargets:
-            snapTargets
-
+        id: assetId,
+        name,
+        thumbnail: thumbnailUrl ?? "",
+        model: modelUrl,
+        type: BuildTool.Furniture,
+        price,
+        furnitureCategory,
+        rotationOffsetY,
+        depthOffset,
+        placementSurfaces,
+        snapTargets
     } satisfies Asset;
-
 }
-
 
 //==================================================
 // LOAD FURNITURE CATALOG
 //==================================================
 
-async function loadFurnitureAssets():
-    Promise<Asset[]> {
+async function loadFurnitureAssets(): Promise<Asset[]> {
+    const furnitureQuery = query(
+        collection(db, "assets"),
+        where("asset_type", "==", "furniture")
+    );
 
-    const furnitureQuery =
-        query(
+    const snapshot = await getDocs(furnitureQuery);
 
-            collection(
-                db,
-                "assets"
-            ),
+    const results = await Promise.allSettled(
+        snapshot.docs.map(
+            async document =>
+                buildFurnitureAsset(
+                    document.id,
+                    document.data() as FirebaseFurnitureAsset
+                )
+        )
+    );
 
-            where(
-                "asset_type",
-                "==",
-                "furniture"
-            )
+    const assets: Asset[] = [];
 
-        );
-
-
-    const snapshot =
-        await getDocs(
-            furnitureQuery
-        );
-
-
-    //--------------------------------------------------
-    // Firestore returns the complete document.
-    // buildFurnitureAsset() maps the fields the editor
-    // actually needs.
-    //--------------------------------------------------
-
-    const results =
-        await Promise.allSettled(
-
-            snapshot.docs.map(
-
-                async document =>
-
-                    buildFurnitureAsset(
-
-                        document.id,
-
-                        document.data() as
-                            FirebaseFurnitureAsset
-
-                    )
-
-            )
-
-        );
-
-
-    const assets:
-        Asset[] = [];
-
-
-    for (
-        const result
-        of results
-    ) {
-
-        if (
-            result.status ===
-            "fulfilled"
-        ) {
-
-            if (
-                result.value
-            ) {
-
-                assets.push(
-                    result.value
-                );
-
+    for (const result of results) {
+        if (result.status === "fulfilled") {
+            if (result.value) {
+                assets.push(result.value);
             }
-
-        }
-
-        else {
-
+        } else {
             console.error(
                 "Failed to build Firebase furniture asset:",
                 result.reason
             );
-
         }
-
     }
 
-
-    //--------------------------------------------------
-    // Stable order
-    //--------------------------------------------------
-
     assets.sort(
-
-        (
-            first,
-            second
-        ) =>
-            first.name.localeCompare(
-                second.name
-            )
-
+        (first, second) =>
+            first.name.localeCompare(second.name)
     );
 
-
-    //--------------------------------------------------
-    // Cache
-    //--------------------------------------------------
-
-    cachedFurnitureAssets =
-        assets;
-
-
-    furnitureCatalogLoaded =
-        true;
-
+    cachedFurnitureAssets = assets;
+    furnitureCatalogLoaded = true;
 
     return cachedFurnitureAssets;
-
 }
-
 
 //==================================================
 // GET FURNITURE ASSETS
 //==================================================
 
-export async function getFurnitureAssets():
-    Promise<Asset[]> {
-
-    //--------------------------------------------------
-    // Already loaded
-    //--------------------------------------------------
-
-    if (
-        furnitureCatalogLoaded
-    ) {
-
+export async function getFurnitureAssets(): Promise<Asset[]> {
+    if (furnitureCatalogLoaded) {
         return cachedFurnitureAssets;
-
     }
 
-
-    //--------------------------------------------------
-    // Reuse active request
-    //--------------------------------------------------
-
-    if (
-        furnitureCatalogPromise
-    ) {
-
+    if (furnitureCatalogPromise) {
         return furnitureCatalogPromise;
-
     }
 
-
-    //--------------------------------------------------
-    // Start request
-    //--------------------------------------------------
-
-    furnitureCatalogPromise =
-        loadFurnitureAssets()
-            .finally(
-
-                () => {
-
-                    furnitureCatalogPromise =
-                        null;
-
-                }
-
-            );
-
+    furnitureCatalogPromise = loadFurnitureAssets()
+        .finally(() => {
+            furnitureCatalogPromise = null;
+        });
 
     return furnitureCatalogPromise;
-
 }
-
 
 //==================================================
 // GET CACHED FURNITURE ASSET
@@ -948,46 +468,27 @@ export async function getFurnitureAssets():
 export function getCachedFurnitureAsset(
     assetId: string
 ): Asset | undefined {
-
     return cachedFurnitureAssets.find(
-
-        asset =>
-            asset.id ===
-            assetId
-
+        asset => asset.id === assetId
     );
-
 }
-
 
 //==================================================
 // GET CACHED FURNITURE ASSETS
 //==================================================
 
-export function getCachedFurnitureAssets():
-    Asset[] {
-
+export function getCachedFurnitureAssets(): Asset[] {
     return cachedFurnitureAssets;
-
 }
-
 
 //==================================================
 // REFRESH FURNITURE ASSETS
 //==================================================
 
-export async function refreshFurnitureAssets():
-    Promise<Asset[]> {
-
-    cachedFurnitureAssets =
-        [];
-
-    furnitureCatalogLoaded =
-        false;
-
-    furnitureCatalogPromise =
-        null;
+export async function refreshFurnitureAssets(): Promise<Asset[]> {
+    cachedFurnitureAssets = [];
+    furnitureCatalogLoaded = false;
+    furnitureCatalogPromise = null;
 
     return getFurnitureAssets();
-
 }

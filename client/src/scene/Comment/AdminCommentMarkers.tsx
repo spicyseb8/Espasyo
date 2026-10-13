@@ -1,3 +1,4 @@
+
 import {
     useEffect,
     useState
@@ -41,6 +42,8 @@ interface MarkerProps {
         boolean;
     visible:
         boolean;
+    onHide:
+        (commentId: string) => void;
 }
 
 function formatCommentDate(
@@ -95,7 +98,8 @@ function Marker({
     comment,
     position,
     focused,
-    visible
+    visible,
+    onHide
 }: MarkerProps) {
     const {
         camera
@@ -121,6 +125,15 @@ function Marker({
         );
     });
 
+    const handleContextMenu = (
+        event: React.MouseEvent
+    ) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        onHide(comment.id);
+    };
+
     return (
         <Html
             position={
@@ -130,8 +143,12 @@ function Marker({
             distanceFactor={
                 undefined
             }
+            zIndexRange={[100, 0]}
         >
             <div
+                onContextMenu={
+                    handleContextMenu
+                }
                 style={{
                     position:
                         "relative",
@@ -148,10 +165,14 @@ function Marker({
                     onClick={
                         event => {
                             event.stopPropagation();
+
                             emitAdminCommentMarkerClick(
                                 comment.id
                             );
                         }
+                    }
+                    onContextMenu={
+                        handleContextMenu
                     }
                     style={{
                         width:
@@ -234,6 +255,7 @@ function Marker({
                                 comment.adminName
                             }
                         </div>
+
                         <div
                             style={{
                                 marginTop:
@@ -250,6 +272,7 @@ function Marker({
                                 )
                             }
                         </div>
+
                         <div
                             style={{
                                 marginTop:
@@ -266,6 +289,7 @@ function Marker({
                                 comment.targetLabel
                             }
                         </div>
+
                         <div
                             style={{
                                 marginTop:
@@ -308,6 +332,13 @@ export default function AdminCommentMarkers({
         string | null
     >(null);
 
+    const [
+        hiddenCommentIds,
+        setHiddenCommentIds
+    ] = useState<Set<string>>(
+        () => new Set()
+    );
+
     useEffect(() => {
         const handleMarkerClick =
             (
@@ -321,6 +352,19 @@ export default function AdminCommentMarkers({
                 ) {
                     return;
                 }
+
+                setHiddenCommentIds(
+                    current => {
+                        const next =
+                            new Set(current);
+
+                        next.delete(
+                            customEvent.detail
+                        );
+
+                        return next;
+                    }
+                );
 
                 setVisibleCommentId(
                     customEvent.detail
@@ -387,6 +431,14 @@ export default function AdminCommentMarkers({
                 )
                 .map(
                     comment => {
+                        if (
+                            hiddenCommentIds.has(
+                                comment.id
+                            )
+                        ) {
+                            return null;
+                        }
+
                         const position =
                             getAdminCommentTargetPoint(
                                 state,
@@ -416,6 +468,36 @@ export default function AdminCommentMarkers({
                                     visibleCommentId ===
                                     comment.id
                                 }
+                                onHide={
+                                    commentId => {
+                                        setHiddenCommentIds(
+                                            current => {
+                                                const next =
+                                                    new Set(current);
+
+                                                next.add(
+                                                    commentId
+                                                );
+
+                                                return next;
+                                            }
+                                        );
+
+                                        setVisibleCommentId(
+                                            current =>
+                                                current === commentId
+                                                    ? null
+                                                    : current
+                                        );
+
+                                        setFocusedCommentId(
+                                            current =>
+                                                current === commentId
+                                                    ? null
+                                                    : current
+                                        );
+                                    }
+                                }
                             />
                         );
                     }
@@ -423,3 +505,4 @@ export default function AdminCommentMarkers({
         </>
     );
 }
+

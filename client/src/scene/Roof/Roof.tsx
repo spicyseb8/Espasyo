@@ -1,336 +1,341 @@
-import { useMemo } from "react";
 
+import { useEffect, useMemo } from "react";
+import { useLoader } from "@react-three/fiber";
+import { useGLTF } from "@react-three/drei";
 import {
+    Box3,
     DoubleSide,
+    Mesh,
+    NoColorSpace,
+    Path,
+    RepeatWrapping,
     Shape,
     ShapeGeometry,
+    SRGBColorSpace,
+    TextureLoader,
     Vector3
 } from "three";
+import useEditor from "../../context/editor/useEditor";
+import { solveRegions } from "../../engine/regions/RegionSolver";
+import { getRegionCenter } from "../../engine/regions/RegionCenter";
+import type { Region } from "../../engine/regions/Polygon";
 
-import useEditor
-    from "../../context/editor/useEditor";
+const CEILING_BASE_COLOR_URL =
+    "/ceiling/concrete/Poliigon_ConcreteWorn_8690_BaseColor.jpg";
 
+const CEILING_NORMAL_URL =
+    "/ceiling/concrete/Poliigon_ConcreteWorn_8690_Normal.png";
 
-export default function Roof() {
+const CEILING_ROUGHNESS_URL =
+    "/ceiling/concrete/Poliigon_ConcreteWorn_8690_Roughness.jpg";
 
-    const {
-        state
-    } = useEditor();
+const CEILING_AO_URL =
+    "/ceiling/concrete/Poliigon_ConcreteWorn_8690_AmbientOcclusion.jpg";
 
+const CEILING_LIGHT_MODEL_URL =
+"/models/default_light/ceiling.glb";
 
-    //==================================================
-    // ROOF HEIGHT
-    //==================================================
-    //
-    // WallPiece uses wallHeight * 0.5 as the vertical
-    // center of each wall, so the actual wall top is
-    // exactly wallHeight.
-    //
-    // Add a very small offset to avoid z-fighting.
-    //
-    //==================================================
+const CEILING_TILE_SIZE = 1;
+const CEILING_LIGHT_TARGET_WIDTH = 0.35;
+const CEILING_LIGHT_GAP = 0.01;
 
-    const roofHeight =
-        Math.max(
-            state.wallHeight,
-            0.1
-        ) + 0.03;
+function createCeilingGeometry(
+    boundaryLoops: Region["boundaryLoops"]
+): ShapeGeometry | null {
+    const outer = boundaryLoops[0]?.corners ?? [];
 
-
-    //==================================================
-    // GET ALL WALL CORNERS
-    //==================================================
-    //
-    // We use the actual wall endpoints instead of relying
-    // on solveRegions().
-    //
-    // This makes the roof work even when the house is:
-    //
-    // - rectangle
-    // - L-shaped
-    // - connected rooms
-    // - irregular
-    //
-    //==================================================
-
-    const roofGeometry =
-        useMemo(
-            () => {
-
-                if (
-                    !state.walls ||
-                    state.walls.length === 0
-                ) {
-                    return null;
-                }
-
-
-                //==================================================
-                // COLLECT WALL ENDPOINTS
-                //==================================================
-
-                const points: Vector3[] =
-                    [];
-
-                for (
-                    const wall
-                    of state.walls
-                ) {
-
-                    points.push(
-                        wall.start.position.clone()
-                    );
-
-                    points.push(
-                        wall.end.position.clone()
-                    );
-                }
-
-
-                if (
-                    points.length < 3
-                ) {
-                    return null;
-                }
-
-
-                //==================================================
-                // REMOVE DUPLICATE POINTS
-                //==================================================
-
-                const uniquePoints: Vector3[] =
-                    [];
-
-                const duplicateDistance =
-                    0.001;
-
-                for (
-                    const point
-                    of points
-                ) {
-
-                    const alreadyExists =
-                        uniquePoints.some(
-                            existing =>
-                                existing.distanceToSquared(
-                                    point
-                                ) <
-                                duplicateDistance *
-                                duplicateDistance
-                        );
-
-                    if (
-                        !alreadyExists
-                    ) {
-                        uniquePoints.push(
-                            point
-                        );
-                    }
-                }
-
-
-                if (
-                    uniquePoints.length < 3
-                ) {
-                    return null;
-                }
-
-
-                //==================================================
-                // CENTER
-                //==================================================
-                //
-                // Find the center of all wall points.
-                //
-                // This is used to sort the boundary points
-                // around the outside of the house.
-                //
-                //==================================================
-
-                let centerX =
-                    0;
-
-                let centerZ =
-                    0;
-
-                for (
-                    const point
-                    of uniquePoints
-                ) {
-
-                    centerX +=
-                        point.x;
-
-                    centerZ +=
-                        point.z;
-                }
-
-                centerX /=
-                    uniquePoints.length;
-
-                centerZ /=
-                    uniquePoints.length;
-
-
-                //==================================================
-                // SORT AROUND CENTER
-                //==================================================
-
-                uniquePoints.sort(
-                    (
-                        a,
-                        b
-                    ) => {
-
-                        const angleA =
-                            Math.atan2(
-                                a.z -
-                                    centerZ,
-                                a.x -
-                                    centerX
-                            );
-
-                        const angleB =
-                            Math.atan2(
-                                b.z -
-                                    centerZ,
-                                b.x -
-                                    centerX
-                            );
-
-                        return (
-                            angleA -
-                            angleB
-                        );
-                    }
-                );
-
-
-                //==================================================
-                // CREATE SHAPE
-                //==================================================
-
-                const shape =
-                    new Shape();
-
-
-                shape.moveTo(
-                    uniquePoints[0].x,
-                    -uniquePoints[0].z
-                );
-
-
-                for (
-                    let i = 1;
-                    i < uniquePoints.length;
-                    i++
-                ) {
-
-                    shape.lineTo(
-                        uniquePoints[i].x,
-                        -uniquePoints[i].z
-                    );
-                }
-
-
-                shape.closePath();
-
-
-                //==================================================
-                // BUILD GEOMETRY
-                //==================================================
-
-                const geometry =
-                    new ShapeGeometry(
-                        shape
-                    );
-
-                geometry.computeVertexNormals();
-
-                geometry.computeBoundingSphere();
-
-
-                return geometry;
-
-            },
-            [
-                state.walls
-            ]
-        );
-
-
-    //==================================================
-    // NO ROOF
-    //==================================================
-
-    if (
-        !state.walkthroughMode ||
-        !roofGeometry
-    ) {
+    if (outer.length < 3) {
         return null;
     }
 
+    const shape = new Shape();
 
-    //==================================================
-    // RENDER
-    //==================================================
+    shape.moveTo(
+        outer[0].x,
+        -outer[0].z
+    );
+
+    for (let index = 1; index < outer.length; index++) {
+        shape.lineTo(
+            outer[index].x,
+            -outer[index].z
+        );
+    }
+
+    shape.closePath();
+
+    shape.holes = boundaryLoops
+        .slice(1)
+        .map(loop => loop.corners)
+        .filter(loop => loop.length >= 3)
+        .map(loop => {
+            const hole = new Path();
+
+            hole.moveTo(
+                loop[0].x,
+                -loop[0].z
+            );
+
+            for (let index = 1; index < loop.length; index++) {
+                hole.lineTo(
+                    loop[index].x,
+                    -loop[index].z
+                );
+            }
+
+            hole.closePath();
+
+            return hole;
+        });
+
+    const geometry = new ShapeGeometry(shape);
+    const uv = geometry.getAttribute("uv");
+
+    if (uv) {
+        geometry.setAttribute("uv2", uv.clone());
+    }
+
+    return geometry;
+}
+
+function CeilingLightFixture({
+    region,
+    height
+}: {
+    region: Region;
+    height: number;
+}) {
+    const { scene } = useGLTF(CEILING_LIGHT_MODEL_URL);
+
+    const center = useMemo(
+        () => getRegionCenter(region),
+        [region]
+    );
+
+    const model = useMemo(() => {
+        const clone = scene.clone(true);
+
+        clone.updateMatrixWorld(true);
+
+        const bounds = new Box3().setFromObject(clone);
+        const size = bounds.getSize(new Vector3());
+        const boundsCenter = bounds.getCenter(new Vector3());
+        const horizontalSize = Math.max(size.x, size.z);
+
+        const scale = horizontalSize > 0.0001
+            ? CEILING_LIGHT_TARGET_WIDTH / horizontalSize
+            : 1;
+
+        clone.scale.multiplyScalar(scale);
+
+        clone.position.set(
+            -boundsCenter.x * scale,
+            -bounds.max.y * scale,
+            -boundsCenter.z * scale
+        );
+
+        clone.traverse(object => {
+            if (object instanceof Mesh) {
+                object.castShadow = true;
+                object.receiveShadow = true;
+                object.raycast = () => null;
+            }
+        });
+
+        clone.updateMatrixWorld(true);
+
+        return clone;
+    }, [scene]);
 
     return (
         <group
-            name="WalkthroughRoof"
+            name={`CeilingLight-${region.id}`}
             position={[
-                0,
-                roofHeight,
-                0
+                center.x,
+                Math.max(height - CEILING_LIGHT_GAP, 0.05),
+                center.z
             ]}
         >
-
-            <mesh
-                geometry={
-                    roofGeometry
-                }
-                rotation={[
-                    -Math.PI / 2,
-                    0,
-                    0
-                ]}
-
-                //==================================================
-                // IMPORTANT:
-                // Do not let the roof create a shadow over
-                // the walkthrough interior.
-                //==================================================
-
-                castShadow={
-                    false
-                }
-
-                receiveShadow={
-                    false
-                }
-
-                //==================================================
-                // Roof is not interactive.
-                //==================================================
-
-                raycast={() => null}
-            >
-
-                <meshBasicMaterial
-                    color="#ffde9b"
-                    side={
-                        DoubleSide
-                    }
-                    transparent={
-                        false
-                    }
-                    depthWrite={
-                        true
-                    }
-                />
-
-            </mesh>
-
+            <primitive object={model} />
         </group>
     );
 }
+
+function RoomCeiling({
+    region,
+    height
+}: {
+    region: Region;
+    height: number;
+}) {
+    const boundaryLoops = region.boundaryLoops;
+
+    const [
+        sourceBaseColor,
+        sourceNormal,
+        sourceRoughness,
+        sourceAO
+    ] = useLoader(
+        TextureLoader,
+        [
+            CEILING_BASE_COLOR_URL,
+            CEILING_NORMAL_URL,
+            CEILING_ROUGHNESS_URL,
+            CEILING_AO_URL
+        ]
+    );
+
+    const [
+        baseColorTexture,
+        normalTexture,
+        roughnessTexture,
+        aoTexture
+    ] = useMemo(() => {
+        const baseColor = sourceBaseColor.clone();
+        const normal = sourceNormal.clone();
+        const roughness = sourceRoughness.clone();
+        const ao = sourceAO.clone();
+
+        const tileSize = Math.max(
+            CEILING_TILE_SIZE,
+            0.001
+        );
+
+        const textures = [
+            baseColor,
+            normal,
+            roughness,
+            ao
+        ];
+
+        for (const texture of textures) {
+            texture.wrapS = RepeatWrapping;
+            texture.wrapT = RepeatWrapping;
+
+            texture.repeat.set(
+                1 / tileSize,
+                1 / tileSize
+            );
+
+            texture.offset.set(0, 0);
+            texture.needsUpdate = true;
+        }
+
+        baseColor.colorSpace = SRGBColorSpace;
+        normal.colorSpace = NoColorSpace;
+        roughness.colorSpace = NoColorSpace;
+        ao.colorSpace = NoColorSpace;
+
+        return [
+            baseColor,
+            normal,
+            roughness,
+            ao
+        ];
+    }, [
+        sourceBaseColor,
+        sourceNormal,
+        sourceRoughness,
+        sourceAO
+    ]);
+
+    useEffect(() => {
+        return () => {
+            baseColorTexture.dispose();
+            normalTexture.dispose();
+            roughnessTexture.dispose();
+            aoTexture.dispose();
+        };
+    }, [
+        baseColorTexture,
+        normalTexture,
+        roughnessTexture,
+        aoTexture
+    ]);
+
+    const geometry = useMemo(
+        () => createCeilingGeometry(boundaryLoops),
+        [boundaryLoops]
+    );
+
+    useEffect(() => {
+        return () => {
+            geometry?.dispose();
+        };
+    }, [geometry]);
+
+    if (!geometry) {
+        return null;
+    }
+
+    return (
+        <mesh
+            name={`WalkthroughCeiling-${region.id}`}
+            geometry={geometry}
+            position={[0, height, 0]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            castShadow
+            receiveShadow
+            raycast={() => null}
+        >
+            <meshStandardMaterial
+                map={baseColorTexture}
+                normalMap={normalTexture}
+                roughnessMap={roughnessTexture}
+                aoMap={aoTexture}
+                color="#ffffff"
+                roughness={1}
+                metalness={0}
+                side={DoubleSide}
+            />
+        </mesh>
+    );
+}
+
+export default function Roof() {
+    const { state } = useEditor();
+
+    const regions = useMemo(
+        () => solveRegions(
+            state.corners,
+            state.walls
+        ).filter(
+            region =>
+                region.corners.length >= 3 &&
+                Math.abs(region.area) > 0.01
+        ),
+        [
+            state.corners,
+            state.walls
+        ]
+    );
+
+    const ceilingHeight = Math.max(
+        state.wallHeight - 0.03,
+        0.1
+    );
+
+    if (!state.walkthroughMode) {
+        return null;
+    }
+
+    return (
+        <group name="WalkthroughCeiling">
+            {regions.map(region => (
+                <group key={`ceiling-${region.id}`}>
+                    <RoomCeiling
+                        region={region}
+                        height={ceilingHeight}
+                    />
+
+                    <CeilingLightFixture
+                        region={region}
+                        height={ceilingHeight}
+                    />
+                </group>
+            ))}
+        </group>
+    );
+}
+
+useGLTF.preload(CEILING_LIGHT_MODEL_URL);

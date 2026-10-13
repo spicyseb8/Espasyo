@@ -889,3 +889,31 @@
         width: min(360px, calc(100vw - 24px)) !important;
     }
 }
+
+.cost-estimator-export-button {
+    display: flex;
+    width: calc(100% - 24px);
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 12px;
+    padding: 10px 12px;
+    border: 1px solid #6b8050;
+    border-radius: 8px;
+    background: #6b8050;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 180ms ease, border-color 180ms ease;
+}
+
+.cost-estimator-export-button:hover {
+    background: #566841;
+    border-color: #566841;
+}
+
+.cost-estimator-export-button:focus-visible {
+    outline: 2px solid #6b8050;
+    outline-offset: 3px;
+}

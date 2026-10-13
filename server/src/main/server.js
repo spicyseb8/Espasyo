@@ -2,7 +2,9 @@ import express from "express";
 import cors from "cors";
 
 import accountRoutes from "./create-account.js";
+import accountActionRoutes from "./account-actions.js";
 import assetRoutes from "./create-asset.js";
+import projectCommentRoutes from "./project-comments.js";
 
 const app = express();
 
@@ -53,7 +55,17 @@ app.use(
 
 app.use(
   "/api",
+  accountActionRoutes
+);
+
+app.use(
+  "/api",
   assetRoutes
+);
+
+app.use(
+  "/api",
+  projectCommentRoutes
 );
 
 // --------------------------------------------------
