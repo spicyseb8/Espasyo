@@ -1,51 +1,47 @@
+
 import {
     useEffect,
     useState
 } from "react";
-
 import {
     useNavigate,
     useParams
 } from "react-router-dom";
-
 import {
     doc,
     getDoc
 } from "firebase/firestore";
-
 import {
     auth,
     db
 } from "../firebase/firebase";
-
 import EditorProvider
     from "../context/EditorProvider";
-
 import useEditor
     from "../context/editor/useEditor";
-
 import Editor
     from "../Studio/Editor/Editor";
-
+import LoadingScreen
+    from "../scene/LoadingScreen";
 import {
     clearProjectSession,
     saveProjectBaseline
 } from "../services/projectEditSessionService";
 
+const MIN_LOADING_MS = 5500;
+
 function LoadProjectContent() {
     const {
         projectId
     } = useParams<{
-        projectId:
-            string;
+        projectId: string;
     }>();
 
     const {
         dispatch
     } = useEditor();
 
-    const navigate =
-        useNavigate();
+    const navigate = useNavigate();
 
     const [
         loading,
@@ -57,64 +53,60 @@ function LoadProjectContent() {
         setError
     ] = useState("");
 
+    const [
+        minTimeElapsed,
+        setMinTimeElapsed
+    ] = useState(false);
+
     useEffect(() => {
-        let cancelled =
-            false;
+        setMinTimeElapsed(false);
+
+        const timer = window.setTimeout(() => {
+            setMinTimeElapsed(true);
+        }, MIN_LOADING_MS);
+
+        return () => {
+            window.clearTimeout(timer);
+        };
+    }, [projectId]);
+
+    useEffect(() => {
+        let cancelled = false;
 
         async function loadProject() {
-            if (
-                !projectId
-            ) {
+            if (!projectId) {
                 setError(
                     "No project was selected."
                 );
-
-                setLoading(
-                    false
-                );
-
+                setLoading(false);
                 return;
             }
 
-            const user =
-                auth.currentUser;
+            const user = auth.currentUser;
 
-            if (
-                !user
-            ) {
+            if (!user) {
                 setError(
                     "Please log in before opening a project."
                 );
-
-                setLoading(
-                    false
-                );
-
+                setLoading(false);
                 return;
             }
 
             try {
-                setLoading(
-                    true
-                );
-
+                setLoading(true);
                 setError("");
 
-                const projectReference =
-                    doc(
-                        db,
-                        "projects",
-                        projectId
-                    );
+                const projectReference = doc(
+                    db,
+                    "projects",
+                    projectId
+                );
 
-                const projectSnapshot =
-                    await getDoc(
-                        projectReference
-                    );
+                const projectSnapshot = await getDoc(
+                    projectReference
+                );
 
-                if (
-                    !projectSnapshot.exists()
-                ) {
+                if (!projectSnapshot.exists()) {
                     throw new Error(
                         "Project does not exist."
                     );
@@ -136,24 +128,23 @@ function LoadProjectContent() {
                     projectMetadata.jsonUrl;
 
                 if (
-                    typeof jsonUrl !==
-                    "string" ||
-                    jsonUrl.trim() ===
-                    ""
+                    typeof jsonUrl !== "string" ||
+                    jsonUrl.trim() === ""
                 ) {
                     throw new Error(
                         "This project does not have a valid JSON URL."
                     );
                 }
 
-                const response =
-                    await fetch(
-                        jsonUrl
-                    );
+                const response = await fetch(
+                    jsonUrl.trim(),
+                    {
+                        method: "GET",
+                        cache: "no-store"
+                    }
+                );
 
-                if (
-                    !response.ok
-                ) {
+                if (!response.ok) {
                     throw new Error(
                         `Failed to download project JSON (${response.status}).`
                     );
@@ -162,19 +153,15 @@ function LoadProjectContent() {
                 const projectData =
                     await response.json();
 
-                if (
-                    cancelled
-                ) {
+                if (cancelled) {
                     return;
                 }
 
                 clearProjectSession();
 
                 dispatch({
-                    type:
-                        "LOAD_PROJECT",
-                    payload:
-                        projectData
+                    type: "LOAD_PROJECT",
+                    payload: projectData
                 });
 
                 saveProjectBaseline(
@@ -185,8 +172,7 @@ function LoadProjectContent() {
                 if (
                     typeof projectData.projectName ===
                         "string" &&
-                    projectData.projectName.trim() !==
-                        ""
+                    projectData.projectName.trim() !== ""
                 ) {
                     localStorage.setItem(
                         "espasyo_project_name",
@@ -194,20 +180,14 @@ function LoadProjectContent() {
                     );
                 }
 
-                setLoading(
-                    false
-                );
-            } catch (
-                loadError
-            ) {
+                setLoading(false);
+            } catch (loadError) {
                 console.error(
                     "Failed to load project:",
                     loadError
                 );
 
-                if (
-                    cancelled
-                ) {
+                if (cancelled) {
                     return;
                 }
 
@@ -217,17 +197,14 @@ function LoadProjectContent() {
                         : "Failed to load project."
                 );
 
-                setLoading(
-                    false
-                );
+                setLoading(false);
             }
         }
 
         void loadProject();
 
         return () => {
-            cancelled =
-                true;
+            cancelled = true;
         };
     }, [
         projectId,
@@ -235,26 +212,13 @@ function LoadProjectContent() {
     ]);
 
     if (
-        loading
+        !error &&
+        (loading || !minTimeElapsed)
     ) {
-        return (
-            <div className="project-loading">
-                <div>
-                    <h2>
-                        Opening Project
-                    </h2>
-
-                    <p>
-                        Reconstructing your interior...
-                    </p>
-                </div>
-            </div>
-        );
+        return <LoadingScreen />;
     }
 
-    if (
-        error
-    ) {
+    if (error) {
         return (
             <div className="project-loading">
                 <div>
@@ -263,17 +227,13 @@ function LoadProjectContent() {
                     </h2>
 
                     <p>
-                        {
-                            error
-                        }
+                        {error}
                     </p>
 
                     <button
                         type="button"
                         onClick={() =>
-                            navigate(
-                                "/studio"
-                            )
+                            navigate("/studio")
                         }
                     >
                         Back to Projects
@@ -283,9 +243,7 @@ function LoadProjectContent() {
         );
     }
 
-    return (
-        <Editor />
-    );
+    return <Editor />;
 }
 
 export default function StudioLoadProject() {

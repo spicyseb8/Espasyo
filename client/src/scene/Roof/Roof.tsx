@@ -1,26 +1,24 @@
 
 import { useEffect, useMemo } from "react";
-
 import { useLoader } from "@react-three/fiber";
-
+import { useGLTF } from "@react-three/drei";
 import {
+    Box3,
     DoubleSide,
+    Mesh,
     NoColorSpace,
     Path,
     RepeatWrapping,
     Shape,
     ShapeGeometry,
     SRGBColorSpace,
-    TextureLoader
+    TextureLoader,
+    Vector3
 } from "three";
-
 import useEditor from "../../context/editor/useEditor";
-
 import { solveRegions } from "../../engine/regions/RegionSolver";
-
-import type {
-    Region
-} from "../../engine/regions/Polygon";
+import { getRegionCenter } from "../../engine/regions/RegionCenter";
+import type { Region } from "../../engine/regions/Polygon";
 
 const CEILING_BASE_COLOR_URL =
     "/ceiling/concrete/Poliigon_ConcreteWorn_8690_BaseColor.jpg";
@@ -34,15 +32,17 @@ const CEILING_ROUGHNESS_URL =
 const CEILING_AO_URL =
     "/ceiling/concrete/Poliigon_ConcreteWorn_8690_AmbientOcclusion.jpg";
 
-// One texture tile per world unit.
-// Increase this value for a larger concrete pattern.
+const CEILING_LIGHT_MODEL_URL =
+"/models/default_light/ceiling.glb";
+
 const CEILING_TILE_SIZE = 1;
+const CEILING_LIGHT_TARGET_WIDTH = 0.35;
+const CEILING_LIGHT_GAP = 0.01;
 
 function createCeilingGeometry(
     boundaryLoops: Region["boundaryLoops"]
 ): ShapeGeometry | null {
-    const outer =
-        boundaryLoops[0]?.corners ?? [];
+    const outer = boundaryLoops[0]?.corners ?? [];
 
     if (outer.length < 3) {
         return null;
@@ -55,11 +55,7 @@ function createCeilingGeometry(
         -outer[0].z
     );
 
-    for (
-        let index = 1;
-        index < outer.length;
-        index++
-    ) {
+    for (let index = 1; index < outer.length; index++) {
         shape.lineTo(
             outer[index].x,
             -outer[index].z
@@ -68,47 +64,101 @@ function createCeilingGeometry(
 
     shape.closePath();
 
-    shape.holes =
-        boundaryLoops
-            .slice(1)
-            .map(loop => loop.corners)
-            .filter(loop => loop.length >= 3)
-            .map(loop => {
-                const hole = new Path();
+    shape.holes = boundaryLoops
+        .slice(1)
+        .map(loop => loop.corners)
+        .filter(loop => loop.length >= 3)
+        .map(loop => {
+            const hole = new Path();
 
-                hole.moveTo(
-                    loop[0].x,
-                    -loop[0].z
+            hole.moveTo(
+                loop[0].x,
+                -loop[0].z
+            );
+
+            for (let index = 1; index < loop.length; index++) {
+                hole.lineTo(
+                    loop[index].x,
+                    -loop[index].z
                 );
+            }
 
-                for (
-                    let index = 1;
-                    index < loop.length;
-                    index++
-                ) {
-                    hole.lineTo(
-                        loop[index].x,
-                        -loop[index].z
-                    );
-                }
+            hole.closePath();
 
-                hole.closePath();
-
-                return hole;
-            });
+            return hole;
+        });
 
     const geometry = new ShapeGeometry(shape);
-
     const uv = geometry.getAttribute("uv");
 
     if (uv) {
-        geometry.setAttribute(
-            "uv2",
-            uv.clone()
-        );
+        geometry.setAttribute("uv2", uv.clone());
     }
 
     return geometry;
+}
+
+function CeilingLightFixture({
+    region,
+    height
+}: {
+    region: Region;
+    height: number;
+}) {
+    const { scene } = useGLTF(CEILING_LIGHT_MODEL_URL);
+
+    const center = useMemo(
+        () => getRegionCenter(region),
+        [region]
+    );
+
+    const model = useMemo(() => {
+        const clone = scene.clone(true);
+
+        clone.updateMatrixWorld(true);
+
+        const bounds = new Box3().setFromObject(clone);
+        const size = bounds.getSize(new Vector3());
+        const boundsCenter = bounds.getCenter(new Vector3());
+        const horizontalSize = Math.max(size.x, size.z);
+
+        const scale = horizontalSize > 0.0001
+            ? CEILING_LIGHT_TARGET_WIDTH / horizontalSize
+            : 1;
+
+        clone.scale.multiplyScalar(scale);
+
+        clone.position.set(
+            -boundsCenter.x * scale,
+            -bounds.max.y * scale,
+            -boundsCenter.z * scale
+        );
+
+        clone.traverse(object => {
+            if (object instanceof Mesh) {
+                object.castShadow = true;
+                object.receiveShadow = true;
+                object.raycast = () => null;
+            }
+        });
+
+        clone.updateMatrixWorld(true);
+
+        return clone;
+    }, [scene]);
+
+    return (
+        <group
+            name={`CeilingLight-${region.id}`}
+            position={[
+                center.x,
+                Math.max(height - CEILING_LIGHT_GAP, 0.05),
+                center.z
+            ]}
+        >
+            <primitive object={model} />
+        </group>
+    );
 }
 
 function RoomCeiling({
@@ -172,7 +222,6 @@ function RoomCeiling({
         }
 
         baseColor.colorSpace = SRGBColorSpace;
-
         normal.colorSpace = NoColorSpace;
         roughness.colorSpace = NoColorSpace;
         ao.colorSpace = NoColorSpace;
@@ -223,16 +272,8 @@ function RoomCeiling({
         <mesh
             name={`WalkthroughCeiling-${region.id}`}
             geometry={geometry}
-            position={[
-                0,
-                height,
-                0
-            ]}
-            rotation={[
-                -Math.PI / 2,
-                0,
-                0
-            ]}
+            position={[0, height, 0]}
+            rotation={[-Math.PI / 2, 0, 0]}
             castShadow
             receiveShadow
             raycast={() => null}
@@ -281,13 +322,20 @@ export default function Roof() {
     return (
         <group name="WalkthroughCeiling">
             {regions.map(region => (
-                <RoomCeiling
-                    key={`ceiling-${region.id}`}
-                    region={region}
-                    height={ceilingHeight}
-                />
-            ))}
+                <group key={`ceiling-${region.id}`}>
+                    <RoomCeiling
+                        region={region}
+                        height={ceilingHeight}
+                    />
 
+                    <CeilingLightFixture
+                        region={region}
+                        height={ceilingHeight}
+                    />
+                </group>
+            ))}
         </group>
     );
 }
+
+useGLTF.preload(CEILING_LIGHT_MODEL_URL);

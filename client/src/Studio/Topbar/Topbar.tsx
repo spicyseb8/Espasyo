@@ -1,12 +1,13 @@
 import "./Topbar.css";
 
-import { ArrowLeft, ChevronDown, Undo2, Redo2 } from "lucide-react";
+import { ArrowLeft, ChevronDown, Download, Undo2, Redo2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import useEditor from "../../context/editor/useEditor";
 import { calculateCostEstimate } from "../../engine/cost/CostEstimator";
+import { downloadCostBreakdownPdf } from "../../engine/cost/CostBreakdownPDF";
 import type { CostCategory } from "../../engine/cost/CostTypes";
 import AdminComments from "../../scene/Comment/AdminComments";
 
@@ -17,6 +18,14 @@ const CATEGORY_LABELS: Record<CostCategory, string> = {
     doors: "Doors",
     windows: "Windows"
 };
+
+const CATEGORY_ORDER: CostCategory[] = [
+    "furniture",
+    "flooring",
+    "wallFinish",
+    "doors",
+    "windows"
+];
 
 const formatCurrency = (amount: number, decimals = 2) =>
     new Intl.NumberFormat("en-PH", {
@@ -90,6 +99,20 @@ export default function Topbar() {
 
         return groups;
     }, [estimate.items]);
+
+    const handleDownloadReport = () => {
+        try {
+            downloadCostBreakdownPdf(estimate, projectName, routeProjectId);
+
+            setOpen(false);
+        } catch (error) {
+            console.error("Failed to generate cost breakdown PDF:", error);
+
+            window.alert(
+                "Unable to generate the cost breakdown report. Please try again."
+            );
+        }
+    };
 
     return (
         <header className="topbar">
@@ -187,56 +210,65 @@ export default function Topbar() {
                                         estimate.
                                     </div>
                                 ) : (
-                                    (Object.keys(groupedItems) as CostCategory[]).map(
-                                        (category) => {
-                                            const items = groupedItems[category];
-                                            if (items.length === 0) return null;
+                                    CATEGORY_ORDER.map((category) => {
+                                        const items = groupedItems[category];
+                                        if (items.length === 0) return null;
 
-                                            const categoryTotal = items.reduce(
-                                                (sum, item) => sum + item.subtotal,
-                                                0
-                                            );
+                                        const categoryTotal = items.reduce(
+                                            (sum, item) => sum + item.subtotal,
+                                            0
+                                        );
 
-                                            return (
-                                                <section key={category} className="cost-category">
-                                                    <div className="cost-category-header">
-                                                        <span>{CATEGORY_LABELS[category]}</span>
-                                                        <strong>{formatCurrency(categoryTotal)}</strong>
-                                                    </div>
+                                        return (
+                                            <section key={category} className="cost-category">
+                                                <div className="cost-category-header">
+                                                    <span>{CATEGORY_LABELS[category]}</span>
+                                                    <strong>{formatCurrency(categoryTotal)}</strong>
+                                                </div>
 
-                                                    {items.map((item, index) => (
-                                                        <div
-                                                            key={`${item.name}-${index}`}
-                                                            className="cost-item"
-                                                        >
-                                                            <div className="cost-item-info">
-                                                                <span className="cost-item-name">
-                                                                    {item.name}
-                                                                </span>
-                                                                <span className="cost-item-quantity">
-                                                                    {item.quantity.toFixed(
-                                                                        item.unit === "m²" ? 2 : 0
-                                                                    )}{" "}
-                                                                    {item.unit} × {formatCurrency(item.rate)}/
-                                                                    {item.unit}
-                                                                </span>
-                                                            </div>
-
-                                                            <span className="cost-item-total">
-                                                                {formatCurrency(item.subtotal)}
+                                                {items.map((item, index) => (
+                                                    <div
+                                                        key={`${item.name}-${index}`}
+                                                        className="cost-item"
+                                                    >
+                                                        <div className="cost-item-info">
+                                                            <span className="cost-item-name">
+                                                                {item.name}
+                                                            </span>
+                                                            <span className="cost-item-quantity">
+                                                                {item.quantity.toFixed(
+                                                                    item.unit === "m²" ? 2 : 0
+                                                                )}{" "}
+                                                                {item.unit} × {formatCurrency(item.rate)}/
+                                                                {item.unit}
                                                             </span>
                                                         </div>
-                                                    ))}
-                                                </section>
-                                            );
-                                        }
-                                    )
+
+                                                        <span className="cost-item-total">
+                                                            {formatCurrency(item.subtotal)}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </section>
+                                        );
+                                    })
                                 )}
                             </div>
 
                             <div className="cost-estimator-total">
                                 <span>Estimated total</span>
                                 <strong>{formatCurrency(estimate.total)}</strong>
+                            </div>
+
+                            <div className="cost-estimator-footer">
+                                <button
+                                    type="button"
+                                    className="cost-estimator-export-button"
+                                    onClick={handleDownloadReport}
+                                >
+                                    <Download size={15} strokeWidth={1.75} />
+                                    <span>Download cost breakdown PDF</span>
+                                </button>
                             </div>
                         </div>
                     )}

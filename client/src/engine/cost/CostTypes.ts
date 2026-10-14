@@ -18,9 +18,11 @@ export interface CostItem {
 
     quantity: number;
     unit: string;
-
+    coats?: number;
     rate: number;
     subtotal: number;
+    length?: number;
+width?: number;
 }
 
 export interface CostEstimate {

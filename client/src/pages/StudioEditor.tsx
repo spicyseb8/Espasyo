@@ -1,23 +1,56 @@
+import {
+    useEffect,
+    useState
+} from "react";
+
 import EditorProvider
     from "../context/EditorProvider";
 
-
-// IMPORTANT:
-// Replace this import with whatever component currently
-// renders your actual 3D editor.
 import Editor
     from "../Studio/Editor/Editor";
 
+import LoadingScreen
+    from "../scene/LoadingScreen";
 
-export default function StudioEditor() {
+const MIN_LOADING_MS = 5500;
+
+function StudioEditorContent() {
+    const [
+        loading,
+        setLoading
+    ] = useState(true);
+
+    useEffect(() => {
+        const timer = window.setTimeout(() => {
+            setLoading(false);
+        }, MIN_LOADING_MS);
+
+        return () => {
+            window.clearTimeout(timer);
+        };
+    }, []);
 
     return (
-
-        <EditorProvider>
-
+        <div className="relative min-h-screen">
             <Editor />
 
-        </EditorProvider>
+            {loading && (
+                <div
+                    className="fixed inset-0 z-[9999] bg-white"
+                    aria-live="polite"
+                    aria-busy="true"
+                >
+                    <LoadingScreen />
+                </div>
+            )}
+        </div>
+    );
+}
 
+export default function StudioEditor() {
+    return (
+        <EditorProvider>
+            <StudioEditorContent />
+        </EditorProvider>
     );
 }

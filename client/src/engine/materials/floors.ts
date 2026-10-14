@@ -28,304 +28,138 @@ import type {
 
 import localDefaultFloorTexture from "../../../uploads/default_floor/assets_floors_Tiles_terrazo_tiles_Diffuse.png";
 
-
 //==================================================
 // EXTENDED FLOOR MATERIAL TYPE
-//==================================================
-//
-// Adds the raw Firebase `category` value (e.g. "brick",
-// "tile", "wood") so the Library page can filter by
-// Wood / Tiles / Bricks without modifying the shared
-// Material interface.
-//
-// FloorMaterial is structurally a Material, so every
-// existing caller of getFloorMaterials() keeps working.
 //==================================================
 
 export type FloorMaterial =
     Material & {
         sourceCategory?: string;
+        length?: number;
+        width?: number;
     };
-
 
 //==================================================
 // DEFAULT FLOOR
 //==================================================
-//
-// This ID still matches the Firebase Terrazo Tiles
-// material:
-//
-// id: A-26015
-// name: Terrazo Tiles
-//
-// IMPORTANT:
-//
-// The actual default floor texture is LOCAL.
-//
-// This means a newly created room does NOT need to wait
-// for Firebase Storage before showing its floor.
-//==================================================
 
-export const DEFAULT_FLOOR_MATERIAL_ID =
-    "A-26015";
-
+export const DEFAULT_FLOOR_MATERIAL_ID = "A-26015";
 
 //==================================================
 // LOCAL DEFAULT FLOOR TEXTURE
 //==================================================
-//
-// Vite converts this imported file into a browser URL.
-//
-// Actual file:
-//
-// client/uploads/default_floor/
-// assets_floors_Tiles_terrazo_tiles_Diffuse.png
-//
-//==================================================
 
 export const LOCAL_DEFAULT_FLOOR_TEXTURE =
     localDefaultFloorTexture;
-
 
 //==================================================
 // FIREBASE FLOOR ASSET
 //==================================================
 
 interface FirebaseFloorAsset {
+    id?: string;
+    asset_status?: string;
+    asset_type: "floor";
+    category?: string;
+    price?: number;
+    name: string;
+    length?: number;
+    width?: number;
 
-    id?:
-        string;
-
-    asset_status?:
-        string;
-
-    asset_type:
-        "floor";
-
-    category?:
-        string;
-
-    price?:
-        number;
-
-    name:
-        string;
-
-    //--------------------------------------------------
-    // OLD STORAGE PATH
-    //--------------------------------------------------
-
-    diffuse_path?:
-        string;
-
-    storage_path?:
-        string;
-
-    thumbnail_path?:
-        string;
-
-    //--------------------------------------------------
-    // NEW DIRECT URL FIELDS
-    //
-    // These should contain the actual HTTPS Firebase
-    // Storage download URLs.
-    //--------------------------------------------------
-
-    diffuse_url?:
-        string;
-
-    thumbnail_url?:
-        string;
-
-    //--------------------------------------------------
-    // MATERIAL SETTINGS
-    //--------------------------------------------------
-
-    color?:
-        string;
-
-    roughness?:
-        number;
-
-    metalness?:
-        number;
+    diffuse_path?: string;
+    storage_path?: string;
+    thumbnail_path?: string;
+    diffuse_url?: string;
+    thumbnail_url?: string;
+    color?: string;
+    roughness?: number;
+    metalness?: number;
 }
-
 
 //==================================================
 // DEFAULT FLOOR CACHE
 //==================================================
-//
-// This is created immediately from the local PNG.
-//
-// Firebase metadata can replace/enrich it later when
-// the complete catalog is loaded.
-//==================================================
 
-let cachedDefaultFloorMaterial:
-    Material | null =
-    null;
-
+let cachedDefaultFloorMaterial: Material | null = null;
 
 //==================================================
 // COMPLETE FLOOR CACHE
 //==================================================
 
-let cachedFloorMaterials:
-    FloorMaterial[] = [];
-
-let floorCatalogLoaded =
-    false;
-
-let floorMaterialsPromise:
-    Promise<FloorMaterial[]> | null =
-    null;
-
+let cachedFloorMaterials: FloorMaterial[] = [];
+let floorCatalogLoaded = false;
+let floorMaterialsPromise: Promise<FloorMaterial[]> | null = null;
 
 //==================================================
 // TEXTURE LOADER
 //==================================================
 
-const floorTextureLoader =
-    new TextureLoader();
-
+const floorTextureLoader = new TextureLoader();
 
 //==================================================
 // TEXTURE CACHE
 //==================================================
 
-const floorTextureCache =
-    new Map<
-        string,
-        Texture
-    >();
-
+const floorTextureCache = new Map<string, Texture>();
 
 //==================================================
 // TEXTURE PROMISE CACHE
 //==================================================
 
-const floorTexturePromises =
-    new Map<
-        string,
-        Promise<Texture | null>
-    >();
-
+const floorTexturePromises = new Map<
+    string,
+    Promise<Texture | null>
+>();
 
 //==================================================
 // LOCAL DEFAULT MATERIAL
-//==================================================
-//
-// This material exists without Firebase.
-//
-// Price is temporarily 0 until the Firebase catalog
-// provides the real metadata for A-26015.
-//
-// The actual default floor texture is ALWAYS the
-// local PNG.
 //==================================================
 
 function createLocalDefaultFloorMaterial(
     firebaseMaterial?: Material
 ): Material {
-
     return {
-
-        id:
-            DEFAULT_FLOOR_MATERIAL_ID,
-
-        name:
-            firebaseMaterial?.name ??
-            "Terrazo Tiles",
-
-        category:
-            firebaseMaterial?.category ??
-            "flooring",
-
+        id: DEFAULT_FLOOR_MATERIAL_ID,
+        name: firebaseMaterial?.name ?? "Terrazo Tiles",
+        category: firebaseMaterial?.category ?? "flooring",
         pricePerSquareMeter:
-            firebaseMaterial?.pricePerSquareMeter ??
-            0,
-
+            firebaseMaterial?.pricePerSquareMeter ?? 0,
         thumbnail:
             firebaseMaterial?.thumbnail ??
             LOCAL_DEFAULT_FLOOR_TEXTURE,
-
-        texture:
-            LOCAL_DEFAULT_FLOOR_TEXTURE,
-
-        color:
-            firebaseMaterial?.color ??
-            "#ffffff",
-
-        roughness:
-            firebaseMaterial?.roughness ??
-            0.8,
-
-        metalness:
-            firebaseMaterial?.metalness ??
-            0
-
+        texture: LOCAL_DEFAULT_FLOOR_TEXTURE,
+        color: firebaseMaterial?.color ?? "#ffffff",
+        roughness: firebaseMaterial?.roughness ?? 0.8,
+        metalness: firebaseMaterial?.metalness ?? 0
     };
 }
 
-
 //==================================================
 // RESOLVE STORAGE URL
-//==================================================
-//
-// This remains only as a FALLBACK for older Firestore
-// records that still contain diffuse_path or
-// thumbnail_path.
-//
-// New records should use diffuse_url and thumbnail_url.
 //==================================================
 
 async function resolveStorageUrl(
     value?: string
 ): Promise<string | undefined> {
-
-    if (
-        !value ||
-        value.trim() === ""
-    ) {
-
+    if (!value || value.trim() === "") {
         return undefined;
     }
 
-
-    const path =
-        value.trim();
-
-
-    //--------------------------------------------------
-    // Already a browser URL.
-    //--------------------------------------------------
+    const path = value.trim();
 
     if (
         path.startsWith("http://") ||
         path.startsWith("https://") ||
         path.startsWith("data:")
     ) {
-
         return path;
     }
 
-
-    //--------------------------------------------------
-    // Firebase Storage path.
-    //--------------------------------------------------
-
     try {
-
         return await getDownloadURL(
-            ref(
-                storage,
-                path
-            )
+            ref(storage, path)
         );
-
     } catch (error) {
-
         console.error(
             "Failed to resolve Firebase Storage floor file:",
             path,
@@ -336,7 +170,6 @@ async function resolveStorageUrl(
     }
 }
 
-
 //==================================================
 // BUILD MATERIAL
 //==================================================
@@ -346,202 +179,105 @@ async function buildFloorMaterial(
     data: FirebaseFloorAsset,
     includeThumbnail: boolean
 ): Promise<FloorMaterial | null> {
-    // ← FIX: was Promise<Material | null>
-
-    const materialId =
-        data.id?.trim() ||
-        documentId;
-
-
-    //--------------------------------------------------
-    // LOAD DIFFUSE TEXTURE URL
-    //
-    // NEW:
-    // Prefer diffuse_url directly from Firestore.
-    //
-    // FALLBACK:
-    // If diffuse_url does not exist, resolve
-    // diffuse_path through Firebase Storage.
-    //--------------------------------------------------
-
-    const texture =
-        data.diffuse_url?.trim() ||
-        await resolveStorageUrl(
-            data.diffuse_path
-        );
-
-
-    //--------------------------------------------------
-    // No diffuse image.
-    //--------------------------------------------------
-
+    // Only explicitly available floor materials are loaded.
     if (
-        !texture
+        typeof data.asset_status !== "string" ||
+        data.asset_status.trim().toLowerCase() !== "available"
     ) {
-
         console.warn(
-            "Skipping floor without a usable diffuse_url or diffuse_path:",
-            materialId,
-            data.diffuse_url ??
-                data.diffuse_path
+            "Skipping unavailable floor material:",
+            documentId,
+            data.asset_status
         );
 
         return null;
     }
 
+    const materialId = data.id?.trim() || documentId;
 
-    //--------------------------------------------------
-    // Thumbnail.
-    //--------------------------------------------------
+    const texture =
+        data.diffuse_url?.trim() ||
+        await resolveStorageUrl(data.diffuse_path);
 
-    let thumbnail:
-        string | undefined;
+    if (!texture) {
+        console.warn(
+            "Skipping floor without a usable diffuse_url or diffuse_path:",
+            materialId,
+            data.diffuse_url ?? data.diffuse_path
+        );
 
+        return null;
+    }
 
-    if (
-        includeThumbnail
-    ) {
+    let thumbnail: string | undefined;
 
-        //------------------------------------------------
-        // NEW:
-        // Prefer thumbnail_url directly from Firestore.
-        //------------------------------------------------
-
-        if (
-            data.thumbnail_url?.trim()
-        ) {
-
-            thumbnail =
-                data.thumbnail_url.trim();
-
-        }
-
-        //------------------------------------------------
-        // FALLBACK:
-        // Use old thumbnail_path.
-        //------------------------------------------------
-
-        else if (
-            data.thumbnail_path
-        ) {
-
+    if (includeThumbnail) {
+        if (data.thumbnail_url?.trim()) {
+            thumbnail = data.thumbnail_url.trim();
+        } else if (data.thumbnail_path) {
             thumbnail =
                 await resolveStorageUrl(
                     data.thumbnail_path
-                ) ??
-                texture;
-
-        }
-
-        //------------------------------------------------
-        // No thumbnail:
-        // Use diffuse texture.
-        //------------------------------------------------
-
-        else {
-
-            thumbnail =
-                texture;
-
+                ) ?? texture;
+        } else {
+            thumbnail = texture;
         }
     }
+    const length =
+        typeof data.length === "number" &&
+        Number.isFinite(data.length) &&
+        data.length > 0
+            ? data.length
+            : undefined;
 
-
-    //--------------------------------------------------
-    // Firebase material.
-    //--------------------------------------------------
+    const width =
+        typeof data.width === "number" &&
+        Number.isFinite(data.width) &&
+        data.width > 0
+            ? data.width
+            : undefined;
 
     return {
+    id: materialId,
+    name: data.name,
+    category: "flooring",
 
-        id:
-            materialId,
+    sourceCategory:
+        typeof data.category === "string"
+            ? data.category
+            : undefined,
 
-        name:
-            data.name,
+    pricePerSquareMeter: Number(data.price ?? 0),
 
-        category:
-            "flooring",
+    // Use the validated variables declared above.
+    length,
+    width,
 
-        sourceCategory:
-            typeof data.category === "string"
-                ? data.category
-                : undefined,
-
-        pricePerSquareMeter:
-            Number(
-                data.price ?? 0
-            ),
-
-        thumbnail,
-
-        texture,
-
-        color:
-            data.color,
-
-        roughness:
-            data.roughness,
-
-        metalness:
-            data.metalness
-
-    } satisfies FloorMaterial;
-    // ← FIX: was satisfies Material
+    thumbnail,
+    texture,
+    color: data.color,
+    roughness: data.roughness,
+    metalness: data.metalness
+} satisfies FloorMaterial;
 }
-
 
 //==================================================
 // GET DEFAULT FLOOR MATERIAL
 //==================================================
-//
-// IMPORTANT:
-//
-// This no longer waits for Firebase.
-//
-// It immediately returns a material using the local
-// Terrazo PNG.
-//
-// The Firebase catalog can still load afterwards and
-// provide the real price/name/etc.
-//==================================================
 
 export async function getDefaultFloorMaterial():
     Promise<Material | null> {
-
-    //--------------------------------------------------
-    // Already cached.
-    //--------------------------------------------------
-
-    if (
-        cachedDefaultFloorMaterial
-    ) {
-
+    if (cachedDefaultFloorMaterial) {
         return cachedDefaultFloorMaterial;
     }
-
-
-    //--------------------------------------------------
-    // Create immediately from LOCAL texture.
-    //--------------------------------------------------
 
     cachedDefaultFloorMaterial =
         createLocalDefaultFloorMaterial();
 
-
-    //--------------------------------------------------
-    // Begin preloading the local texture.
-    //
-    // This does not block room creation.
-    //--------------------------------------------------
-
-    preloadFloorTexture(
-        LOCAL_DEFAULT_FLOOR_TEXTURE
-    );
-
+    preloadFloorTexture(LOCAL_DEFAULT_FLOOR_TEXTURE);
 
     return cachedDefaultFloorMaterial;
 }
-
 
 //==================================================
 // LOAD COMPLETE FLOOR CATALOG
@@ -549,186 +285,75 @@ export async function getDefaultFloorMaterial():
 
 async function loadFloorMaterials():
     Promise<FloorMaterial[]> {
-    // ← FIX: was Promise<Material[]>
+    const floorQuery = query(
+        collection(db, "assets"),
+        where("asset_type", "==", "floor")
+    );
 
-    const floorQuery =
-        query(
+    const snapshot = await getDocs(floorQuery);
 
-            collection(
-                db,
-                "assets"
-            ),
+    const results = await Promise.allSettled(
+        snapshot.docs.map(
+            async document => {
+                const data =
+                    document.data() as FirebaseFloorAsset;
 
-            where(
-                "asset_type",
-                "==",
-                "floor"
-            )
-
-        );
-
-
-    const snapshot =
-        await getDocs(
-            floorQuery
-        );
-
-
-    //--------------------------------------------------
-    // Load all floor materials.
-    //--------------------------------------------------
-
-    const results =
-        await Promise.allSettled(
-
-            snapshot.docs.map(
-                async document => {
-
-                    const data =
-                        document.data() as
-                        FirebaseFloorAsset;
-
-
-                    return buildFloorMaterial(
-
-                        document.id,
-
-                        data,
-
-                        true
-
-                    );
-
-                }
-            )
-
-        );
-
-
-    const materials:
-        FloorMaterial[] = [];
-    // ← FIX: was Material[]
-
-
-    //--------------------------------------------------
-    // Keep successful materials only.
-    //--------------------------------------------------
-
-    for (
-        const result
-        of results
-    ) {
-
-        if (
-            result.status ===
-            "fulfilled"
-        ) {
-
-            if (
-                result.value
-            ) {
-
-                materials.push(
-                    result.value
+                return buildFloorMaterial(
+                    document.id,
+                    data,
+                    true
                 );
-
             }
+        )
+    );
 
+    const materials: FloorMaterial[] = [];
+
+    for (const result of results) {
+        if (result.status === "fulfilled") {
+            if (result.value) {
+                materials.push(result.value);
+            }
         } else {
-
             console.error(
                 "Failed to load a Firebase floor material:",
                 result.reason
             );
-
         }
     }
 
-
-    //--------------------------------------------------
-    // Put Terrazo Tiles first.
-    //--------------------------------------------------
-
     materials.sort(
-        (
-            first,
-            second
-        ) => {
-
-            if (
-                first.id ===
-                DEFAULT_FLOOR_MATERIAL_ID
-            ) {
-
+        (first, second) => {
+            if (first.id === DEFAULT_FLOOR_MATERIAL_ID) {
                 return -1;
             }
 
-
-            if (
-                second.id ===
-                DEFAULT_FLOOR_MATERIAL_ID
-            ) {
-
+            if (second.id === DEFAULT_FLOOR_MATERIAL_ID) {
                 return 1;
             }
-
 
             return 0;
         }
     );
 
+    cachedFloorMaterials = materials;
+    floorCatalogLoaded = true;
 
-    //--------------------------------------------------
-    // Save catalog.
-    //--------------------------------------------------
+    const firebaseDefaultMaterial = materials.find(
+        material => material.id === DEFAULT_FLOOR_MATERIAL_ID
+    );
 
-    cachedFloorMaterials =
-        materials;
-
-    floorCatalogLoaded =
-        true;
-
-
-    //--------------------------------------------------
-    // If Firebase contains A-26015, use its metadata
-    // but KEEP the LOCAL texture as the default texture.
-    //--------------------------------------------------
-
-    const firebaseDefaultMaterial =
-        materials.find(
-            material =>
-                material.id ===
-                DEFAULT_FLOOR_MATERIAL_ID
-        );
-
-
-    if (
-        firebaseDefaultMaterial
-    ) {
-
+    if (firebaseDefaultMaterial) {
         cachedDefaultFloorMaterial =
             createLocalDefaultFloorMaterial(
                 firebaseDefaultMaterial
             );
-
     }
 
-
-    //--------------------------------------------------
-    // Preload local default texture again.
-    //
-    // It is already cached when possible, so this is
-    // effectively free after the first load.
-    //--------------------------------------------------
-
-    preloadFloorTexture(
-        LOCAL_DEFAULT_FLOOR_TEXTURE
-    );
-
+    preloadFloorTexture(LOCAL_DEFAULT_FLOOR_TEXTURE);
 
     return cachedFloorMaterials;
 }
-
 
 //==================================================
 // GET ALL FLOOR MATERIALS
@@ -736,51 +361,21 @@ async function loadFloorMaterials():
 
 export async function getFloorMaterials():
     Promise<FloorMaterial[]> {
-    // ← FIX: was Promise<Material[]>
-
-    //--------------------------------------------------
-    // Complete catalog already loaded.
-    //--------------------------------------------------
-
-    if (
-        floorCatalogLoaded
-    ) {
-
+    if (floorCatalogLoaded) {
         return cachedFloorMaterials;
     }
 
-
-    //--------------------------------------------------
-    // Existing request.
-    //--------------------------------------------------
-
-    if (
-        floorMaterialsPromise
-    ) {
-
+    if (floorMaterialsPromise) {
         return floorMaterialsPromise;
     }
 
-
-    //--------------------------------------------------
-    // Start catalog request.
-    //--------------------------------------------------
-
-    floorMaterialsPromise =
-        loadFloorMaterials()
-            .finally(
-                () => {
-
-                    floorMaterialsPromise =
-                        null;
-
-                }
-            );
-
+    floorMaterialsPromise = loadFloorMaterials()
+        .finally(() => {
+            floorMaterialsPromise = null;
+        });
 
     return floorMaterialsPromise;
 }
-
 
 //==================================================
 // FIND CACHED FLOOR MATERIAL
@@ -788,44 +383,23 @@ export async function getFloorMaterials():
 
 export function findCachedFloorMaterial(
     materialId: string
-): Material | undefined {
+): FloorMaterial | undefined {
+    const catalogMaterial = cachedFloorMaterials.find(
+        material => material.id === materialId
+    );
 
-    //--------------------------------------------------
-    // Search complete catalog.
-    //--------------------------------------------------
-
-    const catalogMaterial =
-        cachedFloorMaterials.find(
-            material =>
-                material.id ===
-                materialId
-        );
-
-
-    if (
-        catalogMaterial
-    ) {
-
+    if (catalogMaterial) {
         return catalogMaterial;
     }
 
-
-    //--------------------------------------------------
-    // Search default cache.
-    //--------------------------------------------------
-
-    if (
-        cachedDefaultFloorMaterial?.id ===
-        materialId
-    ) {
-
-        return cachedDefaultFloorMaterial;
+    if (cachedDefaultFloorMaterial?.id === materialId) {
+        return {
+            ...cachedDefaultFloorMaterial
+        };
     }
-
 
     return undefined;
 }
-
 
 //==================================================
 // GET CACHED TEXTURE
@@ -834,20 +408,12 @@ export function findCachedFloorMaterial(
 export function getCachedFloorTexture(
     url?: string
 ): Texture | undefined {
-
-    if (
-        !url
-    ) {
-
+    if (!url) {
         return undefined;
     }
 
-
-    return floorTextureCache.get(
-        url.trim()
-    );
+    return floorTextureCache.get(url.trim());
 }
-
 
 //==================================================
 // PRELOAD FLOOR TEXTURE
@@ -856,159 +422,67 @@ export function getCachedFloorTexture(
 export function preloadFloorTexture(
     url?: string
 ): Promise<Texture | null> {
-
-    if (
-        !url ||
-        url.trim() === ""
-    ) {
-
-        return Promise.resolve(
-            null
-        );
+    if (!url || url.trim() === "") {
+        return Promise.resolve(null);
     }
 
-
-    const normalizedUrl =
-        url.trim();
-
-
-    //--------------------------------------------------
-    // Already cached.
-    //--------------------------------------------------
+    const normalizedUrl = url.trim();
 
     const cachedTexture =
-        floorTextureCache.get(
-            normalizedUrl
-        );
+        floorTextureCache.get(normalizedUrl);
 
-
-    if (
-        cachedTexture
-    ) {
-
-        return Promise.resolve(
-            cachedTexture
-        );
+    if (cachedTexture) {
+        return Promise.resolve(cachedTexture);
     }
 
-
-    //--------------------------------------------------
-    // Already loading.
-    //--------------------------------------------------
-
     const existingPromise =
-        floorTexturePromises.get(
-            normalizedUrl
-        );
+        floorTexturePromises.get(normalizedUrl);
 
-
-    if (
-        existingPromise
-    ) {
-
+    if (existingPromise) {
         return existingPromise;
     }
 
+    const promise = new Promise<Texture | null>(
+        resolve => {
+            floorTextureLoader.load(
+                normalizedUrl,
+                texture => {
+                    texture.colorSpace = SRGBColorSpace;
+                    texture.wrapS = RepeatWrapping;
+                    texture.wrapT = RepeatWrapping;
 
-    //--------------------------------------------------
-    // Start texture load.
-    //--------------------------------------------------
+                    // Keep the shared cached texture at its default scale.
+                    // Each floor can clone it for its own dimensions.
+                    texture.repeat.set(1, 1);
+                    texture.needsUpdate = true;
 
-    const promise =
-        new Promise<Texture | null>(
-            resolve => {
+                    floorTextureCache.set(
+                        normalizedUrl,
+                        texture
+                    );
 
-                floorTextureLoader.load(
+                    resolve(texture);
+                },
+                undefined,
+                error => {
+                    console.error(
+                        "Failed to load floor texture:",
+                        normalizedUrl,
+                        error
+                    );
 
-                    normalizedUrl,
+                    resolve(null);
+                }
+            );
+        }
+    ).finally(() => {
+        floorTexturePromises.delete(normalizedUrl);
+    });
 
-                    texture => {
-
-                        //--------------------------------------------------
-                        // Diffuse texture.
-                        //--------------------------------------------------
-
-                        texture.colorSpace =
-                            SRGBColorSpace;
-
-
-                        //--------------------------------------------------
-                        // Repeat.
-                        //--------------------------------------------------
-
-                        texture.wrapS =
-                            RepeatWrapping;
-
-                        texture.wrapT =
-                            RepeatWrapping;
-
-
-                        texture.repeat.set(
-                            1,
-                            1
-                        );
-
-
-                        texture.needsUpdate =
-                            true;
-
-
-                        //--------------------------------------------------
-                        // Cache.
-                        //--------------------------------------------------
-
-                        floorTextureCache.set(
-                            normalizedUrl,
-                            texture
-                        );
-
-
-                        resolve(
-                            texture
-                        );
-
-                    },
-
-                    undefined,
-
-                    error => {
-
-                        console.error(
-                            "Failed to load floor texture:",
-                            normalizedUrl,
-                            error
-                        );
-
-                        resolve(
-                            null
-                        );
-
-                    }
-
-                );
-
-            }
-        )
-        .finally(
-            () => {
-
-                floorTexturePromises.delete(
-                    normalizedUrl
-                );
-
-            }
-        );
-
-
-    floorTexturePromises.set(
-        normalizedUrl,
-        promise
-    );
-
+    floorTexturePromises.set(normalizedUrl, promise);
 
     return promise;
 }
-
 
 //==================================================
 // REFRESH
@@ -1016,33 +490,15 @@ export function preloadFloorTexture(
 
 export async function refreshFloorMaterials():
     Promise<FloorMaterial[]> {
-    // ← FIX: was Promise<Material[]>
-
-    cachedDefaultFloorMaterial =
-        null;
-
-    cachedFloorMaterials =
-        [];
-
-    floorCatalogLoaded =
-        false;
-
-    floorMaterialsPromise =
-        null;
-
-
-    //--------------------------------------------------
-    // Recreate local default immediately.
-    //--------------------------------------------------
+    cachedDefaultFloorMaterial = null;
+    cachedFloorMaterials = [];
+    floorCatalogLoaded = false;
+    floorMaterialsPromise = null;
 
     cachedDefaultFloorMaterial =
         createLocalDefaultFloorMaterial();
 
-
-    preloadFloorTexture(
-        LOCAL_DEFAULT_FLOOR_TEXTURE
-    );
-
+    preloadFloorTexture(LOCAL_DEFAULT_FLOOR_TEXTURE);
 
     return getFloorMaterials();
 }
