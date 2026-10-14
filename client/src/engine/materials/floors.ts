@@ -35,6 +35,8 @@ import localDefaultFloorTexture from "../../../uploads/default_floor/assets_floo
 export type FloorMaterial =
     Material & {
         sourceCategory?: string;
+        length?: number;
+        width?: number;
     };
 
 //==================================================
@@ -61,6 +63,9 @@ interface FirebaseFloorAsset {
     category?: string;
     price?: number;
     name: string;
+    length?: number;
+    width?: number;
+
     diffuse_path?: string;
     storage_path?: string;
     thumbnail_path?: string;
@@ -218,22 +223,42 @@ async function buildFloorMaterial(
             thumbnail = texture;
         }
     }
+    const length =
+        typeof data.length === "number" &&
+        Number.isFinite(data.length) &&
+        data.length > 0
+            ? data.length
+            : undefined;
+
+    const width =
+        typeof data.width === "number" &&
+        Number.isFinite(data.width) &&
+        data.width > 0
+            ? data.width
+            : undefined;
 
     return {
-        id: materialId,
-        name: data.name,
-        category: "flooring",
-        sourceCategory:
-            typeof data.category === "string"
-                ? data.category
-                : undefined,
-        pricePerSquareMeter: Number(data.price ?? 0),
-        thumbnail,
-        texture,
-        color: data.color,
-        roughness: data.roughness,
-        metalness: data.metalness
-    } satisfies FloorMaterial;
+    id: materialId,
+    name: data.name,
+    category: "flooring",
+
+    sourceCategory:
+        typeof data.category === "string"
+            ? data.category
+            : undefined,
+
+    pricePerSquareMeter: Number(data.price ?? 0),
+
+    // Use the validated variables declared above.
+    length,
+    width,
+
+    thumbnail,
+    texture,
+    color: data.color,
+    roughness: data.roughness,
+    metalness: data.metalness
+} satisfies FloorMaterial;
 }
 
 //==================================================
@@ -358,7 +383,7 @@ export async function getFloorMaterials():
 
 export function findCachedFloorMaterial(
     materialId: string
-): Material | undefined {
+): FloorMaterial | undefined {
     const catalogMaterial = cachedFloorMaterials.find(
         material => material.id === materialId
     );
@@ -367,10 +392,10 @@ export function findCachedFloorMaterial(
         return catalogMaterial;
     }
 
-    if (
-        cachedDefaultFloorMaterial?.id === materialId
-    ) {
-        return cachedDefaultFloorMaterial;
+    if (cachedDefaultFloorMaterial?.id === materialId) {
+        return {
+            ...cachedDefaultFloorMaterial
+        };
     }
 
     return undefined;
@@ -425,6 +450,9 @@ export function preloadFloorTexture(
                     texture.colorSpace = SRGBColorSpace;
                     texture.wrapS = RepeatWrapping;
                     texture.wrapT = RepeatWrapping;
+
+                    // Keep the shared cached texture at its default scale.
+                    // Each floor can clone it for its own dimensions.
                     texture.repeat.set(1, 1);
                     texture.needsUpdate = true;
 

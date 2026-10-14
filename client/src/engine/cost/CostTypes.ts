@@ -21,6 +21,8 @@ export interface CostItem {
     coats?: number;
     rate: number;
     subtotal: number;
+    length?: number;
+width?: number;
 }
 
 export interface CostEstimate {

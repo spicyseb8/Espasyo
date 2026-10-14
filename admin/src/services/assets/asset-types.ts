@@ -18,6 +18,10 @@ export interface Asset {
 
   price: number;
 
+  length?: number | null;
+
+  width?: number | null;
+
   asset_status?:
     | AssetStatus
     | null;

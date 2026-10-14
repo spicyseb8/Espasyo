@@ -1,4 +1,3 @@
-
 import { jsPDF } from "jspdf";
 import { autoTable } from "jspdf-autotable";
 import type {
@@ -55,13 +54,28 @@ function formatQuantity(item: CostItem): string {
         ? item.quantity
         : 0;
 
-    if (item.unit === "L") {
+    if (item.unit === "L" || item.unit === "pieces") {
         return String(roundLitersUp(quantity));
     }
 
     return quantity.toLocaleString("en-PH", {
         minimumFractionDigits: 0,
         maximumFractionDigits: item.unit === "m²" ? 2 : 4
+    });
+}
+
+function formatDimension(value?: number): string {
+    if (
+        typeof value !== "number" ||
+        !Number.isFinite(value) ||
+        value <= 0
+    ) {
+        return "—";
+    }
+
+    return value.toLocaleString("en-PH", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
     });
 }
 
@@ -106,6 +120,10 @@ export function downloadCostBreakdownPdf(
         creator: "Espasyo"
     });
 
+    //==================================================
+    // REPORT HEADER
+    //==================================================
+
     doc.setFillColor(37, 43, 36);
     doc.rect(0, 0, pageWidth, 32, "F");
 
@@ -127,6 +145,10 @@ export function downloadCostBreakdownPdf(
         11,
         { align: "right" }
     );
+
+    //==================================================
+    // PROJECT DETAILS
+    //==================================================
 
     doc.setTextColor(38, 43, 36);
     doc.setFont("helvetica", "bold");
@@ -157,6 +179,10 @@ export function downloadCostBreakdownPdf(
 
     let currentY = 53;
 
+    //==================================================
+    // COST SECTIONS
+    //==================================================
+
     for (const section of SECTIONS) {
         const sectionItems = estimate.items.filter(item =>
             section.categories.includes(item.category)
@@ -165,11 +191,15 @@ export function downloadCostBreakdownPdf(
         const isWallSection =
             section.title === "WALL MATERIALS";
 
+        const isFlooringSection =
+            section.title === "FLOORING MATERIALS";
+
         if (currentY + 25 > pageHeight - 16) {
             doc.addPage();
             currentY = 16;
         }
 
+        // Section heading
         doc.setFillColor(239, 241, 234);
 
         doc.roundedRect(
@@ -194,6 +224,10 @@ export function downloadCostBreakdownPdf(
 
         currentY += 10;
 
+        //==================================================
+        // TABLE HEADERS
+        //==================================================
+
         const head = isWallSection
             ? [[
                 "Product",
@@ -201,22 +235,38 @@ export function downloadCostBreakdownPdf(
                 "Quantity (in Liters)",
                 "Price"
             ]]
-            : [[
-                "Item / Material",
-                "Quantity",
-                "Unit",
-                "Unit Rate",
-                "Amount"
-            ]];
+            : isFlooringSection
+                ? [[
+                    "Item / Material",
+                    "No. of Pieces",
+                    "Length (m)",
+                    "Width (m)",
+                    "Rate",
+                    "Amount"
+                ]]
+                : [[
+                    "Item / Material",
+                    "Quantity",
+                    "Unit",
+                    "Unit Rate",
+                    "Amount"
+                ]];
+
+        //==================================================
+        // TABLE ROWS
+        //==================================================
 
         const rows = sectionItems.length > 0
             ? sectionItems.map(item => {
+                // Wall material rows
                 if (isWallSection) {
-                    const liters = roundLitersUp(item.quantity);
+                    const liters =
+                        roundLitersUp(item.quantity);
 
-                    const rate = Number.isFinite(item.rate)
-                        ? item.rate
-                        : 0;
+                    const rate =
+                        Number.isFinite(item.rate)
+                            ? item.rate
+                            : 0;
 
                     return [
                         item.name,
@@ -226,6 +276,37 @@ export function downloadCostBreakdownPdf(
                     ];
                 }
 
+                // Flooring rows now include piece count,
+                // length, and width.
+                if (isFlooringSection) {
+                    const hasDimensions =
+                        typeof item.length === "number" &&
+                        Number.isFinite(item.length) &&
+                        item.length > 0 &&
+                        typeof item.width === "number" &&
+                        Number.isFinite(item.width) &&
+                        item.width > 0;
+
+                    const isPieceQuantity =
+                        item.unit === "pieces";
+
+                    return [
+                        item.name,
+
+                        hasDimensions && isPieceQuantity
+                            ? formatQuantity(item)
+                            : "—",
+
+                        formatDimension(item.length),
+                        formatDimension(item.width),
+
+                        formatMoney(item.rate),
+                        formatMoney(item.subtotal)
+                    ];
+                }
+
+                // Furniture, doors, and windows retain
+                // the original columns.
                 return [
                     item.name,
                     formatQuantity(item),
@@ -242,26 +323,41 @@ export function downloadCostBreakdownPdf(
                         "",
                         ""
                     ]
-                    : [
-                        "No items in this section.",
-                        "",
-                        "",
-                        "",
-                        ""
-                    ]
+                    : isFlooringSection
+                        ? [
+                            "No flooring assigned.",
+                            "",
+                            "",
+                            "",
+                            "",
+                            ""
+                        ]
+                        : [
+                            "No items in this section.",
+                            "",
+                            "",
+                            "",
+                            ""
+                        ]
             ];
+
+        //==================================================
+        // TABLE STYLING
+        //==================================================
 
         autoTable(doc, {
             startY: currentY,
             head,
             body: rows,
             theme: "striped",
+
             margin: {
                 left: margin,
                 right: margin,
                 top: 14,
                 bottom: 17
             },
+
             styles: {
                 font: "helvetica",
                 fontSize: 7.5,
@@ -272,15 +368,18 @@ export function downloadCostBreakdownPdf(
                 overflow: "linebreak",
                 valign: "middle"
             },
+
             headStyles: {
                 fillColor: [67, 78, 59],
                 textColor: [255, 255, 255],
                 fontStyle: "bold",
                 fontSize: 7.5
             },
+
             alternateRowStyles: {
                 fillColor: [246, 247, 243]
             },
+
             columnStyles: isWallSection
                 ? {
                     0: {
@@ -299,26 +398,53 @@ export function downloadCostBreakdownPdf(
                         halign: "right"
                     }
                 }
-                : {
-                    0: {
-                        cellWidth: 65
-                    },
-                    1: {
-                        cellWidth: 24,
-                        halign: "right"
-                    },
-                    2: {
-                        cellWidth: 18
-                    },
-                    3: {
-                        cellWidth: 36,
-                        halign: "right"
-                    },
-                    4: {
-                        cellWidth: 43,
-                        halign: "right"
+                : isFlooringSection
+                    ? {
+                        0: {
+                            cellWidth: 54
+                        },
+                        1: {
+                            cellWidth: 25,
+                            halign: "center"
+                        },
+                        2: {
+                            cellWidth: 23,
+                            halign: "center"
+                        },
+                        3: {
+                            cellWidth: 23,
+                            halign: "center"
+                        },
+                        4: {
+                            cellWidth: 30,
+                            halign: "right"
+                        },
+                        5: {
+                            cellWidth: 31,
+                            halign: "right"
+                        }
                     }
-                },
+                    : {
+                        0: {
+                            cellWidth: 65
+                        },
+                        1: {
+                            cellWidth: 24,
+                            halign: "right"
+                        },
+                        2: {
+                            cellWidth: 18
+                        },
+                        3: {
+                            cellWidth: 36,
+                            halign: "right"
+                        },
+                        4: {
+                            cellWidth: 43,
+                            halign: "right"
+                        }
+                    },
+
             didParseCell: data => {
                 if (
                     data.section === "body" &&
@@ -330,13 +456,19 @@ export function downloadCostBreakdownPdf(
                         118,
                         110
                     ];
+
                     data.cell.styles.fontStyle = "italic";
                 }
             }
         });
 
-        currentY = (doc.lastAutoTable?.finalY ?? currentY) + 6;
+        currentY =
+            (doc.lastAutoTable?.finalY ?? currentY) + 6;
     }
+
+    //==================================================
+    // ESTIMATED TOTAL
+    //==================================================
 
     if (currentY + 20 > pageHeight - 15) {
         doc.addPage();
@@ -374,9 +506,17 @@ export function downloadCostBreakdownPdf(
         { align: "right" }
     );
 
+    //==================================================
+    // PAGE FOOTERS
+    //==================================================
+
     const pageCount = doc.getNumberOfPages();
 
-    for (let page = 1; page <= pageCount; page++) {
+    for (
+        let page = 1;
+        page <= pageCount;
+        page++
+    ) {
         doc.setPage(page);
 
         doc.setDrawColor(220, 222, 216);
