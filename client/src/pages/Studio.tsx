@@ -1,751 +1,488 @@
-import {
-    useEffect,
-    useState
-} from "react";
-import {
-    Plus,
-    FolderOpen
-} from "lucide-react";
-import {
-    useNavigate
-} from "react-router-dom";
-import {
-    clearProjectSession
-} from "../services/projectEditSessionService";
-import {
-    collection,
-    getDocs,
-    query,
-    where
-} from "firebase/firestore";
-import {
-    onAuthStateChanged
-} from "firebase/auth";
-import {
-    auth,
-    db
-} from "../firebase/firebase";
-import NavBar
-    from "../pages/NavBar";
-import {
-    getDrafts
-} from "../services/projectDraftService";
-import type {
-    DraftProject
-} from "../services/projectDraftService";
-import "./Studio.css";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowUpRight, FolderOpen, Plus, Search } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { clearProjectSession } from "../services/projectEditSessionService";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth, db } from "../firebase/firebase";
+import { getDrafts } from "../services/projectDraftService";
+import type { DraftProject } from "../services/projectDraftService";
 
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 interface UserProject {
-    projectId:
-        string;
-    projectName:
-        string;
-    ownerId:
-        string;
-    jsonPath:
-        string;
-    jsonUrl:
-        string;
-    schemaVersion:
-        number;
-    thumbnailPath?:
-        string;
-    thumbnailUrl?:
-        string;
-    createdAt?:
-        unknown;
-    updatedAt?:
-        unknown;
+  projectId: string;
+  projectName: string;
+  ownerId: string;
+  jsonPath: string;
+  jsonUrl: string;
+  schemaVersion: number;
+  thumbnailPath?: string;
+  thumbnailUrl?: string;
+  createdAt?: unknown;
+  updatedAt?: unknown;
 }
 
-function formatProjectDate(
-    value: unknown
-): string {
-    if (
-        !value
-    ) {
-        return "Unknown date";
-    }
+type Filter = "all" | "projects" | "drafts";
+type SortKey = "recent" | "name";
 
-    if (
-        typeof value === "object" &&
-        value !== null &&
-        "toDate" in value &&
-        typeof (
-            value as {
-                toDate:
-                    unknown
-            }
-        ).toDate ===
-            "function"
-    ) {
-        const date =
-            (
-                value as {
-                    toDate:
-                        () => Date
-                }
-            ).toDate();
-
-        return date.toLocaleDateString(
-            undefined,
-            {
-                year:
-                    "numeric",
-                month:
-                    "long",
-                day:
-                    "numeric"
-            }
-        );
-    }
-
-    if (
-        value instanceof Date
-    ) {
-        return value.toLocaleDateString(
-            undefined,
-            {
-                year:
-                    "numeric",
-                month:
-                    "long",
-                day:
-                    "numeric"
-            }
-        );
-    }
-
-    if (
-        typeof value ===
-        "string"
-    ) {
-        const date =
-            new Date(
-                value
-            );
-
-        if (
-            !Number.isNaN(
-                date.getTime()
-            )
-        ) {
-            return date.toLocaleDateString(
-                undefined,
-                {
-                    year:
-                        "numeric",
-                    month:
-                        "long",
-                    day:
-                        "numeric"
-                }
-            );
-        }
-    }
-
-    return "Unknown date";
+interface StudioItem {
+  key: string;
+  kind: "project" | "draft";
+  name: string;
+  time: number;
+  meta: string;
+  thumbnail?: string;
+  onOpen: () => void;
 }
 
-function getProjectTime(
-    value: unknown
-): number {
-    if (
-        !value
-    ) {
-        return 0;
-    }
+// ---------------------------------------------------------------------------
+// Date helpers
+// ---------------------------------------------------------------------------
+const DATE_FORMAT: Intl.DateTimeFormatOptions = {
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+};
 
-    if (
-        typeof value === "object" &&
-        value !== null &&
-        "toMillis" in value &&
-        typeof (
-            value as {
-                toMillis:
-                    unknown
-            }
-        ).toMillis ===
-            "function"
-    ) {
-        return (
-            value as {
-                toMillis:
-                    () => number
-            }
-        ).toMillis();
-    }
+function getTime(value: unknown): number {
+  if (!value) return 0;
 
-    if (
-        value instanceof Date
-    ) {
-        return value.getTime();
-    }
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "toMillis" in value &&
+    typeof (value as { toMillis: unknown }).toMillis === "function"
+  ) {
+    return (value as { toMillis: () => number }).toMillis();
+  }
 
-    if (
-        typeof value ===
-        "string"
-    ) {
-        const date =
-            new Date(
-                value
-            );
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === "number" && Number.isFinite(value)) return value;
 
-        if (
-            !Number.isNaN(
-                date.getTime()
-            )
-        ) {
-            return date.getTime();
-        }
-    }
+  if (typeof value === "string") {
+    const ms = new Date(value).getTime();
+    if (!Number.isNaN(ms)) return ms;
+  }
 
-    return 0;
+  return 0;
 }
 
+function formatWhen(ms: number): string {
+  if (!ms) return "Unknown date";
+  const diff = Date.now() - ms;
+  const MIN = 60_000;
+  const HOUR = 60 * MIN;
+  const DAY = 24 * HOUR;
+
+  if (diff < MIN) return "just now";
+  if (diff < HOUR) return `${Math.floor(diff / MIN)}m ago`;
+  if (diff < DAY) return `${Math.floor(diff / HOUR)}h ago`;
+  if (diff < 7 * DAY) return `${Math.floor(diff / DAY)}d ago`;
+  return new Date(ms).toLocaleDateString(undefined, DATE_FORMAT);
+}
+
+// ---------------------------------------------------------------------------
+// Pieces
+// ---------------------------------------------------------------------------
+const PRIMARY_BUTTON =
+  "inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-[#1b1b1b] bg-[#1b1b1b] px-5 py-2.5 text-[12px] font-medium text-white transition hover:bg-black active:translate-y-px";
+
+const GRID = "grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
+
+function ProjectCard({ item }: { item: StudioItem }) {
+  const [imgError, setImgError] = useState(false);
+  const hasImage = Boolean(item.thumbnail?.trim()) && !imgError;
+
+  return (
+    <button
+      type="button"
+      onClick={item.onOpen}
+      aria-label={`${item.kind === "draft" ? "Continue draft" : "Open project"} ${item.name}`}
+      className="group text-left outline-none"
+    >
+      <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-black/[0.05] ring-1 ring-black/5 transition duration-200 group-hover:ring-black/20 group-focus-visible:ring-2 group-focus-visible:ring-[#1b1b1b]">
+        {hasImage ? (
+          <img
+            src={item.thumbnail}
+            alt=""
+            loading="lazy"
+            onError={() => setImgError(true)}
+            className="h-full w-full object-cover transition duration-500 ease-out group-hover:scale-[1.03]"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-black/20">
+            <FolderOpen className="h-8 w-8" strokeWidth={1.25} />
+          </div>
+        )}
+
+        {item.kind === "draft" && (
+          <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-[#1b1b1b] shadow-sm backdrop-blur">
+            Draft
+          </span>
+        )}
+
+        <span className="absolute bottom-3 right-3 inline-flex translate-y-1 items-center gap-1 rounded-full bg-[#1b1b1b] px-3 py-1.5 text-[10px] font-medium text-white opacity-0 shadow-md transition duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100">
+          {item.kind === "draft" ? "Continue" : "Open"}
+          <ArrowUpRight className="h-3 w-3" strokeWidth={2} />
+        </span>
+      </div>
+
+      <div className="mt-3 px-0.5">
+        <h3 className="truncate text-[13px] font-medium leading-tight text-[#1b1b1b]">
+          {item.name}
+        </h3>
+        <p className="mt-1 truncate text-[10px] uppercase tracking-wide text-black/45">
+          {item.meta}
+        </p>
+      </div>
+    </button>
+  );
+}
+
+function NewProjectCard({ onClick }: { onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className="group text-left outline-none">
+      <div className="flex aspect-[4/3] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-black/25 bg-transparent transition duration-200 group-hover:border-[#1b1b1b] group-hover:bg-black/[0.03] group-focus-visible:border-[#1b1b1b] group-focus-visible:ring-2 group-focus-visible:ring-[#1b1b1b]/20">
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1b1b1b] text-white transition group-hover:scale-105">
+          <Plus className="h-4 w-4" strokeWidth={2} />
+        </span>
+        <span className="text-[12px] font-medium text-[#1b1b1b]">New project</span>
+      </div>
+      <div className="mt-3 px-0.5">
+        <p className="text-[13px] font-medium leading-tight text-black/0 select-none" aria-hidden>
+          &nbsp;
+        </p>
+        <p className="mt-1 text-[10px] uppercase tracking-wide text-black/45">
+          Start from a blank room
+        </p>
+      </div>
+    </button>
+  );
+}
+
+function SkeletonCard() {
+  return (
+    <div>
+      <div className="aspect-[4/3] animate-pulse rounded-xl bg-black/[0.06]" />
+      <div className="mt-3 h-3 w-2/3 animate-pulse rounded bg-black/[0.06]" />
+      <div className="mt-2 h-2 w-1/3 animate-pulse rounded bg-black/[0.05]" />
+    </div>
+  );
+}
+
+function Tab({
+  active,
+  count,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  count: number;
+  onClick: () => void;
+  children: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-[11px] font-medium transition ${
+        active
+          ? "border-[#1b1b1b] bg-[#1b1b1b] text-white"
+          : "border-black/20 text-black/60 hover:border-black/50 hover:text-[#1b1b1b]"
+      }`}
+    >
+      {children}
+      <span className={`text-[10px] tabular-nums ${active ? "text-white/60" : "text-black/35"}`}>
+        {count}
+      </span>
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
 export default function Studio() {
-    const navigate =
-        useNavigate();
+  const navigate = useNavigate();
 
-    const [
-        projects,
-        setProjects
-    ] = useState<UserProject[]>([]);
+  const [projects, setProjects] = useState<UserProject[]>([]);
+  const [drafts, setDrafts] = useState<DraftProject[]>([]);
+  const [firstName, setFirstName] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-    const [
-        drafts,
-        setDrafts
-    ] = useState<DraftProject[]>([]);
+  const [filter, setFilter] = useState<Filter>("all");
+  const [sort, setSort] = useState<SortKey>("recent");
+  const [search, setSearch] = useState("");
 
-    const [
-        loading,
-        setLoading
-    ] = useState(true);
+  useEffect(() => {
+    let cancelled = false;
 
-    const [
-        error,
-        setError
-    ] = useState("");
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        if (!cancelled) {
+          setProjects([]);
+          setDrafts([]);
+          setError("Please log in to view your projects.");
+          setLoading(false);
+        }
+        return;
+      }
 
-    useEffect(() => {
-        let cancelled = false;
+      localStorage.setItem("espasyo_current_user_uid", user.uid);
+      if (!cancelled) {
+        setFirstName(user.displayName?.trim().split(/\s+/)[0] ?? "");
+      }
 
-        const unsubscribe =
-            onAuthStateChanged(
-                auth,
-                async user => {
-                    if (
-                        !user
-                    ) {
-                        if (
-                            !cancelled
-                        ) {
-                            setProjects([]);
-                            setDrafts([]);
+      try {
+        setLoading(true);
+        setError("");
 
-                            setError(
-                                "Please log in to view your projects."
-                            );
+        const localDrafts = getDrafts(user.uid);
 
-                            setLoading(
-                                false
-                            );
-                        }
-
-                        return;
-                    }
-
-                    localStorage.setItem(
-                        "espasyo_current_user_uid",
-                        user.uid
-                    );
-
-                    try {
-                        setLoading(
-                            true
-                        );
-
-                        setError("");
-
-                        const localDrafts =
-                            getDrafts(
-                                user.uid
-                            );
-
-                        const projectsQuery =
-                            query(
-                                collection(
-                                    db,
-                                    "projects"
-                                ),
-                                where(
-                                    "ownerId",
-                                    "==",
-                                    user.uid
-                                )
-                            );
-
-                        const snapshot =
-                            await getDocs(
-                                projectsQuery
-                            );
-
-                        const loadedProjects:
-                            UserProject[] = [];
-
-                        snapshot.docs.forEach(
-                            document => {
-                                const data =
-                                    document.data();
-
-                                loadedProjects.push({
-                                    projectId:
-                                        typeof data.projectId ===
-                                        "string"
-                                            ? data.projectId
-                                            : document.id,
-
-                                    projectName:
-                                        typeof data.projectName ===
-                                        "string"
-                                            ? data.projectName
-                                            : "Unnamed Project",
-
-                                    ownerId:
-                                        typeof data.ownerId ===
-                                        "string"
-                                            ? data.ownerId
-                                            : "",
-
-                                    jsonPath:
-                                        typeof data.jsonPath ===
-                                        "string"
-                                            ? data.jsonPath
-                                            : "",
-
-                                    jsonUrl:
-                                        typeof data.jsonUrl ===
-                                        "string"
-                                            ? data.jsonUrl
-                                            : "",
-
-                                    schemaVersion:
-                                        typeof data.schemaVersion ===
-                                        "number"
-                                            ? data.schemaVersion
-                                            : 1,
-
-                                    thumbnailPath:
-                                        typeof data.thumbnailPath ===
-                                        "string"
-                                            ? data.thumbnailPath
-                                            : undefined,
-
-                                    thumbnailUrl:
-                                        typeof data.thumbnailUrl ===
-                                        "string"
-                                            ? data.thumbnailUrl
-                                            : undefined,
-
-                                    createdAt:
-                                        data.createdAt,
-
-                                    updatedAt:
-                                        data.updatedAt
-                                });
-                            }
-                        );
-
-                        loadedProjects.sort(
-                            (
-                                first,
-                                second
-                            ) =>
-                                getProjectTime(
-                                    second.updatedAt
-                                ) -
-                                getProjectTime(
-                                    first.updatedAt
-                                )
-                        );
-
-                        if (
-                            !cancelled
-                        ) {
-                            setDrafts(
-                                localDrafts
-                            );
-
-                            setProjects(
-                                loadedProjects
-                            );
-                        }
-                    } catch (
-                        loadError
-                    ) {
-                        console.error(
-                            "Failed to load projects:",
-                            loadError
-                        );
-
-                        if (
-                            !cancelled
-                        ) {
-                            const firebaseError =
-                                loadError as {
-                                    code?:
-                                        string;
-                                    message?:
-                                        string;
-                                };
-
-                            setError(
-                                firebaseError.code
-                                    ? `Failed to load projects: ${firebaseError.code}`
-                                    : "Failed to load your projects."
-                            );
-                        }
-                    } finally {
-                        if (
-                            !cancelled
-                        ) {
-                            setLoading(
-                                false
-                            );
-                        }
-                    }
-                }
-            );
-
-        return () => {
-            cancelled =
-                true;
-
-            unsubscribe();
-        };
-    }, []);
-
-    function handleCreateProject() {
-        clearProjectSession();
-        localStorage.removeItem(
-            "espasyo_project_name"
+        const snapshot = await getDocs(
+          query(collection(db, "projects"), where("ownerId", "==", user.uid)),
         );
 
-        navigate(
-            "/studio/editor"
-        );
-    }
+        const loaded: UserProject[] = snapshot.docs.map((document) => {
+          const data = document.data();
+          return {
+            projectId:
+              typeof data.projectId === "string" ? data.projectId : document.id,
+            projectName:
+              typeof data.projectName === "string" ? data.projectName : "Unnamed Project",
+            ownerId: typeof data.ownerId === "string" ? data.ownerId : "",
+            jsonPath: typeof data.jsonPath === "string" ? data.jsonPath : "",
+            jsonUrl: typeof data.jsonUrl === "string" ? data.jsonUrl : "",
+            schemaVersion: typeof data.schemaVersion === "number" ? data.schemaVersion : 1,
+            thumbnailPath:
+              typeof data.thumbnailPath === "string" ? data.thumbnailPath : undefined,
+            thumbnailUrl:
+              typeof data.thumbnailUrl === "string" ? data.thumbnailUrl : undefined,
+            createdAt: data.createdAt,
+            updatedAt: data.updatedAt,
+          };
+        });
 
-    function handleLoadProject(
-        project:
-            UserProject
-    ) {
-        navigate(
-            `/studio/load/${project.projectId}`
-        );
-    }
+        if (!cancelled) {
+          setDrafts(localDrafts);
+          setProjects(loaded);
+        }
+      } catch (loadError) {
+        console.error("Failed to load projects:", loadError);
 
-    function handleContinueDraft(
-        draft:
-            DraftProject
-    ) {
-        localStorage.setItem(
-            "espasyo_project_name",
-            draft.projectName
-        );
+        if (!cancelled) {
+          const firebaseError = loadError as { code?: string };
+          setError(
+            firebaseError.code
+              ? `Failed to load projects: ${firebaseError.code}`
+              : "Failed to load your projects.",
+          );
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    });
 
-        navigate(
-            `/studio/editor?draft=${encodeURIComponent(
-                draft.draftId
-            )}`
-        );
-    }
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
 
-    return (
-        <div className="studio-layout">
-            <NavBar />
+  function handleCreateProject() {
+    clearProjectSession();
+    localStorage.removeItem("espasyo_project_name");
+    navigate("/studio/editor");
+  }
 
-            <main className="studio-page">
-                <div className="studio-container">
-                    <div className="studio-header">
-                        <div>
-                            <p className="studio-eyebrow">
-                                Espasyo Studio
-                            </p>
+  const items = useMemo<StudioItem[]>(() => {
+    const projectItems: StudioItem[] = projects.map((p) => {
+      const time = getTime(p.updatedAt);
+      return {
+        key: `project-${p.projectId}`,
+        kind: "project",
+        name: p.projectName,
+        time,
+        meta: `Edited ${formatWhen(time)}`,
+        thumbnail: p.thumbnailUrl,
+        onOpen: () => navigate(`/studio/load/${p.projectId}`),
+      };
+    });
 
-                            <h1>
-                                Your Projects
-                            </h1>
+    const draftItems: StudioItem[] = drafts.map((d) => {
+      const time = getTime(d.savedAt);
+      return {
+        key: `draft-${d.draftId}`,
+        kind: "draft",
+        name: d.projectName,
+        time,
+        meta: `Saved ${formatWhen(time)}`,
+        thumbnail: d.thumbnail,
+        onOpen: () => {
+          localStorage.setItem("espasyo_project_name", d.projectName);
+          navigate(`/studio/editor?draft=${encodeURIComponent(d.draftId)}`);
+        },
+      };
+    });
 
-                            <p className="studio-description">
-                                Create a new interior design
-                                project or open one of your
-                                existing projects.
-                            </p>
-                        </div>
+    return [...projectItems, ...draftItems];
+  }, [projects, drafts, navigate]);
 
-                        <button
-                            type="button"
-                            className="studio-create-button"
-                            onClick={
-                                handleCreateProject
-                            }
-                        >
-                            <Plus
-                                size={
-                                    18
-                                }
-                            />
+  const visible = useMemo(() => {
+    const q = search.trim().toLowerCase();
 
-                            Create Project
-                        </button>
-                    </div>
+    const list = items.filter((i) => {
+      if (filter === "projects" && i.kind !== "project") return false;
+      if (filter === "drafts" && i.kind !== "draft") return false;
+      if (q && !i.name.toLowerCase().includes(q)) return false;
+      return true;
+    });
 
-                    {
-                        loading && (
-                            <section className="studio-projects">
-                                <div className="studio-empty-state">
-                                    Loading projects...
-                                </div>
-                            </section>
-                        )
-                    }
-
-                    {
-                        !loading &&
-                        error && (
-                            <section className="studio-projects">
-                                <div className="studio-empty-state">
-                                    {
-                                        error
-                                    }
-                                </div>
-                            </section>
-                        )
-                    }
-
-                    {
-                        !loading &&
-                        !error && (
-                            <>
-                                <section className="studio-projects">
-                                    <div className="studio-section-heading">
-                                        <h2>
-                                            Drafts
-                                        </h2>
-
-                                        <span>
-                                            {
-                                                drafts.length
-                                            }
-                                        </span>
-                                    </div>
-
-                                    {
-                                        drafts.length ===
-                                        0 && (
-                                            <div className="studio-empty-state">
-                                                <p>
-                                                    You have no saved drafts.
-                                                </p>
-                                            </div>
-                                        )
-                                    }
-
-                                    {
-                                        drafts.length >
-                                        0 && (
-                                            <div className="studio-project-grid">
-                                                {
-                                                    drafts.map(
-                                                        draft => (
-                                                            <article
-                                                                key={
-                                                                    draft.draftId
-                                                                }
-                                                                className="studio-project-card"
-                                                            >
-                                                                <div className="studio-project-preview">
-                                                                    {
-                                                                        draft.thumbnail ? (
-                                                                            <img
-                                                                                src={
-                                                                                    draft.thumbnail
-                                                                                }
-                                                                                alt={
-                                                                                    `${draft.projectName} draft preview`
-                                                                                }
-                                                                                className="studio-project-thumbnail"
-                                                                            />
-                                                                        ) : (
-                                                                            <FolderOpen
-                                                                                size={
-                                                                                    28
-                                                                                }
-                                                                            />
-                                                                        )
-                                                                    }
-                                                                </div>
-
-                                                                <div className="studio-project-info">
-                                                                    <h3>
-                                                                        {
-                                                                            draft.projectName
-                                                                        }
-                                                                    </h3>
-
-                                                                    <p>
-                                                                        Last saved:{" "}
-                                                                        {
-                                                                            formatProjectDate(
-                                                                                draft.savedAt
-                                                                            )
-                                                                        }
-                                                                    </p>
-                                                                </div>
-
-                                                                <button
-                                                                    type="button"
-                                                                    className="studio-load-button"
-                                                                    onClick={() =>
-                                                                        handleContinueDraft(
-                                                                            draft
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    Continue Draft
-                                                                </button>
-                                                            </article>
-                                                        )
-                                                    )
-                                                }
-                                            </div>
-                                        )
-                                    }
-                                </section>
-
-                                <section className="studio-projects">
-                                    <div className="studio-section-heading">
-                                        <h2>
-                                            My Projects
-                                        </h2>
-
-                                        <span>
-                                            {
-                                                projects.length
-                                            }
-                                        </span>
-                                    </div>
-
-                                    {
-                                        projects.length ===
-                                        0 && (
-                                            <div className="studio-empty-state">
-                                                <FolderOpen
-                                                    size={
-                                                        34
-                                                    }
-                                                />
-
-                                                <p>
-                                                    You have no saved projects yet.
-                                                </p>
-
-                                                <button
-                                                    type="button"
-                                                    className="studio-create-button"
-                                                    onClick={
-                                                        handleCreateProject
-                                                    }
-                                                >
-                                                    <Plus
-                                                        size={
-                                                            18
-                                                        }
-                                                    />
-
-                                                    Create Project
-                                                </button>
-                                            </div>
-                                        )
-                                    }
-
-                                    {
-                                        projects.length >
-                                        0 && (
-                                            <div className="studio-project-grid">
-                                                {
-                                                    projects.map(
-                                                        project => (
-                                                            <article
-                                                                key={
-                                                                    project.projectId
-                                                                }
-                                                                className="studio-project-card"
-                                                            >
-                                                                <div className="studio-project-preview">
-                                                                    {
-                                                                        project.thumbnailUrl ? (
-                                                                            <img
-                                                                                src={
-                                                                                    project.thumbnailUrl
-                                                                                }
-                                                                                alt={
-                                                                                    `${project.projectName} project preview`
-                                                                                }
-                                                                                className="studio-project-thumbnail"
-                                                                            />
-                                                                        ) : (
-                                                                            <FolderOpen
-                                                                                size={
-                                                                                    28
-                                                                                }
-                                                                            />
-                                                                        )
-                                                                    }
-                                                                </div>
-
-                                                                <div className="studio-project-info">
-                                                                    <h3>
-                                                                        {
-                                                                            project.projectName
-                                                                        }
-                                                                    </h3>
-
-                                                                    <p>
-                                                                        Last updated:{" "}
-                                                                        {
-                                                                            formatProjectDate(
-                                                                                project.updatedAt
-                                                                            )
-                                                                        }
-                                                                    </p>
-                                                                </div>
-
-                                                                <button
-                                                                    type="button"
-                                                                    className="studio-load-button"
-                                                                    onClick={() =>
-                                                                        handleLoadProject(
-                                                                            project
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    Load Project
-                                                                </button>
-                                                            </article>
-                                                        )
-                                                    )
-                                                }
-                                            </div>
-                                        )
-                                    }
-                                </section>
-                            </>
-                        )
-                    }
-                </div>
-            </main>
-        </div>
+    return list.sort((a, b) =>
+      sort === "name" ? a.name.localeCompare(b.name) : b.time - a.time,
     );
+  }, [items, filter, sort, search]);
+
+  const isSearching = search.trim().length > 0;
+  const showNewTile = !isSearching && filter !== "drafts";
+  const hasAnything = items.length > 0;
+
+  return (
+    <div className="min-h-[calc(100vh-63px)] w-full bg-white font-sans text-[#1b1b1b] antialiased">
+      <main className="mx-auto max-w-[1400px] px-6 pb-20 pt-10 md:px-10">
+        {/* Title row */}
+        <div className="mb-10 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.16em] text-black/45">
+              Espasyo Studio
+            </p>
+            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">
+              {firstName ? `Welcome back, ${firstName}` : "Your projects"}
+            </h1>
+            <p className="mt-3 max-w-[520px] text-[13px] leading-relaxed text-black/50">
+              Pick up where you left off, or start a new room from scratch.
+            </p>
+          </div>
+
+          <button type="button" className={PRIMARY_BUTTON} onClick={handleCreateProject}>
+            <Plus className="h-3.5 w-3.5" strokeWidth={2} />
+            New project
+          </button>
+        </div>
+
+        {/* Controls */}
+        {!loading && !error && hasAnything && (
+          <div className="mb-8 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
+              <Tab active={filter === "all"} count={items.length} onClick={() => setFilter("all")}>
+                All
+              </Tab>
+              <Tab
+                active={filter === "projects"}
+                count={projects.length}
+                onClick={() => setFilter("projects")}
+              >
+                Projects
+              </Tab>
+              <Tab
+                active={filter === "drafts"}
+                count={drafts.length}
+                onClick={() => setFilter("drafts")}
+              >
+                Drafts
+              </Tab>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <label className="relative block sm:w-[240px]" aria-label="Search projects">
+                <Search
+                  className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-black/50"
+                  strokeWidth={1.75}
+                />
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search projects"
+                  className="h-[36px] w-full rounded-md border border-black/15 bg-white pl-9 pr-3 text-[11px] font-medium text-[#1b1b1b] outline-none transition placeholder:text-black/30 hover:border-black/35 focus:border-black/60"
+                />
+              </label>
+
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as SortKey)}
+                aria-label="Sort by"
+                className="h-[36px] cursor-pointer rounded-md border border-black/15 bg-white px-3 text-[11px] font-medium text-[#1b1b1b] outline-none transition hover:border-black/35 focus:border-black/60"
+              >
+                <option value="recent">Most recent</option>
+                <option value="name">Name (A–Z)</option>
+              </select>
+            </div>
+          </div>
+        )}
+
+        {/* Loading */}
+        {loading && (
+          <div className={GRID} aria-busy="true" aria-label="Loading projects">
+            {Array.from({ length: 4 }, (_, i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </div>
+        )}
+
+        {/* Error */}
+        {!loading && error && (
+          <div className="flex min-h-[240px] items-center justify-center rounded-xl bg-black/[0.05] px-6 text-center text-[13px] text-black/50">
+            {error}
+          </div>
+        )}
+
+        {/* First-run empty state */}
+        {!loading && !error && !hasAnything && (
+          <div className="flex min-h-[360px] flex-col items-center justify-center gap-5 rounded-xl border border-dashed border-black/20 px-6 py-16 text-center">
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/[0.05] text-black/40">
+              <FolderOpen className="h-5 w-5" strokeWidth={1.25} />
+            </span>
+            <div>
+              <p className="text-[15px] font-medium">Nothing here yet</p>
+              <p className="mt-1.5 max-w-[360px] text-[13px] leading-relaxed text-black/50">
+                Build your first room, place some furniture, and see the estimated
+                cost update as you go.
+              </p>
+            </div>
+            <button type="button" className={PRIMARY_BUTTON} onClick={handleCreateProject}>
+              <Plus className="h-3.5 w-3.5" strokeWidth={2} />
+              Create your first project
+            </button>
+          </div>
+        )}
+
+        {/* Grid */}
+        {!loading && !error && hasAnything && (
+          <>
+            {visible.length === 0 && !showNewTile ? (
+              <div className="flex min-h-[240px] items-center justify-center rounded-xl bg-black/[0.05] px-6 text-center text-[13px] text-black/45">
+                {isSearching
+                  ? "No projects match your search."
+                  : filter === "drafts"
+                    ? "You have no saved drafts."
+                    : "Nothing to show."}
+              </div>
+            ) : (
+              <div className={GRID}>
+                {showNewTile && <NewProjectCard onClick={handleCreateProject} />}
+                {visible.map((item) => (
+                  <ProjectCard key={item.key} item={item} />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </main>
+    </div>
+  );
 }

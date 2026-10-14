@@ -1,105 +1,70 @@
+import { useEffect, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { Armchair } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import "./NavBar.css";
 
-// Critically damped by default (no overshoot) — this is chrome, not a flick.
+// Critically damped — this is chrome, not a flick.
 const SPRING = { type: "spring", bounce: 0, duration: 0.35 } as const;
 
+const LINKS = [
+  { label: "Home", to: "/", end: true },
+  { label: "Library", to: "/library", end: false },
+  { label: "Studio", to: "/studio", end: false },
+] as const;
+
 export default function NavBar() {
-  const prefersReducedMotion = useReducedMotion();
+  const reduce = useReducedMotion();
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   return (
     <header className="navbar">
-      <div className="navbar__inner">
-
-        {/* Logo - Left */}
-        <div className="navbar__logo">
-          <Armchair className="navbar__logo-icon" strokeWidth={1.5} />
+      <div className={`navbar__inner${scrolled ? " is-scrolled" : ""}`}>
+        {/* Logo */}
+        <Link to="/" className="navbar__logo" aria-label="Espasyo home">
+          <span className="navbar__logo-badge">
+            <Armchair className="navbar__logo-icon" strokeWidth={1.75} />
+          </span>
           <span className="navbar__logo-text">Espasyo</span>
-        </div>
+        </Link>
 
-        {/* Navigation Links - Center */}
-        <nav className="navbar__links">
-
-          <NavLink to="/" className="navbar__link">
-            {({ isActive }) => (
-              <>
-                Home
-
-                {isActive && (
-                  <motion.span
-                    layoutId="navIndicator"
-                    className="navbar__indicator"
-                    transition={
-                      prefersReducedMotion
-                        ? { duration: 0 }
-                        : SPRING
-                    }
-                  />
-                )}
-              </>
-            )}
-          </NavLink>
-
-          <NavLink to="/library" className="navbar__link">
-            {({ isActive }) => (
-              <>
-                Library
-
-                {isActive && (
-                  <motion.span
-                    layoutId="navIndicator"
-                    className="navbar__indicator"
-                    transition={
-                      prefersReducedMotion
-                        ? { duration: 0 }
-                        : SPRING
-                    }
-                  />
-                )}
-              </>
-            )}
-          </NavLink>
-
-          <NavLink to="/studio" className="navbar__link">
-            {({ isActive }) => (
-              <>
-                Studio
-
-                {isActive && (
-                  <motion.span
-                    layoutId="navIndicator"
-                    className="navbar__indicator"
-                    transition={
-                      prefersReducedMotion
-                        ? { duration: 0 }
-                        : SPRING
-                    }
-                  />
-                )}
-              </>
-            )}
-          </NavLink>
-
+        {/* Links */}
+        <nav className="navbar__links" aria-label="Primary">
+          {LINKS.map((link) => (
+            <NavLink key={link.to} to={link.to} end={link.end} className="navbar__link">
+              {({ isActive }) => (
+                <>
+                  {isActive && (
+                    <motion.span
+                      layoutId="navPill"
+                      className="navbar__pill"
+                      transition={reduce ? { duration: 0 } : SPRING}
+                    />
+                  )}
+                  <span className="navbar__link-text">{link.label}</span>
+                </>
+              )}
+            </NavLink>
+          ))}
         </nav>
 
-        {/* Sign In - Right */}
+        {/* Action */}
         <motion.div
-          whileTap={
-            prefersReducedMotion ? undefined : { scale: 0.96 }
-          }
+          className="navbar__action"
+          whileTap={reduce ? undefined : { scale: 0.97 }}
           transition={SPRING}
-          style={{ display: "inline-flex" }}
         >
-          <Link
-            to="/auth"
-            className="navbar__signin-button"
-          >
-            Sign In
+          <Link to="/auth" className="navbar__signin">
+            Sign in
           </Link>
         </motion.div>
-
       </div>
     </header>
   );

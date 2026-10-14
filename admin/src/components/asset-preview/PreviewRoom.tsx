@@ -10,6 +10,7 @@ import {
   WallMaterial,
   SOLID_MATERIAL_PROPS,
 } from "./PreviewMaterials";
+import { PREVIEW_ROOM_DIMENSIONS } from "./previewRoomDimensions";
 
 function VisibleEdges() {
   return (
@@ -26,23 +27,12 @@ export default function PreviewRoom({
 }: {
   asset: Asset | null;
 }) {
-  const wallHeight =
-    3;
-
-  const roomWidth =
-    4.6;
-
-  const roomDepth =
-    5.5;
-
-  const floorThickness =
-    0.3;
-
-  const backWallThickness =
-    0.2;
-
-  const leftWallThickness =
-    1.0;
+  const wallHeight = PREVIEW_ROOM_DIMENSIONS.wallHeight;
+  const roomWidth = PREVIEW_ROOM_DIMENSIONS.width;
+  const roomDepth = PREVIEW_ROOM_DIMENSIONS.depth;
+  const floorThickness = PREVIEW_ROOM_DIMENSIONS.floorThickness;
+  const backWallThickness = PREVIEW_ROOM_DIMENSIONS.backWallThickness;
+  const leftWallThickness = PREVIEW_ROOM_DIMENSIONS.leftWallThickness;
 
   const floorTopY =
     floorThickness;

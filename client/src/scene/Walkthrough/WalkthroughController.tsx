@@ -50,9 +50,9 @@ const WALK_SPEED = 2.5;
 
 // Head-bobbing settings
 const BOB_HEIGHT = 0.035;
-const BOB_SIDE_SWAY = 0.015;
-const BOB_FREQUENCY = Math.PI * 2;
-const BOB_SMOOTHING = 8;
+const BOB_SIDE_SWAY = 0.035;
+const BOB_FREQUENCY = Math.PI * 1.8;
+const BOB_SMOOTHING = 10;
 
 //==================================================
 // ZOOM SETTINGS

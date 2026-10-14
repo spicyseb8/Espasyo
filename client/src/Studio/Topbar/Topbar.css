@@ -1,128 +1,127 @@
 /* ==================================================
-   TOPBAR — tokens
+   TOPBAR — tokens (ink palette, same as Library / Studio)
+   Sizes use the shared type scale when it's loaded, with fallbacks
+   because the editor route sits outside <AppLayout />.
    ================================================== */
 
 :root {
-    --tb-ink: #202124;
-    --tb-ink-soft: #303236;
-    --tb-ink-muted: #85878b;
-    --tb-ink-faint: #a3a5a8;
+    --tb-ink: #1b1b1b;
+    --tb-ink-soft: #2e2e2e;
+    --tb-ink-muted: rgba(0, 0, 0, 0.5);
+    --tb-ink-faint: rgba(0, 0, 0, 0.32);
 
-    --tb-line: #e9eaec;
-    --tb-line-soft: #eeeeef;
-    --tb-line-strong: #d6d8db;
+    --tb-line: rgba(0, 0, 0, 0.1);
+    --tb-line-soft: rgba(0, 0, 0, 0.07);
+    --tb-line-strong: rgba(0, 0, 0, 0.22);
 
     --tb-surface: #ffffff;
-    --tb-surface-hover: #f8f9fa;
-    --tb-surface-sunken: #fafafa;
+    --tb-surface-hover: rgba(0, 0, 0, 0.05);
+    --tb-surface-sunken: rgba(0, 0, 0, 0.03);
 
-    --tb-green: #4f8765;
-    --tb-green-ink: #397252;
-    --tb-green-tint: #f1f7f3;
-    --tb-green-border: #b8d9c2;
+    /* green palette — used by the cost estimate button & prices */
+    --tb-green: #1f8a4c;
+    --tb-green-ink: #14663a;
+    --tb-green-tint: rgba(31, 138, 76, 0.08);
+    --tb-green-border: rgba(31, 138, 76, 0.35);
 
     --tb-radius-sm: 8px;
-    --tb-radius-md: 9px;
-    --tb-radius-lg: 14px;
+    --tb-radius-md: 999px;
+    --tb-radius-lg: 16px;
 
-    --tb-shadow-dropdown:
-        0 18px 45px rgba(0, 0, 0, 0.10),
-        0 4px 12px rgba(0, 0, 0, 0.04);
+    --tb-shadow-dropdown: 0 18px 48px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.05);
+    --tb-ring: 0 0 0 2px rgba(27, 27, 27, 0.18);
 
-    --tb-shadow-hover:
-        0 1px 3px rgba(0, 0, 0, 0.04);
-
-    --tb-ring: 0 0 0 3px rgba(0, 0, 0, 0.06);
+    --tb-t-body: var(--t-body, 13px);
+    --tb-t-label: var(--t-label, 11px);
+    --tb-t-micro: var(--t-micro, 10px);
 }
 
 
 /* ==================================================
-   TOPBAR
+   BAR
    ================================================== */
 
 .topbar {
     position: relative;
+    z-index: 1000;
+
+    display: grid;
+    grid-template-columns: 1fr minmax(0, 320px) 1fr;
+    align-items: center;
+    gap: 16px;
 
     width: 100%;
     height: 64px;
-
-    display: flex;
-    align-items: center;
-
-    padding: 0 20px;
-
-    background: var(--tb-surface);
-
-    border-bottom: 1px solid var(--tb-line);
-
+    padding: 0 clamp(12px, 2vw, 24px);
     box-sizing: border-box;
 
-    z-index: 1000;
+    background: var(--tb-surface);
+    border-bottom: 0;
+
+    font-family: inherit;
+    color: var(--tb-ink);
+    -webkit-font-smoothing: antialiased;
 }
-
-
-/* ==================================================
-   LEFT
-   ================================================== */
 
 .topbar-left {
     display: flex;
     align-items: center;
-
-    width: 220px;
-
-    flex-shrink: 0;
+    justify-self: start;
 }
-
-
-/* ==================================================
-   BRAND
-   ================================================== */
-
-.topbar-brand {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-
-    font-size: 17px;
-    font-weight: 800;
-
-    letter-spacing: 0.06em;
-
-    color: var(--tb-ink);
-
-    user-select: none;
-}
-
-.topbar-brand::before {
-    content: "";
-
-    width: 7px;
-    height: 7px;
-
-    border-radius: 999px;
-
-    background: var(--tb-green);
-}
-
-
-/* ==================================================
-   CENTER
-   ================================================== */
 
 .topbar-center {
-    position: absolute;
-
-    left: 50%;
-
-    transform: translateX(-50%);
-
     display: flex;
     align-items: center;
-
     justify-content: center;
+    min-width: 0;
+}
 
-    width: 340px;
+.topbar-actions {
+    display: flex;
+    align-items: center;
+    justify-self: end;
+    gap: 8px;
+}
+
+
+/* ==================================================
+   BACK
+   ================================================== */
+
+.topbar-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+
+    height: 34px;
+    padding: 0 14px 0 10px;
+
+    border: 1px solid var(--tb-line-strong);
+    border-radius: 999px;
+
+    background: transparent;
+    color: var(--tb-ink);
+
+    font-size: var(--tb-t-label);
+    font-weight: 500;
+    text-decoration: none;
+
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+.topbar-back:hover {
+    background: var(--tb-ink);
+    border-color: var(--tb-ink);
+    color: #fff;
+}
+
+.topbar-back:active {
+    transform: translateY(1px);
+}
+
+.topbar-back:focus-visible {
+    outline: none;
+    box-shadow: var(--tb-ring);
 }
 
 
@@ -131,97 +130,80 @@
    ================================================== */
 
 .project-title-input {
-    width: 340px;
-
-    padding: 9px 12px;
-
-    border: 1px solid transparent;
-
-    border-radius: var(--tb-radius-md);
-
-    background: transparent;
-
+    width: 100%;
+    height: 36px;
+    padding: 0 14px;
     box-sizing: border-box;
 
-    font-size: 13px;
-    font-weight: 500;
+    border: 1px solid var(--tb-line);
+    border-radius: 10px;
 
+    background: var(--tb-surface-sunken);
     color: var(--tb-ink);
 
+    font-family: inherit;
+    font-size: var(--tb-t-body);
+    font-weight: 500;
     text-align: center;
+    text-overflow: ellipsis;
 
     outline: none;
 
-    transition:
-        background 0.15s ease,
-        border-color 0.15s ease,
-        box-shadow 0.15s ease;
+    transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .project-title-input::placeholder {
     color: var(--tb-ink-faint);
-
     font-weight: 400;
 }
 
 .project-title-input:hover {
-    background: var(--tb-surface-hover);
-
-    border-color: var(--tb-line);
+    background: var(--tb-surface);
+    border-color: var(--tb-line-strong);
 }
 
 .project-title-input:focus {
     background: var(--tb-surface);
-
-    border-color: var(--tb-line-strong);
-
-    box-shadow: var(--tb-ring);
+    border-color: var(--tb-ink);
 }
 
 
 /* ==================================================
-   RIGHT ACTIONS
+   UNDO / REDO — one segmented pair
    ================================================== */
 
-.topbar-actions {
-    display: flex;
-
+.history-group {
+    display: inline-flex;
     align-items: center;
 
-    gap: 8px;
+    height: 34px;
+    padding: 0 3px;
 
-    margin-left: auto;
+    border: 1px solid var(--tb-line-strong);
+    border-radius: 999px;
 }
 
-
-/* ==================================================
-   HISTORY (UNDO / REDO)
-   ================================================== */
-
 .history-button {
-    width: 36px;
-    height: 36px;
+    width: 28px;
+    height: 28px;
 
     display: flex;
     align-items: center;
     justify-content: center;
 
     border: none;
-    border-radius: var(--tb-radius-sm);
+    border-radius: 999px;
 
     background: transparent;
-    color: var(--tb-ink-soft);
+    color: var(--tb-ink);
 
     cursor: pointer;
 
-    transition:
-        background 0.15s ease,
-        opacity 0.15s ease,
-        transform 0.1s ease;
+    transition: background 0.15s ease, transform 0.1s ease;
 }
 
 .history-button:hover:not(:disabled) {
-    background: rgba(0, 0, 0, 0.06);
+    background: var(--tb-surface-hover);
 }
 
 .history-button:active:not(:disabled) {
@@ -229,7 +211,7 @@
 }
 
 .history-button:disabled {
-    opacity: 0.35;
+    color: var(--tb-ink-faint);
     cursor: default;
 }
 
@@ -240,65 +222,43 @@
 
 
 /* ==================================================
-   WALKTHROUGH BUTTON
-   ================================================== */
-
-
-
-/* ==================================================
-   COST ESTIMATOR
+   COST ESTIMATE — green filled button
    ================================================== */
 
 .cost-estimator {
     position: relative;
 }
 
-
-/* --------------------------------------------------
-   BUTTON
-   -------------------------------------------------- */
-
 .cost-estimator-button {
-    height: 38px;
+    height: 34px;
 
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 8px;
 
-    gap: 7px;
+    padding: 0 12px 0 14px;
 
-    padding: 0 13px;
+    border: 1px solid var(--tb-green);
+    border-radius: 999px;
 
-    border: 1px solid #e1e2e4;
+    background: var(--tb-green);
+    color: #fff;
 
-    border-radius: var(--tb-radius-md);
-
-    background: var(--tb-surface);
-
-    color: var(--tb-ink-soft);
-
-    font-size: 12px;
-    font-weight: 600;
-
+    font-family: inherit;
+    font-size: var(--tb-t-label);
+    font-weight: 500;
     white-space: nowrap;
 
     cursor: pointer;
-
     box-sizing: border-box;
 
-    transition:
-        background 0.15s ease,
-        border-color 0.15s ease,
-        box-shadow 0.15s ease,
-        transform 0.1s ease;
+    transition: background 0.15s ease, transform 0.1s ease;
 }
 
 .cost-estimator-button:hover {
-    background: var(--tb-surface-sunken);
-
-    border-color: #d5d7da;
-
-    box-shadow: var(--tb-shadow-hover);
+    background: var(--tb-green-ink);
+    border-color: var(--tb-green-ink);
 }
 
 .cost-estimator-button:active {
@@ -307,20 +267,20 @@
 
 .cost-estimator-button:focus-visible {
     outline: none;
-
-    box-shadow: var(--tb-ring);
+    box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--tb-green);
 }
 
+.cost-estimator-label {
+    color: rgba(255, 255, 255, 0.75);
+}
 
-/* ==================================================
-   COST CHEVRON
-   ================================================== */
+.cost-estimator-amount {
+    font-variant-numeric: tabular-nums;
+}
 
 .cost-chevron {
     flex-shrink: 0;
-
-    color: var(--tb-ink-muted);
-
+    color: rgba(255, 255, 255, 0.75);
     transition: transform 0.2s ease;
 }
 
@@ -335,308 +295,221 @@
 
 .cost-estimator-dropdown {
     position: absolute;
-
     top: calc(100% + 10px);
-
     right: 0;
+    z-index: 1001;
 
-    width: 350px;
-
-    max-height: 520px;
+    width: 360px;
+    max-height: 560px;
 
     display: flex;
     flex-direction: column;
-
-    background: var(--tb-surface);
-
-    border: 1px solid var(--tb-line);
-
-    border-radius: var(--tb-radius-lg);
-
-    box-shadow: var(--tb-shadow-dropdown);
-
     overflow: hidden;
 
-    z-index: 1001;
+    background: var(--tb-surface);
+    border: 1px solid var(--tb-line);
+    border-radius: var(--tb-radius-lg);
+    box-shadow: var(--tb-shadow-dropdown);
 
     transform-origin: top right;
-
     animation: tb-dropdown-in 0.14s ease-out;
 }
 
 @keyframes tb-dropdown-in {
-    from {
-        opacity: 0;
-        transform: translateY(-4px) scale(0.98);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
+    from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
 }
-
-@media (prefers-reduced-motion: reduce) {
-    .cost-estimator-dropdown {
-        animation: none;
-    }
-}
-
-
-/* ==================================================
-   COST HEADER
-   ================================================== */
 
 .cost-estimator-header {
-    padding: 16px 18px 14px;
-
-    background: var(--tb-surface);
-
-    border-bottom: 1px solid var(--tb-line-soft);
+    padding: 18px 20px 14px;
 }
 
-.cost-estimator-header > div {
-    display: flex;
-    flex-direction: column;
-
-    gap: 3px;
-}
-
-.cost-estimator-header strong {
-    font-size: 15px;
-    font-weight: 700;
-
-    color: var(--tb-ink);
-}
-
-.cost-estimator-header span {
-    font-size: 11px;
-
+.cost-eyebrow {
+    margin: 0;
+    font-size: var(--tb-t-label);
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
     color: var(--tb-ink-muted);
 }
 
-
-/* ==================================================
-   COST LIST
-   ================================================== */
+.cost-summary {
+    margin: 6px 0 0;
+    font-size: var(--tb-t-label);
+    color: var(--tb-ink-muted);
+}
 
 .cost-estimator-list {
     flex: 1;
-
-    padding: 7px 10px;
-
+    min-height: 0;
+    padding: 0 20px 8px;
     overflow-y: auto;
-
     scrollbar-width: thin;
 }
 
-.cost-estimator-list::-webkit-scrollbar {
-    width: 7px;
-}
-
+.cost-estimator-list::-webkit-scrollbar { width: 6px; }
 .cost-estimator-list::-webkit-scrollbar-thumb {
     background: var(--tb-line-strong);
     border-radius: 999px;
 }
 
-.cost-estimator-list::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-
-/* ==================================================
-   COST CATEGORY
-   ================================================== */
-
+/* Sections separated by hairlines — no nested cards */
 .cost-category {
-    margin: 6px 0;
-
-    padding: 10px 10px 8px;
-
-    border: 1px solid var(--tb-line-soft);
-
-    border-radius: 10px;
-
-    background: var(--tb-surface);
-
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.cost-category:hover {
-    border-color: var(--tb-line-strong);
-    box-shadow: var(--tb-shadow-hover);
+    padding: 14px 0 6px;
+    border-top: 1px solid var(--tb-line-soft);
 }
 
 .cost-category-header {
     display: flex;
-
-    align-items: center;
-
+    align-items: baseline;
     justify-content: space-between;
-
-    padding-bottom: 7px;
-
-    border-bottom: 1px solid var(--tb-line-soft);
+    margin-bottom: 4px;
 }
 
 .cost-category-header span {
-    font-size: 10px;
-    font-weight: 700;
-
-    letter-spacing: 0.06em;
-
+    font-size: var(--tb-t-micro);
+    font-weight: 500;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
-
     color: var(--tb-ink-muted);
 }
 
 .cost-category-header strong {
-    font-size: 11px;
-    font-weight: 700;
-
-    color: var(--tb-green);
+    font-size: var(--tb-t-label);
+    font-weight: 600;
+    color: var(--tb-green-ink);
+    font-variant-numeric: tabular-nums;
 }
-
-
-/* ==================================================
-   COST ITEM
-   ================================================== */
 
 .cost-item {
     display: flex;
-
     align-items: center;
-
     justify-content: space-between;
-
     gap: 12px;
 
-    padding: 10px 6px 4px;
-
-    margin: 0 -6px;
+    padding: 8px 8px;
+    margin: 0 -8px;
 
     border-radius: 8px;
-
     transition: background 0.12s ease;
 }
 
 .cost-item:hover {
-    background: var(--tb-surface-hover);
+    background: var(--tb-surface-sunken);
 }
 
 .cost-item-info {
     min-width: 0;
-
     display: flex;
     flex-direction: column;
-
-    gap: 3px;
+    gap: 2px;
 }
 
 .cost-item-name {
     overflow: hidden;
-
     white-space: nowrap;
-
     text-overflow: ellipsis;
-
-    font-size: 12px;
-    font-weight: 600;
-
-    color: #292a2d;
+    font-size: var(--tb-t-body);
+    font-weight: 500;
+    color: var(--tb-ink);
 }
 
 .cost-item-quantity {
-    font-size: 10px;
-
-    color: #999b9f;
-
+    font-size: var(--tb-t-micro);
+    color: var(--tb-ink-muted);
     font-variant-numeric: tabular-nums;
 }
 
 .cost-item-total {
     flex-shrink: 0;
-
-    font-size: 12px;
-    font-weight: 700;
-
-    color: var(--tb-green);
-
+    font-size: var(--tb-t-body);
+    font-weight: 500;
+    color: var(--tb-green-ink);
     font-variant-numeric: tabular-nums;
 }
 
-
-/* ==================================================
-   EMPTY STATE
-   ================================================== */
-
 .cost-empty {
-    padding: 35px 15px;
-
+    padding: 36px 8px 40px;
     text-align: center;
-
-    font-size: 12px;
-
-    color: var(--tb-ink-faint);
+    font-size: var(--tb-t-body);
+    line-height: 1.55;
+    color: var(--tb-ink-muted);
+    border-top: 1px solid var(--tb-line-soft);
 }
-
-
-/* ==================================================
-   TOTAL
-   ================================================== */
 
 .cost-estimator-total {
     display: flex;
-
-    align-items: center;
-
+    align-items: baseline;
     justify-content: space-between;
 
-    padding: 14px 18px;
-
-    border-top: 1px solid var(--tb-line);
-
-    background: var(--tb-surface-sunken);
+    padding: 16px 20px 14px;
+    border-top: 1px solid var(--tb-green);
+    background: var(--tb-surface);
 }
 
 .cost-estimator-total span {
-    font-size: 12px;
-    font-weight: 600;
-
-    color: #5b5d61;
+    font-size: var(--tb-t-label);
+    font-weight: 500;
+    color: var(--tb-ink-muted);
 }
 
 .cost-estimator-total strong {
     font-size: 18px;
-    font-weight: 800;
-
-    color: var(--tb-green);
-
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--tb-green-ink);
     font-variant-numeric: tabular-nums;
+}
+
+/* PDF export — outlined green pill, so the filled estimate button stays primary */
+.cost-estimator-footer {
+    padding: 0 20px 18px;
+    background: var(--tb-surface);
+}
+
+.cost-estimator-export-button {
+    display: flex;
+    width: 100%;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    border: 1px solid var(--tb-green);
+    border-radius: 999px;
+
+    background: transparent;
+    color: var(--tb-green-ink);
+
+    font-family: inherit;
+    font-size: var(--tb-t-label);
+    font-weight: 500;
+
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+
+.cost-estimator-export-button:hover {
+    background: var(--tb-green);
+    color: #fff;
+}
+
+.cost-estimator-export-button:active {
+    transform: translateY(1px);
+}
+
+.cost-estimator-export-button:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--tb-green);
 }
 
 
 /* ==================================================
-   RESPONSIVE
+   COMMENTS — legacy styles (only used if AdminComments still
+   renders the old .admin-comments-* classes; the shadcn version
+   uses Tailwind and ignores all of this)
    ================================================== */
 
-@media (max-width: 800px) {
-
-    .topbar {
-        padding: 0 14px;
-    }
-
-    .project-title-input {
-        max-width: 220px;
-
-        margin-left: 16px;
-
-    }
-
-    .cost-estimator-dropdown {
-        width: 320px;
-    }
-
-}
 .admin-comments {
     position: relative;
     display: flex;
@@ -647,61 +520,73 @@
 
 .admin-comments-button {
     box-sizing: border-box;
-    height: 38px !important;
-    min-width: 150px;
+    position: relative;
+    height: 34px !important;
+    min-width: 34px;
     display: inline-flex !important;
     flex-direction: row !important;
     align-items: center !important;
     justify-content: center !important;
     gap: 7px !important;
-    padding: 0 13px !important;
+    padding: 0 12px !important;
     margin: 0 !important;
-    border: 1px solid #dededb !important;
-    border-radius: 8px !important;
-    background: #ffffff !important;
-    color: #333333 !important;
+    border: 1px solid var(--tb-line-strong) !important;
+    border-radius: 999px !important;
+    background: transparent !important;
+    color: var(--tb-ink) !important;
     font-family: inherit !important;
-    font-size: 12px !important;
-    font-weight: 600 !important;
+    font-size: var(--tb-t-label) !important;
+    font-weight: 500 !important;
     line-height: 1 !important;
     text-decoration: none !important;
     white-space: nowrap !important;
     cursor: pointer !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-    transition:
-        background 0.2s ease,
-        border-color 0.2s ease,
-        box-shadow 0.2s ease;
+    box-shadow: none !important;
+    transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .admin-comments-button:hover {
-    background: #f5f5f2 !important;
-    border-color: #d5d5d1 !important;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+    background: var(--tb-surface-hover) !important;
+    border-color: var(--tb-ink) !important;
 }
 
-.admin-comments-button:focus {
-    outline: none;
-}
+.admin-comments-button:focus { outline: none; }
+.admin-comments-button:focus-visible { box-shadow: var(--tb-ring) !important; }
 
 .admin-comments-button svg {
     flex-shrink: 0;
     display: block;
 }
 
+/* Icon-only variant used in the topbar */
+.admin-comments-icon-only .admin-comments-button {
+    width: 34px;
+    padding: 0 !important;
+}
+.admin-comments-icon-only .admin-comments-button > span:not(.admin-comments-count),
+.admin-comments-icon-only .admin-comments-chevron {
+    display: none !important;
+}
+.admin-comments-icon-only .admin-comments-count {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+}
+
 .admin-comments-count {
-    min-width: 18px;
-    height: 18px;
+    min-width: 16px;
+    height: 16px;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    padding: 0 5px !important;
+    padding: 0 4px !important;
     border-radius: 999px !important;
-    background: #fff1e5 !important;
-    color: #e86f00 !important;
-    font-size: 9px !important;
-    font-weight: 700 !important;
+    background: #e5484d !important;
+    color: #fff !important;
+    font-size: var(--tb-t-micro) !important;
+    font-weight: 600 !important;
     line-height: 1 !important;
+    font-variant-numeric: tabular-nums;
 }
 
 .admin-comments-chevron {
@@ -709,49 +594,44 @@
     display: block;
     transition: transform 0.2s ease;
 }
-
-.admin-comments-chevron.open {
-    transform: rotate(180deg);
-}
+.admin-comments-chevron.open { transform: rotate(180deg); }
 
 .admin-comments-dropdown {
     position: absolute !important;
-    top: calc(100% + 8px) !important;
+    top: calc(100% + 10px) !important;
     right: 0 !important;
     width: 360px !important;
     max-width: calc(100vw - 24px) !important;
     box-sizing: border-box;
     overflow: hidden;
-    border: 1px solid #dfdfdb !important;
-    border-radius: 12px !important;
-    background: #ffffff !important;
-    box-shadow: 0 14px 35px rgba(0, 0, 0, 0.14) !important;
+    border: 1px solid var(--tb-line) !important;
+    border-radius: var(--tb-radius-lg) !important;
+    background: var(--tb-surface) !important;
+    box-shadow: var(--tb-shadow-dropdown) !important;
     z-index: 1000 !important;
 }
 
 .admin-comments-header {
     display: block;
-    padding: 13px 15px;
-    border-bottom: 1px solid #e7e7e3;
-    background: #ffffff;
+    padding: 16px 18px 12px;
+    background: var(--tb-surface);
 }
 
 .admin-comments-header strong {
     display: block;
     margin: 0;
     padding: 0;
-    color: #222222;
-    font-size: 13px;
-    font-weight: 700;
+    color: var(--tb-ink);
+    font-size: var(--tb-t-body);
+    font-weight: 600;
     line-height: 1.2;
 }
 
 .admin-comments-header span {
     display: block;
     margin-top: 4px;
-    color: #999999;
-    font-size: 10px;
-    font-weight: 400;
+    color: var(--tb-ink-muted);
+    font-size: var(--tb-t-label);
     line-height: 1.2;
 }
 
@@ -760,35 +640,36 @@
     max-height: 360px;
     overflow-x: hidden;
     overflow-y: auto;
-    padding: 10px;
-    background: #ffffff;
+    padding: 0 12px 12px;
+    background: var(--tb-surface);
+    scrollbar-width: thin;
 }
 
 .admin-comments-empty {
     padding: 28px 12px;
     text-align: center;
-    color: #999999;
-    font-size: 11px;
-    line-height: 1.4;
+    color: var(--tb-ink-muted);
+    font-size: var(--tb-t-body);
+    line-height: 1.5;
 }
 
 .admin-comment-card {
     box-sizing: border-box;
     width: 100%;
     margin: 0 0 8px;
-    padding: 11px 12px;
-    border: 1px solid #e7e7e3;
-    border-radius: 11px;
-    background: #f7f7f5;
+    padding: 12px 14px;
+    border: 1px solid var(--tb-line-soft);
+    border-radius: 12px;
+    background: var(--tb-surface-sunken);
+    transition: border-color 0.15s ease;
 }
 
-.admin-comment-card:last-child {
-    margin-bottom: 0;
-}
+.admin-comment-card:hover { border-color: var(--tb-line-strong); }
+.admin-comment-card:last-child { margin-bottom: 0; }
 
 .admin-comment-card.specific {
-    border-color: #ffd2a8;
-    background: #fff4e9;
+    border-color: var(--tb-ink);
+    background: var(--tb-surface);
 }
 
 .admin-comment-top {
@@ -808,9 +689,9 @@
     overflow: hidden;
     margin: 0;
     padding: 0;
-    color: #333333;
-    font-size: 10px;
-    font-weight: 700;
+    color: var(--tb-ink);
+    font-size: var(--tb-t-label);
+    font-weight: 600;
     line-height: 1.25;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -819,9 +700,8 @@
 .admin-comment-date {
     display: block;
     margin-top: 2px;
-    color: #999999;
-    font-size: 9px;
-    font-weight: 400;
+    color: var(--tb-ink-muted);
+    font-size: var(--tb-t-micro);
     line-height: 1.25;
 }
 
@@ -837,83 +717,61 @@
     padding: 0 !important;
     margin: 0 !important;
     border: 0 !important;
-    border-radius: 7px !important;
-    background: #ff7a00 !important;
-    color: #ffffff !important;
+    border-radius: 999px !important;
+    background: var(--tb-ink) !important;
+    color: #fff !important;
     cursor: pointer !important;
     box-shadow: none !important;
 }
 
-.admin-comment-focus:hover {
-    background: #ea6f00 !important;
-}
-
-.admin-comment-focus svg {
-    display: block;
-    flex-shrink: 0;
-}
+.admin-comment-focus:hover { background: #000 !important; }
+.admin-comment-focus svg { display: block; flex-shrink: 0; }
 
 .admin-comment-target {
     display: block;
-    margin-top: 7px;
-    color: #d86d00;
-    font-size: 9px;
-    font-weight: 600;
+    margin-top: 8px;
+    color: var(--tb-ink-muted);
+    font-size: var(--tb-t-micro);
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
     line-height: 1.3;
 }
 
 .admin-comment-text {
-    margin: 5px 0 0;
+    margin: 6px 0 0;
     padding: 0;
-    color: #333333;
-    font-size: 11px;
-    font-weight: 400;
+    color: var(--tb-ink);
+    font-size: var(--tb-t-body);
     line-height: 1.5;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
 }
 
+
+/* ==================================================
+   RESPONSIVE
+   ================================================== */
+
+@media (max-width: 900px) {
+    .cost-estimator-label { display: none; }
+}
+
 @media (max-width: 700px) {
-    .admin-comments-button {
-        min-width: 42px;
-        width: 42px;
-        padding: 0 !important;
+    .topbar {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        gap: 8px;
     }
 
-    .admin-comments-button span:not(.admin-comments-count) {
-        display: none;
-    }
+    .topbar-back span { display: none; }
+    .topbar-back { padding: 0 10px; }
 
+    .cost-estimator-dropdown,
     .admin-comments-dropdown {
-        right: 0;
         width: min(360px, calc(100vw - 24px)) !important;
     }
 }
 
-.cost-estimator-export-button {
-    display: flex;
-    width: calc(100% - 24px);
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    margin: 12px;
-    padding: 10px 12px;
-    border: 1px solid #6b8050;
-    border-radius: 8px;
-    background: #6b8050;
-    color: #ffffff;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 180ms ease, border-color 180ms ease;
-}
-
-.cost-estimator-export-button:hover {
-    background: #566841;
-    border-color: #566841;
-}
-
-.cost-estimator-export-button:focus-visible {
-    outline: 2px solid #6b8050;
-    outline-offset: 3px;
+@media (prefers-reduced-motion: reduce) {
+    .cost-estimator-dropdown { animation: none; }
 }

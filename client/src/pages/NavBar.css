@@ -1,110 +1,141 @@
-/* Translucent, blurred nav bar — content scrolls under it, not behind an
-   opaque strip. Bright top edge reads as light catching a real material. */
-
+/* Floating glass bar. Fixed, so pages need ~88px top offset (AppLayout adds it). */
 .navbar {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background-color: var(--color-fill-translucent);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  backdrop-filter: saturate(180%) blur(20px);
-  border-bottom: 0.5px solid var(--color-separator);
-  padding-top: env(safe-area-inset-top);
-}
-
-@media (prefers-reduced-transparency: reduce) {
-  .navbar {
-    background-color: var(--color-background);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-  }
+  position: fixed;
+  top: 12px;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  padding: 0 clamp(12px, 3vw, 40px);
+  pointer-events: none;
 }
 
 .navbar__inner {
-  max-width: 72rem;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  max-width: 1400px;
+  height: 52px;
   margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.875rem 1.25rem;
+  padding: 0 8px 0 10px;
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.62);
+  backdrop-filter: blur(18px) saturate(1.7);
+  -webkit-backdrop-filter: blur(18px) saturate(1.7);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 0 0 rgba(0, 0, 0, 0);
+  pointer-events: auto;
+  transition: background 0.3s, box-shadow 0.3s, border-color 0.3s;
+}
+.navbar__inner.is-scrolled {
+  border-color: rgba(0, 0, 0, 0.09);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 8px 30px rgba(0, 0, 0, 0.08);
 }
 
-@media (min-width: 768px) {
-  .navbar__inner {
-    padding: 0.875rem 2rem;
-  }
-}
-
-/* --- Logo --- */
-
+/* Logo */
 .navbar__logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  justify-self: start;
+  text-decoration: none;
+  color: #1b1b1b;
+}
+.navbar__logo-badge {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: #1b1b1b;
+  color: #fff;
 }
-
 .navbar__logo-icon {
-  height: 1.125rem;
-  width: 1.125rem;
-  color: var(--color-label);
+  width: 16px;
+  height: 16px;
 }
-
 .navbar__logo-text {
-  font-family: var(--font-system);
-  font-size: 1.0625rem;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: -0.01em; /* size-specific tracking: tighten as size grows */
-  color: var(--color-label);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
 }
 
-/* --- Links --- */
-
+/* Links */
 .navbar__links {
-  display: none;
+  display: flex;
   align-items: center;
-  gap: 2rem;
+  gap: 2px;
 }
-
-@media (min-width: 640px) {
-  .navbar__links {
-    display: flex;
-  }
-}
-
 .navbar__link {
   position: relative;
-  font-family: var(--font-system);
-  font-size: 0.9375rem;
-  font-weight: 400;
-  letter-spacing: 0; /* body-size text needs ~0 tracking, not the heading's negative value */
-  color: var(--color-secondary-label);
-  padding-bottom: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 16px;
+  border-radius: 999px;
+  color: rgba(0, 0, 0, 0.5);
+  font-size: 12px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.2s;
 }
-
-.navbar__link[data-active="true"] {
-  color: var(--color-label);
+.navbar__link:hover,
+.navbar__link.active {
+  color: #1b1b1b;
 }
-
-/* Motion owns position/width of this via layoutId — only visual styling here. */
-.navbar__indicator {
+.navbar__link:focus-visible,
+.navbar__signin:focus-visible,
+.navbar__logo:focus-visible {
+  outline: 2px solid #1b1b1b;
+  outline-offset: 2px;
+}
+.navbar__pill {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 2px;
-  border-radius: 1px;
-  background-color: var(--color-label);
+  inset: 0;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.07);
+}
+.navbar__link-text {
+  position: relative;
+  z-index: 1;
 }
 
-/* --- Sign in CTA: the single sparing accent on the page --- */
+/* Action */
+.navbar__action {
+  display: inline-flex;
+  justify-self: end;
+}
+.navbar__signin {
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: #1b1b1b;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+.navbar__signin:hover {
+  background: #000;
+}
 
-.navbar__signin-button {
-  display: inline-block;
-  border-radius: 0.875rem;
-  background-color: var(--color-accent);
-  padding: 0.5rem 1.125rem;
-  font-family: var(--font-system);
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: #ffffff;
+@media (max-width: 560px) {
+  .navbar__logo-text {
+    display: none;
+  }
+  .navbar__link {
+    padding: 0 11px;
+  }
+  .navbar__signin {
+    padding: 0 14px;
+  }
 }
