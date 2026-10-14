@@ -128,9 +128,17 @@ export default function Scene({
                 width:
                     "100%",
                 height:
-                    "100%"
+                    "100%",
+                background:
+                    "#ffffff"
             }}
         >
+            <color
+                attach="background"
+                args={[
+                    "#ffffff"
+                ]}
+            />
             <Lights />
             <Grid />
             <BlueprintScene />

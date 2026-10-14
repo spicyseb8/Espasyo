@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 
 import AccountSettings from "@/components/pages/AccountSettings/AccountSettings";
 import AssetLibrary from "@/components/pages/AssetLibrary/AssetLibrary";
+import ModelSizeChecker from "@/components/pages/loader";
 import ProjectManagement from "@/components/pages/ProjectManagement/ProjectManagement";
 import AdminProjectLoader from "@/components/project-loader/AdminProjectLoader";
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -33,6 +34,15 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+
+      <Route
+        path="/glb-rescaler"
+        element={
+          <RequireAdmin>
+            <ModelSizeChecker />
+          </RequireAdmin>
+        }
+      />
 
       <Route
         path="/projects/view/:projectId"
