@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
 import {
   collection,
@@ -7,7 +8,7 @@ import {
   where,
 } from "firebase/firestore";
 
-import { Home, User, Activity } from "lucide-react";
+import { Home, User, Activity, Box } from "lucide-react";
 
 import {
   Avatar,
@@ -49,6 +50,11 @@ const menuItems = [
     icon: Activity,
     label: "Recent activities",
   },
+  {
+    icon: Box,
+    label: "GLB rescaler",
+    path: "/glb-rescaler",
+  },
 ];
 
 function getInitials(name: string) {
@@ -67,6 +73,7 @@ export default function TopBar() {
     useState<EmployeeProfile | null>(null);
 
   const { user, role } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!user) {
@@ -202,18 +209,28 @@ export default function TopBar() {
             <Separator />
 
             <nav className="flex flex-col py-2">
-              {menuItems.map(({ icon: Icon, label }) => (
-                <button
-                  key={label}
-                  type="button"
-                  className="flex items-center px-6 py-2.5 text-sm hover:bg-accent transition-colors"
-                >
-                  <span className="flex items-center gap-3">
-                    <Icon className="h-4 w-4 text-muted-foreground" />
-                    <span>{label}</span>
-                  </span>
-                </button>
-              ))}
+              {menuItems.map((item) => {
+                const { icon: Icon, label } = item;
+
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => {
+                      if (item.path) {
+                        navigate(item.path);
+                        setSheetOpen(false);
+                      }
+                    }}
+                    className="flex items-center px-6 py-2.5 text-sm hover:bg-accent transition-colors"
+                  >
+                    <span className="flex items-center gap-3">
+                      <Icon className="h-4 w-4 text-muted-foreground" />
+                      <span>{label}</span>
+                    </span>
+                  </button>
+                );
+              })}
             </nav>
 
             {/* Bottom */}

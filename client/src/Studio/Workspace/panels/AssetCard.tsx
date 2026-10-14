@@ -19,10 +19,6 @@ import {
     BuildTool
 } from "../../../context/BuildTool";
 
-import AssetModelThumbnail
-    from "../AssetModelThumbnail";
-
-
 interface Props {
     asset: Asset;
 }
@@ -121,18 +117,10 @@ export default function AssetCard({
                         }}
                     />
 
-                ) : asset.model ? (
-
-                    <AssetModelThumbnail
-                        model={
-                            asset.model
-                        }
-                    />
-
                 ) : (
 
                     <div className="asset-thumb-empty">
-                        No preview
+                        {asset.model ? "Preview unavailable" : "No preview"}
                     </div>
 
                 )}
