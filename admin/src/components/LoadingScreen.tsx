@@ -1,25 +1,26 @@
-"use client"; // only needed if you're on the Next.js App Router
+import { useEffect, useState } from "react";
 
-import { Suspense, useMemo, useRef } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
-import { Center, useGLTF } from "@react-three/drei";
-import * as THREE from "three";
-
-// ── Config ──────────────────────────────────────────────────────────────
-// 4 models spaced evenly across the same 1s loop.
-const MODELS = [
-  { url: "/models/loader-files/furni1.glb", delay: 0, variant: "straight" },
-  { url: "/models/loader-files/furni2.glb", delay: 0.25, variant: "left" },
-  { url: "/models/loader-files/furni3.glb", delay: 0.5, variant: "right" },
-  { url: "/models/loader-files/furni4.glb", delay: 0.75, variant: "straight" },
-] as const;
+//==================================================
+// CONFIGURATION
+//==================================================
 
 type Variant = "straight" | "left" | "right";
 
-// Models start at the top at full size, then get "sucked" down toward a point
-// at the bottom-center while shrinking to nothing.
-// Stops: 0% / 25% / 50% / 75% / 100%   (1 unit ≈ 100px)
-const KEYFRAMES: Record<Variant, { x: number[]; y: number[]; s: number[]; r: number[] }> = {
+// 4 images spaced evenly across the same 1s loop.
+const MODELS: { url: string; delay: number; variant: Variant }[] = [
+  { url: "/models/loader-files/furni1.png", delay: 0, variant: "straight" },
+  { url: "/models/loader-files/furni2.png", delay: 0.25, variant: "left" },
+  { url: "/models/loader-files/furni3.png", delay: 0.5, variant: "right" },
+  { url: "/models/loader-files/furni4.png", delay: 0.75, variant: "straight" },
+];
+
+// Same keyframes as before (1 unit = 100px, y flipped because CSS y points down).
+// Stops: 0% / 25% / 50% / 75% / 100%
+const STOPS = [0, 25, 50, 75, 100];
+const KEYFRAMES: Record<
+  Variant,
+  { x: number[]; y: number[]; s: number[]; r: number[] }
+> = {
   straight: {
     x: [0, 0, 0, 0, 0],
     y: [0.9, 0.4, -0.2, -0.9, -1.5],
@@ -40,70 +41,102 @@ const KEYFRAMES: Record<Variant, { x: number[]; y: number[]; s: number[]; r: num
   },
 };
 
-const STOPS = [0, 0.25, 0.5, 0.75, 1];
 // Quick fade-in at the top, fade out as it vanishes at the bottom.
 const OPACITY = [0, 1, 1, 0.9, 0];
-/** Size of each model at its largest (was 1). Bump to make models bigger. */
-const TARGET_SIZE = 2.2;
 
-// Linear interpolation between keyframe stops, exactly like CSS `linear`.
-function sample(keys: number[], t: number) {
-  for (let i = 0; i < STOPS.length - 1; i++) {
-    if (t <= STOPS[i + 1]) {
-      const f = (t - STOPS[i]) / (STOPS[i + 1] - STOPS[i]);
-      return THREE.MathUtils.lerp(keys[i], keys[i + 1], f);
-    }
-  }
-  return keys[keys.length - 1];
+/** Size of each image at its largest, in px. */
+const TARGET_SIZE = 220;
+const UNIT = 100; // px per keyframe unit
+
+// Build the CSS @keyframes for each variant from the config above.
+// Three.js rotation.z is counter-clockwise, CSS rotate() is clockwise,
+// so the angle is negated to keep the same look.
+const KEYFRAME_CSS = (Object.keys(KEYFRAMES) as Variant[])
+  .map((variant) => {
+    const k = KEYFRAMES[variant];
+    const frames = STOPS.map((stop, i) => {
+      const x = k.x[i] * UNIT;
+      const y = -k.y[i] * UNIT;
+      const s = Math.max(k.s[i], 0.0001);
+      const r = -k.r[i];
+      return `${stop}% { transform: translate(${x}px, ${y}px) rotate(${r}deg) scale(${s}); opacity: ${OPACITY[i]}; }`;
+    }).join("\n");
+    return `@keyframes loader-fall-${variant} {\n${frames}\n}`;
+  })
+  .join("\n");
+
+//==================================================
+// IMAGE PRELOADER
+//==================================================
+
+// Waits until every PNG is loaded so nothing pops in halfway through its fall.
+function useImagesReady(urls: string[]) {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all(
+      urls.map(
+        (url) =>
+          new Promise<void>((resolve) => {
+            const img = new Image();
+            img.onload = () => resolve();
+            img.onerror = () => resolve(); // don't block the loader on a failed image
+            img.src = url;
+          })
+      )
+    ).then(() => {
+      if (!cancelled) setReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return ready;
 }
 
-// ── One falling model ───────────────────────────────────────────────────
-function FallingModel({ url, delay, variant }: { url: string; delay: number; variant: Variant }) {
-  const group = useRef<THREE.Group>(null);
-  const { scene } = useGLTF(url);
+//==================================================
+// ONE FALLING IMAGE
+//==================================================
 
-  const { model, materials, baseScale } = useMemo(() => {
-    const clone = scene.clone(true);
-    const materials: THREE.Material[] = [];
-    clone.traverse((obj) => {
-      if (obj instanceof THREE.Mesh) {
-        const mat = obj.material.clone();
-        mat.transparent = true; // required so we can fade opacity
-        obj.material = mat;
-        materials.push(mat);
-      }
-    });
-    // Normalize every model to the same footprint, regardless of source size
-    const size = new THREE.Vector3();
-    new THREE.Box3().setFromObject(clone).getSize(size);
-    const maxDim = Math.max(size.x, size.y, size.z, 0.0001);
-    return { model: clone, materials, baseScale: TARGET_SIZE / maxDim };
-  }, [scene]);
-
-  const k = KEYFRAMES[variant];
-
-  useFrame(({ clock }) => {
-    const g = group.current;
-    if (!g) return;
-    const t = (clock.elapsedTime + delay) % 1; // 1s loop, staggered per model
-    g.position.set(sample(k.x, t), sample(k.y, t), 0);
-    g.rotation.z = THREE.MathUtils.degToRad(sample(k.r, t));
-    g.scale.setScalar(Math.max(baseScale * sample(k.s, t), 0.0001));
-    const opacity = sample(OPACITY, t);
-    for (const m of materials) m.opacity = opacity;
-  });
-
+function FallingImage({
+  url,
+  delay,
+  variant,
+}: {
+  url: string;
+  delay: number;
+  variant: Variant;
+}) {
   return (
-    <group ref={group}>
-      <Center>
-        <primitive object={model} />
-      </Center>
-    </group>
+    <img
+      src={url}
+      alt=""
+      aria-hidden="true"
+      draggable={false}
+      className="loader-fall-img pointer-events-none absolute select-none object-contain"
+      style={{
+        left: "50%",
+        top: "50%",
+        width: TARGET_SIZE,
+        height: TARGET_SIZE,
+        marginLeft: -TARGET_SIZE / 2,
+        marginTop: -TARGET_SIZE / 2,
+        opacity: 0,
+        // Negative delay = start already part-way through the loop (staggered).
+        animation: `loader-fall-${variant} 1s linear ${-delay}s infinite`,
+        willChange: "transform, opacity",
+      }}
+    />
   );
 }
 
-// ── Animated "Loading Project . . ." label ──────────────────────────────
-// The dots pulse in sequence. With reduced motion they simply stay visible.
+//==================================================
+// LOADING LABEL
+//==================================================
+
 function LoadingLabel() {
   return (
     <p className="flex items-center text-lg font-bold tracking-tight text-neutral-700">
@@ -123,9 +156,10 @@ function LoadingLabel() {
   );
 }
 
-// ── Black indeterminate loading bar ─────────────────────────────────────
-// A black segment slides across a faint track, easing in and out.
-// With reduced motion it becomes a static, gently-pulsing bar instead.
+//==================================================
+// LOADING BAR
+//==================================================
+
 function LoadingBar() {
   return (
     <>
@@ -156,31 +190,41 @@ function LoadingBar() {
   );
 }
 
-// ── Drop-in replacement for your old LoadingScreen ──────────────────────
+//==================================================
+// LOADING SCREEN
+//==================================================
+
 export default function LoadingScreen() {
+  const ready = useImagesReady(MODELS.map((m) => m.url));
+
   return (
     <main
       className="relative flex min-h-screen items-center justify-center overflow-hidden bg-white"
       aria-live="polite"
       aria-busy="true"
     >
+      <style>{KEYFRAME_CSS}</style>
+
       <div className="relative z-10 flex flex-col items-center gap-4">
-        <div className="h-[340px] w-[340px]" role="status" aria-label="Loading project">
-          <Canvas
-            gl={{ alpha: true, antialias: true }}
-            camera={{ position: [0, 0, 4.5], fov: 50 }}
-            dpr={[1, 2]}
-          >
-            <ambientLight intensity={0.9} />
-            <directionalLight position={[3, 4, 5]} intensity={1.4} />
-            {/* Purple glow sits at the "drain" point at the bottom */}
-            <pointLight position={[0, -1.5, 2]} intensity={6} color="#5c3d99" />
-            <Suspense fallback={null}>
-              {MODELS.map((m) => (
-                <FallingModel key={m.url} {...m} />
-              ))}
-            </Suspense>
-          </Canvas>
+        <div
+          className="relative h-[340px] w-[340px]"
+          role="status"
+          aria-label="Loading project"
+        >
+          {/* Purple glow sitting at the "drain" point at the bottom */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute left-1/2 h-24 w-48 -translate-x-1/2 rounded-full"
+            style={{
+              bottom: 40,
+              background:
+                "radial-gradient(closest-side, rgba(92,61,153,0.45), rgba(92,61,153,0))",
+              filter: "blur(8px)",
+            }}
+          />
+
+          {ready &&
+            MODELS.map((m) => <FallingImage key={m.url} {...m} />)}
         </div>
 
         <div className="flex flex-col items-center gap-4">
@@ -191,5 +235,3 @@ export default function LoadingScreen() {
     </main>
   );
 }
-
-MODELS.forEach((m) => useGLTF.preload(m.url));
