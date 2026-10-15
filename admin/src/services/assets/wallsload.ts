@@ -6,14 +6,12 @@ import {
 } from "firebase/firestore";
 
 import {
-    getDownloadURL,
-    ref
-} from "firebase/storage";
-
-import {
-    db,
-    storage
+    db
 } from "../../firebase/firebase";
+import {
+    registerAssetDownloadURL,
+    resolveStorageAssetURL
+} from "@/lib/assetLibraryCache";
 
 import type {
     Material
@@ -31,6 +29,9 @@ interface FirebaseWallAsset {
 
     asset_type:
         "wall";
+
+    asset_status?:
+        string;
 
     category:
         string;
@@ -102,7 +103,8 @@ let wallMaterialsPromise:
 //==================================================
 
 async function resolveStorageUrl(
-    value?: string
+    value?: string,
+    cacheable = false,
 ): Promise<string | undefined> {
 
     if (
@@ -128,6 +130,9 @@ async function resolveStorageUrl(
         path.startsWith("data:")
     ) {
 
+        if (cacheable) {
+            await registerAssetDownloadURL(path);
+        }
         return path;
     }
 
@@ -138,12 +143,7 @@ async function resolveStorageUrl(
 
     try {
 
-        return await getDownloadURL(
-            ref(
-                storage,
-                path
-            )
-        );
+        return await resolveStorageAssetURL(path, cacheable);
 
     } catch (error) {
 
@@ -167,7 +167,8 @@ async function resolveStorageUrl(
 //==================================================
 
 async function getWallTextureUrl(
-    data: FirebaseWallAsset
+    data: FirebaseWallAsset,
+    cacheable: boolean,
 ): Promise<string | undefined> {
 
     //--------------------------------------------------
@@ -178,7 +179,7 @@ async function getWallTextureUrl(
         data.base_color_url?.trim()
     ) {
 
-        return data.base_color_url.trim();
+        return resolveStorageUrl(data.base_color_url.trim(), cacheable);
     }
 
 
@@ -187,7 +188,8 @@ async function getWallTextureUrl(
     //--------------------------------------------------
 
     return resolveStorageUrl(
-        data.base_color_path
+        data.base_color_path,
+        cacheable,
     );
 }
 
@@ -197,7 +199,8 @@ async function getWallTextureUrl(
 //==================================================
 
 async function getWallThumbnailUrl(
-    data: FirebaseWallAsset
+    data: FirebaseWallAsset,
+    cacheable: boolean,
 ): Promise<string | undefined> {
 
     //--------------------------------------------------
@@ -208,7 +211,7 @@ async function getWallThumbnailUrl(
         data.thumbnail_url?.trim()
     ) {
 
-        return data.thumbnail_url.trim();
+        return resolveStorageUrl(data.thumbnail_url.trim(), cacheable);
     }
 
 
@@ -217,7 +220,8 @@ async function getWallThumbnailUrl(
     //--------------------------------------------------
 
     return resolveStorageUrl(
-        data.thumbnail_path
+        data.thumbnail_path,
+        cacheable,
     );
 }
 
@@ -278,6 +282,9 @@ async function loadWallMaterials():
                     const data =
                         doc.data() as
                         FirebaseWallAsset;
+                    const cacheable =
+                        typeof data.asset_status === "string" &&
+                        data.asset_status.trim().toLowerCase() === "available";
 
 
                     //--------------------------------------------------
@@ -286,7 +293,8 @@ async function loadWallMaterials():
 
                     const thumbnail =
                         await getWallThumbnailUrl(
-                            data
+                            data,
+                            cacheable,
                         );
 
 
@@ -298,7 +306,8 @@ async function loadWallMaterials():
 
                     const texture =
                         await getWallTextureUrl(
-                            data
+                            data,
+                            cacheable,
                         );
 
 

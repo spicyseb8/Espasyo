@@ -100,6 +100,34 @@ function useImagesReady(urls: string[]) {
 }
 
 //==================================================
+// PROGRESS
+//==================================================
+
+interface LoadingScreenProps {
+  /**
+   * Real progress from 0 to 100. If you leave it out, a simulated
+   * progress is shown: it climbs quickly, then slows down and waits
+   * around 92% until this screen is unmounted.
+   */
+  progress?: number;
+  label?: string;
+}
+
+function useSimulatedProgress(enabled: boolean) {
+  const [value, setValue] = useState(0);
+
+  useEffect(() => {
+    if (!enabled) return;
+    const id = setInterval(() => {
+      setValue((v) => v + (92 - v) * 0.06);
+    }, 100);
+    return () => clearInterval(id);
+  }, [enabled]);
+
+  return value;
+}
+
+//==================================================
 // ONE FALLING IMAGE
 //==================================================
 
@@ -139,10 +167,10 @@ function FallingImage({
 // LOADING LABEL
 //==================================================
 
-function LoadingLabel() {
+function LoadingLabel({ label }: { label: string }) {
   return (
     <p className="flex items-center text-lg font-bold tracking-tight text-neutral-700">
-      <span>Loading Project</span>
+      <span>{label}</span>
       <span aria-hidden="true" className="ml-2 flex gap-2">
         {[0, 1, 2].map((i) => (
           <span
@@ -159,36 +187,35 @@ function LoadingLabel() {
 }
 
 //==================================================
-// LOADING BAR
+// PROGRESS BAR (replaces the old sliding loading bar)
 //==================================================
 
-function LoadingBar() {
+function ProgressBar({ value }: { value: number }) {
+  const pct = Math.round(value);
+
   return (
-    <>
-      <style>{`
-        @keyframes loader-bar-slide {
-          0%   { transform: translateX(-100%); }
-          100% { transform: translateX(300%); }
-        }
-        .loader-bar-fill {
-          animation: loader-bar-slide 1.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .loader-bar-fill {
-            animation: none;
-            transform: none;
-            width: 100%;
-            opacity: 0.6;
-          }
-        }
-      `}</style>
+    <div className="flex w-56 flex-col gap-2">
       <div
-        aria-hidden="true"
-        className="h-1.5 w-56 overflow-hidden rounded-full bg-black/10"
+        role="progressbar"
+        aria-label="Loading project"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={pct}
+        className="h-1.5 w-full overflow-hidden rounded-full bg-black/10"
       >
-        <div className="loader-bar-fill h-full w-1/3 rounded-full bg-black" />
+        <div
+          className="h-full rounded-full bg-black transition-[width] duration-200 ease-out motion-reduce:transition-none"
+          style={{ width: `${value}%` }}
+        />
       </div>
-    </>
+
+      <p
+        aria-hidden="true"
+        className="text-right text-sm font-semibold tabular-nums text-neutral-500"
+      >
+        {pct}%
+      </p>
+    </div>
   );
 }
 
@@ -196,8 +223,13 @@ function LoadingBar() {
 // LOADING SCREEN
 //==================================================
 
-export default function LoadingScreen() {
+export default function LoadingScreen({
+  progress,
+  label = "Loading Project",
+}: LoadingScreenProps) {
   const ready = useImagesReady(MODELS.map((m) => m.url));
+  const simulated = useSimulatedProgress(progress === undefined);
+  const value = Math.min(100, Math.max(0, progress ?? simulated));
 
   return (
     <main
@@ -230,8 +262,8 @@ export default function LoadingScreen() {
         </div>
 
         <div className="flex flex-col items-center gap-4">
-          <LoadingLabel />
-          <LoadingBar />
+          <LoadingLabel label={label} />
+          <ProgressBar value={value} />
         </div>
       </div>
     </main>

@@ -1,0 +1,5066 @@
+{
+  "generatedAt": "2026-10-15T17:32:14.564Z",
+  "projectId": "espasyo-6072d",
+  "bucket": "espasyo-6072d.firebasestorage.app",
+  "collection": "assets",
+  "mode": "dry-run",
+  "summary": {
+    "firestoreDocuments": 44,
+    "storageObjects": 57,
+    "assetStorageObjects": 39,
+    "assetStorageBytes": 787454029,
+    "projectsJsonFilesInspected": 12,
+    "assetsByType": {
+      "furniture": 24,
+      "floor": 7,
+      "wall": 13
+    },
+    "idsToMigrate": 44,
+    "verifiedIdReferences": 101,
+    "sourceCodeReferences": 2,
+    "storagePathReferences": 60,
+    "missingStoragePathReferences": 0,
+    "directoryPrefixRepairs": 5,
+    "validationIssues": 10,
+    "validationWarnings": 7,
+    "duplicateContentGroups": 1,
+    "duplicateReferenceGroups": 23,
+    "unresolvedReferences": 0,
+    "deletionCandidates": 32,
+    "firestoreCollections": [
+      {
+        "name": "adminComments",
+        "documentCount": 15
+      },
+      {
+        "name": "adminEmployees",
+        "documentCount": 7
+      },
+      {
+        "name": "assets",
+        "documentCount": 44
+      },
+      {
+        "name": "projects",
+        "documentCount": 13
+      },
+      {
+        "name": "users",
+        "documentCount": 11
+      }
+    ]
+  },
+  "assets": [
+    {
+      "documentId": "1leXkoHmhslSxmZsagb7",
+      "idField": "1leXkoHmhslSxmZsagb7",
+      "assetType": "furniture",
+      "name": "Modern Stainless Steel Refrigerator",
+      "category": "diningroom",
+      "status": "not_available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "price",
+        "created_at",
+        "storage_path",
+        "model_path",
+        "placement_surface",
+        "rotation_offset_y",
+        "depth_offset",
+        "snap_targets",
+        "updated_at",
+        "asset_status"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "documentId": "4vD9gHQW3UI3K8xLD71B",
+      "idField": "4vD9gHQW3UI3K8xLD71B",
+      "assetType": "furniture",
+      "name": "Barrel Chair",
+      "category": "livingroom",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "asset_type",
+        "category",
+        "price",
+        "asset_status",
+        "created_at",
+        "storage_path",
+        "model_path",
+        "placement_surface",
+        "rotation_offset_y",
+        "depth_offset",
+        "snap_targets",
+        "updated_at",
+        "name"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "documentId": "9pPtBuRt0sQZnCf6NeZY",
+      "idField": "9pPtBuRt0sQZnCf6NeZY",
+      "assetType": "floor",
+      "name": "tile test",
+      "category": "wood",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "price",
+        "asset_status",
+        "created_at",
+        "updated_at",
+        "length",
+        "width",
+        "diffuse_path",
+        "roughness",
+        "metalness"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "documentId": "A-26001",
+      "idField": "A-26001",
+      "assetType": "wall",
+      "name": "Moonlight Blue",
+      "category": "paint",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "price",
+        "color",
+        "roughness",
+        "metalness",
+        "created_at",
+        "updated_at",
+        "asset_status"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "documentId": "A-26002",
+      "idField": "A-26002",
+      "assetType": "wall",
+      "name": "Pale Gold",
+      "category": "paint",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "price",
+        "color",
+        "roughness",
+        "metalness",
+        "created_at",
+        "updated_at",
+        "asset_status"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "documentId": "A-26003",
+      "idField": "A-26003",
+      "assetType": "wall",
+      "name": "Dark Navy",
+      "category": "paint",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "price",
+        "color",
+        "roughness",
+        "metalness",
+        "created_at",
+        "updated_at",
+        "asset_status"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "documentId": "A-26004",
+      "idField": "A-26004",
+      "assetType": "wall",
+      "name": "Baby's Breath",
+      "category": "paint",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "price",
+        "color",
+        "roughness",
+        "metalness",
+        "created_at",
+        "updated_at",
+        "asset_status"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "documentId": "A-26005",
+      "idField": "A-26005",
+      "assetType": "wall",
+      "name": "Matte Green",
+      "category": "paint",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "price",
+        "color",
+        "roughness",
+        "metalness",
+        "created_at",
+        "updated_at",
+        "asset_status"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "documentId": "A-26006",
+      "idField": "A-26006",
+      "assetType": "wall",
+      "name": "Brandy Snifter",
+      "category": "paint",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "price",
+        "color",
+        "roughness",
+        "metalness",
+        "created_at",
+        "updated_at",
+        "asset_status"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "documentId": "A-26007",
+      "idField": "A-26007",
+      "assetType": "wall",
+      "name": "Blue Ice",
+      "category": "paint",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "price",
+        "color",
+        "roughness",
+        "metalness",
+        "created_at",
+        "updated_at",
+        "asset_status"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "documentId": "A-26008",
+      "idField": "A-26008",
+      "assetType": "wall",
+      "name": "Warm Gray 2 C",
+      "category": "paint",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "price",
+        "color",
+        "roughness",
+        "metalness",
+        "created_at",
+        "updated_at",
+        "asset_status"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "documentId": "A-26009",
+      "idField": "A-26009",
+      "assetType": "wall",
+      "name": "Medieval Blue",
+      "category": "paint",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "price",
+        "color",
+        "roughness",
+        "metalness",
+        "created_at",
+        "updated_at",
+        "asset_status"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "documentId": "A-26010",
+      "idField": "A-26010",
+      "assetType": "wall",
+      "name": "Silver Pine",
+      "category": "paint",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "price",
+        "color",
+        "roughness",
+        "metalness",
+        "created_at",
+        "updated_at",
+        "asset_status"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "documentId": "A-26011",
+      "idField": "A-26011",
+      "assetType": "wall",
+      "name": "Sun Kiss",
+      "category": "paint",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "price",
+        "color",
+        "roughness",
+        "metalness",
+        "created_at",
+        "updated_at",
+        "asset_status"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "documentId": "A-26012",
+      "idField": "A-26012",
+      "assetType": "wall",
+      "name": "Whisper White",
+      "category": "paint",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "price",
+        "color",
+        "roughness",
+        "metalness",
+        "created_at",
+        "updated_at",
+        "asset_status"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "documentId": "A-26013",
+      "idField": "A-26013",
+      "assetType": "floor",
+      "name": "Square Brick Floors",
+      "category": "brick",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "asset_type",
+        "category",
+        "price",
+        "storage_path",
+        "diffuse_path",
+        "created_at",
+        "name",
+        "length",
+        "width",
+        "updated_at",
+        "asset_status"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": [
+        "$.storage_path is a folder prefix, not an object path."
+      ]
+    },
+    {
+      "documentId": "A-26014",
+      "idField": "A-26014",
+      "assetType": "floor",
+      "name": "Square Tiles",
+      "category": "tiles",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "storage_path",
+        "diffuse_path",
+        "created_at",
+        "updated_at",
+        "asset_status",
+        "model_url",
+        "price"
+      ],
+      "issueCount": 2,
+      "issues": [
+        "Floor length is missing or is not a positive number.",
+        "Floor width is missing or is not a positive number."
+      ],
+      "warnings": [
+        "$.storage_path is a folder prefix, not an object path."
+      ]
+    },
+    {
+      "documentId": "A-26015",
+      "idField": "A-26015",
+      "assetType": "floor",
+      "name": "Terrazo Tiles",
+      "category": "tiles",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "price",
+        "storage_path",
+        "diffuse_path",
+        "created_at",
+        "updated_at",
+        "asset_status"
+      ],
+      "issueCount": 2,
+      "issues": [
+        "Floor length is missing or is not a positive number.",
+        "Floor width is missing or is not a positive number."
+      ],
+      "warnings": [
+        "$.storage_path is a folder prefix, not an object path."
+      ]
+    },
+    {
+      "documentId": "A-26016",
+      "idField": "A-26016",
+      "assetType": "floor",
+      "name": "Plank Flooring",
+      "category": "wood",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "price",
+        "storage_path",
+        "diffuse_path",
+        "created_at",
+        "updated_at",
+        "asset_status"
+      ],
+      "issueCount": 2,
+      "issues": [
+        "Floor length is missing or is not a positive number.",
+        "Floor width is missing or is not a positive number."
+      ],
+      "warnings": [
+        "$.storage_path is a folder prefix, not an object path."
+      ]
+    },
+    {
+      "documentId": "A-26017",
+      "idField": "A-26017",
+      "assetType": "floor",
+      "name": "Wooden Floor",
+      "category": "wood",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "price",
+        "storage_path",
+        "diffuse_path",
+        "created_at",
+        "updated_at",
+        "asset_status"
+      ],
+      "issueCount": 2,
+      "issues": [
+        "Floor length is missing or is not a positive number.",
+        "Floor width is missing or is not a positive number."
+      ],
+      "warnings": [
+        "$.storage_path is a folder prefix, not an object path."
+      ]
+    },
+    {
+      "documentId": "A-3X1T1I",
+      "idField": "A-3X1T1I",
+      "assetType": "furniture",
+      "name": "Single Door",
+      "category": "doors",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_status",
+        "asset_type",
+        "category",
+        "model_path",
+        "thumbnail_path",
+        "created_at",
+        "model_url",
+        "updated_at",
+        "price"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": [
+        "Legacy door/window category is supported by existing loaders but rejected by create-asset.js."
+      ]
+    },
+    {
+      "documentId": "A-4BERBM",
+      "idField": "A-4BERBM",
+      "assetType": "furniture",
+      "name": "TV",
+      "category": "livingroom",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_status",
+        "asset_type",
+        "category",
+        "price",
+        "placement_surface",
+        "model_path",
+        "thumbnail_path",
+        "created_at",
+        "updated_at",
+        "model_url"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "documentId": "A-DF723H",
+      "idField": "A-DF723H",
+      "assetType": "furniture",
+      "name": "Sofa",
+      "category": "livingroom",
+      "status": "available",
+      "fieldsPresent": [
+        "asset_status",
+        "asset_type",
+        "category",
+        "created_at",
+        "id",
+        "model_path",
+        "placement_surface",
+        "updated_at",
+        "price",
+        "name"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "documentId": "A-ELXX9U",
+      "idField": "A-ELXX9U",
+      "assetType": "furniture",
+      "name": "Slim Intersection Window",
+      "category": "windows",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_status",
+        "asset_type",
+        "category",
+        "price",
+        "model_path",
+        "thumbnail_path",
+        "created_at",
+        "updated_at",
+        "model_url"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": [
+        "Legacy door/window category is supported by existing loaders but rejected by create-asset.js."
+      ]
+    },
+    {
+      "documentId": "A-KOSIW0",
+      "idField": "A-KOSIW0",
+      "assetType": "furniture",
+      "name": "Cabinet",
+      "category": "bedroom",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_status",
+        "asset_type",
+        "category",
+        "price",
+        "placement_surface",
+        "model_path",
+        "thumbnail_path",
+        "created_at",
+        "updated_at"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "documentId": "A-WWTI9B",
+      "idField": "A-WWTI9B",
+      "assetType": "furniture",
+      "name": "Table",
+      "category": "diningroom",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_status",
+        "asset_type",
+        "category",
+        "price",
+        "placement_surface",
+        "model_path",
+        "thumbnail_path",
+        "created_at",
+        "updated_at"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "documentId": "ewZhEYTdu2niIU6lZF2h",
+      "idField": "ewZhEYTdu2niIU6lZF2h",
+      "assetType": "furniture",
+      "name": "testing",
+      "category": "livingroom",
+      "status": "not_available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "price",
+        "created_at",
+        "storage_path",
+        "model_path",
+        "placement_surface",
+        "rotation_offset_y",
+        "depth_offset",
+        "snap_targets",
+        "updated_at",
+        "asset_status"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "documentId": "gQQOYRG9Cce28WquJ5B0",
+      "idField": "gQQOYRG9Cce28WquJ5B0",
+      "assetType": "furniture",
+      "name": "Obsidian Executive Chair",
+      "category": "office",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "price",
+        "asset_status",
+        "created_at",
+        "updated_at",
+        "storage_path",
+        "model_path",
+        "placement_surface",
+        "rotation_offset_y",
+        "depth_offset",
+        "snap_targets"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "documentId": "HRgQpL2Tx92bvodO8RZI",
+      "idField": "HRgQpL2Tx92bvodO8RZI",
+      "assetType": "furniture",
+      "name": "Ivory Pharaoh Chair",
+      "category": "livingroom",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "price",
+        "asset_status",
+        "created_at",
+        "updated_at",
+        "storage_path",
+        "model_path",
+        "placement_surface",
+        "rotation_offset_y",
+        "depth_offset",
+        "snap_targets"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "documentId": "HZG0WRHwY8yuH9J0Nc5O",
+      "idField": "HZG0WRHwY8yuH9J0Nc5O",
+      "assetType": "furniture",
+      "name": "Sofa",
+      "category": "livingroom",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "price",
+        "asset_status",
+        "created_at",
+        "updated_at",
+        "storage_path",
+        "model_path",
+        "placement_surface",
+        "rotation_offset_y",
+        "depth_offset",
+        "snap_targets"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "documentId": "I5Mm64NNEKhOFusIqWHe",
+      "idField": "I5Mm64NNEKhOFusIqWHe",
+      "assetType": "furniture",
+      "name": "Cocoa Curve Lounge",
+      "category": "livingroom",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "asset_status",
+        "created_at",
+        "storage_path",
+        "model_path",
+        "placement_surface",
+        "rotation_offset_y",
+        "depth_offset",
+        "snap_targets",
+        "updated_at",
+        "price"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "documentId": "kjdY8niuhQPlDK1nzeio",
+      "idField": "kjdY8niuhQPlDK1nzeio",
+      "assetType": "furniture",
+      "name": "Ivory Cloud U-Sofa",
+      "category": "livingroom",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "price",
+        "asset_status",
+        "created_at",
+        "updated_at",
+        "storage_path",
+        "model_path",
+        "placement_surface",
+        "rotation_offset_y",
+        "depth_offset",
+        "snap_targets"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "documentId": "l7aynDwSMh5MpQK9fx7c",
+      "idField": "l7aynDwSMh5MpQK9fx7c",
+      "assetType": "furniture",
+      "name": "Channel Tufted Camel Bed",
+      "category": "bedroom",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "price",
+        "asset_status",
+        "created_at",
+        "updated_at",
+        "storage_path",
+        "model_path",
+        "placement_surface",
+        "rotation_offset_y",
+        "depth_offset",
+        "snap_targets"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "documentId": "o9hxXiBMGY3bJZAApUte",
+      "idField": "o9hxXiBMGY3bJZAApUte",
+      "assetType": "furniture",
+      "name": "Modern Lounge Chair",
+      "category": "livingroom",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "price",
+        "asset_status",
+        "created_at",
+        "updated_at",
+        "storage_path",
+        "model_path",
+        "placement_surface",
+        "rotation_offset_y",
+        "depth_offset",
+        "snap_targets"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "documentId": "PqtRcTuqL5ifuo3GTUUH",
+      "idField": "PqtRcTuqL5ifuo3GTUUH",
+      "assetType": "furniture",
+      "name": "Ashen Wood Lounge Chair",
+      "category": "livingroom",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "price",
+        "asset_status",
+        "created_at",
+        "updated_at",
+        "storage_path",
+        "model_path",
+        "placement_surface",
+        "rotation_offset_y",
+        "depth_offset",
+        "snap_targets"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "documentId": "qQdRA4o2kNzBfZtQrKce",
+      "idField": "qQdRA4o2kNzBfZtQrKce",
+      "assetType": "furniture",
+      "name": "Goldenrod Comfort Chair",
+      "category": "livingroom",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "price",
+        "asset_status",
+        "created_at",
+        "updated_at",
+        "storage_path",
+        "model_path",
+        "placement_surface",
+        "rotation_offset_y",
+        "depth_offset",
+        "snap_targets"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "documentId": "qTnjmIpfmIcZlvFlDnC1",
+      "idField": "qTnjmIpfmIcZlvFlDnC1",
+      "assetType": "furniture",
+      "name": "Elephant Gray Sectional Couch",
+      "category": "livingroom",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "price",
+        "asset_status",
+        "created_at",
+        "updated_at",
+        "storage_path",
+        "model_path",
+        "placement_surface",
+        "rotation_offset_y",
+        "depth_offset",
+        "snap_targets"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "documentId": "SreeI98A0JN3AJjsb3UN",
+      "idField": "SreeI98A0JN3AJjsb3UN",
+      "assetType": "floor",
+      "name": "Black Ceramic Tiles",
+      "category": "tile",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "price",
+        "asset_status",
+        "created_at",
+        "updated_at",
+        "diffuse_path",
+        "roughness",
+        "metalness"
+      ],
+      "issueCount": 2,
+      "issues": [
+        "Floor length is missing or is not a positive number.",
+        "Floor width is missing or is not a positive number."
+      ],
+      "warnings": []
+    },
+    {
+      "documentId": "vi2bJxz7mkQzycxuRV53",
+      "idField": "vi2bJxz7mkQzycxuRV53",
+      "assetType": "furniture",
+      "name": "Modern Ash Bed",
+      "category": "bedroom",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "price",
+        "asset_status",
+        "created_at",
+        "updated_at",
+        "storage_path",
+        "model_path",
+        "placement_surface",
+        "rotation_offset_y",
+        "depth_offset",
+        "snap_targets"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "documentId": "vlljo8HQum9D2GBE4oWd",
+      "idField": "vlljo8HQum9D2GBE4oWd",
+      "assetType": "wall",
+      "name": "testing2",
+      "category": "tile",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "price",
+        "asset_status",
+        "created_at",
+        "updated_at",
+        "diffuse_path",
+        "base_color_path",
+        "roughness",
+        "metalness"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "documentId": "x3hHPlyBgYWVUPB6TGTL",
+      "idField": "x3hHPlyBgYWVUPB6TGTL",
+      "assetType": "furniture",
+      "name": "Ivory-Gold Breakfast Stool",
+      "category": "diningroom",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "price",
+        "asset_status",
+        "created_at",
+        "updated_at",
+        "storage_path",
+        "model_path",
+        "placement_surface",
+        "rotation_offset_y",
+        "depth_offset",
+        "snap_targets"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "documentId": "xytfdR9rejLmC6xcFlU7",
+      "idField": "xytfdR9rejLmC6xcFlU7",
+      "assetType": "furniture",
+      "name": "Ivory Marble Center Table",
+      "category": "diningroom",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "price",
+        "asset_status",
+        "created_at",
+        "updated_at",
+        "storage_path",
+        "model_path",
+        "placement_surface",
+        "rotation_offset_y",
+        "depth_offset",
+        "snap_targets"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "documentId": "yoAt8ckUEXxmjtmB70p3",
+      "idField": "yoAt8ckUEXxmjtmB70p3",
+      "assetType": "furniture",
+      "name": "Saddlewood Executive Chair",
+      "category": "office",
+      "status": "available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "price",
+        "asset_status",
+        "created_at",
+        "updated_at",
+        "storage_path",
+        "model_path",
+        "placement_surface",
+        "rotation_offset_y",
+        "depth_offset",
+        "snap_targets"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    },
+    {
+      "documentId": "zq3deO69URAqY3XpQMGh",
+      "idField": "zq3deO69URAqY3XpQMGh",
+      "assetType": "furniture",
+      "name": "Saddlewood Executive Chair",
+      "category": "livingroom",
+      "status": "not_available",
+      "fieldsPresent": [
+        "id",
+        "name",
+        "asset_type",
+        "category",
+        "price",
+        "created_at",
+        "storage_path",
+        "model_path",
+        "placement_surface",
+        "rotation_offset_y",
+        "depth_offset",
+        "snap_targets",
+        "updated_at",
+        "asset_status"
+      ],
+      "issueCount": 0,
+      "issues": [],
+      "warnings": []
+    }
+  ],
+  "storageInventory": [
+    {
+      "name": "assets/floor/tile/SreeI98A0JN3AJjsb3UN-diffuse-black-stones-tiled-floor.jpg",
+      "size": 3807339,
+      "contentType": "image/jpeg",
+      "md5Hash": "D9DXUhHTG5zplFRHSLnClw==",
+      "crc32c": "8Yxncg==",
+      "generation": "1791900892435294",
+      "metageneration": "2",
+      "timeCreated": "2026-10-13T14:14:52.443Z",
+      "updated": "2026-10-13T14:15:00.874Z",
+      "cacheControl": "public, max-age=31536000",
+      "contentDisposition": null,
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/floor/wood/9pPtBuRt0sQZnCf6NeZY-diffuse-png-transparent-porcelain-tile-flooring-bathroom-floor-tiles-miscellaneous-texture-kitchen-thumbnail.png",
+      "size": 17970,
+      "contentType": "image/png",
+      "md5Hash": "NtNdBHeaJ2yeHFb60BTsyA==",
+      "crc32c": "gK6Ctw==",
+      "generation": "1791901646884616",
+      "metageneration": "2",
+      "timeCreated": "2026-10-13T14:27:26.890Z",
+      "updated": "2026-10-13T14:27:29.002Z",
+      "cacheControl": "public, max-age=31536000",
+      "contentDisposition": null,
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/floors/Brick/square_brick_floor/Diffuse.png",
+      "size": 20601848,
+      "contentType": "image/png",
+      "md5Hash": "yYmyFYFneYk7dTOeUMSEsw==",
+      "crc32c": "JMh8fg==",
+      "generation": "1789397686718270",
+      "metageneration": "1",
+      "timeCreated": "2026-09-14T14:54:46.722Z",
+      "updated": "2026-09-14T14:54:46.722Z",
+      "cacheControl": null,
+      "contentDisposition": null,
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/floors/Tiles/square_tiles/Diffuse.png",
+      "size": 22023097,
+      "contentType": "image/png",
+      "md5Hash": "J/uktGqY9Wg3T8gmG+K29Q==",
+      "crc32c": "vwzERw==",
+      "generation": "1789397717953889",
+      "metageneration": "1",
+      "timeCreated": "2026-09-14T14:55:17.960Z",
+      "updated": "2026-09-14T14:55:17.960Z",
+      "cacheControl": null,
+      "contentDisposition": null,
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/floors/Tiles/terrazo_tiles/Diffuse.png",
+      "size": 27115185,
+      "contentType": "image/png",
+      "md5Hash": "opvJmVsIs1+dsATMrF0WqQ==",
+      "crc32c": "nzg/+Q==",
+      "generation": "1789397750580327",
+      "metageneration": "1",
+      "timeCreated": "2026-09-14T14:55:50.585Z",
+      "updated": "2026-09-14T14:55:50.585Z",
+      "cacheControl": null,
+      "contentDisposition": null,
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/floors/Wood/plank_flooring/Diffuse.png",
+      "size": 20659527,
+      "contentType": "image/png",
+      "md5Hash": "jGOB6VLkRn46kXnOQXqGUQ==",
+      "crc32c": "AErodw==",
+      "generation": "1789397779072736",
+      "metageneration": "1",
+      "timeCreated": "2026-09-14T14:56:19.077Z",
+      "updated": "2026-09-14T14:56:19.077Z",
+      "cacheControl": null,
+      "contentDisposition": null,
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/floors/Wood/wooden_floor/Diffuse.png",
+      "size": 25432245,
+      "contentType": "image/png",
+      "md5Hash": "ktt/4hdNO9Gzhjy2elqsyg==",
+      "crc32c": "xjqv/w==",
+      "generation": "1789397811458185",
+      "metageneration": "1",
+      "timeCreated": "2026-09-14T14:56:51.462Z",
+      "updated": "2026-09-14T14:56:51.462Z",
+      "cacheControl": null,
+      "contentDisposition": null,
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/furniture/",
+      "size": 0,
+      "contentType": "application/x-www-form-urlencoded;charset=UTF-8",
+      "md5Hash": "1B2M2Y8AsgTpgAmY7PhCfg==",
+      "crc32c": "AAAAAA==",
+      "generation": "1789729549006389",
+      "metageneration": "1",
+      "timeCreated": "2026-09-18T11:05:49.013Z",
+      "updated": "2026-09-18T11:05:49.013Z",
+      "cacheControl": null,
+      "contentDisposition": "inline; filename*=utf-8''furniture",
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/furniture/bedroom/",
+      "size": 0,
+      "contentType": "application/x-www-form-urlencoded;charset=UTF-8",
+      "md5Hash": "1B2M2Y8AsgTpgAmY7PhCfg==",
+      "crc32c": "AAAAAA==",
+      "generation": "1789729926312331",
+      "metageneration": "1",
+      "timeCreated": "2026-09-18T11:12:06.316Z",
+      "updated": "2026-09-18T11:12:06.316Z",
+      "cacheControl": null,
+      "contentDisposition": "inline; filename*=utf-8''bedroom",
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/furniture/bedroom/Cabinet.glb",
+      "size": 5161440,
+      "contentType": "model/gltf-binary",
+      "md5Hash": "QNUN7wVrLWdZROcdzKz46A==",
+      "crc32c": "JpDCfw==",
+      "generation": "1789730043014402",
+      "metageneration": "2",
+      "timeCreated": "2026-09-18T11:14:03.021Z",
+      "updated": "2026-09-18T11:20:21.518Z",
+      "cacheControl": null,
+      "contentDisposition": "inline; filename*=utf-8''Cabinet.glb",
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/furniture/bedroom/l7aynDwSMh5MpQK9fx7c-model-Channel-Tufted-Camel-Bed_scaled_resized.glb",
+      "size": 15284736,
+      "contentType": "application/octet-stream",
+      "md5Hash": "qD9+Llk0IHi+2ZQmyrhPTg==",
+      "crc32c": "vf61gg==",
+      "generation": "1791904673259910",
+      "metageneration": "2",
+      "timeCreated": "2026-10-13T15:17:53.267Z",
+      "updated": "2026-10-13T15:17:55.649Z",
+      "cacheControl": "public, max-age=31536000",
+      "contentDisposition": null,
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/furniture/bedroom/vi2bJxz7mkQzycxuRV53-model-Modern-Ash-Bed_resized.glb",
+      "size": 22870548,
+      "contentType": "application/octet-stream",
+      "md5Hash": "AueMhCgoMc/bGQ5zNDKJ1A==",
+      "crc32c": "jSz3OA==",
+      "generation": "1791904770049122",
+      "metageneration": "2",
+      "timeCreated": "2026-10-13T15:19:30.055Z",
+      "updated": "2026-10-13T15:19:32.207Z",
+      "cacheControl": "public, max-age=31536000",
+      "contentDisposition": null,
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/furniture/diningroom/",
+      "size": 0,
+      "contentType": "application/x-www-form-urlencoded;charset=UTF-8",
+      "md5Hash": "1B2M2Y8AsgTpgAmY7PhCfg==",
+      "crc32c": "AAAAAA==",
+      "generation": "1789729930878889",
+      "metageneration": "1",
+      "timeCreated": "2026-09-18T11:12:10.884Z",
+      "updated": "2026-09-18T11:12:10.884Z",
+      "cacheControl": null,
+      "contentDisposition": "inline; filename*=utf-8''diningroom",
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/furniture/diningroom/1leXkoHmhslSxmZsagb7-model-Modern-Stainless-Steel-Refrigerator.glb",
+      "size": 18025560,
+      "contentType": "application/octet-stream",
+      "md5Hash": "fUGMP5sxqtQuyOtTWpvV/A==",
+      "crc32c": "3CIQUw==",
+      "generation": "1791904371840852",
+      "metageneration": "2",
+      "timeCreated": "2026-10-13T15:12:51.845Z",
+      "updated": "2026-10-13T15:12:53.233Z",
+      "cacheControl": "public, max-age=31536000",
+      "contentDisposition": null,
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/furniture/diningroom/Table.glb",
+      "size": 12219000,
+      "contentType": "model/gltf-binary",
+      "md5Hash": "6cHd4dvVn+rNw2/8sLApIQ==",
+      "crc32c": "R0Ay3g==",
+      "generation": "1789730012293860",
+      "metageneration": "2",
+      "timeCreated": "2026-09-18T11:13:32.299Z",
+      "updated": "2026-09-18T11:20:20.163Z",
+      "cacheControl": null,
+      "contentDisposition": "inline; filename*=utf-8''Table.glb",
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/furniture/diningroom/x3hHPlyBgYWVUPB6TGTL-model-Ivory-Gold-Breakfast-Stool_resized.glb",
+      "size": 47615236,
+      "contentType": "application/octet-stream",
+      "md5Hash": "QRcJIuGevHqG60CZK+BB7w==",
+      "crc32c": "kQI4SQ==",
+      "generation": "1791907511932899",
+      "metageneration": "2",
+      "timeCreated": "2026-10-13T16:05:11.940Z",
+      "updated": "2026-10-13T16:05:13.123Z",
+      "cacheControl": "public, max-age=31536000",
+      "contentDisposition": null,
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/furniture/diningroom/xytfdR9rejLmC6xcFlU7-model-Ivory-Marble-Center-Table_resized.glb",
+      "size": 55674584,
+      "contentType": "application/octet-stream",
+      "md5Hash": "KenJN/GOmX2oZ8ZKVOPFmQ==",
+      "crc32c": "X9Zs5Q==",
+      "generation": "1791907414044649",
+      "metageneration": "2",
+      "timeCreated": "2026-10-13T16:03:34.051Z",
+      "updated": "2026-10-13T16:03:35.464Z",
+      "cacheControl": "public, max-age=31536000",
+      "contentDisposition": null,
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/furniture/livingroom/",
+      "size": 0,
+      "contentType": "application/x-www-form-urlencoded;charset=UTF-8",
+      "md5Hash": "1B2M2Y8AsgTpgAmY7PhCfg==",
+      "crc32c": "AAAAAA==",
+      "generation": "1789729936141343",
+      "metageneration": "1",
+      "timeCreated": "2026-09-18T11:12:16.146Z",
+      "updated": "2026-09-18T11:12:16.146Z",
+      "cacheControl": null,
+      "contentDisposition": "inline; filename*=utf-8''livingroom",
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+      "size": 31515020,
+      "contentType": "application/octet-stream",
+      "md5Hash": "2LLN+vtz7qehRrpwTnQ4QA==",
+      "crc32c": "/1zkRQ==",
+      "generation": "1791557624278300",
+      "metageneration": "2",
+      "timeCreated": "2026-10-09T14:53:44.286Z",
+      "updated": "2026-10-09T14:53:46.976Z",
+      "cacheControl": "public, max-age=31536000",
+      "contentDisposition": null,
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+      "size": 35986292,
+      "contentType": "application/octet-stream",
+      "md5Hash": "68RfAlliTyhF84M5P7iB2A==",
+      "crc32c": "yC2YCw==",
+      "generation": "1791908019155590",
+      "metageneration": "2",
+      "timeCreated": "2026-10-13T16:13:39.161Z",
+      "updated": "2026-10-13T16:13:40.579Z",
+      "cacheControl": "public, max-age=31536000",
+      "contentDisposition": null,
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+      "size": 27213144,
+      "contentType": "application/octet-stream",
+      "md5Hash": "HMVuzXAvCw3I2Ecz4HAlEw==",
+      "crc32c": "zwYMAg==",
+      "generation": "1791557386993831",
+      "metageneration": "2",
+      "timeCreated": "2026-10-09T14:49:46.999Z",
+      "updated": "2026-10-09T14:49:47.983Z",
+      "cacheControl": "public, max-age=31536000",
+      "contentDisposition": null,
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+      "size": 50035900,
+      "contentType": "application/octet-stream",
+      "md5Hash": "2jBoBxrF94ZexIrOlF1/cQ==",
+      "crc32c": "xlvTVQ==",
+      "generation": "1791908089417316",
+      "metageneration": "2",
+      "timeCreated": "2026-10-13T16:14:49.422Z",
+      "updated": "2026-10-13T16:14:51.869Z",
+      "cacheControl": "public, max-age=31536000",
+      "contentDisposition": null,
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+      "size": 46000932,
+      "contentType": "application/octet-stream",
+      "md5Hash": "QjGea7Vth9I8UDRcPQq5Ew==",
+      "crc32c": "8e2tmg==",
+      "generation": "1791907923934027",
+      "metageneration": "2",
+      "timeCreated": "2026-10-13T16:12:03.941Z",
+      "updated": "2026-10-13T16:12:06.344Z",
+      "cacheControl": "public, max-age=31536000",
+      "contentDisposition": null,
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/furniture/livingroom/TV.glb",
+      "size": 1116556,
+      "contentType": "model/gltf-binary",
+      "md5Hash": "YNlv70CmXGPyhUpvLVBfFw==",
+      "crc32c": "ubyCOw==",
+      "generation": "1789730039004593",
+      "metageneration": "2",
+      "timeCreated": "2026-09-18T11:13:59.010Z",
+      "updated": "2026-09-18T11:20:18.804Z",
+      "cacheControl": null,
+      "contentDisposition": "inline; filename*=utf-8''TV.glb",
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+      "size": 44606820,
+      "contentType": "application/octet-stream",
+      "md5Hash": "1tOPv4A87hvqYSlRYibByw==",
+      "crc32c": "vvNRpg==",
+      "generation": "1791083563705036",
+      "metageneration": "2",
+      "timeCreated": "2026-10-04T03:12:43.733Z",
+      "updated": "2026-10-04T03:12:45.560Z",
+      "cacheControl": "public, max-age=31536000",
+      "contentDisposition": null,
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+      "size": 39703028,
+      "contentType": "application/octet-stream",
+      "md5Hash": "3fYFRLgfH4VZY8R9PKKYQw==",
+      "crc32c": "ywx3tQ==",
+      "generation": "1791907690631538",
+      "metageneration": "2",
+      "timeCreated": "2026-10-13T16:08:10.637Z",
+      "updated": "2026-10-13T16:08:11.911Z",
+      "cacheControl": "public, max-age=31536000",
+      "contentDisposition": null,
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+      "size": 45749440,
+      "contentType": "application/octet-stream",
+      "md5Hash": "3RnHfEyIDEl6Pzj+70Dqog==",
+      "crc32c": "8+JRfQ==",
+      "generation": "1791558215335972",
+      "metageneration": "2",
+      "timeCreated": "2026-10-09T15:03:35.345Z",
+      "updated": "2026-10-09T15:03:38.705Z",
+      "cacheControl": "public, max-age=31536000",
+      "contentDisposition": null,
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+      "size": 42128656,
+      "contentType": "application/octet-stream",
+      "md5Hash": "vzA7R+ZqyOO2gYhN/mdJ0w==",
+      "crc32c": "v39x3w==",
+      "generation": "1791907587889968",
+      "metageneration": "2",
+      "timeCreated": "2026-10-13T16:06:27.897Z",
+      "updated": "2026-10-13T16:06:29.525Z",
+      "cacheControl": "public, max-age=31536000",
+      "contentDisposition": null,
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+      "size": 12843064,
+      "contentType": "application/octet-stream",
+      "md5Hash": "uUIITpSWqNPIzW2GsQxZUw==",
+      "crc32c": "53j5ZQ==",
+      "generation": "1791907978665374",
+      "metageneration": "2",
+      "timeCreated": "2026-10-13T16:12:58.675Z",
+      "updated": "2026-10-13T16:13:00.239Z",
+      "cacheControl": "public, max-age=31536000",
+      "contentDisposition": null,
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/furniture/livingroom/steel-frame-shelves-01.glb",
+      "size": 1596392,
+      "contentType": "application/octet-stream",
+      "md5Hash": "d6paLSsUFaZEXmIkkJe0nQ==",
+      "crc32c": "Cjs+qw==",
+      "generation": "1790082762917656",
+      "metageneration": "1",
+      "timeCreated": "2026-09-22T13:12:42.923Z",
+      "updated": "2026-09-22T13:12:42.923Z",
+      "cacheControl": null,
+      "contentDisposition": "inline; filename*=utf-8''steel-frame-shelves-01.glb",
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb",
+      "size": 34482280,
+      "contentType": "application/octet-stream",
+      "md5Hash": "ir3ocZYC+7yPcohXszFisw==",
+      "crc32c": "J5+FtQ==",
+      "generation": "1791908355190757",
+      "metageneration": "2",
+      "timeCreated": "2026-10-13T16:19:15.203Z",
+      "updated": "2026-10-13T16:19:16.362Z",
+      "cacheControl": "public, max-age=31536000",
+      "contentDisposition": null,
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/furniture/office/gQQOYRG9Cce28WquJ5B0-model-Obsidian-Executive-Chair.glb",
+      "size": 25427900,
+      "contentType": "application/octet-stream",
+      "md5Hash": "c6reOmTWy2B0Q2xW+P8xoQ==",
+      "crc32c": "jucF/w==",
+      "generation": "1791908308529489",
+      "metageneration": "2",
+      "timeCreated": "2026-10-13T16:18:28.535Z",
+      "updated": "2026-10-13T16:18:30.619Z",
+      "cacheControl": "public, max-age=31536000",
+      "contentDisposition": null,
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/furniture/office/yoAt8ckUEXxmjtmB70p3-model-Saddlewood-Executive-Chair.glb",
+      "size": 34482280,
+      "contentType": "application/octet-stream",
+      "md5Hash": "ir3ocZYC+7yPcohXszFisw==",
+      "crc32c": "J5+FtQ==",
+      "generation": "1791908459970372",
+      "metageneration": "2",
+      "timeCreated": "2026-10-13T16:20:59.975Z",
+      "updated": "2026-10-13T16:21:01.415Z",
+      "cacheControl": "public, max-age=31536000",
+      "contentDisposition": null,
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/openings/",
+      "size": 0,
+      "contentType": "application/x-www-form-urlencoded;charset=UTF-8",
+      "md5Hash": "1B2M2Y8AsgTpgAmY7PhCfg==",
+      "crc32c": "AAAAAA==",
+      "generation": "1789729637883363",
+      "metageneration": "1",
+      "timeCreated": "2026-09-18T11:07:17.889Z",
+      "updated": "2026-09-18T11:07:17.889Z",
+      "cacheControl": null,
+      "contentDisposition": "inline; filename*=utf-8''openings",
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/openings/doors/",
+      "size": 0,
+      "contentType": "application/x-www-form-urlencoded;charset=UTF-8",
+      "md5Hash": "1B2M2Y8AsgTpgAmY7PhCfg==",
+      "crc32c": "AAAAAA==",
+      "generation": "1789729644566645",
+      "metageneration": "1",
+      "timeCreated": "2026-09-18T11:07:24.570Z",
+      "updated": "2026-09-18T11:07:24.570Z",
+      "cacheControl": null,
+      "contentDisposition": "inline; filename*=utf-8''doors",
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/openings/doors/single-door.glb",
+      "size": 12186500,
+      "contentType": "model/gltf-binary",
+      "md5Hash": "DFXWR3Y5rto3l85WzGaiwA==",
+      "crc32c": "GLX8Dw==",
+      "generation": "1789730201300288",
+      "metageneration": "2",
+      "timeCreated": "2026-09-18T11:16:41.303Z",
+      "updated": "2026-09-18T11:20:22.831Z",
+      "cacheControl": null,
+      "contentDisposition": "inline; filename*=utf-8''single-door.glb",
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/openings/windows/",
+      "size": 0,
+      "contentType": "application/x-www-form-urlencoded;charset=UTF-8",
+      "md5Hash": "1B2M2Y8AsgTpgAmY7PhCfg==",
+      "crc32c": "AAAAAA==",
+      "generation": "1789729647647926",
+      "metageneration": "1",
+      "timeCreated": "2026-09-18T11:07:27.650Z",
+      "updated": "2026-09-18T11:07:27.650Z",
+      "cacheControl": null,
+      "contentDisposition": "inline; filename*=utf-8''windows",
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/openings/windows/Slim_Intersection_i.glb",
+      "size": 1606112,
+      "contentType": "model/gltf-binary",
+      "md5Hash": "rnNEQABg8zAMUB5UMoJeMw==",
+      "crc32c": "NoYCtA==",
+      "generation": "1789730208441666",
+      "metageneration": "2",
+      "timeCreated": "2026-09-18T11:16:48.446Z",
+      "updated": "2026-09-18T11:20:24.175Z",
+      "cacheControl": null,
+      "contentDisposition": "inline; filename*=utf-8''Slim_Intersection_i.glb",
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "assets/wall/tile/vlljo8HQum9D2GBE4oWd-diffuse-wallpaperflare-com_wallpaper.jpg",
+      "size": 4265398,
+      "contentType": "image/jpeg",
+      "md5Hash": "yKzdpPFHS4nzrMvUN/3uqA==",
+      "crc32c": "0eCCbA==",
+      "generation": "1791083665057268",
+      "metageneration": "2",
+      "timeCreated": "2026-10-04T03:14:25.062Z",
+      "updated": "2026-10-04T03:14:32.823Z",
+      "cacheControl": "public, max-age=31536000",
+      "contentDisposition": null,
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "projects/F4HKML8903WrqD35yHb7YY4V5032/20e1dac5-0a92-4afd-886e-b07151b918bf.json",
+      "size": 2844,
+      "contentType": "application/json",
+      "md5Hash": "eqKB++OZSvsv+wjCxc7q+Q==",
+      "crc32c": "dbMDdw==",
+      "generation": "1790170458681425",
+      "metageneration": "1",
+      "timeCreated": "2026-09-23T13:34:18.712Z",
+      "updated": "2026-09-23T13:34:18.712Z",
+      "cacheControl": null,
+      "contentDisposition": "inline; filename*=utf-8''20e1dac5-0a92-4afd-886e-b07151b918bf.json",
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "projects/F4HKML8903WrqD35yHb7YY4V5032/4334fc02-7776-42ba-b75e-4b9a77e31f12.jpg",
+      "size": 177142,
+      "contentType": "image/jpeg",
+      "md5Hash": "mt61vkH1IuXyNLz1oOF6Ew==",
+      "crc32c": "yVFcUA==",
+      "generation": "1791293266778967",
+      "metageneration": "1",
+      "timeCreated": "2026-10-06T13:27:46.784Z",
+      "updated": "2026-10-06T13:27:46.784Z",
+      "cacheControl": null,
+      "contentDisposition": "inline; filename*=utf-8''4334fc02-7776-42ba-b75e-4b9a77e31f12.jpg",
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "projects/F4HKML8903WrqD35yHb7YY4V5032/4334fc02-7776-42ba-b75e-4b9a77e31f12.json",
+      "size": 5725,
+      "contentType": "application/json",
+      "md5Hash": "tQrAbMTuZ1lFKnNMIEHJHQ==",
+      "crc32c": "vCbOcQ==",
+      "generation": "1791293261959438",
+      "metageneration": "1",
+      "timeCreated": "2026-10-06T13:27:41.964Z",
+      "updated": "2026-10-06T13:27:41.964Z",
+      "cacheControl": null,
+      "contentDisposition": "inline; filename*=utf-8''4334fc02-7776-42ba-b75e-4b9a77e31f12.json",
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "projects/F4HKML8903WrqD35yHb7YY4V5032/54fcd7c8-47bc-4eee-a987-4276a49e339e.json",
+      "size": 3993,
+      "contentType": "application/json",
+      "md5Hash": "4WF1wT7ni/xLpkI9XT8Axw==",
+      "crc32c": "q4M6sw==",
+      "generation": "1790171507845972",
+      "metageneration": "1",
+      "timeCreated": "2026-09-23T13:51:47.862Z",
+      "updated": "2026-09-23T13:51:47.862Z",
+      "cacheControl": null,
+      "contentDisposition": "inline; filename*=utf-8''54fcd7c8-47bc-4eee-a987-4276a49e339e.json",
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "projects/F4HKML8903WrqD35yHb7YY4V5032/81917f53-7ae0-40a4-960e-569293f46f6b.json",
+      "size": 2845,
+      "contentType": "application/json",
+      "md5Hash": "y1cngTnDLOssZSwmmVWVyw==",
+      "crc32c": "aWUr8g==",
+      "generation": "1790169545626396",
+      "metageneration": "1",
+      "timeCreated": "2026-09-23T13:19:05.631Z",
+      "updated": "2026-09-23T13:19:05.631Z",
+      "cacheControl": null,
+      "contentDisposition": "inline; filename*=utf-8''81917f53-7ae0-40a4-960e-569293f46f6b.json",
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "projects/F4HKML8903WrqD35yHb7YY4V5032/a9733422-43c3-4ce6-8946-0cda2d1ff524.json",
+      "size": 3205,
+      "contentType": "application/json",
+      "md5Hash": "74AFNYhjcsQCtiEsPHfssg==",
+      "crc32c": "YDyZCQ==",
+      "generation": "1790148039496825",
+      "metageneration": "1",
+      "timeCreated": "2026-09-23T07:20:39.503Z",
+      "updated": "2026-09-23T07:20:39.503Z",
+      "cacheControl": null,
+      "contentDisposition": "inline; filename*=utf-8''a9733422-43c3-4ce6-8946-0cda2d1ff524.json",
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "projects/F4HKML8903WrqD35yHb7YY4V5032/c5ea1f17-84f0-41c7-b315-839682b23754.jpg",
+      "size": 218976,
+      "contentType": "image/jpeg",
+      "md5Hash": "RZX0KDOCEsAQZuR1PSk4Pw==",
+      "crc32c": "/rCFHA==",
+      "generation": "1791976603463772",
+      "metageneration": "1",
+      "timeCreated": "2026-10-14T11:16:43.474Z",
+      "updated": "2026-10-14T11:16:43.474Z",
+      "cacheControl": null,
+      "contentDisposition": "inline; filename*=utf-8''c5ea1f17-84f0-41c7-b315-839682b23754.jpg",
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "projects/F4HKML8903WrqD35yHb7YY4V5032/c5ea1f17-84f0-41c7-b315-839682b23754.json",
+      "size": 6357,
+      "contentType": "application/json",
+      "md5Hash": "lTmMNb2sevPMql9WLYiCmw==",
+      "crc32c": "wDdeAA==",
+      "generation": "1791976599938989",
+      "metageneration": "1",
+      "timeCreated": "2026-10-14T11:16:39.956Z",
+      "updated": "2026-10-14T11:16:39.956Z",
+      "cacheControl": null,
+      "contentDisposition": "inline; filename*=utf-8''c5ea1f17-84f0-41c7-b315-839682b23754.json",
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "projects/F4HKML8903WrqD35yHb7YY4V5032/d925f762-366d-4cb7-b4fe-eba1ae90dea3.jpg",
+      "size": 125469,
+      "contentType": "image/jpeg",
+      "md5Hash": "v+OI0wVwJPVle4qLdwzazA==",
+      "crc32c": "qSeauQ==",
+      "generation": "1791976107801337",
+      "metageneration": "1",
+      "timeCreated": "2026-10-14T11:08:27.810Z",
+      "updated": "2026-10-14T11:08:27.810Z",
+      "cacheControl": null,
+      "contentDisposition": "inline; filename*=utf-8''d925f762-366d-4cb7-b4fe-eba1ae90dea3.jpg",
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "projects/F4HKML8903WrqD35yHb7YY4V5032/d925f762-366d-4cb7-b4fe-eba1ae90dea3.json",
+      "size": 4473,
+      "contentType": "application/json",
+      "md5Hash": "uER8KbkTmg0BJGQcGTJ8vQ==",
+      "crc32c": "9+yzig==",
+      "generation": "1791976105830809",
+      "metageneration": "1",
+      "timeCreated": "2026-10-14T11:08:25.842Z",
+      "updated": "2026-10-14T11:08:25.842Z",
+      "cacheControl": null,
+      "contentDisposition": "inline; filename*=utf-8''d925f762-366d-4cb7-b4fe-eba1ae90dea3.json",
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "projects/xihzTIneaddfoHzPfYPDqFoinec2/5809402b-aef2-49fc-9222-5b02a2b5b7ec.jpg",
+      "size": 128621,
+      "contentType": "image/jpeg",
+      "md5Hash": "IucgkmXsAlc5xNofJaHSAw==",
+      "crc32c": "/T7Eig==",
+      "generation": "1792075146424140",
+      "metageneration": "1",
+      "timeCreated": "2026-10-15T14:39:06.434Z",
+      "updated": "2026-10-15T14:39:06.434Z",
+      "cacheControl": null,
+      "contentDisposition": "inline; filename*=utf-8''5809402b-aef2-49fc-9222-5b02a2b5b7ec.jpg",
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "projects/xihzTIneaddfoHzPfYPDqFoinec2/5809402b-aef2-49fc-9222-5b02a2b5b7ec.json",
+      "size": 19832,
+      "contentType": "application/json",
+      "md5Hash": "iqtXCTPcyib8/kziD/+ZJw==",
+      "crc32c": "THGUhg==",
+      "generation": "1792075144339770",
+      "metageneration": "1",
+      "timeCreated": "2026-10-15T14:39:04.353Z",
+      "updated": "2026-10-15T14:39:04.353Z",
+      "cacheControl": null,
+      "contentDisposition": "inline; filename*=utf-8''5809402b-aef2-49fc-9222-5b02a2b5b7ec.json",
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "projects/xihzTIneaddfoHzPfYPDqFoinec2/856a6cad-452f-4d73-af18-8d9e8950ec12-preview.png",
+      "size": 108856,
+      "contentType": "image/png",
+      "md5Hash": "5SbHCJ8/Wv+OZpnmAIG4uQ==",
+      "crc32c": "lqQUHA==",
+      "generation": "1791017490945330",
+      "metageneration": "1",
+      "timeCreated": "2026-10-03T08:51:30.956Z",
+      "updated": "2026-10-03T08:51:30.956Z",
+      "cacheControl": "no-cache, max-age=0",
+      "contentDisposition": "inline; filename*=utf-8''856a6cad-452f-4d73-af18-8d9e8950ec12-preview.png",
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "projects/xihzTIneaddfoHzPfYPDqFoinec2/856a6cad-452f-4d73-af18-8d9e8950ec12.json",
+      "size": 5765,
+      "contentType": "application/json",
+      "md5Hash": "hfLZgkMwa1mjRBBKGZ0gXA==",
+      "crc32c": "kWffsQ==",
+      "generation": "1791017495497616",
+      "metageneration": "1",
+      "timeCreated": "2026-10-03T08:51:35.508Z",
+      "updated": "2026-10-03T08:51:35.508Z",
+      "cacheControl": null,
+      "contentDisposition": "inline; filename*=utf-8''856a6cad-452f-4d73-af18-8d9e8950ec12.json",
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "projects/zuVBAKpkIkYYJpKMySHFk8wWhpQ2/005b4806-85af-4949-b69a-13efc44b534d.json",
+      "size": 14815,
+      "contentType": "application/json",
+      "md5Hash": "aa2HpiByg3MKRYg0ihZeKg==",
+      "crc32c": "hRJAqw==",
+      "generation": "1791016139897196",
+      "metageneration": "1",
+      "timeCreated": "2026-10-03T08:28:59.910Z",
+      "updated": "2026-10-03T08:28:59.910Z",
+      "cacheControl": null,
+      "contentDisposition": "inline; filename*=utf-8''005b4806-85af-4949-b69a-13efc44b534d.json",
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "projects/zuVBAKpkIkYYJpKMySHFk8wWhpQ2/d60a9374-16d2-44bb-83a3-0d2b7df2d443.json",
+      "size": 18027,
+      "contentType": "application/json",
+      "md5Hash": "NRWoZYZPe3YGiIBweuI7MQ==",
+      "crc32c": "HJuAsA==",
+      "generation": "1791381668039694",
+      "metageneration": "1",
+      "timeCreated": "2026-10-07T14:01:08.047Z",
+      "updated": "2026-10-07T14:01:08.047Z",
+      "cacheControl": null,
+      "contentDisposition": "inline; filename*=utf-8''d60a9374-16d2-44bb-83a3-0d2b7df2d443.json",
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "projects/zuVBAKpkIkYYJpKMySHFk8wWhpQ2/e4a0a4a6-dba5-4160-8952-6e59973904d9.jpg",
+      "size": 376055,
+      "contentType": "image/jpeg",
+      "md5Hash": "OAgOV2w0aKf02Lm5Tx5C6A==",
+      "crc32c": "DebtAQ==",
+      "generation": "1792064091824931",
+      "metageneration": "1",
+      "timeCreated": "2026-10-15T11:34:51.836Z",
+      "updated": "2026-10-15T11:34:51.836Z",
+      "cacheControl": null,
+      "contentDisposition": "inline; filename*=utf-8''e4a0a4a6-dba5-4160-8952-6e59973904d9.jpg",
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    },
+    {
+      "name": "projects/zuVBAKpkIkYYJpKMySHFk8wWhpQ2/e4a0a4a6-dba5-4160-8952-6e59973904d9.json",
+      "size": 11486,
+      "contentType": "application/json",
+      "md5Hash": "sVN0731GTHdp29hTSwiEKg==",
+      "crc32c": "5CTErg==",
+      "generation": "1792064087754117",
+      "metageneration": "1",
+      "timeCreated": "2026-10-15T11:34:47.784Z",
+      "updated": "2026-10-15T11:34:47.784Z",
+      "cacheControl": null,
+      "contentDisposition": "inline; filename*=utf-8''e4a0a4a6-dba5-4160-8952-6e59973904d9.json",
+      "contentEncoding": null,
+      "contentLanguage": null,
+      "metadata": {},
+      "downloadTokenPresent": true
+    }
+  ],
+  "pathReferences": [
+    {
+      "documentId": "1leXkoHmhslSxmZsagb7",
+      "assetId": "1leXkoHmhslSxmZsagb7",
+      "name": "Modern Stainless Steel Refrigerator",
+      "assetType": "furniture",
+      "category": "diningroom",
+      "field": "$.storage_path",
+      "path": "assets/furniture/diningroom/1leXkoHmhslSxmZsagb7-model-Modern-Stainless-Steel-Refrigerator.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "1leXkoHmhslSxmZsagb7",
+      "assetId": "1leXkoHmhslSxmZsagb7",
+      "name": "Modern Stainless Steel Refrigerator",
+      "assetType": "furniture",
+      "category": "diningroom",
+      "field": "$.model_path",
+      "path": "assets/furniture/diningroom/1leXkoHmhslSxmZsagb7-model-Modern-Stainless-Steel-Refrigerator.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "4vD9gHQW3UI3K8xLD71B",
+      "assetId": "4vD9gHQW3UI3K8xLD71B",
+      "name": "Barrel Chair",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "field": "$.storage_path",
+      "path": "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "4vD9gHQW3UI3K8xLD71B",
+      "assetId": "4vD9gHQW3UI3K8xLD71B",
+      "name": "Barrel Chair",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "field": "$.model_path",
+      "path": "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "9pPtBuRt0sQZnCf6NeZY",
+      "assetId": "9pPtBuRt0sQZnCf6NeZY",
+      "name": "tile test",
+      "assetType": "floor",
+      "category": "wood",
+      "field": "$.diffuse_path",
+      "path": "assets/floor/wood/9pPtBuRt0sQZnCf6NeZY-diffuse-png-transparent-porcelain-tile-flooring-bathroom-floor-tiles-miscellaneous-texture-kitchen-thumbnail.png",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "A-26013",
+      "assetId": "A-26013",
+      "name": "Square Brick Floors",
+      "assetType": "floor",
+      "category": "brick",
+      "field": "$.storage_path",
+      "path": "assets/floors/Brick/square_brick_floor",
+      "exists": false,
+      "isDirectoryPrefix": true,
+      "verifiedRepairPath": "assets/floors/Brick/square_brick_floor/Diffuse.png"
+    },
+    {
+      "documentId": "A-26013",
+      "assetId": "A-26013",
+      "name": "Square Brick Floors",
+      "assetType": "floor",
+      "category": "brick",
+      "field": "$.diffuse_path",
+      "path": "assets/floors/Brick/square_brick_floor/Diffuse.png",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "A-26014",
+      "assetId": "A-26014",
+      "name": "Square Tiles",
+      "assetType": "floor",
+      "category": "tiles",
+      "field": "$.storage_path",
+      "path": "assets/floors/Tiles/square_tiles",
+      "exists": false,
+      "isDirectoryPrefix": true,
+      "verifiedRepairPath": "assets/floors/Tiles/square_tiles/Diffuse.png"
+    },
+    {
+      "documentId": "A-26014",
+      "assetId": "A-26014",
+      "name": "Square Tiles",
+      "assetType": "floor",
+      "category": "tiles",
+      "field": "$.diffuse_path",
+      "path": "assets/floors/Tiles/square_tiles/Diffuse.png",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "A-26014",
+      "assetId": "A-26014",
+      "name": "Square Tiles",
+      "assetType": "floor",
+      "category": "tiles",
+      "field": "$.model_url",
+      "path": "assets/floors/Tiles/square_tiles/Diffuse.png",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "A-26015",
+      "assetId": "A-26015",
+      "name": "Terrazo Tiles",
+      "assetType": "floor",
+      "category": "tiles",
+      "field": "$.storage_path",
+      "path": "assets/floors/Tiles/terrazo_tiles",
+      "exists": false,
+      "isDirectoryPrefix": true,
+      "verifiedRepairPath": "assets/floors/Tiles/terrazo_tiles/Diffuse.png"
+    },
+    {
+      "documentId": "A-26015",
+      "assetId": "A-26015",
+      "name": "Terrazo Tiles",
+      "assetType": "floor",
+      "category": "tiles",
+      "field": "$.diffuse_path",
+      "path": "assets/floors/Tiles/terrazo_tiles/Diffuse.png",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "A-26016",
+      "assetId": "A-26016",
+      "name": "Plank Flooring",
+      "assetType": "floor",
+      "category": "wood",
+      "field": "$.storage_path",
+      "path": "assets/floors/Wood/plank_flooring",
+      "exists": false,
+      "isDirectoryPrefix": true,
+      "verifiedRepairPath": "assets/floors/Wood/plank_flooring/Diffuse.png"
+    },
+    {
+      "documentId": "A-26016",
+      "assetId": "A-26016",
+      "name": "Plank Flooring",
+      "assetType": "floor",
+      "category": "wood",
+      "field": "$.diffuse_path",
+      "path": "assets/floors/Wood/plank_flooring/Diffuse.png",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "A-26017",
+      "assetId": "A-26017",
+      "name": "Wooden Floor",
+      "assetType": "floor",
+      "category": "wood",
+      "field": "$.storage_path",
+      "path": "assets/floors/Wood/wooden_floor",
+      "exists": false,
+      "isDirectoryPrefix": true,
+      "verifiedRepairPath": "assets/floors/Wood/wooden_floor/Diffuse.png"
+    },
+    {
+      "documentId": "A-26017",
+      "assetId": "A-26017",
+      "name": "Wooden Floor",
+      "assetType": "floor",
+      "category": "wood",
+      "field": "$.diffuse_path",
+      "path": "assets/floors/Wood/wooden_floor/Diffuse.png",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "A-3X1T1I",
+      "assetId": "A-3X1T1I",
+      "name": "Single Door",
+      "assetType": "furniture",
+      "category": "doors",
+      "field": "$.model_path",
+      "path": "assets/openings/doors/single-door.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "A-3X1T1I",
+      "assetId": "A-3X1T1I",
+      "name": "Single Door",
+      "assetType": "furniture",
+      "category": "doors",
+      "field": "$.model_url",
+      "path": "assets/openings/doors/single-door.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "A-4BERBM",
+      "assetId": "A-4BERBM",
+      "name": "TV",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "field": "$.model_path",
+      "path": "assets/furniture/livingroom/TV.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "A-4BERBM",
+      "assetId": "A-4BERBM",
+      "name": "TV",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "field": "$.model_url",
+      "path": "assets/furniture/livingroom/TV.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "A-DF723H",
+      "assetId": "A-DF723H",
+      "name": "Sofa",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "field": "$.model_path",
+      "path": "assets/furniture/livingroom/steel-frame-shelves-01.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "A-ELXX9U",
+      "assetId": "A-ELXX9U",
+      "name": "Slim Intersection Window",
+      "assetType": "furniture",
+      "category": "windows",
+      "field": "$.model_path",
+      "path": "assets/openings/windows/Slim_Intersection_i.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "A-ELXX9U",
+      "assetId": "A-ELXX9U",
+      "name": "Slim Intersection Window",
+      "assetType": "furniture",
+      "category": "windows",
+      "field": "$.model_url",
+      "path": "assets/openings/windows/Slim_Intersection_i.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "A-KOSIW0",
+      "assetId": "A-KOSIW0",
+      "name": "Cabinet",
+      "assetType": "furniture",
+      "category": "bedroom",
+      "field": "$.model_path",
+      "path": "assets/furniture/bedroom/Cabinet.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "A-WWTI9B",
+      "assetId": "A-WWTI9B",
+      "name": "Table",
+      "assetType": "furniture",
+      "category": "diningroom",
+      "field": "$.model_path",
+      "path": "assets/furniture/diningroom/Table.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "ewZhEYTdu2niIU6lZF2h",
+      "assetId": "ewZhEYTdu2niIU6lZF2h",
+      "name": "testing",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "field": "$.storage_path",
+      "path": "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "ewZhEYTdu2niIU6lZF2h",
+      "assetId": "ewZhEYTdu2niIU6lZF2h",
+      "name": "testing",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "field": "$.model_path",
+      "path": "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "gQQOYRG9Cce28WquJ5B0",
+      "assetId": "gQQOYRG9Cce28WquJ5B0",
+      "name": "Obsidian Executive Chair",
+      "assetType": "furniture",
+      "category": "office",
+      "field": "$.storage_path",
+      "path": "assets/furniture/office/gQQOYRG9Cce28WquJ5B0-model-Obsidian-Executive-Chair.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "gQQOYRG9Cce28WquJ5B0",
+      "assetId": "gQQOYRG9Cce28WquJ5B0",
+      "name": "Obsidian Executive Chair",
+      "assetType": "furniture",
+      "category": "office",
+      "field": "$.model_path",
+      "path": "assets/furniture/office/gQQOYRG9Cce28WquJ5B0-model-Obsidian-Executive-Chair.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "HRgQpL2Tx92bvodO8RZI",
+      "assetId": "HRgQpL2Tx92bvodO8RZI",
+      "name": "Ivory Pharaoh Chair",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "field": "$.storage_path",
+      "path": "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "HRgQpL2Tx92bvodO8RZI",
+      "assetId": "HRgQpL2Tx92bvodO8RZI",
+      "name": "Ivory Pharaoh Chair",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "field": "$.model_path",
+      "path": "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "HZG0WRHwY8yuH9J0Nc5O",
+      "assetId": "HZG0WRHwY8yuH9J0Nc5O",
+      "name": "Sofa",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "field": "$.storage_path",
+      "path": "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "HZG0WRHwY8yuH9J0Nc5O",
+      "assetId": "HZG0WRHwY8yuH9J0Nc5O",
+      "name": "Sofa",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "field": "$.model_path",
+      "path": "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "I5Mm64NNEKhOFusIqWHe",
+      "assetId": "I5Mm64NNEKhOFusIqWHe",
+      "name": "Cocoa Curve Lounge",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "field": "$.storage_path",
+      "path": "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "I5Mm64NNEKhOFusIqWHe",
+      "assetId": "I5Mm64NNEKhOFusIqWHe",
+      "name": "Cocoa Curve Lounge",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "field": "$.model_path",
+      "path": "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "kjdY8niuhQPlDK1nzeio",
+      "assetId": "kjdY8niuhQPlDK1nzeio",
+      "name": "Ivory Cloud U-Sofa",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "field": "$.storage_path",
+      "path": "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "kjdY8niuhQPlDK1nzeio",
+      "assetId": "kjdY8niuhQPlDK1nzeio",
+      "name": "Ivory Cloud U-Sofa",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "field": "$.model_path",
+      "path": "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "l7aynDwSMh5MpQK9fx7c",
+      "assetId": "l7aynDwSMh5MpQK9fx7c",
+      "name": "Channel Tufted Camel Bed",
+      "assetType": "furniture",
+      "category": "bedroom",
+      "field": "$.storage_path",
+      "path": "assets/furniture/bedroom/l7aynDwSMh5MpQK9fx7c-model-Channel-Tufted-Camel-Bed_scaled_resized.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "l7aynDwSMh5MpQK9fx7c",
+      "assetId": "l7aynDwSMh5MpQK9fx7c",
+      "name": "Channel Tufted Camel Bed",
+      "assetType": "furniture",
+      "category": "bedroom",
+      "field": "$.model_path",
+      "path": "assets/furniture/bedroom/l7aynDwSMh5MpQK9fx7c-model-Channel-Tufted-Camel-Bed_scaled_resized.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "o9hxXiBMGY3bJZAApUte",
+      "assetId": "o9hxXiBMGY3bJZAApUte",
+      "name": "Modern Lounge Chair",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "field": "$.storage_path",
+      "path": "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "o9hxXiBMGY3bJZAApUte",
+      "assetId": "o9hxXiBMGY3bJZAApUte",
+      "name": "Modern Lounge Chair",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "field": "$.model_path",
+      "path": "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "PqtRcTuqL5ifuo3GTUUH",
+      "assetId": "PqtRcTuqL5ifuo3GTUUH",
+      "name": "Ashen Wood Lounge Chair",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "field": "$.storage_path",
+      "path": "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "PqtRcTuqL5ifuo3GTUUH",
+      "assetId": "PqtRcTuqL5ifuo3GTUUH",
+      "name": "Ashen Wood Lounge Chair",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "field": "$.model_path",
+      "path": "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "qQdRA4o2kNzBfZtQrKce",
+      "assetId": "qQdRA4o2kNzBfZtQrKce",
+      "name": "Goldenrod Comfort Chair",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "field": "$.storage_path",
+      "path": "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "qQdRA4o2kNzBfZtQrKce",
+      "assetId": "qQdRA4o2kNzBfZtQrKce",
+      "name": "Goldenrod Comfort Chair",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "field": "$.model_path",
+      "path": "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "qTnjmIpfmIcZlvFlDnC1",
+      "assetId": "qTnjmIpfmIcZlvFlDnC1",
+      "name": "Elephant Gray Sectional Couch",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "field": "$.storage_path",
+      "path": "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "qTnjmIpfmIcZlvFlDnC1",
+      "assetId": "qTnjmIpfmIcZlvFlDnC1",
+      "name": "Elephant Gray Sectional Couch",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "field": "$.model_path",
+      "path": "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "SreeI98A0JN3AJjsb3UN",
+      "assetId": "SreeI98A0JN3AJjsb3UN",
+      "name": "Black Ceramic Tiles",
+      "assetType": "floor",
+      "category": "tile",
+      "field": "$.diffuse_path",
+      "path": "assets/floor/tile/SreeI98A0JN3AJjsb3UN-diffuse-black-stones-tiled-floor.jpg",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "vi2bJxz7mkQzycxuRV53",
+      "assetId": "vi2bJxz7mkQzycxuRV53",
+      "name": "Modern Ash Bed",
+      "assetType": "furniture",
+      "category": "bedroom",
+      "field": "$.storage_path",
+      "path": "assets/furniture/bedroom/vi2bJxz7mkQzycxuRV53-model-Modern-Ash-Bed_resized.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "vi2bJxz7mkQzycxuRV53",
+      "assetId": "vi2bJxz7mkQzycxuRV53",
+      "name": "Modern Ash Bed",
+      "assetType": "furniture",
+      "category": "bedroom",
+      "field": "$.model_path",
+      "path": "assets/furniture/bedroom/vi2bJxz7mkQzycxuRV53-model-Modern-Ash-Bed_resized.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "vlljo8HQum9D2GBE4oWd",
+      "assetId": "vlljo8HQum9D2GBE4oWd",
+      "name": "testing2",
+      "assetType": "wall",
+      "category": "tile",
+      "field": "$.diffuse_path",
+      "path": "assets/wall/tile/vlljo8HQum9D2GBE4oWd-diffuse-wallpaperflare-com_wallpaper.jpg",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "vlljo8HQum9D2GBE4oWd",
+      "assetId": "vlljo8HQum9D2GBE4oWd",
+      "name": "testing2",
+      "assetType": "wall",
+      "category": "tile",
+      "field": "$.base_color_path",
+      "path": "assets/wall/tile/vlljo8HQum9D2GBE4oWd-diffuse-wallpaperflare-com_wallpaper.jpg",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "x3hHPlyBgYWVUPB6TGTL",
+      "assetId": "x3hHPlyBgYWVUPB6TGTL",
+      "name": "Ivory-Gold Breakfast Stool",
+      "assetType": "furniture",
+      "category": "diningroom",
+      "field": "$.storage_path",
+      "path": "assets/furniture/diningroom/x3hHPlyBgYWVUPB6TGTL-model-Ivory-Gold-Breakfast-Stool_resized.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "x3hHPlyBgYWVUPB6TGTL",
+      "assetId": "x3hHPlyBgYWVUPB6TGTL",
+      "name": "Ivory-Gold Breakfast Stool",
+      "assetType": "furniture",
+      "category": "diningroom",
+      "field": "$.model_path",
+      "path": "assets/furniture/diningroom/x3hHPlyBgYWVUPB6TGTL-model-Ivory-Gold-Breakfast-Stool_resized.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "xytfdR9rejLmC6xcFlU7",
+      "assetId": "xytfdR9rejLmC6xcFlU7",
+      "name": "Ivory Marble Center Table",
+      "assetType": "furniture",
+      "category": "diningroom",
+      "field": "$.storage_path",
+      "path": "assets/furniture/diningroom/xytfdR9rejLmC6xcFlU7-model-Ivory-Marble-Center-Table_resized.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "xytfdR9rejLmC6xcFlU7",
+      "assetId": "xytfdR9rejLmC6xcFlU7",
+      "name": "Ivory Marble Center Table",
+      "assetType": "furniture",
+      "category": "diningroom",
+      "field": "$.model_path",
+      "path": "assets/furniture/diningroom/xytfdR9rejLmC6xcFlU7-model-Ivory-Marble-Center-Table_resized.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "yoAt8ckUEXxmjtmB70p3",
+      "assetId": "yoAt8ckUEXxmjtmB70p3",
+      "name": "Saddlewood Executive Chair",
+      "assetType": "furniture",
+      "category": "office",
+      "field": "$.storage_path",
+      "path": "assets/furniture/office/yoAt8ckUEXxmjtmB70p3-model-Saddlewood-Executive-Chair.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "yoAt8ckUEXxmjtmB70p3",
+      "assetId": "yoAt8ckUEXxmjtmB70p3",
+      "name": "Saddlewood Executive Chair",
+      "assetType": "furniture",
+      "category": "office",
+      "field": "$.model_path",
+      "path": "assets/furniture/office/yoAt8ckUEXxmjtmB70p3-model-Saddlewood-Executive-Chair.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "zq3deO69URAqY3XpQMGh",
+      "assetId": "zq3deO69URAqY3XpQMGh",
+      "name": "Saddlewood Executive Chair",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "field": "$.storage_path",
+      "path": "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    },
+    {
+      "documentId": "zq3deO69URAqY3XpQMGh",
+      "assetId": "zq3deO69URAqY3XpQMGh",
+      "name": "Saddlewood Executive Chair",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "field": "$.model_path",
+      "path": "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb",
+      "exists": true,
+      "isDirectoryPrefix": false,
+      "verifiedRepairPath": null
+    }
+  ],
+  "idMapping": [
+    {
+      "oldDocumentId": "1leXkoHmhslSxmZsagb7",
+      "oldIdField": "1leXkoHmhslSxmZsagb7",
+      "newDocumentId": "F-00126",
+      "newIdField": "F-00126",
+      "assetType": "furniture",
+      "name": "Modern Stainless Steel Refrigerator",
+      "category": "diningroom",
+      "sequence": 1,
+      "year": "2026",
+      "referencesFound": 0,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "4vD9gHQW3UI3K8xLD71B",
+      "oldIdField": "4vD9gHQW3UI3K8xLD71B",
+      "newDocumentId": "F-00226",
+      "newIdField": "F-00226",
+      "assetType": "furniture",
+      "name": "Barrel Chair",
+      "category": "livingroom",
+      "sequence": 2,
+      "year": "2026",
+      "referencesFound": 1,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "A-3X1T1I",
+      "oldIdField": "A-3X1T1I",
+      "newDocumentId": "F-00326",
+      "newIdField": "F-00326",
+      "assetType": "furniture",
+      "name": "Single Door",
+      "category": "doors",
+      "sequence": 3,
+      "year": "2026",
+      "referencesFound": 12,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "A-4BERBM",
+      "oldIdField": "A-4BERBM",
+      "newDocumentId": "F-00426",
+      "newIdField": "F-00426",
+      "assetType": "furniture",
+      "name": "TV",
+      "category": "livingroom",
+      "sequence": 4,
+      "year": "2026",
+      "referencesFound": 9,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "A-DF723H",
+      "oldIdField": "A-DF723H",
+      "newDocumentId": "F-00526",
+      "newIdField": "F-00526",
+      "assetType": "furniture",
+      "name": "Sofa",
+      "category": "livingroom",
+      "sequence": 5,
+      "year": "2026",
+      "referencesFound": 0,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "A-ELXX9U",
+      "oldIdField": "A-ELXX9U",
+      "newDocumentId": "F-00626",
+      "newIdField": "F-00626",
+      "assetType": "furniture",
+      "name": "Slim Intersection Window",
+      "category": "windows",
+      "sequence": 6,
+      "year": "2026",
+      "referencesFound": 18,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "A-KOSIW0",
+      "oldIdField": "A-KOSIW0",
+      "newDocumentId": "F-00726",
+      "newIdField": "F-00726",
+      "assetType": "furniture",
+      "name": "Cabinet",
+      "category": "bedroom",
+      "sequence": 7,
+      "year": "2026",
+      "referencesFound": 6,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "A-WWTI9B",
+      "oldIdField": "A-WWTI9B",
+      "newDocumentId": "F-00826",
+      "newIdField": "F-00826",
+      "assetType": "furniture",
+      "name": "Table",
+      "category": "diningroom",
+      "sequence": 8,
+      "year": "2026",
+      "referencesFound": 5,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "ewZhEYTdu2niIU6lZF2h",
+      "oldIdField": "ewZhEYTdu2niIU6lZF2h",
+      "newDocumentId": "F-00926",
+      "newIdField": "F-00926",
+      "assetType": "furniture",
+      "name": "testing",
+      "category": "livingroom",
+      "sequence": 9,
+      "year": "2026",
+      "referencesFound": 2,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "gQQOYRG9Cce28WquJ5B0",
+      "oldIdField": "gQQOYRG9Cce28WquJ5B0",
+      "newDocumentId": "F-01026",
+      "newIdField": "F-01026",
+      "assetType": "furniture",
+      "name": "Obsidian Executive Chair",
+      "category": "office",
+      "sequence": 10,
+      "year": "2026",
+      "referencesFound": 0,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "HRgQpL2Tx92bvodO8RZI",
+      "oldIdField": "HRgQpL2Tx92bvodO8RZI",
+      "newDocumentId": "F-01126",
+      "newIdField": "F-01126",
+      "assetType": "furniture",
+      "name": "Ivory Pharaoh Chair",
+      "category": "livingroom",
+      "sequence": 11,
+      "year": "2026",
+      "referencesFound": 0,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "HZG0WRHwY8yuH9J0Nc5O",
+      "oldIdField": "HZG0WRHwY8yuH9J0Nc5O",
+      "newDocumentId": "F-01226",
+      "newIdField": "F-01226",
+      "assetType": "furniture",
+      "name": "Sofa",
+      "category": "livingroom",
+      "sequence": 12,
+      "year": "2026",
+      "referencesFound": 0,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "I5Mm64NNEKhOFusIqWHe",
+      "oldIdField": "I5Mm64NNEKhOFusIqWHe",
+      "newDocumentId": "F-01326",
+      "newIdField": "F-01326",
+      "assetType": "furniture",
+      "name": "Cocoa Curve Lounge",
+      "category": "livingroom",
+      "sequence": 13,
+      "year": "2026",
+      "referencesFound": 0,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "kjdY8niuhQPlDK1nzeio",
+      "oldIdField": "kjdY8niuhQPlDK1nzeio",
+      "newDocumentId": "F-01426",
+      "newIdField": "F-01426",
+      "assetType": "furniture",
+      "name": "Ivory Cloud U-Sofa",
+      "category": "livingroom",
+      "sequence": 14,
+      "year": "2026",
+      "referencesFound": 1,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "l7aynDwSMh5MpQK9fx7c",
+      "oldIdField": "l7aynDwSMh5MpQK9fx7c",
+      "newDocumentId": "F-01526",
+      "newIdField": "F-01526",
+      "assetType": "furniture",
+      "name": "Channel Tufted Camel Bed",
+      "category": "bedroom",
+      "sequence": 15,
+      "year": "2026",
+      "referencesFound": 1,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "o9hxXiBMGY3bJZAApUte",
+      "oldIdField": "o9hxXiBMGY3bJZAApUte",
+      "newDocumentId": "F-01626",
+      "newIdField": "F-01626",
+      "assetType": "furniture",
+      "name": "Modern Lounge Chair",
+      "category": "livingroom",
+      "sequence": 16,
+      "year": "2026",
+      "referencesFound": 0,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "PqtRcTuqL5ifuo3GTUUH",
+      "oldIdField": "PqtRcTuqL5ifuo3GTUUH",
+      "newDocumentId": "F-01726",
+      "newIdField": "F-01726",
+      "assetType": "furniture",
+      "name": "Ashen Wood Lounge Chair",
+      "category": "livingroom",
+      "sequence": 17,
+      "year": "2026",
+      "referencesFound": 1,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "qQdRA4o2kNzBfZtQrKce",
+      "oldIdField": "qQdRA4o2kNzBfZtQrKce",
+      "newDocumentId": "F-01826",
+      "newIdField": "F-01826",
+      "assetType": "furniture",
+      "name": "Goldenrod Comfort Chair",
+      "category": "livingroom",
+      "sequence": 18,
+      "year": "2026",
+      "referencesFound": 0,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "qTnjmIpfmIcZlvFlDnC1",
+      "oldIdField": "qTnjmIpfmIcZlvFlDnC1",
+      "newDocumentId": "F-01926",
+      "newIdField": "F-01926",
+      "assetType": "furniture",
+      "name": "Elephant Gray Sectional Couch",
+      "category": "livingroom",
+      "sequence": 19,
+      "year": "2026",
+      "referencesFound": 1,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "vi2bJxz7mkQzycxuRV53",
+      "oldIdField": "vi2bJxz7mkQzycxuRV53",
+      "newDocumentId": "F-02026",
+      "newIdField": "F-02026",
+      "assetType": "furniture",
+      "name": "Modern Ash Bed",
+      "category": "bedroom",
+      "sequence": 20,
+      "year": "2026",
+      "referencesFound": 3,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "x3hHPlyBgYWVUPB6TGTL",
+      "oldIdField": "x3hHPlyBgYWVUPB6TGTL",
+      "newDocumentId": "F-02126",
+      "newIdField": "F-02126",
+      "assetType": "furniture",
+      "name": "Ivory-Gold Breakfast Stool",
+      "category": "diningroom",
+      "sequence": 21,
+      "year": "2026",
+      "referencesFound": 0,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "xytfdR9rejLmC6xcFlU7",
+      "oldIdField": "xytfdR9rejLmC6xcFlU7",
+      "newDocumentId": "F-02226",
+      "newIdField": "F-02226",
+      "assetType": "furniture",
+      "name": "Ivory Marble Center Table",
+      "category": "diningroom",
+      "sequence": 22,
+      "year": "2026",
+      "referencesFound": 1,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "yoAt8ckUEXxmjtmB70p3",
+      "oldIdField": "yoAt8ckUEXxmjtmB70p3",
+      "newDocumentId": "F-02326",
+      "newIdField": "F-02326",
+      "assetType": "furniture",
+      "name": "Saddlewood Executive Chair",
+      "category": "office",
+      "sequence": 23,
+      "year": "2026",
+      "referencesFound": 1,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "zq3deO69URAqY3XpQMGh",
+      "oldIdField": "zq3deO69URAqY3XpQMGh",
+      "newDocumentId": "F-02426",
+      "newIdField": "F-02426",
+      "assetType": "furniture",
+      "name": "Saddlewood Executive Chair",
+      "category": "livingroom",
+      "sequence": 24,
+      "year": "2026",
+      "referencesFound": 0,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "9pPtBuRt0sQZnCf6NeZY",
+      "oldIdField": "9pPtBuRt0sQZnCf6NeZY",
+      "newDocumentId": "FL-00126",
+      "newIdField": "FL-00126",
+      "assetType": "floor",
+      "name": "tile test",
+      "category": "wood",
+      "sequence": 1,
+      "year": "2026",
+      "referencesFound": 2,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "A-26013",
+      "oldIdField": "A-26013",
+      "newDocumentId": "FL-00226",
+      "newIdField": "FL-00226",
+      "assetType": "floor",
+      "name": "Square Brick Floors",
+      "category": "brick",
+      "sequence": 2,
+      "year": "2026",
+      "referencesFound": 0,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "A-26014",
+      "oldIdField": "A-26014",
+      "newDocumentId": "FL-00326",
+      "newIdField": "FL-00326",
+      "assetType": "floor",
+      "name": "Square Tiles",
+      "category": "tiles",
+      "sequence": 3,
+      "year": "2026",
+      "referencesFound": 3,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "A-26015",
+      "oldIdField": "A-26015",
+      "newDocumentId": "FL-00426",
+      "newIdField": "FL-00426",
+      "assetType": "floor",
+      "name": "Terrazo Tiles",
+      "category": "tiles",
+      "sequence": 4,
+      "year": "2026",
+      "referencesFound": 0,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "A-26016",
+      "oldIdField": "A-26016",
+      "newDocumentId": "FL-00526",
+      "newIdField": "FL-00526",
+      "assetType": "floor",
+      "name": "Plank Flooring",
+      "category": "wood",
+      "sequence": 5,
+      "year": "2026",
+      "referencesFound": 0,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "A-26017",
+      "oldIdField": "A-26017",
+      "newDocumentId": "FL-00626",
+      "newIdField": "FL-00626",
+      "assetType": "floor",
+      "name": "Wooden Floor",
+      "category": "wood",
+      "sequence": 6,
+      "year": "2026",
+      "referencesFound": 6,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "SreeI98A0JN3AJjsb3UN",
+      "oldIdField": "SreeI98A0JN3AJjsb3UN",
+      "newDocumentId": "FL-00726",
+      "newIdField": "FL-00726",
+      "assetType": "floor",
+      "name": "Black Ceramic Tiles",
+      "category": "tile",
+      "sequence": 7,
+      "year": "2026",
+      "referencesFound": 0,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "A-26001",
+      "oldIdField": "A-26001",
+      "newDocumentId": "W-00126",
+      "newIdField": "W-00126",
+      "assetType": "wall",
+      "name": "Moonlight Blue",
+      "category": "paint",
+      "sequence": 1,
+      "year": "2026",
+      "referencesFound": 0,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "A-26002",
+      "oldIdField": "A-26002",
+      "newDocumentId": "W-00226",
+      "newIdField": "W-00226",
+      "assetType": "wall",
+      "name": "Pale Gold",
+      "category": "paint",
+      "sequence": 2,
+      "year": "2026",
+      "referencesFound": 0,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "A-26003",
+      "oldIdField": "A-26003",
+      "newDocumentId": "W-00326",
+      "newIdField": "W-00326",
+      "assetType": "wall",
+      "name": "Dark Navy",
+      "category": "paint",
+      "sequence": 3,
+      "year": "2026",
+      "referencesFound": 0,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "A-26004",
+      "oldIdField": "A-26004",
+      "newDocumentId": "W-00426",
+      "newIdField": "W-00426",
+      "assetType": "wall",
+      "name": "Baby's Breath",
+      "category": "paint",
+      "sequence": 4,
+      "year": "2026",
+      "referencesFound": 20,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "A-26005",
+      "oldIdField": "A-26005",
+      "newDocumentId": "W-00526",
+      "newIdField": "W-00526",
+      "assetType": "wall",
+      "name": "Matte Green",
+      "category": "paint",
+      "sequence": 5,
+      "year": "2026",
+      "referencesFound": 0,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "A-26006",
+      "oldIdField": "A-26006",
+      "newDocumentId": "W-00626",
+      "newIdField": "W-00626",
+      "assetType": "wall",
+      "name": "Brandy Snifter",
+      "category": "paint",
+      "sequence": 6,
+      "year": "2026",
+      "referencesFound": 0,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "A-26007",
+      "oldIdField": "A-26007",
+      "newDocumentId": "W-00726",
+      "newIdField": "W-00726",
+      "assetType": "wall",
+      "name": "Blue Ice",
+      "category": "paint",
+      "sequence": 7,
+      "year": "2026",
+      "referencesFound": 0,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "A-26008",
+      "oldIdField": "A-26008",
+      "newDocumentId": "W-00826",
+      "newIdField": "W-00826",
+      "assetType": "wall",
+      "name": "Warm Gray 2 C",
+      "category": "paint",
+      "sequence": 8,
+      "year": "2026",
+      "referencesFound": 0,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "A-26009",
+      "oldIdField": "A-26009",
+      "newDocumentId": "W-00926",
+      "newIdField": "W-00926",
+      "assetType": "wall",
+      "name": "Medieval Blue",
+      "category": "paint",
+      "sequence": 9,
+      "year": "2026",
+      "referencesFound": 1,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "A-26010",
+      "oldIdField": "A-26010",
+      "newDocumentId": "W-01026",
+      "newIdField": "W-01026",
+      "assetType": "wall",
+      "name": "Silver Pine",
+      "category": "paint",
+      "sequence": 10,
+      "year": "2026",
+      "referencesFound": 1,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "A-26011",
+      "oldIdField": "A-26011",
+      "newDocumentId": "W-01126",
+      "newIdField": "W-01126",
+      "assetType": "wall",
+      "name": "Sun Kiss",
+      "category": "paint",
+      "sequence": 11,
+      "year": "2026",
+      "referencesFound": 2,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "A-26012",
+      "oldIdField": "A-26012",
+      "newDocumentId": "W-01226",
+      "newIdField": "W-01226",
+      "assetType": "wall",
+      "name": "Whisper White",
+      "category": "paint",
+      "sequence": 12,
+      "year": "2026",
+      "referencesFound": 0,
+      "targetExists": false
+    },
+    {
+      "oldDocumentId": "vlljo8HQum9D2GBE4oWd",
+      "oldIdField": "vlljo8HQum9D2GBE4oWd",
+      "newDocumentId": "W-01326",
+      "newIdField": "W-01326",
+      "assetType": "wall",
+      "name": "testing2",
+      "category": "tile",
+      "sequence": 13,
+      "year": "2026",
+      "referencesFound": 4,
+      "targetExists": false
+    }
+  ],
+  "storagePathMapping": [
+    {
+      "assetId": "1leXkoHmhslSxmZsagb7",
+      "newAssetId": "F-00126",
+      "assetType": "furniture",
+      "category": "diningroom",
+      "role": "model",
+      "sourcePath": "assets/furniture/diningroom/1leXkoHmhslSxmZsagb7-model-Modern-Stainless-Steel-Refrigerator.glb",
+      "destinationPath": "assets/furniture/diningroom/F-00126/model.glb",
+      "fields": [
+        "$.storage_path",
+        "$.model_path"
+      ],
+      "size": 18025560,
+      "contentType": "application/octet-stream",
+      "md5Hash": "fUGMP5sxqtQuyOtTWpvV/A==",
+      "crc32c": "3CIQUw==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": false
+    },
+    {
+      "assetId": "4vD9gHQW3UI3K8xLD71B",
+      "newAssetId": "F-00226",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "role": "model",
+      "sourcePath": "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+      "destinationPath": "assets/furniture/livingroom/F-00226/model.glb",
+      "fields": [
+        "$.storage_path",
+        "$.model_path"
+      ],
+      "size": 31515020,
+      "contentType": "application/octet-stream",
+      "md5Hash": "2LLN+vtz7qehRrpwTnQ4QA==",
+      "crc32c": "/1zkRQ==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": false
+    },
+    {
+      "assetId": "9pPtBuRt0sQZnCf6NeZY",
+      "newAssetId": "FL-00126",
+      "assetType": "floor",
+      "category": "wood",
+      "role": "diffuse",
+      "sourcePath": "assets/floor/wood/9pPtBuRt0sQZnCf6NeZY-diffuse-png-transparent-porcelain-tile-flooring-bathroom-floor-tiles-miscellaneous-texture-kitchen-thumbnail.png",
+      "destinationPath": "assets/floors/wood/FL-00126/diffuse.png",
+      "fields": [
+        "$.diffuse_path"
+      ],
+      "size": 17970,
+      "contentType": "image/png",
+      "md5Hash": "NtNdBHeaJ2yeHFb60BTsyA==",
+      "crc32c": "gK6Ctw==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": false
+    },
+    {
+      "assetId": "A-26013",
+      "newAssetId": "FL-00226",
+      "assetType": "floor",
+      "category": "brick",
+      "role": "diffuse",
+      "sourcePath": "assets/floors/Brick/square_brick_floor/Diffuse.png",
+      "destinationPath": "assets/floors/brick/FL-00226/diffuse.png",
+      "fields": [
+        "$.diffuse_path"
+      ],
+      "size": 20601848,
+      "contentType": "image/png",
+      "md5Hash": "yYmyFYFneYk7dTOeUMSEsw==",
+      "crc32c": "JMh8fg==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": false
+    },
+    {
+      "assetId": "A-26013",
+      "newAssetId": "FL-00226",
+      "assetType": "floor",
+      "category": "brick",
+      "role": "diffuse",
+      "sourcePath": "assets/floors/Brick/square_brick_floor",
+      "destinationPath": "assets/floors/brick/FL-00226/diffuse.png",
+      "fields": [
+        "$.storage_path"
+      ],
+      "size": 20601848,
+      "contentType": "image/png",
+      "md5Hash": "yYmyFYFneYk7dTOeUMSEsw==",
+      "crc32c": "JMh8fg==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": true,
+      "repairFrom": "assets/floors/Brick/square_brick_floor/Diffuse.png"
+    },
+    {
+      "assetId": "A-26014",
+      "newAssetId": "FL-00326",
+      "assetType": "floor",
+      "category": "tiles",
+      "role": "diffuse",
+      "sourcePath": "assets/floors/Tiles/square_tiles/Diffuse.png",
+      "destinationPath": "assets/floors/tiles/FL-00326/diffuse.png",
+      "fields": [
+        "$.diffuse_path",
+        "$.model_url"
+      ],
+      "size": 22023097,
+      "contentType": "image/png",
+      "md5Hash": "J/uktGqY9Wg3T8gmG+K29Q==",
+      "crc32c": "vwzERw==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": false
+    },
+    {
+      "assetId": "A-26014",
+      "newAssetId": "FL-00326",
+      "assetType": "floor",
+      "category": "tiles",
+      "role": "diffuse",
+      "sourcePath": "assets/floors/Tiles/square_tiles",
+      "destinationPath": "assets/floors/tiles/FL-00326/diffuse.png",
+      "fields": [
+        "$.storage_path"
+      ],
+      "size": 22023097,
+      "contentType": "image/png",
+      "md5Hash": "J/uktGqY9Wg3T8gmG+K29Q==",
+      "crc32c": "vwzERw==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": true,
+      "repairFrom": "assets/floors/Tiles/square_tiles/Diffuse.png"
+    },
+    {
+      "assetId": "A-26015",
+      "newAssetId": "FL-00426",
+      "assetType": "floor",
+      "category": "tiles",
+      "role": "diffuse",
+      "sourcePath": "assets/floors/Tiles/terrazo_tiles/Diffuse.png",
+      "destinationPath": "assets/floors/tiles/FL-00426/diffuse.png",
+      "fields": [
+        "$.diffuse_path"
+      ],
+      "size": 27115185,
+      "contentType": "image/png",
+      "md5Hash": "opvJmVsIs1+dsATMrF0WqQ==",
+      "crc32c": "nzg/+Q==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": false
+    },
+    {
+      "assetId": "A-26015",
+      "newAssetId": "FL-00426",
+      "assetType": "floor",
+      "category": "tiles",
+      "role": "diffuse",
+      "sourcePath": "assets/floors/Tiles/terrazo_tiles",
+      "destinationPath": "assets/floors/tiles/FL-00426/diffuse.png",
+      "fields": [
+        "$.storage_path"
+      ],
+      "size": 27115185,
+      "contentType": "image/png",
+      "md5Hash": "opvJmVsIs1+dsATMrF0WqQ==",
+      "crc32c": "nzg/+Q==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": true,
+      "repairFrom": "assets/floors/Tiles/terrazo_tiles/Diffuse.png"
+    },
+    {
+      "assetId": "A-26016",
+      "newAssetId": "FL-00526",
+      "assetType": "floor",
+      "category": "wood",
+      "role": "diffuse",
+      "sourcePath": "assets/floors/Wood/plank_flooring/Diffuse.png",
+      "destinationPath": "assets/floors/wood/FL-00526/diffuse.png",
+      "fields": [
+        "$.diffuse_path"
+      ],
+      "size": 20659527,
+      "contentType": "image/png",
+      "md5Hash": "jGOB6VLkRn46kXnOQXqGUQ==",
+      "crc32c": "AErodw==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": false
+    },
+    {
+      "assetId": "A-26016",
+      "newAssetId": "FL-00526",
+      "assetType": "floor",
+      "category": "wood",
+      "role": "diffuse",
+      "sourcePath": "assets/floors/Wood/plank_flooring",
+      "destinationPath": "assets/floors/wood/FL-00526/diffuse.png",
+      "fields": [
+        "$.storage_path"
+      ],
+      "size": 20659527,
+      "contentType": "image/png",
+      "md5Hash": "jGOB6VLkRn46kXnOQXqGUQ==",
+      "crc32c": "AErodw==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": true,
+      "repairFrom": "assets/floors/Wood/plank_flooring/Diffuse.png"
+    },
+    {
+      "assetId": "A-26017",
+      "newAssetId": "FL-00626",
+      "assetType": "floor",
+      "category": "wood",
+      "role": "diffuse",
+      "sourcePath": "assets/floors/Wood/wooden_floor/Diffuse.png",
+      "destinationPath": "assets/floors/wood/FL-00626/diffuse.png",
+      "fields": [
+        "$.diffuse_path"
+      ],
+      "size": 25432245,
+      "contentType": "image/png",
+      "md5Hash": "ktt/4hdNO9Gzhjy2elqsyg==",
+      "crc32c": "xjqv/w==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": false
+    },
+    {
+      "assetId": "A-26017",
+      "newAssetId": "FL-00626",
+      "assetType": "floor",
+      "category": "wood",
+      "role": "diffuse",
+      "sourcePath": "assets/floors/Wood/wooden_floor",
+      "destinationPath": "assets/floors/wood/FL-00626/diffuse.png",
+      "fields": [
+        "$.storage_path"
+      ],
+      "size": 25432245,
+      "contentType": "image/png",
+      "md5Hash": "ktt/4hdNO9Gzhjy2elqsyg==",
+      "crc32c": "xjqv/w==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": true,
+      "repairFrom": "assets/floors/Wood/wooden_floor/Diffuse.png"
+    },
+    {
+      "assetId": "A-3X1T1I",
+      "newAssetId": "F-00326",
+      "assetType": "furniture",
+      "category": "doors",
+      "role": "model",
+      "sourcePath": "assets/openings/doors/single-door.glb",
+      "destinationPath": "assets/furniture/doors/F-00326/model.glb",
+      "fields": [
+        "$.model_path",
+        "$.model_url"
+      ],
+      "size": 12186500,
+      "contentType": "model/gltf-binary",
+      "md5Hash": "DFXWR3Y5rto3l85WzGaiwA==",
+      "crc32c": "GLX8Dw==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": false
+    },
+    {
+      "assetId": "A-4BERBM",
+      "newAssetId": "F-00426",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "role": "model",
+      "sourcePath": "assets/furniture/livingroom/TV.glb",
+      "destinationPath": "assets/furniture/livingroom/F-00426/model.glb",
+      "fields": [
+        "$.model_path",
+        "$.model_url"
+      ],
+      "size": 1116556,
+      "contentType": "model/gltf-binary",
+      "md5Hash": "YNlv70CmXGPyhUpvLVBfFw==",
+      "crc32c": "ubyCOw==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": false
+    },
+    {
+      "assetId": "A-DF723H",
+      "newAssetId": "F-00526",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "role": "model",
+      "sourcePath": "assets/furniture/livingroom/steel-frame-shelves-01.glb",
+      "destinationPath": "assets/furniture/livingroom/F-00526/model.glb",
+      "fields": [
+        "$.model_path"
+      ],
+      "size": 1596392,
+      "contentType": "application/octet-stream",
+      "md5Hash": "d6paLSsUFaZEXmIkkJe0nQ==",
+      "crc32c": "Cjs+qw==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": false
+    },
+    {
+      "assetId": "A-ELXX9U",
+      "newAssetId": "F-00626",
+      "assetType": "furniture",
+      "category": "windows",
+      "role": "model",
+      "sourcePath": "assets/openings/windows/Slim_Intersection_i.glb",
+      "destinationPath": "assets/furniture/windows/F-00626/model.glb",
+      "fields": [
+        "$.model_path",
+        "$.model_url"
+      ],
+      "size": 1606112,
+      "contentType": "model/gltf-binary",
+      "md5Hash": "rnNEQABg8zAMUB5UMoJeMw==",
+      "crc32c": "NoYCtA==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": false
+    },
+    {
+      "assetId": "A-KOSIW0",
+      "newAssetId": "F-00726",
+      "assetType": "furniture",
+      "category": "bedroom",
+      "role": "model",
+      "sourcePath": "assets/furniture/bedroom/Cabinet.glb",
+      "destinationPath": "assets/furniture/bedroom/F-00726/model.glb",
+      "fields": [
+        "$.model_path"
+      ],
+      "size": 5161440,
+      "contentType": "model/gltf-binary",
+      "md5Hash": "QNUN7wVrLWdZROcdzKz46A==",
+      "crc32c": "JpDCfw==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": false
+    },
+    {
+      "assetId": "A-WWTI9B",
+      "newAssetId": "F-00826",
+      "assetType": "furniture",
+      "category": "diningroom",
+      "role": "model",
+      "sourcePath": "assets/furniture/diningroom/Table.glb",
+      "destinationPath": "assets/furniture/diningroom/F-00826/model.glb",
+      "fields": [
+        "$.model_path"
+      ],
+      "size": 12219000,
+      "contentType": "model/gltf-binary",
+      "md5Hash": "6cHd4dvVn+rNw2/8sLApIQ==",
+      "crc32c": "R0Ay3g==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": false
+    },
+    {
+      "assetId": "ewZhEYTdu2niIU6lZF2h",
+      "newAssetId": "F-00926",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "role": "model",
+      "sourcePath": "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+      "destinationPath": "assets/furniture/livingroom/F-00926/model.glb",
+      "fields": [
+        "$.storage_path",
+        "$.model_path"
+      ],
+      "size": 44606820,
+      "contentType": "application/octet-stream",
+      "md5Hash": "1tOPv4A87hvqYSlRYibByw==",
+      "crc32c": "vvNRpg==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": false
+    },
+    {
+      "assetId": "gQQOYRG9Cce28WquJ5B0",
+      "newAssetId": "F-01026",
+      "assetType": "furniture",
+      "category": "office",
+      "role": "model",
+      "sourcePath": "assets/furniture/office/gQQOYRG9Cce28WquJ5B0-model-Obsidian-Executive-Chair.glb",
+      "destinationPath": "assets/furniture/office/F-01026/model.glb",
+      "fields": [
+        "$.storage_path",
+        "$.model_path"
+      ],
+      "size": 25427900,
+      "contentType": "application/octet-stream",
+      "md5Hash": "c6reOmTWy2B0Q2xW+P8xoQ==",
+      "crc32c": "jucF/w==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": false
+    },
+    {
+      "assetId": "HRgQpL2Tx92bvodO8RZI",
+      "newAssetId": "F-01126",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "role": "model",
+      "sourcePath": "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+      "destinationPath": "assets/furniture/livingroom/F-01126/model.glb",
+      "fields": [
+        "$.storage_path",
+        "$.model_path"
+      ],
+      "size": 35986292,
+      "contentType": "application/octet-stream",
+      "md5Hash": "68RfAlliTyhF84M5P7iB2A==",
+      "crc32c": "yC2YCw==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": false
+    },
+    {
+      "assetId": "HZG0WRHwY8yuH9J0Nc5O",
+      "newAssetId": "F-01226",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "role": "model",
+      "sourcePath": "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+      "destinationPath": "assets/furniture/livingroom/F-01226/model.glb",
+      "fields": [
+        "$.storage_path",
+        "$.model_path"
+      ],
+      "size": 27213144,
+      "contentType": "application/octet-stream",
+      "md5Hash": "HMVuzXAvCw3I2Ecz4HAlEw==",
+      "crc32c": "zwYMAg==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": false
+    },
+    {
+      "assetId": "I5Mm64NNEKhOFusIqWHe",
+      "newAssetId": "F-01326",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "role": "model",
+      "sourcePath": "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+      "destinationPath": "assets/furniture/livingroom/F-01326/model.glb",
+      "fields": [
+        "$.storage_path",
+        "$.model_path"
+      ],
+      "size": 50035900,
+      "contentType": "application/octet-stream",
+      "md5Hash": "2jBoBxrF94ZexIrOlF1/cQ==",
+      "crc32c": "xlvTVQ==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": false
+    },
+    {
+      "assetId": "kjdY8niuhQPlDK1nzeio",
+      "newAssetId": "F-01426",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "role": "model",
+      "sourcePath": "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+      "destinationPath": "assets/furniture/livingroom/F-01426/model.glb",
+      "fields": [
+        "$.storage_path",
+        "$.model_path"
+      ],
+      "size": 39703028,
+      "contentType": "application/octet-stream",
+      "md5Hash": "3fYFRLgfH4VZY8R9PKKYQw==",
+      "crc32c": "ywx3tQ==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": false
+    },
+    {
+      "assetId": "l7aynDwSMh5MpQK9fx7c",
+      "newAssetId": "F-01526",
+      "assetType": "furniture",
+      "category": "bedroom",
+      "role": "model",
+      "sourcePath": "assets/furniture/bedroom/l7aynDwSMh5MpQK9fx7c-model-Channel-Tufted-Camel-Bed_scaled_resized.glb",
+      "destinationPath": "assets/furniture/bedroom/F-01526/model.glb",
+      "fields": [
+        "$.storage_path",
+        "$.model_path"
+      ],
+      "size": 15284736,
+      "contentType": "application/octet-stream",
+      "md5Hash": "qD9+Llk0IHi+2ZQmyrhPTg==",
+      "crc32c": "vf61gg==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": false
+    },
+    {
+      "assetId": "o9hxXiBMGY3bJZAApUte",
+      "newAssetId": "F-01626",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "role": "model",
+      "sourcePath": "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+      "destinationPath": "assets/furniture/livingroom/F-01626/model.glb",
+      "fields": [
+        "$.storage_path",
+        "$.model_path"
+      ],
+      "size": 45749440,
+      "contentType": "application/octet-stream",
+      "md5Hash": "3RnHfEyIDEl6Pzj+70Dqog==",
+      "crc32c": "8+JRfQ==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": false
+    },
+    {
+      "assetId": "PqtRcTuqL5ifuo3GTUUH",
+      "newAssetId": "F-01726",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "role": "model",
+      "sourcePath": "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+      "destinationPath": "assets/furniture/livingroom/F-01726/model.glb",
+      "fields": [
+        "$.storage_path",
+        "$.model_path"
+      ],
+      "size": 46000932,
+      "contentType": "application/octet-stream",
+      "md5Hash": "QjGea7Vth9I8UDRcPQq5Ew==",
+      "crc32c": "8e2tmg==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": false
+    },
+    {
+      "assetId": "qQdRA4o2kNzBfZtQrKce",
+      "newAssetId": "F-01826",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "role": "model",
+      "sourcePath": "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+      "destinationPath": "assets/furniture/livingroom/F-01826/model.glb",
+      "fields": [
+        "$.storage_path",
+        "$.model_path"
+      ],
+      "size": 42128656,
+      "contentType": "application/octet-stream",
+      "md5Hash": "vzA7R+ZqyOO2gYhN/mdJ0w==",
+      "crc32c": "v39x3w==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": false
+    },
+    {
+      "assetId": "qTnjmIpfmIcZlvFlDnC1",
+      "newAssetId": "F-01926",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "role": "model",
+      "sourcePath": "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+      "destinationPath": "assets/furniture/livingroom/F-01926/model.glb",
+      "fields": [
+        "$.storage_path",
+        "$.model_path"
+      ],
+      "size": 12843064,
+      "contentType": "application/octet-stream",
+      "md5Hash": "uUIITpSWqNPIzW2GsQxZUw==",
+      "crc32c": "53j5ZQ==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": false
+    },
+    {
+      "assetId": "SreeI98A0JN3AJjsb3UN",
+      "newAssetId": "FL-00726",
+      "assetType": "floor",
+      "category": "tile",
+      "role": "diffuse",
+      "sourcePath": "assets/floor/tile/SreeI98A0JN3AJjsb3UN-diffuse-black-stones-tiled-floor.jpg",
+      "destinationPath": "assets/floors/tile/FL-00726/diffuse.jpg",
+      "fields": [
+        "$.diffuse_path"
+      ],
+      "size": 3807339,
+      "contentType": "image/jpeg",
+      "md5Hash": "D9DXUhHTG5zplFRHSLnClw==",
+      "crc32c": "8Yxncg==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": false
+    },
+    {
+      "assetId": "vi2bJxz7mkQzycxuRV53",
+      "newAssetId": "F-02026",
+      "assetType": "furniture",
+      "category": "bedroom",
+      "role": "model",
+      "sourcePath": "assets/furniture/bedroom/vi2bJxz7mkQzycxuRV53-model-Modern-Ash-Bed_resized.glb",
+      "destinationPath": "assets/furniture/bedroom/F-02026/model.glb",
+      "fields": [
+        "$.storage_path",
+        "$.model_path"
+      ],
+      "size": 22870548,
+      "contentType": "application/octet-stream",
+      "md5Hash": "AueMhCgoMc/bGQ5zNDKJ1A==",
+      "crc32c": "jSz3OA==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": false
+    },
+    {
+      "assetId": "vlljo8HQum9D2GBE4oWd",
+      "newAssetId": "W-01326",
+      "assetType": "wall",
+      "category": "tile",
+      "role": "diffuse",
+      "sourcePath": "assets/wall/tile/vlljo8HQum9D2GBE4oWd-diffuse-wallpaperflare-com_wallpaper.jpg",
+      "destinationPath": "assets/walls/tile/W-01326/diffuse.jpg",
+      "fields": [
+        "$.diffuse_path",
+        "$.base_color_path"
+      ],
+      "size": 4265398,
+      "contentType": "image/jpeg",
+      "md5Hash": "yKzdpPFHS4nzrMvUN/3uqA==",
+      "crc32c": "0eCCbA==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": false
+    },
+    {
+      "assetId": "x3hHPlyBgYWVUPB6TGTL",
+      "newAssetId": "F-02126",
+      "assetType": "furniture",
+      "category": "diningroom",
+      "role": "model",
+      "sourcePath": "assets/furniture/diningroom/x3hHPlyBgYWVUPB6TGTL-model-Ivory-Gold-Breakfast-Stool_resized.glb",
+      "destinationPath": "assets/furniture/diningroom/F-02126/model.glb",
+      "fields": [
+        "$.storage_path",
+        "$.model_path"
+      ],
+      "size": 47615236,
+      "contentType": "application/octet-stream",
+      "md5Hash": "QRcJIuGevHqG60CZK+BB7w==",
+      "crc32c": "kQI4SQ==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": false
+    },
+    {
+      "assetId": "xytfdR9rejLmC6xcFlU7",
+      "newAssetId": "F-02226",
+      "assetType": "furniture",
+      "category": "diningroom",
+      "role": "model",
+      "sourcePath": "assets/furniture/diningroom/xytfdR9rejLmC6xcFlU7-model-Ivory-Marble-Center-Table_resized.glb",
+      "destinationPath": "assets/furniture/diningroom/F-02226/model.glb",
+      "fields": [
+        "$.storage_path",
+        "$.model_path"
+      ],
+      "size": 55674584,
+      "contentType": "application/octet-stream",
+      "md5Hash": "KenJN/GOmX2oZ8ZKVOPFmQ==",
+      "crc32c": "X9Zs5Q==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": false
+    },
+    {
+      "assetId": "yoAt8ckUEXxmjtmB70p3",
+      "newAssetId": "F-02326",
+      "assetType": "furniture",
+      "category": "office",
+      "role": "model",
+      "sourcePath": "assets/furniture/office/yoAt8ckUEXxmjtmB70p3-model-Saddlewood-Executive-Chair.glb",
+      "destinationPath": "assets/furniture/office/F-02326/model.glb",
+      "fields": [
+        "$.storage_path",
+        "$.model_path"
+      ],
+      "size": 34482280,
+      "contentType": "application/octet-stream",
+      "md5Hash": "ir3ocZYC+7yPcohXszFisw==",
+      "crc32c": "J5+FtQ==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": false
+    },
+    {
+      "assetId": "zq3deO69URAqY3XpQMGh",
+      "newAssetId": "F-02426",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "role": "model",
+      "sourcePath": "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb",
+      "destinationPath": "assets/furniture/livingroom/F-02426/model.glb",
+      "fields": [
+        "$.storage_path",
+        "$.model_path"
+      ],
+      "size": 34482280,
+      "contentType": "application/octet-stream",
+      "md5Hash": "ir3ocZYC+7yPcohXszFisw==",
+      "crc32c": "J5+FtQ==",
+      "targetExists": false,
+      "copyVerified": false,
+      "repair": false
+    }
+  ],
+  "duplicateCandidates": [
+    {
+      "size": 34482280,
+      "md5Hash": "ir3ocZYC+7yPcohXszFisw==",
+      "crc32c": "J5+FtQ==",
+      "paths": [
+        "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb",
+        "assets/furniture/office/yoAt8ckUEXxmjtmB70p3-model-Saddlewood-Executive-Chair.glb"
+      ],
+      "candidateOnly": true,
+      "deletionApproved": false,
+      "reason": "Matching Cloud Storage MD5 and CRC32C metadata; references and canonical copies still require verification."
+    }
+  ],
+  "duplicateReferenceGroups": [
+    {
+      "storagePath": "assets/furniture/diningroom/1leXkoHmhslSxmZsagb7-model-Modern-Stainless-Steel-Refrigerator.glb",
+      "references": [
+        {
+          "documentId": "1leXkoHmhslSxmZsagb7",
+          "field": "$.storage_path"
+        },
+        {
+          "documentId": "1leXkoHmhslSxmZsagb7",
+          "field": "$.model_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+      "references": [
+        {
+          "documentId": "4vD9gHQW3UI3K8xLD71B",
+          "field": "$.storage_path"
+        },
+        {
+          "documentId": "4vD9gHQW3UI3K8xLD71B",
+          "field": "$.model_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/floors/Tiles/square_tiles/Diffuse.png",
+      "references": [
+        {
+          "documentId": "A-26014",
+          "field": "$.diffuse_path"
+        },
+        {
+          "documentId": "A-26014",
+          "field": "$.model_url"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/openings/doors/single-door.glb",
+      "references": [
+        {
+          "documentId": "A-3X1T1I",
+          "field": "$.model_path"
+        },
+        {
+          "documentId": "A-3X1T1I",
+          "field": "$.model_url"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/livingroom/TV.glb",
+      "references": [
+        {
+          "documentId": "A-4BERBM",
+          "field": "$.model_path"
+        },
+        {
+          "documentId": "A-4BERBM",
+          "field": "$.model_url"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/openings/windows/Slim_Intersection_i.glb",
+      "references": [
+        {
+          "documentId": "A-ELXX9U",
+          "field": "$.model_path"
+        },
+        {
+          "documentId": "A-ELXX9U",
+          "field": "$.model_url"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+      "references": [
+        {
+          "documentId": "ewZhEYTdu2niIU6lZF2h",
+          "field": "$.storage_path"
+        },
+        {
+          "documentId": "ewZhEYTdu2niIU6lZF2h",
+          "field": "$.model_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/office/gQQOYRG9Cce28WquJ5B0-model-Obsidian-Executive-Chair.glb",
+      "references": [
+        {
+          "documentId": "gQQOYRG9Cce28WquJ5B0",
+          "field": "$.storage_path"
+        },
+        {
+          "documentId": "gQQOYRG9Cce28WquJ5B0",
+          "field": "$.model_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+      "references": [
+        {
+          "documentId": "HRgQpL2Tx92bvodO8RZI",
+          "field": "$.storage_path"
+        },
+        {
+          "documentId": "HRgQpL2Tx92bvodO8RZI",
+          "field": "$.model_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+      "references": [
+        {
+          "documentId": "HZG0WRHwY8yuH9J0Nc5O",
+          "field": "$.storage_path"
+        },
+        {
+          "documentId": "HZG0WRHwY8yuH9J0Nc5O",
+          "field": "$.model_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+      "references": [
+        {
+          "documentId": "I5Mm64NNEKhOFusIqWHe",
+          "field": "$.storage_path"
+        },
+        {
+          "documentId": "I5Mm64NNEKhOFusIqWHe",
+          "field": "$.model_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+      "references": [
+        {
+          "documentId": "kjdY8niuhQPlDK1nzeio",
+          "field": "$.storage_path"
+        },
+        {
+          "documentId": "kjdY8niuhQPlDK1nzeio",
+          "field": "$.model_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/bedroom/l7aynDwSMh5MpQK9fx7c-model-Channel-Tufted-Camel-Bed_scaled_resized.glb",
+      "references": [
+        {
+          "documentId": "l7aynDwSMh5MpQK9fx7c",
+          "field": "$.storage_path"
+        },
+        {
+          "documentId": "l7aynDwSMh5MpQK9fx7c",
+          "field": "$.model_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+      "references": [
+        {
+          "documentId": "o9hxXiBMGY3bJZAApUte",
+          "field": "$.storage_path"
+        },
+        {
+          "documentId": "o9hxXiBMGY3bJZAApUte",
+          "field": "$.model_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+      "references": [
+        {
+          "documentId": "PqtRcTuqL5ifuo3GTUUH",
+          "field": "$.storage_path"
+        },
+        {
+          "documentId": "PqtRcTuqL5ifuo3GTUUH",
+          "field": "$.model_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+      "references": [
+        {
+          "documentId": "qQdRA4o2kNzBfZtQrKce",
+          "field": "$.storage_path"
+        },
+        {
+          "documentId": "qQdRA4o2kNzBfZtQrKce",
+          "field": "$.model_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+      "references": [
+        {
+          "documentId": "qTnjmIpfmIcZlvFlDnC1",
+          "field": "$.storage_path"
+        },
+        {
+          "documentId": "qTnjmIpfmIcZlvFlDnC1",
+          "field": "$.model_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/bedroom/vi2bJxz7mkQzycxuRV53-model-Modern-Ash-Bed_resized.glb",
+      "references": [
+        {
+          "documentId": "vi2bJxz7mkQzycxuRV53",
+          "field": "$.storage_path"
+        },
+        {
+          "documentId": "vi2bJxz7mkQzycxuRV53",
+          "field": "$.model_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/wall/tile/vlljo8HQum9D2GBE4oWd-diffuse-wallpaperflare-com_wallpaper.jpg",
+      "references": [
+        {
+          "documentId": "vlljo8HQum9D2GBE4oWd",
+          "field": "$.diffuse_path"
+        },
+        {
+          "documentId": "vlljo8HQum9D2GBE4oWd",
+          "field": "$.base_color_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/diningroom/x3hHPlyBgYWVUPB6TGTL-model-Ivory-Gold-Breakfast-Stool_resized.glb",
+      "references": [
+        {
+          "documentId": "x3hHPlyBgYWVUPB6TGTL",
+          "field": "$.storage_path"
+        },
+        {
+          "documentId": "x3hHPlyBgYWVUPB6TGTL",
+          "field": "$.model_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/diningroom/xytfdR9rejLmC6xcFlU7-model-Ivory-Marble-Center-Table_resized.glb",
+      "references": [
+        {
+          "documentId": "xytfdR9rejLmC6xcFlU7",
+          "field": "$.storage_path"
+        },
+        {
+          "documentId": "xytfdR9rejLmC6xcFlU7",
+          "field": "$.model_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/office/yoAt8ckUEXxmjtmB70p3-model-Saddlewood-Executive-Chair.glb",
+      "references": [
+        {
+          "documentId": "yoAt8ckUEXxmjtmB70p3",
+          "field": "$.storage_path"
+        },
+        {
+          "documentId": "yoAt8ckUEXxmjtmB70p3",
+          "field": "$.model_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb",
+      "references": [
+        {
+          "documentId": "zq3deO69URAqY3XpQMGh",
+          "field": "$.storage_path"
+        },
+        {
+          "documentId": "zq3deO69URAqY3XpQMGh",
+          "field": "$.model_path"
+        }
+      ]
+    }
+  ],
+  "projectJsonUpdates": [
+    {
+      "path": "projects/F4HKML8903WrqD35yHb7YY4V5032/20e1dac5-0a92-4afd-886e-b07151b918bf.json",
+      "referenceCount": 1,
+      "pathReferenceCount": 0,
+      "oldMd5Hash": null,
+      "contentWillBeUpdated": true
+    },
+    {
+      "path": "projects/F4HKML8903WrqD35yHb7YY4V5032/4334fc02-7776-42ba-b75e-4b9a77e31f12.json",
+      "referenceCount": 8,
+      "pathReferenceCount": 0,
+      "oldMd5Hash": null,
+      "contentWillBeUpdated": true
+    },
+    {
+      "path": "projects/F4HKML8903WrqD35yHb7YY4V5032/54fcd7c8-47bc-4eee-a987-4276a49e339e.json",
+      "referenceCount": 3,
+      "pathReferenceCount": 0,
+      "oldMd5Hash": null,
+      "contentWillBeUpdated": true
+    },
+    {
+      "path": "projects/F4HKML8903WrqD35yHb7YY4V5032/81917f53-7ae0-40a4-960e-569293f46f6b.json",
+      "referenceCount": 1,
+      "pathReferenceCount": 0,
+      "oldMd5Hash": null,
+      "contentWillBeUpdated": true
+    },
+    {
+      "path": "projects/F4HKML8903WrqD35yHb7YY4V5032/a9733422-43c3-4ce6-8946-0cda2d1ff524.json",
+      "referenceCount": 1,
+      "pathReferenceCount": 0,
+      "oldMd5Hash": null,
+      "contentWillBeUpdated": true
+    },
+    {
+      "path": "projects/F4HKML8903WrqD35yHb7YY4V5032/c5ea1f17-84f0-41c7-b315-839682b23754.json",
+      "referenceCount": 8,
+      "pathReferenceCount": 0,
+      "oldMd5Hash": null,
+      "contentWillBeUpdated": true
+    },
+    {
+      "path": "projects/F4HKML8903WrqD35yHb7YY4V5032/d925f762-366d-4cb7-b4fe-eba1ae90dea3.json",
+      "referenceCount": 3,
+      "pathReferenceCount": 0,
+      "oldMd5Hash": null,
+      "contentWillBeUpdated": true
+    },
+    {
+      "path": "projects/xihzTIneaddfoHzPfYPDqFoinec2/5809402b-aef2-49fc-9222-5b02a2b5b7ec.json",
+      "referenceCount": 23,
+      "pathReferenceCount": 0,
+      "oldMd5Hash": null,
+      "contentWillBeUpdated": true
+    },
+    {
+      "path": "projects/xihzTIneaddfoHzPfYPDqFoinec2/856a6cad-452f-4d73-af18-8d9e8950ec12.json",
+      "referenceCount": 7,
+      "pathReferenceCount": 0,
+      "oldMd5Hash": null,
+      "contentWillBeUpdated": true
+    },
+    {
+      "path": "projects/zuVBAKpkIkYYJpKMySHFk8wWhpQ2/005b4806-85af-4949-b69a-13efc44b534d.json",
+      "referenceCount": 8,
+      "pathReferenceCount": 0,
+      "oldMd5Hash": null,
+      "contentWillBeUpdated": true
+    },
+    {
+      "path": "projects/zuVBAKpkIkYYJpKMySHFk8wWhpQ2/d60a9374-16d2-44bb-83a3-0d2b7df2d443.json",
+      "referenceCount": 30,
+      "pathReferenceCount": 0,
+      "oldMd5Hash": null,
+      "contentWillBeUpdated": true
+    },
+    {
+      "path": "projects/zuVBAKpkIkYYJpKMySHFk8wWhpQ2/e4a0a4a6-dba5-4160-8952-6e59973904d9.json",
+      "referenceCount": 8,
+      "pathReferenceCount": 0,
+      "oldMd5Hash": null,
+      "contentWillBeUpdated": true
+    }
+  ],
+  "firestoreReferenceUpdates": [],
+  "sourceCodeReferences": [
+    {
+      "file": "client/src/engine/materials/floors.ts",
+      "line": 47,
+      "oldId": "A-26015",
+      "newId": "FL-00426",
+      "recognizedReference": true,
+      "sourceLine": "export const DEFAULT_FLOOR_MATERIAL_ID = \"A-26015\";"
+    },
+    {
+      "file": "admin/src/services/assets/floorsload.ts",
+      "line": 49,
+      "oldId": "A-26015",
+      "newId": "FL-00426",
+      "recognizedReference": true,
+      "sourceLine": "\"A-26015\";"
+    }
+  ],
+  "unresolvedReferences": [],
+  "deletionCandidates": [
+    {
+      "path": "assets/floor/tile/SreeI98A0JN3AJjsb3UN-diffuse-black-stones-tiled-floor.jpg",
+      "size": 3807339,
+      "md5Hash": "D9DXUhHTG5zplFRHSLnClw==",
+      "crc32c": "8Yxncg==",
+      "currentlyReferenced": true,
+      "plannedReplacementPaths": [
+        "assets/floors/tile/FL-00726/diffuse.jpg"
+      ],
+      "replacementVerified": false,
+      "eligibleAfterApply": true,
+      "deletionScheduled": false,
+      "reason": "Can be considered only after every replacement and reference update is verified."
+    },
+    {
+      "path": "assets/floor/wood/9pPtBuRt0sQZnCf6NeZY-diffuse-png-transparent-porcelain-tile-flooring-bathroom-floor-tiles-miscellaneous-texture-kitchen-thumbnail.png",
+      "size": 17970,
+      "md5Hash": "NtNdBHeaJ2yeHFb60BTsyA==",
+      "crc32c": "gK6Ctw==",
+      "currentlyReferenced": true,
+      "plannedReplacementPaths": [
+        "assets/floors/wood/FL-00126/diffuse.png"
+      ],
+      "replacementVerified": false,
+      "eligibleAfterApply": true,
+      "deletionScheduled": false,
+      "reason": "Can be considered only after every replacement and reference update is verified."
+    },
+    {
+      "path": "assets/floors/Brick/square_brick_floor/Diffuse.png",
+      "size": 20601848,
+      "md5Hash": "yYmyFYFneYk7dTOeUMSEsw==",
+      "crc32c": "JMh8fg==",
+      "currentlyReferenced": true,
+      "plannedReplacementPaths": [
+        "assets/floors/brick/FL-00226/diffuse.png"
+      ],
+      "replacementVerified": false,
+      "eligibleAfterApply": true,
+      "deletionScheduled": false,
+      "reason": "Can be considered only after every replacement and reference update is verified."
+    },
+    {
+      "path": "assets/floors/Tiles/square_tiles/Diffuse.png",
+      "size": 22023097,
+      "md5Hash": "J/uktGqY9Wg3T8gmG+K29Q==",
+      "crc32c": "vwzERw==",
+      "currentlyReferenced": true,
+      "plannedReplacementPaths": [
+        "assets/floors/tiles/FL-00326/diffuse.png"
+      ],
+      "replacementVerified": false,
+      "eligibleAfterApply": true,
+      "deletionScheduled": false,
+      "reason": "Can be considered only after every replacement and reference update is verified."
+    },
+    {
+      "path": "assets/floors/Tiles/terrazo_tiles/Diffuse.png",
+      "size": 27115185,
+      "md5Hash": "opvJmVsIs1+dsATMrF0WqQ==",
+      "crc32c": "nzg/+Q==",
+      "currentlyReferenced": true,
+      "plannedReplacementPaths": [
+        "assets/floors/tiles/FL-00426/diffuse.png"
+      ],
+      "replacementVerified": false,
+      "eligibleAfterApply": true,
+      "deletionScheduled": false,
+      "reason": "Can be considered only after every replacement and reference update is verified."
+    },
+    {
+      "path": "assets/floors/Wood/plank_flooring/Diffuse.png",
+      "size": 20659527,
+      "md5Hash": "jGOB6VLkRn46kXnOQXqGUQ==",
+      "crc32c": "AErodw==",
+      "currentlyReferenced": true,
+      "plannedReplacementPaths": [
+        "assets/floors/wood/FL-00526/diffuse.png"
+      ],
+      "replacementVerified": false,
+      "eligibleAfterApply": true,
+      "deletionScheduled": false,
+      "reason": "Can be considered only after every replacement and reference update is verified."
+    },
+    {
+      "path": "assets/floors/Wood/wooden_floor/Diffuse.png",
+      "size": 25432245,
+      "md5Hash": "ktt/4hdNO9Gzhjy2elqsyg==",
+      "crc32c": "xjqv/w==",
+      "currentlyReferenced": true,
+      "plannedReplacementPaths": [
+        "assets/floors/wood/FL-00626/diffuse.png"
+      ],
+      "replacementVerified": false,
+      "eligibleAfterApply": true,
+      "deletionScheduled": false,
+      "reason": "Can be considered only after every replacement and reference update is verified."
+    },
+    {
+      "path": "assets/furniture/bedroom/Cabinet.glb",
+      "size": 5161440,
+      "md5Hash": "QNUN7wVrLWdZROcdzKz46A==",
+      "crc32c": "JpDCfw==",
+      "currentlyReferenced": true,
+      "plannedReplacementPaths": [
+        "assets/furniture/bedroom/F-00726/model.glb"
+      ],
+      "replacementVerified": false,
+      "eligibleAfterApply": true,
+      "deletionScheduled": false,
+      "reason": "Can be considered only after every replacement and reference update is verified."
+    },
+    {
+      "path": "assets/furniture/bedroom/l7aynDwSMh5MpQK9fx7c-model-Channel-Tufted-Camel-Bed_scaled_resized.glb",
+      "size": 15284736,
+      "md5Hash": "qD9+Llk0IHi+2ZQmyrhPTg==",
+      "crc32c": "vf61gg==",
+      "currentlyReferenced": true,
+      "plannedReplacementPaths": [
+        "assets/furniture/bedroom/F-01526/model.glb"
+      ],
+      "replacementVerified": false,
+      "eligibleAfterApply": true,
+      "deletionScheduled": false,
+      "reason": "Can be considered only after every replacement and reference update is verified."
+    },
+    {
+      "path": "assets/furniture/bedroom/vi2bJxz7mkQzycxuRV53-model-Modern-Ash-Bed_resized.glb",
+      "size": 22870548,
+      "md5Hash": "AueMhCgoMc/bGQ5zNDKJ1A==",
+      "crc32c": "jSz3OA==",
+      "currentlyReferenced": true,
+      "plannedReplacementPaths": [
+        "assets/furniture/bedroom/F-02026/model.glb"
+      ],
+      "replacementVerified": false,
+      "eligibleAfterApply": true,
+      "deletionScheduled": false,
+      "reason": "Can be considered only after every replacement and reference update is verified."
+    },
+    {
+      "path": "assets/furniture/diningroom/1leXkoHmhslSxmZsagb7-model-Modern-Stainless-Steel-Refrigerator.glb",
+      "size": 18025560,
+      "md5Hash": "fUGMP5sxqtQuyOtTWpvV/A==",
+      "crc32c": "3CIQUw==",
+      "currentlyReferenced": true,
+      "plannedReplacementPaths": [
+        "assets/furniture/diningroom/F-00126/model.glb"
+      ],
+      "replacementVerified": false,
+      "eligibleAfterApply": true,
+      "deletionScheduled": false,
+      "reason": "Can be considered only after every replacement and reference update is verified."
+    },
+    {
+      "path": "assets/furniture/diningroom/Table.glb",
+      "size": 12219000,
+      "md5Hash": "6cHd4dvVn+rNw2/8sLApIQ==",
+      "crc32c": "R0Ay3g==",
+      "currentlyReferenced": true,
+      "plannedReplacementPaths": [
+        "assets/furniture/diningroom/F-00826/model.glb"
+      ],
+      "replacementVerified": false,
+      "eligibleAfterApply": true,
+      "deletionScheduled": false,
+      "reason": "Can be considered only after every replacement and reference update is verified."
+    },
+    {
+      "path": "assets/furniture/diningroom/x3hHPlyBgYWVUPB6TGTL-model-Ivory-Gold-Breakfast-Stool_resized.glb",
+      "size": 47615236,
+      "md5Hash": "QRcJIuGevHqG60CZK+BB7w==",
+      "crc32c": "kQI4SQ==",
+      "currentlyReferenced": true,
+      "plannedReplacementPaths": [
+        "assets/furniture/diningroom/F-02126/model.glb"
+      ],
+      "replacementVerified": false,
+      "eligibleAfterApply": true,
+      "deletionScheduled": false,
+      "reason": "Can be considered only after every replacement and reference update is verified."
+    },
+    {
+      "path": "assets/furniture/diningroom/xytfdR9rejLmC6xcFlU7-model-Ivory-Marble-Center-Table_resized.glb",
+      "size": 55674584,
+      "md5Hash": "KenJN/GOmX2oZ8ZKVOPFmQ==",
+      "crc32c": "X9Zs5Q==",
+      "currentlyReferenced": true,
+      "plannedReplacementPaths": [
+        "assets/furniture/diningroom/F-02226/model.glb"
+      ],
+      "replacementVerified": false,
+      "eligibleAfterApply": true,
+      "deletionScheduled": false,
+      "reason": "Can be considered only after every replacement and reference update is verified."
+    },
+    {
+      "path": "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+      "size": 31515020,
+      "md5Hash": "2LLN+vtz7qehRrpwTnQ4QA==",
+      "crc32c": "/1zkRQ==",
+      "currentlyReferenced": true,
+      "plannedReplacementPaths": [
+        "assets/furniture/livingroom/F-00226/model.glb"
+      ],
+      "replacementVerified": false,
+      "eligibleAfterApply": true,
+      "deletionScheduled": false,
+      "reason": "Can be considered only after every replacement and reference update is verified."
+    },
+    {
+      "path": "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+      "size": 35986292,
+      "md5Hash": "68RfAlliTyhF84M5P7iB2A==",
+      "crc32c": "yC2YCw==",
+      "currentlyReferenced": true,
+      "plannedReplacementPaths": [
+        "assets/furniture/livingroom/F-01126/model.glb"
+      ],
+      "replacementVerified": false,
+      "eligibleAfterApply": true,
+      "deletionScheduled": false,
+      "reason": "Can be considered only after every replacement and reference update is verified."
+    },
+    {
+      "path": "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+      "size": 27213144,
+      "md5Hash": "HMVuzXAvCw3I2Ecz4HAlEw==",
+      "crc32c": "zwYMAg==",
+      "currentlyReferenced": true,
+      "plannedReplacementPaths": [
+        "assets/furniture/livingroom/F-01226/model.glb"
+      ],
+      "replacementVerified": false,
+      "eligibleAfterApply": true,
+      "deletionScheduled": false,
+      "reason": "Can be considered only after every replacement and reference update is verified."
+    },
+    {
+      "path": "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+      "size": 50035900,
+      "md5Hash": "2jBoBxrF94ZexIrOlF1/cQ==",
+      "crc32c": "xlvTVQ==",
+      "currentlyReferenced": true,
+      "plannedReplacementPaths": [
+        "assets/furniture/livingroom/F-01326/model.glb"
+      ],
+      "replacementVerified": false,
+      "eligibleAfterApply": true,
+      "deletionScheduled": false,
+      "reason": "Can be considered only after every replacement and reference update is verified."
+    },
+    {
+      "path": "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+      "size": 46000932,
+      "md5Hash": "QjGea7Vth9I8UDRcPQq5Ew==",
+      "crc32c": "8e2tmg==",
+      "currentlyReferenced": true,
+      "plannedReplacementPaths": [
+        "assets/furniture/livingroom/F-01726/model.glb"
+      ],
+      "replacementVerified": false,
+      "eligibleAfterApply": true,
+      "deletionScheduled": false,
+      "reason": "Can be considered only after every replacement and reference update is verified."
+    },
+    {
+      "path": "assets/furniture/livingroom/TV.glb",
+      "size": 1116556,
+      "md5Hash": "YNlv70CmXGPyhUpvLVBfFw==",
+      "crc32c": "ubyCOw==",
+      "currentlyReferenced": true,
+      "plannedReplacementPaths": [
+        "assets/furniture/livingroom/F-00426/model.glb"
+      ],
+      "replacementVerified": false,
+      "eligibleAfterApply": true,
+      "deletionScheduled": false,
+      "reason": "Can be considered only after every replacement and reference update is verified."
+    },
+    {
+      "path": "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+      "size": 44606820,
+      "md5Hash": "1tOPv4A87hvqYSlRYibByw==",
+      "crc32c": "vvNRpg==",
+      "currentlyReferenced": true,
+      "plannedReplacementPaths": [
+        "assets/furniture/livingroom/F-00926/model.glb"
+      ],
+      "replacementVerified": false,
+      "eligibleAfterApply": true,
+      "deletionScheduled": false,
+      "reason": "Can be considered only after every replacement and reference update is verified."
+    },
+    {
+      "path": "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+      "size": 39703028,
+      "md5Hash": "3fYFRLgfH4VZY8R9PKKYQw==",
+      "crc32c": "ywx3tQ==",
+      "currentlyReferenced": true,
+      "plannedReplacementPaths": [
+        "assets/furniture/livingroom/F-01426/model.glb"
+      ],
+      "replacementVerified": false,
+      "eligibleAfterApply": true,
+      "deletionScheduled": false,
+      "reason": "Can be considered only after every replacement and reference update is verified."
+    },
+    {
+      "path": "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+      "size": 45749440,
+      "md5Hash": "3RnHfEyIDEl6Pzj+70Dqog==",
+      "crc32c": "8+JRfQ==",
+      "currentlyReferenced": true,
+      "plannedReplacementPaths": [
+        "assets/furniture/livingroom/F-01626/model.glb"
+      ],
+      "replacementVerified": false,
+      "eligibleAfterApply": true,
+      "deletionScheduled": false,
+      "reason": "Can be considered only after every replacement and reference update is verified."
+    },
+    {
+      "path": "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+      "size": 42128656,
+      "md5Hash": "vzA7R+ZqyOO2gYhN/mdJ0w==",
+      "crc32c": "v39x3w==",
+      "currentlyReferenced": true,
+      "plannedReplacementPaths": [
+        "assets/furniture/livingroom/F-01826/model.glb"
+      ],
+      "replacementVerified": false,
+      "eligibleAfterApply": true,
+      "deletionScheduled": false,
+      "reason": "Can be considered only after every replacement and reference update is verified."
+    },
+    {
+      "path": "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+      "size": 12843064,
+      "md5Hash": "uUIITpSWqNPIzW2GsQxZUw==",
+      "crc32c": "53j5ZQ==",
+      "currentlyReferenced": true,
+      "plannedReplacementPaths": [
+        "assets/furniture/livingroom/F-01926/model.glb"
+      ],
+      "replacementVerified": false,
+      "eligibleAfterApply": true,
+      "deletionScheduled": false,
+      "reason": "Can be considered only after every replacement and reference update is verified."
+    },
+    {
+      "path": "assets/furniture/livingroom/steel-frame-shelves-01.glb",
+      "size": 1596392,
+      "md5Hash": "d6paLSsUFaZEXmIkkJe0nQ==",
+      "crc32c": "Cjs+qw==",
+      "currentlyReferenced": true,
+      "plannedReplacementPaths": [
+        "assets/furniture/livingroom/F-00526/model.glb"
+      ],
+      "replacementVerified": false,
+      "eligibleAfterApply": true,
+      "deletionScheduled": false,
+      "reason": "Can be considered only after every replacement and reference update is verified."
+    },
+    {
+      "path": "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb",
+      "size": 34482280,
+      "md5Hash": "ir3ocZYC+7yPcohXszFisw==",
+      "crc32c": "J5+FtQ==",
+      "currentlyReferenced": true,
+      "plannedReplacementPaths": [
+        "assets/furniture/livingroom/F-02426/model.glb"
+      ],
+      "replacementVerified": false,
+      "eligibleAfterApply": true,
+      "deletionScheduled": false,
+      "reason": "Can be considered only after every replacement and reference update is verified."
+    },
+    {
+      "path": "assets/furniture/office/gQQOYRG9Cce28WquJ5B0-model-Obsidian-Executive-Chair.glb",
+      "size": 25427900,
+      "md5Hash": "c6reOmTWy2B0Q2xW+P8xoQ==",
+      "crc32c": "jucF/w==",
+      "currentlyReferenced": true,
+      "plannedReplacementPaths": [
+        "assets/furniture/office/F-01026/model.glb"
+      ],
+      "replacementVerified": false,
+      "eligibleAfterApply": true,
+      "deletionScheduled": false,
+      "reason": "Can be considered only after every replacement and reference update is verified."
+    },
+    {
+      "path": "assets/furniture/office/yoAt8ckUEXxmjtmB70p3-model-Saddlewood-Executive-Chair.glb",
+      "size": 34482280,
+      "md5Hash": "ir3ocZYC+7yPcohXszFisw==",
+      "crc32c": "J5+FtQ==",
+      "currentlyReferenced": true,
+      "plannedReplacementPaths": [
+        "assets/furniture/office/F-02326/model.glb"
+      ],
+      "replacementVerified": false,
+      "eligibleAfterApply": true,
+      "deletionScheduled": false,
+      "reason": "Can be considered only after every replacement and reference update is verified."
+    },
+    {
+      "path": "assets/openings/doors/single-door.glb",
+      "size": 12186500,
+      "md5Hash": "DFXWR3Y5rto3l85WzGaiwA==",
+      "crc32c": "GLX8Dw==",
+      "currentlyReferenced": true,
+      "plannedReplacementPaths": [
+        "assets/furniture/doors/F-00326/model.glb"
+      ],
+      "replacementVerified": false,
+      "eligibleAfterApply": true,
+      "deletionScheduled": false,
+      "reason": "Can be considered only after every replacement and reference update is verified."
+    },
+    {
+      "path": "assets/openings/windows/Slim_Intersection_i.glb",
+      "size": 1606112,
+      "md5Hash": "rnNEQABg8zAMUB5UMoJeMw==",
+      "crc32c": "NoYCtA==",
+      "currentlyReferenced": true,
+      "plannedReplacementPaths": [
+        "assets/furniture/windows/F-00626/model.glb"
+      ],
+      "replacementVerified": false,
+      "eligibleAfterApply": true,
+      "deletionScheduled": false,
+      "reason": "Can be considered only after every replacement and reference update is verified."
+    },
+    {
+      "path": "assets/wall/tile/vlljo8HQum9D2GBE4oWd-diffuse-wallpaperflare-com_wallpaper.jpg",
+      "size": 4265398,
+      "md5Hash": "yKzdpPFHS4nzrMvUN/3uqA==",
+      "crc32c": "0eCCbA==",
+      "currentlyReferenced": true,
+      "plannedReplacementPaths": [
+        "assets/walls/tile/W-01326/diffuse.jpg"
+      ],
+      "replacementVerified": false,
+      "eligibleAfterApply": true,
+      "deletionScheduled": false,
+      "reason": "Can be considered only after every replacement and reference update is verified."
+    }
+  ]
+}

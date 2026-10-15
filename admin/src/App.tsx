@@ -11,6 +11,7 @@ import Login from "@/components/auth/Login";
 import UserTable from "@/components/pages/UserTable/UserTable";
 import Home from "@/components/pages/Home";
 import { useAuth } from "@/context/AuthContext";
+import AssetStartupGate from "@/engine/AssetStartupGate";
 
 function RequireAdmin({ children }: { children: ReactNode }) {
   const { user, role, loading } = useAuth();
@@ -32,8 +33,9 @@ function RequireAdmin({ children }: { children: ReactNode }) {
 
 function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
+    <AssetStartupGate>
+      <Routes>
+        <Route path="/login" element={<Login />} />
 
       <Route
         path="/glb-rescaler"
@@ -113,7 +115,8 @@ function App() {
       />
 
       <Route path="*" element={<Navigate to="/login" replace />} />
-    </Routes>
+      </Routes>
+    </AssetStartupGate>
   );
 }
 

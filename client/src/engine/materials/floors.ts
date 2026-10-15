@@ -6,11 +6,6 @@ import {
 } from "firebase/firestore";
 
 import {
-    getDownloadURL,
-    ref
-} from "firebase/storage";
-
-import {
     RepeatWrapping,
     SRGBColorSpace,
     Texture,
@@ -18,9 +13,15 @@ import {
 } from "three";
 
 import {
-    db,
-    storage
+    db
 } from "../../firebase/firebase";
+import {
+    registerAssetDownloadURL,
+    resolveStorageAssetURL
+} from "../../lib/assetLibraryCache";
+import {
+    collectAssetSources
+} from "../../lib/assetLibraryCache";
 
 import type {
     Material
@@ -43,7 +44,7 @@ export type FloorMaterial =
 // DEFAULT FLOOR
 //==================================================
 
-export const DEFAULT_FLOOR_MATERIAL_ID = "A-26015";
+export const DEFAULT_FLOOR_MATERIAL_ID = "FL-00426";
 
 //==================================================
 // LOCAL DEFAULT FLOOR TEXTURE
@@ -87,6 +88,7 @@ let cachedDefaultFloorMaterial: Material | null = null;
 //==================================================
 
 let cachedFloorMaterials: FloorMaterial[] = [];
+let cachedFloorStorageSources: string[] = [];
 let floorCatalogLoaded = false;
 let floorMaterialsPromise: Promise<FloorMaterial[]> | null = null;
 
@@ -152,13 +154,12 @@ async function resolveStorageUrl(
         path.startsWith("https://") ||
         path.startsWith("data:")
     ) {
+        await registerAssetDownloadURL(path);
         return path;
     }
 
     try {
-        return await getDownloadURL(
-            ref(storage, path)
-        );
+        return await resolveStorageAssetURL(path);
     } catch (error) {
         console.error(
             "Failed to resolve Firebase Storage floor file:",
@@ -196,8 +197,10 @@ async function buildFloorMaterial(
     const materialId = data.id?.trim() || documentId;
 
     const texture =
-        data.diffuse_url?.trim() ||
-        await resolveStorageUrl(data.diffuse_path);
+        await resolveStorageUrl(
+            data.diffuse_url?.trim() ||
+            data.diffuse_path
+        );
 
     if (!texture) {
         console.warn(
@@ -213,7 +216,8 @@ async function buildFloorMaterial(
 
     if (includeThumbnail) {
         if (data.thumbnail_url?.trim()) {
-            thumbnail = data.thumbnail_url.trim();
+            thumbnail =
+                await resolveStorageUrl(data.thumbnail_url.trim());
         } else if (data.thumbnail_path) {
             thumbnail =
                 await resolveStorageUrl(
@@ -291,6 +295,15 @@ async function loadFloorMaterials():
     );
 
     const snapshot = await getDocs(floorQuery);
+    cachedFloorStorageSources = snapshot.docs
+        .filter(document => {
+            const data = document.data() as FirebaseFloorAsset;
+            return (
+                typeof data.asset_status === "string" &&
+                data.asset_status.trim().toLowerCase() === "available"
+            );
+        })
+        .flatMap(document => collectAssetSources(document.data()));
 
     const results = await Promise.allSettled(
         snapshot.docs.map(
@@ -401,6 +414,10 @@ export function findCachedFloorMaterial(
     return undefined;
 }
 
+export function getFloorStorageSources(): string[] {
+    return cachedFloorStorageSources;
+}
+
 //==================================================
 // GET CACHED TEXTURE
 //==================================================
@@ -492,6 +509,7 @@ export async function refreshFloorMaterials():
     Promise<FloorMaterial[]> {
     cachedDefaultFloorMaterial = null;
     cachedFloorMaterials = [];
+    cachedFloorStorageSources = [];
     floorCatalogLoaded = false;
     floorMaterialsPromise = null;
 

@@ -1,9 +1,7 @@
 import {
-  getDownloadURL,
-  ref as storageRef,
-} from "firebase/storage";
-
-import { storage } from "@/firebase/firebase";
+  registerAssetDownloadURL,
+  resolveStorageAssetURL,
+} from "@/lib/assetLibraryCache";
 
 
 const storageUrlCache = new Map<string, string>();
@@ -49,7 +47,8 @@ export function normalizeStoragePath(
 
 
 export async function resolveStoragePath(
-  path?: string | null
+  path?: string | null,
+  cacheable = true,
 ): Promise<string | null> {
 
   if (!path?.trim()) {
@@ -59,6 +58,9 @@ export async function resolveStoragePath(
   const trimmedPath = path.trim();
 
   if (/^(https?:\/\/|data:|blob:)/i.test(trimmedPath)) {
+    if (cacheable) {
+      await registerAssetDownloadURL(trimmedPath);
+    }
     return trimmedPath;
   }
 
@@ -86,6 +88,9 @@ export async function resolveStoragePath(
     );
 
   if (cachedUrl) {
+    if (cacheable) {
+      await registerAssetDownloadURL(cachedUrl);
+    }
     return cachedUrl;
   }
 
@@ -95,13 +100,7 @@ export async function resolveStoragePath(
       normalizedPath
     );
 
-    const fileRef = storageRef(
-      storage,
-      normalizedPath
-    );
-
-    const url =
-      await getDownloadURL(fileRef);
+    const url = await resolveStorageAssetURL(normalizedPath, cacheable);
 
   
     storageUrlCache.set(
@@ -113,7 +112,6 @@ export async function resolveStoragePath(
       "[PreviewStorage] Storage URL resolved:",
       {
         path: normalizedPath,
-        url,
       }
     );
 

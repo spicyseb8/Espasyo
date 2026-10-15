@@ -1,0 +1,1897 @@
+{
+  "version": 1,
+  "generatedAt": "2026-10-15T18:28:42.682Z",
+  "projectId": "espasyo-6072d",
+  "bucket": "espasyo-6072d.firebasestorage.app",
+  "mode": "apply",
+  "scanComplete": true,
+  "summary": {
+    "assetObjectsInspected": 64,
+    "assetBytesInspected": 1574908058,
+    "firestoreDocumentsScanned": 90,
+    "savedProjectsScanned": 12,
+    "applicationSourceFilesScanned": 369,
+    "duplicateContentGroups": 31,
+    "safeToDelete": 27,
+    "keep": 32,
+    "manualReview": 5,
+    "scanErrors": 0
+  },
+  "duplicateGroups": [
+    {
+      "sha256": "623d0d2a6ea71b0ad014f7706627633373bc0179b4d63662abd35b2a9d787335",
+      "size": 3807339,
+      "paths": [
+        "assets/floor/tile/SreeI98A0JN3AJjsb3UN-diffuse-black-stones-tiled-floor.jpg",
+        "assets/floors/tile/FL-00726/diffuse.jpg"
+      ]
+    },
+    {
+      "sha256": "433dfec970904f36b3a7269b1c65b99c71c5ba73defba9c335354df5ee763f9a",
+      "size": 17970,
+      "paths": [
+        "assets/floor/wood/9pPtBuRt0sQZnCf6NeZY-diffuse-png-transparent-porcelain-tile-flooring-bathroom-floor-tiles-miscellaneous-texture-kitchen-thumbnail.png",
+        "assets/floors/wood/FL-00126/diffuse.png"
+      ]
+    },
+    {
+      "sha256": "34b5fd4cd6ff9b18b77ec0f8a3991d7725855e7b4d80edd0854959ced3fdebc9",
+      "size": 20601848,
+      "paths": [
+        "assets/floors/Brick/square_brick_floor/Diffuse.png",
+        "assets/floors/brick/FL-00226/diffuse.png"
+      ]
+    },
+    {
+      "sha256": "ba67945e7fc597a5c88ab369e321d8e3a019d98b1674acc870de868f620b555a",
+      "size": 22023097,
+      "paths": [
+        "assets/floors/Tiles/square_tiles/Diffuse.png",
+        "assets/floors/tiles/FL-00326/diffuse.png"
+      ]
+    },
+    {
+      "sha256": "80cb813199412195523caf0e9e41bf96cf7e8cdf9a9ae91307bb8633c823b9e3",
+      "size": 27115185,
+      "paths": [
+        "assets/floors/Tiles/terrazo_tiles/Diffuse.png",
+        "assets/floors/tiles/FL-00426/diffuse.png"
+      ]
+    },
+    {
+      "sha256": "f75a6b1308320e2357734c171c8935d7b3d2be483146587587b16113eaabdcac",
+      "size": 20659527,
+      "paths": [
+        "assets/floors/Wood/plank_flooring/Diffuse.png",
+        "assets/floors/wood/FL-00526/diffuse.png"
+      ]
+    },
+    {
+      "sha256": "ba1a842a3d92ff937b677a124f6ec4c3597eba0b7c2a01c5218457039f429afa",
+      "size": 25432245,
+      "paths": [
+        "assets/floors/Wood/wooden_floor/Diffuse.png",
+        "assets/floors/wood/FL-00626/diffuse.png"
+      ]
+    },
+    {
+      "sha256": "e1bd988a45dfba7aa68ea4208d73eae70b172127a8d7fba8190d8eae9b665369",
+      "size": 5161440,
+      "paths": [
+        "assets/furniture/bedroom/Cabinet.glb",
+        "assets/furniture/bedroom/F-00726/model.glb"
+      ]
+    },
+    {
+      "sha256": "ee57630afd37194ce98ea4abf011ddf43b7f4621ddede09109203a12e8f4eed3",
+      "size": 15284736,
+      "paths": [
+        "assets/furniture/bedroom/F-01526/model.glb",
+        "assets/furniture/bedroom/l7aynDwSMh5MpQK9fx7c-model-Channel-Tufted-Camel-Bed_scaled_resized.glb"
+      ]
+    },
+    {
+      "sha256": "6cd332e9374468c819c1847320f7ef8733ae5d955661d3e7f1f1af796f333d93",
+      "size": 22870548,
+      "paths": [
+        "assets/furniture/bedroom/F-02026/model.glb",
+        "assets/furniture/bedroom/vi2bJxz7mkQzycxuRV53-model-Modern-Ash-Bed_resized.glb"
+      ]
+    },
+    {
+      "sha256": "f164d154a5885ad495847f5cd9e71dc1f843014774a93683e0ec99a42f1388a5",
+      "size": 18025560,
+      "paths": [
+        "assets/furniture/diningroom/1leXkoHmhslSxmZsagb7-model-Modern-Stainless-Steel-Refrigerator.glb",
+        "assets/furniture/diningroom/F-00126/model.glb"
+      ]
+    },
+    {
+      "sha256": "2d19cbdfbd7f220ab5183d103b8e38bf5b8a43b2d8b958b8154a0b5875c41eac",
+      "size": 12219000,
+      "paths": [
+        "assets/furniture/diningroom/F-00826/model.glb",
+        "assets/furniture/diningroom/Table.glb"
+      ]
+    },
+    {
+      "sha256": "6ff478794fcb15411dfaf5a05ad3efee6a119694455a0afe77e66173660db237",
+      "size": 47615236,
+      "paths": [
+        "assets/furniture/diningroom/F-02126/model.glb",
+        "assets/furniture/diningroom/x3hHPlyBgYWVUPB6TGTL-model-Ivory-Gold-Breakfast-Stool_resized.glb"
+      ]
+    },
+    {
+      "sha256": "c866784a1c67ab12a16300be25733f9d548edc3f49daf11e786ff70c7fc845f8",
+      "size": 55674584,
+      "paths": [
+        "assets/furniture/diningroom/F-02226/model.glb",
+        "assets/furniture/diningroom/xytfdR9rejLmC6xcFlU7-model-Ivory-Marble-Center-Table_resized.glb"
+      ]
+    },
+    {
+      "sha256": "187901d77eb5a6d16e2138ee507ada3d9f9956a316e0bf439efd09e729f97d87",
+      "size": 12186500,
+      "paths": [
+        "assets/furniture/doors/F-00326/model.glb",
+        "assets/openings/doors/single-door.glb"
+      ]
+    },
+    {
+      "sha256": "19662a0c145e5770db1f106df9b322b04ae625bcbebc90073ecea69121aa6089",
+      "size": 31515020,
+      "paths": [
+        "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+        "assets/furniture/livingroom/F-00226/model.glb"
+      ]
+    },
+    {
+      "sha256": "9d7758bbf5eb65916c7824b2351741d3650bb65bb22d57c1378638f735a23d86",
+      "size": 1116556,
+      "paths": [
+        "assets/furniture/livingroom/F-00426/model.glb",
+        "assets/furniture/livingroom/TV.glb"
+      ]
+    },
+    {
+      "sha256": "479c042fe0a74ac876f21b9e2e74c99b18173f12b6aac15427d9fa8f711a689c",
+      "size": 1596392,
+      "paths": [
+        "assets/furniture/livingroom/F-00526/model.glb",
+        "assets/furniture/livingroom/steel-frame-shelves-01.glb"
+      ]
+    },
+    {
+      "sha256": "d59fdad5352d923cd5193f95aa97e150541e9a602ccd2e4bd5027de60589f1e2",
+      "size": 44606820,
+      "paths": [
+        "assets/furniture/livingroom/F-00926/model.glb",
+        "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb"
+      ]
+    },
+    {
+      "sha256": "ec60bfac5ac58b53ee33227ceaac1ccecb7f3b51f051a33c0c42e8d073e2afa8",
+      "size": 35986292,
+      "paths": [
+        "assets/furniture/livingroom/F-01126/model.glb",
+        "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb"
+      ]
+    },
+    {
+      "sha256": "237f2d751cdb396562b4cf4a9bc6a520e742373ea79636b3e8a64f189b64e11a",
+      "size": 27213144,
+      "paths": [
+        "assets/furniture/livingroom/F-01226/model.glb",
+        "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb"
+      ]
+    },
+    {
+      "sha256": "36b8d6ce65611c5254b2b9ead17222104da212cde34a1c822a0663fae3925db4",
+      "size": 50035900,
+      "paths": [
+        "assets/furniture/livingroom/F-01326/model.glb",
+        "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb"
+      ]
+    },
+    {
+      "sha256": "b88b67e21f5a210359d9cc45a2c0643ad15b255f4688678518c9b07791ea0c6a",
+      "size": 39703028,
+      "paths": [
+        "assets/furniture/livingroom/F-01426/model.glb",
+        "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb"
+      ]
+    },
+    {
+      "sha256": "4a7a22cc60d3c55238399880f7313acce3a0b65528076a384edb0ceb65d060dd",
+      "size": 45749440,
+      "paths": [
+        "assets/furniture/livingroom/F-01626/model.glb",
+        "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb"
+      ]
+    },
+    {
+      "sha256": "57985379d63116ab63c038d157ccb0ceedd636050b3cbcf602c60c22111bb6fb",
+      "size": 46000932,
+      "paths": [
+        "assets/furniture/livingroom/F-01726/model.glb",
+        "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb"
+      ]
+    },
+    {
+      "sha256": "ab75032fc6cc07a9bb9a53d56d0f3d0b372a726a2c9c8a0d934fd9137054aee9",
+      "size": 42128656,
+      "paths": [
+        "assets/furniture/livingroom/F-01826/model.glb",
+        "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb"
+      ]
+    },
+    {
+      "sha256": "fdb895a566db1a657827b501e7c7ca21465b88fbb372950286e0b88a5d3b8dd6",
+      "size": 12843064,
+      "paths": [
+        "assets/furniture/livingroom/F-01926/model.glb",
+        "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb"
+      ]
+    },
+    {
+      "sha256": "c47560adb4be42043b72edfe9d7e00a2cd9c590bcd4b18857a0ff80674833673",
+      "size": 34482280,
+      "paths": [
+        "assets/furniture/livingroom/F-02426/model.glb",
+        "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb",
+        "assets/furniture/office/F-02326/model.glb",
+        "assets/furniture/office/yoAt8ckUEXxmjtmB70p3-model-Saddlewood-Executive-Chair.glb"
+      ]
+    },
+    {
+      "sha256": "02cd7d882f7fefed15ba0f4e18eb9cab405ded2f2c6d3dd5271427d9c4f9656e",
+      "size": 25427900,
+      "paths": [
+        "assets/furniture/office/F-01026/model.glb",
+        "assets/furniture/office/gQQOYRG9Cce28WquJ5B0-model-Obsidian-Executive-Chair.glb"
+      ]
+    },
+    {
+      "sha256": "8885796f9dadc2c58bcbda471dfc14819b5524d17bd91b2b1456e43f6b464443",
+      "size": 1606112,
+      "paths": [
+        "assets/furniture/windows/F-00626/model.glb",
+        "assets/openings/windows/Slim_Intersection_i.glb"
+      ]
+    },
+    {
+      "sha256": "b5da32a2d2994fc59a7f1711b0a501520e9a4d6200c5b8f8df9d5bb357403903",
+      "size": 4265398,
+      "paths": [
+        "assets/wall/tile/vlljo8HQum9D2GBE4oWd-diffuse-wallpaperflare-com_wallpaper.jpg",
+        "assets/walls/tile/W-01326/diffuse.jpg"
+      ]
+    }
+  ],
+  "objects": [
+    {
+      "path": "assets/floor/tile/SreeI98A0JN3AJjsb3UN-diffuse-black-stones-tiled-floor.jpg",
+      "size": 3807339,
+      "contentType": "image/jpeg",
+      "generation": "1791900892435294",
+      "md5Hash": "D9DXUhHTG5zplFRHSLnClw==",
+      "crc32c": "8Yxncg==",
+      "sha256": "623d0d2a6ea71b0ad014f7706627633373bc0179b4d63662abd35b2a9d787335",
+      "duplicatePaths": [
+        "assets/floors/tile/FL-00726/diffuse.jpg"
+      ],
+      "referenceCount": 0,
+      "references": [],
+      "replacementPath": "assets/floors/tile/FL-00726/diffuse.jpg",
+      "status": "safe-to-delete",
+      "reason": "SHA-256 content matches a canonical replacement that remains referenced; no references to this path were found."
+    },
+    {
+      "path": "assets/floor/wood/9pPtBuRt0sQZnCf6NeZY-diffuse-png-transparent-porcelain-tile-flooring-bathroom-floor-tiles-miscellaneous-texture-kitchen-thumbnail.png",
+      "size": 17970,
+      "contentType": "image/png",
+      "generation": "1791901646884616",
+      "md5Hash": "NtNdBHeaJ2yeHFb60BTsyA==",
+      "crc32c": "gK6Ctw==",
+      "sha256": "433dfec970904f36b3a7269b1c65b99c71c5ba73defba9c335354df5ee763f9a",
+      "duplicatePaths": [
+        "assets/floors/wood/FL-00126/diffuse.png"
+      ],
+      "referenceCount": 0,
+      "references": [],
+      "replacementPath": "assets/floors/wood/FL-00126/diffuse.png",
+      "status": "safe-to-delete",
+      "reason": "SHA-256 content matches a canonical replacement that remains referenced; no references to this path were found."
+    },
+    {
+      "path": "assets/floors/Brick/square_brick_floor/Diffuse.png",
+      "size": 20601848,
+      "contentType": "image/png",
+      "generation": "1789397686718270",
+      "md5Hash": "yYmyFYFneYk7dTOeUMSEsw==",
+      "crc32c": "JMh8fg==",
+      "sha256": "34b5fd4cd6ff9b18b77ec0f8a3991d7725855e7b4d80edd0854959ced3fdebc9",
+      "duplicatePaths": [
+        "assets/floors/brick/FL-00226/diffuse.png"
+      ],
+      "referenceCount": 0,
+      "references": [],
+      "replacementPath": "assets/floors/brick/FL-00226/diffuse.png",
+      "status": "safe-to-delete",
+      "reason": "SHA-256 content matches a canonical replacement that remains referenced; no references to this path were found."
+    },
+    {
+      "path": "assets/floors/Tiles/square_tiles/Diffuse.png",
+      "size": 22023097,
+      "contentType": "image/png",
+      "generation": "1789397717953889",
+      "md5Hash": "J/uktGqY9Wg3T8gmG+K29Q==",
+      "crc32c": "vwzERw==",
+      "sha256": "ba67945e7fc597a5c88ab369e321d8e3a019d98b1674acc870de868f620b555a",
+      "duplicatePaths": [
+        "assets/floors/tiles/FL-00326/diffuse.png"
+      ],
+      "referenceCount": 0,
+      "references": [],
+      "replacementPath": "assets/floors/tiles/FL-00326/diffuse.png",
+      "status": "safe-to-delete",
+      "reason": "SHA-256 content matches a canonical replacement that remains referenced; no references to this path were found."
+    },
+    {
+      "path": "assets/floors/Tiles/terrazo_tiles/Diffuse.png",
+      "size": 27115185,
+      "contentType": "image/png",
+      "generation": "1789397750580327",
+      "md5Hash": "opvJmVsIs1+dsATMrF0WqQ==",
+      "crc32c": "nzg/+Q==",
+      "sha256": "80cb813199412195523caf0e9e41bf96cf7e8cdf9a9ae91307bb8633c823b9e3",
+      "duplicatePaths": [
+        "assets/floors/tiles/FL-00426/diffuse.png"
+      ],
+      "referenceCount": 0,
+      "references": [],
+      "replacementPath": "assets/floors/tiles/FL-00426/diffuse.png",
+      "status": "safe-to-delete",
+      "reason": "SHA-256 content matches a canonical replacement that remains referenced; no references to this path were found."
+    },
+    {
+      "path": "assets/floors/Wood/plank_flooring/Diffuse.png",
+      "size": 20659527,
+      "contentType": "image/png",
+      "generation": "1789397779072736",
+      "md5Hash": "jGOB6VLkRn46kXnOQXqGUQ==",
+      "crc32c": "AErodw==",
+      "sha256": "f75a6b1308320e2357734c171c8935d7b3d2be483146587587b16113eaabdcac",
+      "duplicatePaths": [
+        "assets/floors/wood/FL-00526/diffuse.png"
+      ],
+      "referenceCount": 0,
+      "references": [],
+      "replacementPath": "assets/floors/wood/FL-00526/diffuse.png",
+      "status": "safe-to-delete",
+      "reason": "SHA-256 content matches a canonical replacement that remains referenced; no references to this path were found."
+    },
+    {
+      "path": "assets/floors/Wood/wooden_floor/Diffuse.png",
+      "size": 25432245,
+      "contentType": "image/png",
+      "generation": "1789397811458185",
+      "md5Hash": "ktt/4hdNO9Gzhjy2elqsyg==",
+      "crc32c": "xjqv/w==",
+      "sha256": "ba1a842a3d92ff937b677a124f6ec4c3597eba0b7c2a01c5218457039f429afa",
+      "duplicatePaths": [
+        "assets/floors/wood/FL-00626/diffuse.png"
+      ],
+      "referenceCount": 0,
+      "references": [],
+      "replacementPath": "assets/floors/wood/FL-00626/diffuse.png",
+      "status": "safe-to-delete",
+      "reason": "SHA-256 content matches a canonical replacement that remains referenced; no references to this path were found."
+    },
+    {
+      "path": "assets/floors/brick/FL-00226/diffuse.png",
+      "size": 20601848,
+      "contentType": "image/png",
+      "generation": "1792086860206938",
+      "md5Hash": "yYmyFYFneYk7dTOeUMSEsw==",
+      "crc32c": "JMh8fg==",
+      "sha256": "34b5fd4cd6ff9b18b77ec0f8a3991d7725855e7b4d80edd0854959ced3fdebc9",
+      "duplicatePaths": [
+        "assets/floors/Brick/square_brick_floor/Diffuse.png"
+      ],
+      "referenceCount": 2,
+      "references": [
+        {
+          "source": "firestore:assets/FL-00226",
+          "value": "assets/floors/brick/FL-00226/diffuse.png"
+        },
+        {
+          "source": "firestore:assets/FL-00226",
+          "value": "assets/floors/brick/FL-00226/diffuse.png"
+        }
+      ],
+      "replacementPath": null,
+      "status": "keep",
+      "reason": "This duplicate path is referenced; no reference migration is proposed in this cleanup."
+    },
+    {
+      "path": "assets/floors/tile/FL-00726/diffuse.jpg",
+      "size": 3807339,
+      "contentType": "image/jpeg",
+      "generation": "1792086888961667",
+      "md5Hash": "D9DXUhHTG5zplFRHSLnClw==",
+      "crc32c": "8Yxncg==",
+      "sha256": "623d0d2a6ea71b0ad014f7706627633373bc0179b4d63662abd35b2a9d787335",
+      "duplicatePaths": [
+        "assets/floor/tile/SreeI98A0JN3AJjsb3UN-diffuse-black-stones-tiled-floor.jpg"
+      ],
+      "referenceCount": 1,
+      "references": [
+        {
+          "source": "firestore:assets/FL-00726",
+          "value": "assets/floors/tile/FL-00726/diffuse.jpg"
+        }
+      ],
+      "replacementPath": null,
+      "status": "keep",
+      "reason": "This duplicate path is referenced; no reference migration is proposed in this cleanup."
+    },
+    {
+      "path": "assets/floors/tiles/FL-00326/diffuse.png",
+      "size": 22023097,
+      "contentType": "image/png",
+      "generation": "1792086862800184",
+      "md5Hash": "J/uktGqY9Wg3T8gmG+K29Q==",
+      "crc32c": "vwzERw==",
+      "sha256": "ba67945e7fc597a5c88ab369e321d8e3a019d98b1674acc870de868f620b555a",
+      "duplicatePaths": [
+        "assets/floors/Tiles/square_tiles/Diffuse.png"
+      ],
+      "referenceCount": 3,
+      "references": [
+        {
+          "source": "firestore:assets/FL-00326",
+          "value": "assets/floors/tiles/FL-00326/diffuse.png"
+        },
+        {
+          "source": "firestore:assets/FL-00326",
+          "value": "assets/floors/tiles/FL-00326/diffuse.png"
+        },
+        {
+          "source": "firestore:assets/FL-00326",
+          "value": "assets/floors/tiles/FL-00326/diffuse.png"
+        }
+      ],
+      "replacementPath": null,
+      "status": "keep",
+      "reason": "This duplicate path is referenced; no reference migration is proposed in this cleanup."
+    },
+    {
+      "path": "assets/floors/tiles/FL-00426/diffuse.png",
+      "size": 27115185,
+      "contentType": "image/png",
+      "generation": "1792086865564365",
+      "md5Hash": "opvJmVsIs1+dsATMrF0WqQ==",
+      "crc32c": "nzg/+Q==",
+      "sha256": "80cb813199412195523caf0e9e41bf96cf7e8cdf9a9ae91307bb8633c823b9e3",
+      "duplicatePaths": [
+        "assets/floors/Tiles/terrazo_tiles/Diffuse.png"
+      ],
+      "referenceCount": 2,
+      "references": [
+        {
+          "source": "firestore:assets/FL-00426",
+          "value": "assets/floors/tiles/FL-00426/diffuse.png"
+        },
+        {
+          "source": "firestore:assets/FL-00426",
+          "value": "assets/floors/tiles/FL-00426/diffuse.png"
+        }
+      ],
+      "replacementPath": null,
+      "status": "keep",
+      "reason": "This duplicate path is referenced; no reference migration is proposed in this cleanup."
+    },
+    {
+      "path": "assets/floors/wood/FL-00126/diffuse.png",
+      "size": 17970,
+      "contentType": "image/png",
+      "generation": "1792086857791058",
+      "md5Hash": "NtNdBHeaJ2yeHFb60BTsyA==",
+      "crc32c": "gK6Ctw==",
+      "sha256": "433dfec970904f36b3a7269b1c65b99c71c5ba73defba9c335354df5ee763f9a",
+      "duplicatePaths": [
+        "assets/floor/wood/9pPtBuRt0sQZnCf6NeZY-diffuse-png-transparent-porcelain-tile-flooring-bathroom-floor-tiles-miscellaneous-texture-kitchen-thumbnail.png"
+      ],
+      "referenceCount": 1,
+      "references": [
+        {
+          "source": "firestore:assets/FL-00126",
+          "value": "assets/floors/wood/FL-00126/diffuse.png"
+        }
+      ],
+      "replacementPath": null,
+      "status": "keep",
+      "reason": "This duplicate path is referenced; no reference migration is proposed in this cleanup."
+    },
+    {
+      "path": "assets/floors/wood/FL-00526/diffuse.png",
+      "size": 20659527,
+      "contentType": "image/png",
+      "generation": "1792086866679537",
+      "md5Hash": "jGOB6VLkRn46kXnOQXqGUQ==",
+      "crc32c": "AErodw==",
+      "sha256": "f75a6b1308320e2357734c171c8935d7b3d2be483146587587b16113eaabdcac",
+      "duplicatePaths": [
+        "assets/floors/Wood/plank_flooring/Diffuse.png"
+      ],
+      "referenceCount": 2,
+      "references": [
+        {
+          "source": "firestore:assets/FL-00526",
+          "value": "assets/floors/wood/FL-00526/diffuse.png"
+        },
+        {
+          "source": "firestore:assets/FL-00526",
+          "value": "assets/floors/wood/FL-00526/diffuse.png"
+        }
+      ],
+      "replacementPath": null,
+      "status": "keep",
+      "reason": "This duplicate path is referenced; no reference migration is proposed in this cleanup."
+    },
+    {
+      "path": "assets/floors/wood/FL-00626/diffuse.png",
+      "size": 25432245,
+      "contentType": "image/png",
+      "generation": "1792086867811231",
+      "md5Hash": "ktt/4hdNO9Gzhjy2elqsyg==",
+      "crc32c": "xjqv/w==",
+      "sha256": "ba1a842a3d92ff937b677a124f6ec4c3597eba0b7c2a01c5218457039f429afa",
+      "duplicatePaths": [
+        "assets/floors/Wood/wooden_floor/Diffuse.png"
+      ],
+      "referenceCount": 2,
+      "references": [
+        {
+          "source": "firestore:assets/FL-00626",
+          "value": "assets/floors/wood/FL-00626/diffuse.png"
+        },
+        {
+          "source": "firestore:assets/FL-00626",
+          "value": "assets/floors/wood/FL-00626/diffuse.png"
+        }
+      ],
+      "replacementPath": null,
+      "status": "keep",
+      "reason": "This duplicate path is referenced; no reference migration is proposed in this cleanup."
+    },
+    {
+      "path": "assets/furniture/bedroom/Cabinet.glb",
+      "size": 5161440,
+      "contentType": "model/gltf-binary",
+      "generation": "1789730043014402",
+      "md5Hash": "QNUN7wVrLWdZROcdzKz46A==",
+      "crc32c": "JpDCfw==",
+      "sha256": "e1bd988a45dfba7aa68ea4208d73eae70b172127a8d7fba8190d8eae9b665369",
+      "duplicatePaths": [
+        "assets/furniture/bedroom/F-00726/model.glb"
+      ],
+      "referenceCount": 1,
+      "references": [
+        {
+          "source": "application-code",
+          "file": "server/src/seed-correct-furniture.js",
+          "line": 22
+        }
+      ],
+      "replacementPath": null,
+      "status": "manual-review",
+      "reason": "Referenced object is retained, but its path does not follow the requested target folder structure."
+    },
+    {
+      "path": "assets/furniture/bedroom/F-00726/model.glb",
+      "size": 5161440,
+      "contentType": "model/gltf-binary",
+      "generation": "1792086873694659",
+      "md5Hash": "QNUN7wVrLWdZROcdzKz46A==",
+      "crc32c": "JpDCfw==",
+      "sha256": "e1bd988a45dfba7aa68ea4208d73eae70b172127a8d7fba8190d8eae9b665369",
+      "duplicatePaths": [
+        "assets/furniture/bedroom/Cabinet.glb"
+      ],
+      "referenceCount": 1,
+      "references": [
+        {
+          "source": "firestore:assets/F-00726",
+          "value": "assets/furniture/bedroom/F-00726/model.glb"
+        }
+      ],
+      "replacementPath": null,
+      "status": "keep",
+      "reason": "This duplicate path is referenced; no reference migration is proposed in this cleanup."
+    },
+    {
+      "path": "assets/furniture/bedroom/F-01526/model.glb",
+      "size": 15284736,
+      "contentType": "application/octet-stream",
+      "generation": "1792086882969169",
+      "md5Hash": "qD9+Llk0IHi+2ZQmyrhPTg==",
+      "crc32c": "vf61gg==",
+      "sha256": "ee57630afd37194ce98ea4abf011ddf43b7f4621ddede09109203a12e8f4eed3",
+      "duplicatePaths": [
+        "assets/furniture/bedroom/l7aynDwSMh5MpQK9fx7c-model-Channel-Tufted-Camel-Bed_scaled_resized.glb"
+      ],
+      "referenceCount": 2,
+      "references": [
+        {
+          "source": "firestore:assets/F-01526",
+          "value": "assets/furniture/bedroom/F-01526/model.glb"
+        },
+        {
+          "source": "firestore:assets/F-01526",
+          "value": "assets/furniture/bedroom/F-01526/model.glb"
+        }
+      ],
+      "replacementPath": null,
+      "status": "keep",
+      "reason": "This duplicate path is referenced; no reference migration is proposed in this cleanup."
+    },
+    {
+      "path": "assets/furniture/bedroom/F-02026/model.glb",
+      "size": 22870548,
+      "contentType": "application/octet-stream",
+      "generation": "1792086890025421",
+      "md5Hash": "AueMhCgoMc/bGQ5zNDKJ1A==",
+      "crc32c": "jSz3OA==",
+      "sha256": "6cd332e9374468c819c1847320f7ef8733ae5d955661d3e7f1f1af796f333d93",
+      "duplicatePaths": [
+        "assets/furniture/bedroom/vi2bJxz7mkQzycxuRV53-model-Modern-Ash-Bed_resized.glb"
+      ],
+      "referenceCount": 2,
+      "references": [
+        {
+          "source": "firestore:assets/F-02026",
+          "value": "assets/furniture/bedroom/F-02026/model.glb"
+        },
+        {
+          "source": "firestore:assets/F-02026",
+          "value": "assets/furniture/bedroom/F-02026/model.glb"
+        }
+      ],
+      "replacementPath": null,
+      "status": "keep",
+      "reason": "This duplicate path is referenced; no reference migration is proposed in this cleanup."
+    },
+    {
+      "path": "assets/furniture/bedroom/l7aynDwSMh5MpQK9fx7c-model-Channel-Tufted-Camel-Bed_scaled_resized.glb",
+      "size": 15284736,
+      "contentType": "application/octet-stream",
+      "generation": "1791904673259910",
+      "md5Hash": "qD9+Llk0IHi+2ZQmyrhPTg==",
+      "crc32c": "vf61gg==",
+      "sha256": "ee57630afd37194ce98ea4abf011ddf43b7f4621ddede09109203a12e8f4eed3",
+      "duplicatePaths": [
+        "assets/furniture/bedroom/F-01526/model.glb"
+      ],
+      "referenceCount": 0,
+      "references": [],
+      "replacementPath": "assets/furniture/bedroom/F-01526/model.glb",
+      "status": "safe-to-delete",
+      "reason": "SHA-256 content matches a canonical replacement that remains referenced; no references to this path were found."
+    },
+    {
+      "path": "assets/furniture/bedroom/vi2bJxz7mkQzycxuRV53-model-Modern-Ash-Bed_resized.glb",
+      "size": 22870548,
+      "contentType": "application/octet-stream",
+      "generation": "1791904770049122",
+      "md5Hash": "AueMhCgoMc/bGQ5zNDKJ1A==",
+      "crc32c": "jSz3OA==",
+      "sha256": "6cd332e9374468c819c1847320f7ef8733ae5d955661d3e7f1f1af796f333d93",
+      "duplicatePaths": [
+        "assets/furniture/bedroom/F-02026/model.glb"
+      ],
+      "referenceCount": 0,
+      "references": [],
+      "replacementPath": "assets/furniture/bedroom/F-02026/model.glb",
+      "status": "safe-to-delete",
+      "reason": "SHA-256 content matches a canonical replacement that remains referenced; no references to this path were found."
+    },
+    {
+      "path": "assets/furniture/diningroom/1leXkoHmhslSxmZsagb7-model-Modern-Stainless-Steel-Refrigerator.glb",
+      "size": 18025560,
+      "contentType": "application/octet-stream",
+      "generation": "1791904371840852",
+      "md5Hash": "fUGMP5sxqtQuyOtTWpvV/A==",
+      "crc32c": "3CIQUw==",
+      "sha256": "f164d154a5885ad495847f5cd9e71dc1f843014774a93683e0ec99a42f1388a5",
+      "duplicatePaths": [
+        "assets/furniture/diningroom/F-00126/model.glb"
+      ],
+      "referenceCount": 0,
+      "references": [],
+      "replacementPath": "assets/furniture/diningroom/F-00126/model.glb",
+      "status": "safe-to-delete",
+      "reason": "SHA-256 content matches a canonical replacement that remains referenced; no references to this path were found."
+    },
+    {
+      "path": "assets/furniture/diningroom/F-00126/model.glb",
+      "size": 18025560,
+      "contentType": "application/octet-stream",
+      "generation": "1792086686639544",
+      "md5Hash": "fUGMP5sxqtQuyOtTWpvV/A==",
+      "crc32c": "3CIQUw==",
+      "sha256": "f164d154a5885ad495847f5cd9e71dc1f843014774a93683e0ec99a42f1388a5",
+      "duplicatePaths": [
+        "assets/furniture/diningroom/1leXkoHmhslSxmZsagb7-model-Modern-Stainless-Steel-Refrigerator.glb"
+      ],
+      "referenceCount": 2,
+      "references": [
+        {
+          "source": "firestore:assets/F-00126",
+          "value": "assets/furniture/diningroom/F-00126/model.glb"
+        },
+        {
+          "source": "firestore:assets/F-00126",
+          "value": "assets/furniture/diningroom/F-00126/model.glb"
+        }
+      ],
+      "replacementPath": null,
+      "status": "keep",
+      "reason": "This duplicate path is referenced; no reference migration is proposed in this cleanup."
+    },
+    {
+      "path": "assets/furniture/diningroom/F-00826/model.glb",
+      "size": 12219000,
+      "contentType": "model/gltf-binary",
+      "generation": "1792086874818448",
+      "md5Hash": "6cHd4dvVn+rNw2/8sLApIQ==",
+      "crc32c": "R0Ay3g==",
+      "sha256": "2d19cbdfbd7f220ab5183d103b8e38bf5b8a43b2d8b958b8154a0b5875c41eac",
+      "duplicatePaths": [
+        "assets/furniture/diningroom/Table.glb"
+      ],
+      "referenceCount": 1,
+      "references": [
+        {
+          "source": "firestore:assets/F-00826",
+          "value": "assets/furniture/diningroom/F-00826/model.glb"
+        }
+      ],
+      "replacementPath": null,
+      "status": "keep",
+      "reason": "This duplicate path is referenced; no reference migration is proposed in this cleanup."
+    },
+    {
+      "path": "assets/furniture/diningroom/F-02126/model.glb",
+      "size": 47615236,
+      "contentType": "application/octet-stream",
+      "generation": "1792086892507167",
+      "md5Hash": "QRcJIuGevHqG60CZK+BB7w==",
+      "crc32c": "kQI4SQ==",
+      "sha256": "6ff478794fcb15411dfaf5a05ad3efee6a119694455a0afe77e66173660db237",
+      "duplicatePaths": [
+        "assets/furniture/diningroom/x3hHPlyBgYWVUPB6TGTL-model-Ivory-Gold-Breakfast-Stool_resized.glb"
+      ],
+      "referenceCount": 2,
+      "references": [
+        {
+          "source": "firestore:assets/F-02126",
+          "value": "assets/furniture/diningroom/F-02126/model.glb"
+        },
+        {
+          "source": "firestore:assets/F-02126",
+          "value": "assets/furniture/diningroom/F-02126/model.glb"
+        }
+      ],
+      "replacementPath": null,
+      "status": "keep",
+      "reason": "This duplicate path is referenced; no reference migration is proposed in this cleanup."
+    },
+    {
+      "path": "assets/furniture/diningroom/F-02226/model.glb",
+      "size": 55674584,
+      "contentType": "application/octet-stream",
+      "generation": "1792086893881481",
+      "md5Hash": "KenJN/GOmX2oZ8ZKVOPFmQ==",
+      "crc32c": "X9Zs5Q==",
+      "sha256": "c866784a1c67ab12a16300be25733f9d548edc3f49daf11e786ff70c7fc845f8",
+      "duplicatePaths": [
+        "assets/furniture/diningroom/xytfdR9rejLmC6xcFlU7-model-Ivory-Marble-Center-Table_resized.glb"
+      ],
+      "referenceCount": 2,
+      "references": [
+        {
+          "source": "firestore:assets/F-02226",
+          "value": "assets/furniture/diningroom/F-02226/model.glb"
+        },
+        {
+          "source": "firestore:assets/F-02226",
+          "value": "assets/furniture/diningroom/F-02226/model.glb"
+        }
+      ],
+      "replacementPath": null,
+      "status": "keep",
+      "reason": "This duplicate path is referenced; no reference migration is proposed in this cleanup."
+    },
+    {
+      "path": "assets/furniture/diningroom/Table.glb",
+      "size": 12219000,
+      "contentType": "model/gltf-binary",
+      "generation": "1789730012293860",
+      "md5Hash": "6cHd4dvVn+rNw2/8sLApIQ==",
+      "crc32c": "R0Ay3g==",
+      "sha256": "2d19cbdfbd7f220ab5183d103b8e38bf5b8a43b2d8b958b8154a0b5875c41eac",
+      "duplicatePaths": [
+        "assets/furniture/diningroom/F-00826/model.glb"
+      ],
+      "referenceCount": 1,
+      "references": [
+        {
+          "source": "application-code",
+          "file": "server/src/seed-correct-furniture.js",
+          "line": 17
+        }
+      ],
+      "replacementPath": null,
+      "status": "manual-review",
+      "reason": "Referenced object is retained, but its path does not follow the requested target folder structure."
+    },
+    {
+      "path": "assets/furniture/diningroom/x3hHPlyBgYWVUPB6TGTL-model-Ivory-Gold-Breakfast-Stool_resized.glb",
+      "size": 47615236,
+      "contentType": "application/octet-stream",
+      "generation": "1791907511932899",
+      "md5Hash": "QRcJIuGevHqG60CZK+BB7w==",
+      "crc32c": "kQI4SQ==",
+      "sha256": "6ff478794fcb15411dfaf5a05ad3efee6a119694455a0afe77e66173660db237",
+      "duplicatePaths": [
+        "assets/furniture/diningroom/F-02126/model.glb"
+      ],
+      "referenceCount": 0,
+      "references": [],
+      "replacementPath": "assets/furniture/diningroom/F-02126/model.glb",
+      "status": "safe-to-delete",
+      "reason": "SHA-256 content matches a canonical replacement that remains referenced; no references to this path were found."
+    },
+    {
+      "path": "assets/furniture/diningroom/xytfdR9rejLmC6xcFlU7-model-Ivory-Marble-Center-Table_resized.glb",
+      "size": 55674584,
+      "contentType": "application/octet-stream",
+      "generation": "1791907414044649",
+      "md5Hash": "KenJN/GOmX2oZ8ZKVOPFmQ==",
+      "crc32c": "X9Zs5Q==",
+      "sha256": "c866784a1c67ab12a16300be25733f9d548edc3f49daf11e786ff70c7fc845f8",
+      "duplicatePaths": [
+        "assets/furniture/diningroom/F-02226/model.glb"
+      ],
+      "referenceCount": 0,
+      "references": [],
+      "replacementPath": "assets/furniture/diningroom/F-02226/model.glb",
+      "status": "safe-to-delete",
+      "reason": "SHA-256 content matches a canonical replacement that remains referenced; no references to this path were found."
+    },
+    {
+      "path": "assets/furniture/doors/F-00326/model.glb",
+      "size": 12186500,
+      "contentType": "model/gltf-binary",
+      "generation": "1792086868914451",
+      "md5Hash": "DFXWR3Y5rto3l85WzGaiwA==",
+      "crc32c": "GLX8Dw==",
+      "sha256": "187901d77eb5a6d16e2138ee507ada3d9f9956a316e0bf439efd09e729f97d87",
+      "duplicatePaths": [
+        "assets/openings/doors/single-door.glb"
+      ],
+      "referenceCount": 2,
+      "references": [
+        {
+          "source": "firestore:assets/F-00326",
+          "value": "assets/furniture/doors/F-00326/model.glb"
+        },
+        {
+          "source": "firestore:assets/F-00326",
+          "value": "assets/furniture/doors/F-00326/model.glb"
+        }
+      ],
+      "replacementPath": null,
+      "status": "keep",
+      "reason": "This duplicate path is referenced; no reference migration is proposed in this cleanup."
+    },
+    {
+      "path": "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+      "size": 31515020,
+      "contentType": "application/octet-stream",
+      "generation": "1791557624278300",
+      "md5Hash": "2LLN+vtz7qehRrpwTnQ4QA==",
+      "crc32c": "/1zkRQ==",
+      "sha256": "19662a0c145e5770db1f106df9b322b04ae625bcbebc90073ecea69121aa6089",
+      "duplicatePaths": [
+        "assets/furniture/livingroom/F-00226/model.glb"
+      ],
+      "referenceCount": 0,
+      "references": [],
+      "replacementPath": "assets/furniture/livingroom/F-00226/model.glb",
+      "status": "safe-to-delete",
+      "reason": "SHA-256 content matches a canonical replacement that remains referenced; no references to this path were found."
+    },
+    {
+      "path": "assets/furniture/livingroom/F-00226/model.glb",
+      "size": 31515020,
+      "contentType": "application/octet-stream",
+      "generation": "1792086855090071",
+      "md5Hash": "2LLN+vtz7qehRrpwTnQ4QA==",
+      "crc32c": "/1zkRQ==",
+      "sha256": "19662a0c145e5770db1f106df9b322b04ae625bcbebc90073ecea69121aa6089",
+      "duplicatePaths": [
+        "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb"
+      ],
+      "referenceCount": 2,
+      "references": [
+        {
+          "source": "firestore:assets/F-00226",
+          "value": "assets/furniture/livingroom/F-00226/model.glb"
+        },
+        {
+          "source": "firestore:assets/F-00226",
+          "value": "assets/furniture/livingroom/F-00226/model.glb"
+        }
+      ],
+      "replacementPath": null,
+      "status": "keep",
+      "reason": "This duplicate path is referenced; no reference migration is proposed in this cleanup."
+    },
+    {
+      "path": "assets/furniture/livingroom/F-00426/model.glb",
+      "size": 1116556,
+      "contentType": "model/gltf-binary",
+      "generation": "1792086870010752",
+      "md5Hash": "YNlv70CmXGPyhUpvLVBfFw==",
+      "crc32c": "ubyCOw==",
+      "sha256": "9d7758bbf5eb65916c7824b2351741d3650bb65bb22d57c1378638f735a23d86",
+      "duplicatePaths": [
+        "assets/furniture/livingroom/TV.glb"
+      ],
+      "referenceCount": 2,
+      "references": [
+        {
+          "source": "firestore:assets/F-00426",
+          "value": "assets/furniture/livingroom/F-00426/model.glb"
+        },
+        {
+          "source": "firestore:assets/F-00426",
+          "value": "assets/furniture/livingroom/F-00426/model.glb"
+        }
+      ],
+      "replacementPath": null,
+      "status": "keep",
+      "reason": "This duplicate path is referenced; no reference migration is proposed in this cleanup."
+    },
+    {
+      "path": "assets/furniture/livingroom/F-00526/model.glb",
+      "size": 1596392,
+      "contentType": "application/octet-stream",
+      "generation": "1792086871132659",
+      "md5Hash": "d6paLSsUFaZEXmIkkJe0nQ==",
+      "crc32c": "Cjs+qw==",
+      "sha256": "479c042fe0a74ac876f21b9e2e74c99b18173f12b6aac15427d9fa8f711a689c",
+      "duplicatePaths": [
+        "assets/furniture/livingroom/steel-frame-shelves-01.glb"
+      ],
+      "referenceCount": 1,
+      "references": [
+        {
+          "source": "firestore:assets/F-00526",
+          "value": "assets/furniture/livingroom/F-00526/model.glb"
+        }
+      ],
+      "replacementPath": null,
+      "status": "keep",
+      "reason": "This duplicate path is referenced; no reference migration is proposed in this cleanup."
+    },
+    {
+      "path": "assets/furniture/livingroom/F-00926/model.glb",
+      "size": 44606820,
+      "contentType": "application/octet-stream",
+      "generation": "1792086876129675",
+      "md5Hash": "1tOPv4A87hvqYSlRYibByw==",
+      "crc32c": "vvNRpg==",
+      "sha256": "d59fdad5352d923cd5193f95aa97e150541e9a602ccd2e4bd5027de60589f1e2",
+      "duplicatePaths": [
+        "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb"
+      ],
+      "referenceCount": 2,
+      "references": [
+        {
+          "source": "firestore:assets/F-00926",
+          "value": "assets/furniture/livingroom/F-00926/model.glb"
+        },
+        {
+          "source": "firestore:assets/F-00926",
+          "value": "assets/furniture/livingroom/F-00926/model.glb"
+        }
+      ],
+      "replacementPath": null,
+      "status": "keep",
+      "reason": "This duplicate path is referenced; no reference migration is proposed in this cleanup."
+    },
+    {
+      "path": "assets/furniture/livingroom/F-01126/model.glb",
+      "size": 35986292,
+      "contentType": "application/octet-stream",
+      "generation": "1792086878376030",
+      "md5Hash": "68RfAlliTyhF84M5P7iB2A==",
+      "crc32c": "yC2YCw==",
+      "sha256": "ec60bfac5ac58b53ee33227ceaac1ccecb7f3b51f051a33c0c42e8d073e2afa8",
+      "duplicatePaths": [
+        "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb"
+      ],
+      "referenceCount": 2,
+      "references": [
+        {
+          "source": "firestore:assets/F-01126",
+          "value": "assets/furniture/livingroom/F-01126/model.glb"
+        },
+        {
+          "source": "firestore:assets/F-01126",
+          "value": "assets/furniture/livingroom/F-01126/model.glb"
+        }
+      ],
+      "replacementPath": null,
+      "status": "keep",
+      "reason": "This duplicate path is referenced; no reference migration is proposed in this cleanup."
+    },
+    {
+      "path": "assets/furniture/livingroom/F-01226/model.glb",
+      "size": 27213144,
+      "contentType": "application/octet-stream",
+      "generation": "1792086879492194",
+      "md5Hash": "HMVuzXAvCw3I2Ecz4HAlEw==",
+      "crc32c": "zwYMAg==",
+      "sha256": "237f2d751cdb396562b4cf4a9bc6a520e742373ea79636b3e8a64f189b64e11a",
+      "duplicatePaths": [
+        "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb"
+      ],
+      "referenceCount": 2,
+      "references": [
+        {
+          "source": "firestore:assets/F-01226",
+          "value": "assets/furniture/livingroom/F-01226/model.glb"
+        },
+        {
+          "source": "firestore:assets/F-01226",
+          "value": "assets/furniture/livingroom/F-01226/model.glb"
+        }
+      ],
+      "replacementPath": null,
+      "status": "keep",
+      "reason": "This duplicate path is referenced; no reference migration is proposed in this cleanup."
+    },
+    {
+      "path": "assets/furniture/livingroom/F-01326/model.glb",
+      "size": 50035900,
+      "contentType": "application/octet-stream",
+      "generation": "1792086880730917",
+      "md5Hash": "2jBoBxrF94ZexIrOlF1/cQ==",
+      "crc32c": "xlvTVQ==",
+      "sha256": "36b8d6ce65611c5254b2b9ead17222104da212cde34a1c822a0663fae3925db4",
+      "duplicatePaths": [
+        "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb"
+      ],
+      "referenceCount": 2,
+      "references": [
+        {
+          "source": "firestore:assets/F-01326",
+          "value": "assets/furniture/livingroom/F-01326/model.glb"
+        },
+        {
+          "source": "firestore:assets/F-01326",
+          "value": "assets/furniture/livingroom/F-01326/model.glb"
+        }
+      ],
+      "replacementPath": null,
+      "status": "keep",
+      "reason": "This duplicate path is referenced; no reference migration is proposed in this cleanup."
+    },
+    {
+      "path": "assets/furniture/livingroom/F-01426/model.glb",
+      "size": 39703028,
+      "contentType": "application/octet-stream",
+      "generation": "1792086881849629",
+      "md5Hash": "3fYFRLgfH4VZY8R9PKKYQw==",
+      "crc32c": "ywx3tQ==",
+      "sha256": "b88b67e21f5a210359d9cc45a2c0643ad15b255f4688678518c9b07791ea0c6a",
+      "duplicatePaths": [
+        "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb"
+      ],
+      "referenceCount": 2,
+      "references": [
+        {
+          "source": "firestore:assets/F-01426",
+          "value": "assets/furniture/livingroom/F-01426/model.glb"
+        },
+        {
+          "source": "firestore:assets/F-01426",
+          "value": "assets/furniture/livingroom/F-01426/model.glb"
+        }
+      ],
+      "replacementPath": null,
+      "status": "keep",
+      "reason": "This duplicate path is referenced; no reference migration is proposed in this cleanup."
+    },
+    {
+      "path": "assets/furniture/livingroom/F-01626/model.glb",
+      "size": 45749440,
+      "contentType": "application/octet-stream",
+      "generation": "1792086884237097",
+      "md5Hash": "3RnHfEyIDEl6Pzj+70Dqog==",
+      "crc32c": "8+JRfQ==",
+      "sha256": "4a7a22cc60d3c55238399880f7313acce3a0b65528076a384edb0ceb65d060dd",
+      "duplicatePaths": [
+        "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb"
+      ],
+      "referenceCount": 2,
+      "references": [
+        {
+          "source": "firestore:assets/F-01626",
+          "value": "assets/furniture/livingroom/F-01626/model.glb"
+        },
+        {
+          "source": "firestore:assets/F-01626",
+          "value": "assets/furniture/livingroom/F-01626/model.glb"
+        }
+      ],
+      "replacementPath": null,
+      "status": "keep",
+      "reason": "This duplicate path is referenced; no reference migration is proposed in this cleanup."
+    },
+    {
+      "path": "assets/furniture/livingroom/F-01726/model.glb",
+      "size": 46000932,
+      "contentType": "application/octet-stream",
+      "generation": "1792086885355060",
+      "md5Hash": "QjGea7Vth9I8UDRcPQq5Ew==",
+      "crc32c": "8e2tmg==",
+      "sha256": "57985379d63116ab63c038d157ccb0ceedd636050b3cbcf602c60c22111bb6fb",
+      "duplicatePaths": [
+        "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb"
+      ],
+      "referenceCount": 2,
+      "references": [
+        {
+          "source": "firestore:assets/F-01726",
+          "value": "assets/furniture/livingroom/F-01726/model.glb"
+        },
+        {
+          "source": "firestore:assets/F-01726",
+          "value": "assets/furniture/livingroom/F-01726/model.glb"
+        }
+      ],
+      "replacementPath": null,
+      "status": "keep",
+      "reason": "This duplicate path is referenced; no reference migration is proposed in this cleanup."
+    },
+    {
+      "path": "assets/furniture/livingroom/F-01826/model.glb",
+      "size": 42128656,
+      "contentType": "application/octet-stream",
+      "generation": "1792086886671912",
+      "md5Hash": "vzA7R+ZqyOO2gYhN/mdJ0w==",
+      "crc32c": "v39x3w==",
+      "sha256": "ab75032fc6cc07a9bb9a53d56d0f3d0b372a726a2c9c8a0d934fd9137054aee9",
+      "duplicatePaths": [
+        "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb"
+      ],
+      "referenceCount": 2,
+      "references": [
+        {
+          "source": "firestore:assets/F-01826",
+          "value": "assets/furniture/livingroom/F-01826/model.glb"
+        },
+        {
+          "source": "firestore:assets/F-01826",
+          "value": "assets/furniture/livingroom/F-01826/model.glb"
+        }
+      ],
+      "replacementPath": null,
+      "status": "keep",
+      "reason": "This duplicate path is referenced; no reference migration is proposed in this cleanup."
+    },
+    {
+      "path": "assets/furniture/livingroom/F-01926/model.glb",
+      "size": 12843064,
+      "contentType": "application/octet-stream",
+      "generation": "1792086887794290",
+      "md5Hash": "uUIITpSWqNPIzW2GsQxZUw==",
+      "crc32c": "53j5ZQ==",
+      "sha256": "fdb895a566db1a657827b501e7c7ca21465b88fbb372950286e0b88a5d3b8dd6",
+      "duplicatePaths": [
+        "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb"
+      ],
+      "referenceCount": 2,
+      "references": [
+        {
+          "source": "firestore:assets/F-01926",
+          "value": "assets/furniture/livingroom/F-01926/model.glb"
+        },
+        {
+          "source": "firestore:assets/F-01926",
+          "value": "assets/furniture/livingroom/F-01926/model.glb"
+        }
+      ],
+      "replacementPath": null,
+      "status": "keep",
+      "reason": "This duplicate path is referenced; no reference migration is proposed in this cleanup."
+    },
+    {
+      "path": "assets/furniture/livingroom/F-02426/model.glb",
+      "size": 34482280,
+      "contentType": "application/octet-stream",
+      "generation": "1792086896041162",
+      "md5Hash": "ir3ocZYC+7yPcohXszFisw==",
+      "crc32c": "J5+FtQ==",
+      "sha256": "c47560adb4be42043b72edfe9d7e00a2cd9c590bcd4b18857a0ff80674833673",
+      "duplicatePaths": [
+        "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb",
+        "assets/furniture/office/F-02326/model.glb",
+        "assets/furniture/office/yoAt8ckUEXxmjtmB70p3-model-Saddlewood-Executive-Chair.glb"
+      ],
+      "referenceCount": 2,
+      "references": [
+        {
+          "source": "firestore:assets/F-02426",
+          "value": "assets/furniture/livingroom/F-02426/model.glb"
+        },
+        {
+          "source": "firestore:assets/F-02426",
+          "value": "assets/furniture/livingroom/F-02426/model.glb"
+        }
+      ],
+      "replacementPath": null,
+      "status": "keep",
+      "reason": "This duplicate path is referenced; no reference migration is proposed in this cleanup."
+    },
+    {
+      "path": "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+      "size": 35986292,
+      "contentType": "application/octet-stream",
+      "generation": "1791908019155590",
+      "md5Hash": "68RfAlliTyhF84M5P7iB2A==",
+      "crc32c": "yC2YCw==",
+      "sha256": "ec60bfac5ac58b53ee33227ceaac1ccecb7f3b51f051a33c0c42e8d073e2afa8",
+      "duplicatePaths": [
+        "assets/furniture/livingroom/F-01126/model.glb"
+      ],
+      "referenceCount": 0,
+      "references": [],
+      "replacementPath": "assets/furniture/livingroom/F-01126/model.glb",
+      "status": "safe-to-delete",
+      "reason": "SHA-256 content matches a canonical replacement that remains referenced; no references to this path were found."
+    },
+    {
+      "path": "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+      "size": 27213144,
+      "contentType": "application/octet-stream",
+      "generation": "1791557386993831",
+      "md5Hash": "HMVuzXAvCw3I2Ecz4HAlEw==",
+      "crc32c": "zwYMAg==",
+      "sha256": "237f2d751cdb396562b4cf4a9bc6a520e742373ea79636b3e8a64f189b64e11a",
+      "duplicatePaths": [
+        "assets/furniture/livingroom/F-01226/model.glb"
+      ],
+      "referenceCount": 0,
+      "references": [],
+      "replacementPath": "assets/furniture/livingroom/F-01226/model.glb",
+      "status": "safe-to-delete",
+      "reason": "SHA-256 content matches a canonical replacement that remains referenced; no references to this path were found."
+    },
+    {
+      "path": "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+      "size": 50035900,
+      "contentType": "application/octet-stream",
+      "generation": "1791908089417316",
+      "md5Hash": "2jBoBxrF94ZexIrOlF1/cQ==",
+      "crc32c": "xlvTVQ==",
+      "sha256": "36b8d6ce65611c5254b2b9ead17222104da212cde34a1c822a0663fae3925db4",
+      "duplicatePaths": [
+        "assets/furniture/livingroom/F-01326/model.glb"
+      ],
+      "referenceCount": 0,
+      "references": [],
+      "replacementPath": "assets/furniture/livingroom/F-01326/model.glb",
+      "status": "safe-to-delete",
+      "reason": "SHA-256 content matches a canonical replacement that remains referenced; no references to this path were found."
+    },
+    {
+      "path": "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+      "size": 46000932,
+      "contentType": "application/octet-stream",
+      "generation": "1791907923934027",
+      "md5Hash": "QjGea7Vth9I8UDRcPQq5Ew==",
+      "crc32c": "8e2tmg==",
+      "sha256": "57985379d63116ab63c038d157ccb0ceedd636050b3cbcf602c60c22111bb6fb",
+      "duplicatePaths": [
+        "assets/furniture/livingroom/F-01726/model.glb"
+      ],
+      "referenceCount": 0,
+      "references": [],
+      "replacementPath": "assets/furniture/livingroom/F-01726/model.glb",
+      "status": "safe-to-delete",
+      "reason": "SHA-256 content matches a canonical replacement that remains referenced; no references to this path were found."
+    },
+    {
+      "path": "assets/furniture/livingroom/TV.glb",
+      "size": 1116556,
+      "contentType": "model/gltf-binary",
+      "generation": "1789730039004593",
+      "md5Hash": "YNlv70CmXGPyhUpvLVBfFw==",
+      "crc32c": "ubyCOw==",
+      "sha256": "9d7758bbf5eb65916c7824b2351741d3650bb65bb22d57c1378638f735a23d86",
+      "duplicatePaths": [
+        "assets/furniture/livingroom/F-00426/model.glb"
+      ],
+      "referenceCount": 2,
+      "references": [
+        {
+          "source": "application-code",
+          "file": "client/src/engine/furniture/FirebaseFurnitureLibrary.ts",
+          "line": 44
+        },
+        {
+          "source": "application-code",
+          "file": "server/src/seed-correct-furniture.js",
+          "line": 27
+        }
+      ],
+      "replacementPath": null,
+      "status": "manual-review",
+      "reason": "Referenced object is retained, but its path does not follow the requested target folder structure."
+    },
+    {
+      "path": "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+      "size": 44606820,
+      "contentType": "application/octet-stream",
+      "generation": "1791083563705036",
+      "md5Hash": "1tOPv4A87hvqYSlRYibByw==",
+      "crc32c": "vvNRpg==",
+      "sha256": "d59fdad5352d923cd5193f95aa97e150541e9a602ccd2e4bd5027de60589f1e2",
+      "duplicatePaths": [
+        "assets/furniture/livingroom/F-00926/model.glb"
+      ],
+      "referenceCount": 0,
+      "references": [],
+      "replacementPath": "assets/furniture/livingroom/F-00926/model.glb",
+      "status": "safe-to-delete",
+      "reason": "SHA-256 content matches a canonical replacement that remains referenced; no references to this path were found."
+    },
+    {
+      "path": "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+      "size": 39703028,
+      "contentType": "application/octet-stream",
+      "generation": "1791907690631538",
+      "md5Hash": "3fYFRLgfH4VZY8R9PKKYQw==",
+      "crc32c": "ywx3tQ==",
+      "sha256": "b88b67e21f5a210359d9cc45a2c0643ad15b255f4688678518c9b07791ea0c6a",
+      "duplicatePaths": [
+        "assets/furniture/livingroom/F-01426/model.glb"
+      ],
+      "referenceCount": 0,
+      "references": [],
+      "replacementPath": "assets/furniture/livingroom/F-01426/model.glb",
+      "status": "safe-to-delete",
+      "reason": "SHA-256 content matches a canonical replacement that remains referenced; no references to this path were found."
+    },
+    {
+      "path": "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+      "size": 45749440,
+      "contentType": "application/octet-stream",
+      "generation": "1791558215335972",
+      "md5Hash": "3RnHfEyIDEl6Pzj+70Dqog==",
+      "crc32c": "8+JRfQ==",
+      "sha256": "4a7a22cc60d3c55238399880f7313acce3a0b65528076a384edb0ceb65d060dd",
+      "duplicatePaths": [
+        "assets/furniture/livingroom/F-01626/model.glb"
+      ],
+      "referenceCount": 0,
+      "references": [],
+      "replacementPath": "assets/furniture/livingroom/F-01626/model.glb",
+      "status": "safe-to-delete",
+      "reason": "SHA-256 content matches a canonical replacement that remains referenced; no references to this path were found."
+    },
+    {
+      "path": "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+      "size": 42128656,
+      "contentType": "application/octet-stream",
+      "generation": "1791907587889968",
+      "md5Hash": "vzA7R+ZqyOO2gYhN/mdJ0w==",
+      "crc32c": "v39x3w==",
+      "sha256": "ab75032fc6cc07a9bb9a53d56d0f3d0b372a726a2c9c8a0d934fd9137054aee9",
+      "duplicatePaths": [
+        "assets/furniture/livingroom/F-01826/model.glb"
+      ],
+      "referenceCount": 0,
+      "references": [],
+      "replacementPath": "assets/furniture/livingroom/F-01826/model.glb",
+      "status": "safe-to-delete",
+      "reason": "SHA-256 content matches a canonical replacement that remains referenced; no references to this path were found."
+    },
+    {
+      "path": "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+      "size": 12843064,
+      "contentType": "application/octet-stream",
+      "generation": "1791907978665374",
+      "md5Hash": "uUIITpSWqNPIzW2GsQxZUw==",
+      "crc32c": "53j5ZQ==",
+      "sha256": "fdb895a566db1a657827b501e7c7ca21465b88fbb372950286e0b88a5d3b8dd6",
+      "duplicatePaths": [
+        "assets/furniture/livingroom/F-01926/model.glb"
+      ],
+      "referenceCount": 0,
+      "references": [],
+      "replacementPath": "assets/furniture/livingroom/F-01926/model.glb",
+      "status": "safe-to-delete",
+      "reason": "SHA-256 content matches a canonical replacement that remains referenced; no references to this path were found."
+    },
+    {
+      "path": "assets/furniture/livingroom/steel-frame-shelves-01.glb",
+      "size": 1596392,
+      "contentType": "application/octet-stream",
+      "generation": "1790082762917656",
+      "md5Hash": "d6paLSsUFaZEXmIkkJe0nQ==",
+      "crc32c": "Cjs+qw==",
+      "sha256": "479c042fe0a74ac876f21b9e2e74c99b18173f12b6aac15427d9fa8f711a689c",
+      "duplicatePaths": [
+        "assets/furniture/livingroom/F-00526/model.glb"
+      ],
+      "referenceCount": 0,
+      "references": [],
+      "replacementPath": "assets/furniture/livingroom/F-00526/model.glb",
+      "status": "safe-to-delete",
+      "reason": "SHA-256 content matches a canonical replacement that remains referenced; no references to this path were found."
+    },
+    {
+      "path": "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb",
+      "size": 34482280,
+      "contentType": "application/octet-stream",
+      "generation": "1791908355190757",
+      "md5Hash": "ir3ocZYC+7yPcohXszFisw==",
+      "crc32c": "J5+FtQ==",
+      "sha256": "c47560adb4be42043b72edfe9d7e00a2cd9c590bcd4b18857a0ff80674833673",
+      "duplicatePaths": [
+        "assets/furniture/livingroom/F-02426/model.glb",
+        "assets/furniture/office/F-02326/model.glb",
+        "assets/furniture/office/yoAt8ckUEXxmjtmB70p3-model-Saddlewood-Executive-Chair.glb"
+      ],
+      "referenceCount": 0,
+      "references": [],
+      "replacementPath": "assets/furniture/livingroom/F-02426/model.glb",
+      "status": "safe-to-delete",
+      "reason": "SHA-256 content matches a canonical replacement that remains referenced; no references to this path were found."
+    },
+    {
+      "path": "assets/furniture/office/F-01026/model.glb",
+      "size": 25427900,
+      "contentType": "application/octet-stream",
+      "generation": "1792086877222839",
+      "md5Hash": "c6reOmTWy2B0Q2xW+P8xoQ==",
+      "crc32c": "jucF/w==",
+      "sha256": "02cd7d882f7fefed15ba0f4e18eb9cab405ded2f2c6d3dd5271427d9c4f9656e",
+      "duplicatePaths": [
+        "assets/furniture/office/gQQOYRG9Cce28WquJ5B0-model-Obsidian-Executive-Chair.glb"
+      ],
+      "referenceCount": 2,
+      "references": [
+        {
+          "source": "firestore:assets/F-01026",
+          "value": "assets/furniture/office/F-01026/model.glb"
+        },
+        {
+          "source": "firestore:assets/F-01026",
+          "value": "assets/furniture/office/F-01026/model.glb"
+        }
+      ],
+      "replacementPath": null,
+      "status": "keep",
+      "reason": "This duplicate path is referenced; no reference migration is proposed in this cleanup."
+    },
+    {
+      "path": "assets/furniture/office/F-02326/model.glb",
+      "size": 34482280,
+      "contentType": "application/octet-stream",
+      "generation": "1792086894929915",
+      "md5Hash": "ir3ocZYC+7yPcohXszFisw==",
+      "crc32c": "J5+FtQ==",
+      "sha256": "c47560adb4be42043b72edfe9d7e00a2cd9c590bcd4b18857a0ff80674833673",
+      "duplicatePaths": [
+        "assets/furniture/livingroom/F-02426/model.glb",
+        "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb",
+        "assets/furniture/office/yoAt8ckUEXxmjtmB70p3-model-Saddlewood-Executive-Chair.glb"
+      ],
+      "referenceCount": 2,
+      "references": [
+        {
+          "source": "firestore:assets/F-02326",
+          "value": "assets/furniture/office/F-02326/model.glb"
+        },
+        {
+          "source": "firestore:assets/F-02326",
+          "value": "assets/furniture/office/F-02326/model.glb"
+        }
+      ],
+      "replacementPath": null,
+      "status": "keep",
+      "reason": "This duplicate path is referenced; no reference migration is proposed in this cleanup."
+    },
+    {
+      "path": "assets/furniture/office/gQQOYRG9Cce28WquJ5B0-model-Obsidian-Executive-Chair.glb",
+      "size": 25427900,
+      "contentType": "application/octet-stream",
+      "generation": "1791908308529489",
+      "md5Hash": "c6reOmTWy2B0Q2xW+P8xoQ==",
+      "crc32c": "jucF/w==",
+      "sha256": "02cd7d882f7fefed15ba0f4e18eb9cab405ded2f2c6d3dd5271427d9c4f9656e",
+      "duplicatePaths": [
+        "assets/furniture/office/F-01026/model.glb"
+      ],
+      "referenceCount": 0,
+      "references": [],
+      "replacementPath": "assets/furniture/office/F-01026/model.glb",
+      "status": "safe-to-delete",
+      "reason": "SHA-256 content matches a canonical replacement that remains referenced; no references to this path were found."
+    },
+    {
+      "path": "assets/furniture/office/yoAt8ckUEXxmjtmB70p3-model-Saddlewood-Executive-Chair.glb",
+      "size": 34482280,
+      "contentType": "application/octet-stream",
+      "generation": "1791908459970372",
+      "md5Hash": "ir3ocZYC+7yPcohXszFisw==",
+      "crc32c": "J5+FtQ==",
+      "sha256": "c47560adb4be42043b72edfe9d7e00a2cd9c590bcd4b18857a0ff80674833673",
+      "duplicatePaths": [
+        "assets/furniture/livingroom/F-02426/model.glb",
+        "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb",
+        "assets/furniture/office/F-02326/model.glb"
+      ],
+      "referenceCount": 0,
+      "references": [],
+      "replacementPath": "assets/furniture/livingroom/F-02426/model.glb",
+      "status": "safe-to-delete",
+      "reason": "SHA-256 content matches a canonical replacement that remains referenced; no references to this path were found."
+    },
+    {
+      "path": "assets/furniture/windows/F-00626/model.glb",
+      "size": 1606112,
+      "contentType": "model/gltf-binary",
+      "generation": "1792086872354688",
+      "md5Hash": "rnNEQABg8zAMUB5UMoJeMw==",
+      "crc32c": "NoYCtA==",
+      "sha256": "8885796f9dadc2c58bcbda471dfc14819b5524d17bd91b2b1456e43f6b464443",
+      "duplicatePaths": [
+        "assets/openings/windows/Slim_Intersection_i.glb"
+      ],
+      "referenceCount": 2,
+      "references": [
+        {
+          "source": "firestore:assets/F-00626",
+          "value": "assets/furniture/windows/F-00626/model.glb"
+        },
+        {
+          "source": "firestore:assets/F-00626",
+          "value": "assets/furniture/windows/F-00626/model.glb"
+        }
+      ],
+      "replacementPath": null,
+      "status": "keep",
+      "reason": "This duplicate path is referenced; no reference migration is proposed in this cleanup."
+    },
+    {
+      "path": "assets/openings/doors/single-door.glb",
+      "size": 12186500,
+      "contentType": "model/gltf-binary",
+      "generation": "1789730201300288",
+      "md5Hash": "DFXWR3Y5rto3l85WzGaiwA==",
+      "crc32c": "GLX8Dw==",
+      "sha256": "187901d77eb5a6d16e2138ee507ada3d9f9956a316e0bf439efd09e729f97d87",
+      "duplicatePaths": [
+        "assets/furniture/doors/F-00326/model.glb"
+      ],
+      "referenceCount": 1,
+      "references": [
+        {
+          "source": "application-code",
+          "file": "server/src/seed-correct-furniture.js",
+          "line": 12
+        }
+      ],
+      "replacementPath": null,
+      "status": "manual-review",
+      "reason": "Referenced object is retained, but its path does not follow the requested target folder structure."
+    },
+    {
+      "path": "assets/openings/windows/Slim_Intersection_i.glb",
+      "size": 1606112,
+      "contentType": "model/gltf-binary",
+      "generation": "1789730208441666",
+      "md5Hash": "rnNEQABg8zAMUB5UMoJeMw==",
+      "crc32c": "NoYCtA==",
+      "sha256": "8885796f9dadc2c58bcbda471dfc14819b5524d17bd91b2b1456e43f6b464443",
+      "duplicatePaths": [
+        "assets/furniture/windows/F-00626/model.glb"
+      ],
+      "referenceCount": 1,
+      "references": [
+        {
+          "source": "application-code",
+          "file": "server/src/seed-correct-furniture.js",
+          "line": 7
+        }
+      ],
+      "replacementPath": null,
+      "status": "manual-review",
+      "reason": "Referenced object is retained, but its path does not follow the requested target folder structure."
+    },
+    {
+      "path": "assets/wall/tile/vlljo8HQum9D2GBE4oWd-diffuse-wallpaperflare-com_wallpaper.jpg",
+      "size": 4265398,
+      "contentType": "image/jpeg",
+      "generation": "1791083665057268",
+      "md5Hash": "yKzdpPFHS4nzrMvUN/3uqA==",
+      "crc32c": "0eCCbA==",
+      "sha256": "b5da32a2d2994fc59a7f1711b0a501520e9a4d6200c5b8f8df9d5bb357403903",
+      "duplicatePaths": [
+        "assets/walls/tile/W-01326/diffuse.jpg"
+      ],
+      "referenceCount": 0,
+      "references": [],
+      "replacementPath": "assets/walls/tile/W-01326/diffuse.jpg",
+      "status": "safe-to-delete",
+      "reason": "SHA-256 content matches a canonical replacement that remains referenced; no references to this path were found."
+    },
+    {
+      "path": "assets/walls/tile/W-01326/diffuse.jpg",
+      "size": 4265398,
+      "contentType": "image/jpeg",
+      "generation": "1792086891306164",
+      "md5Hash": "yKzdpPFHS4nzrMvUN/3uqA==",
+      "crc32c": "0eCCbA==",
+      "sha256": "b5da32a2d2994fc59a7f1711b0a501520e9a4d6200c5b8f8df9d5bb357403903",
+      "duplicatePaths": [
+        "assets/wall/tile/vlljo8HQum9D2GBE4oWd-diffuse-wallpaperflare-com_wallpaper.jpg"
+      ],
+      "referenceCount": 2,
+      "references": [
+        {
+          "source": "firestore:assets/W-01326",
+          "value": "assets/walls/tile/W-01326/diffuse.jpg"
+        },
+        {
+          "source": "firestore:assets/W-01326",
+          "value": "assets/walls/tile/W-01326/diffuse.jpg"
+        }
+      ],
+      "replacementPath": null,
+      "status": "keep",
+      "reason": "This duplicate path is referenced; no reference migration is proposed in this cleanup."
+    }
+  ],
+  "scanErrors": [],
+  "deletionLog": [
+    {
+      "path": "assets/floor/tile/SreeI98A0JN3AJjsb3UN-diffuse-black-stones-tiled-floor.jpg",
+      "generation": "1791900892435294",
+      "sha256": "623d0d2a6ea71b0ad014f7706627633373bc0179b4d63662abd35b2a9d787335",
+      "deletedAt": "2026-10-15T18:46:00.892Z",
+      "status": "deleted",
+      "error": null
+    },
+    {
+      "path": "assets/floor/wood/9pPtBuRt0sQZnCf6NeZY-diffuse-png-transparent-porcelain-tile-flooring-bathroom-floor-tiles-miscellaneous-texture-kitchen-thumbnail.png",
+      "generation": "1791901646884616",
+      "sha256": "433dfec970904f36b3a7269b1c65b99c71c5ba73defba9c335354df5ee763f9a",
+      "deletedAt": "2026-10-15T18:46:01.267Z",
+      "status": "deleted",
+      "error": null
+    },
+    {
+      "path": "assets/floors/Brick/square_brick_floor/Diffuse.png",
+      "generation": "1789397686718270",
+      "sha256": "34b5fd4cd6ff9b18b77ec0f8a3991d7725855e7b4d80edd0854959ced3fdebc9",
+      "deletedAt": "2026-10-15T18:46:01.587Z",
+      "status": "deleted",
+      "error": null
+    },
+    {
+      "path": "assets/floors/Tiles/square_tiles/Diffuse.png",
+      "generation": "1789397717953889",
+      "sha256": "ba67945e7fc597a5c88ab369e321d8e3a019d98b1674acc870de868f620b555a",
+      "deletedAt": "2026-10-15T18:46:01.872Z",
+      "status": "deleted",
+      "error": null
+    },
+    {
+      "path": "assets/floors/Tiles/terrazo_tiles/Diffuse.png",
+      "generation": "1789397750580327",
+      "sha256": "80cb813199412195523caf0e9e41bf96cf7e8cdf9a9ae91307bb8633c823b9e3",
+      "deletedAt": "2026-10-15T18:46:02.186Z",
+      "status": "deleted",
+      "error": null
+    },
+    {
+      "path": "assets/floors/Wood/plank_flooring/Diffuse.png",
+      "generation": "1789397779072736",
+      "sha256": "f75a6b1308320e2357734c171c8935d7b3d2be483146587587b16113eaabdcac",
+      "deletedAt": "2026-10-15T18:46:02.511Z",
+      "status": "deleted",
+      "error": null
+    },
+    {
+      "path": "assets/floors/Wood/wooden_floor/Diffuse.png",
+      "generation": "1789397811458185",
+      "sha256": "ba1a842a3d92ff937b677a124f6ec4c3597eba0b7c2a01c5218457039f429afa",
+      "deletedAt": "2026-10-15T18:46:02.804Z",
+      "status": "deleted",
+      "error": null
+    },
+    {
+      "path": "assets/furniture/bedroom/l7aynDwSMh5MpQK9fx7c-model-Channel-Tufted-Camel-Bed_scaled_resized.glb",
+      "generation": "1791904673259910",
+      "sha256": "ee57630afd37194ce98ea4abf011ddf43b7f4621ddede09109203a12e8f4eed3",
+      "deletedAt": "2026-10-15T18:46:03.150Z",
+      "status": "deleted",
+      "error": null
+    },
+    {
+      "path": "assets/furniture/bedroom/vi2bJxz7mkQzycxuRV53-model-Modern-Ash-Bed_resized.glb",
+      "generation": "1791904770049122",
+      "sha256": "6cd332e9374468c819c1847320f7ef8733ae5d955661d3e7f1f1af796f333d93",
+      "deletedAt": "2026-10-15T18:46:03.460Z",
+      "status": "deleted",
+      "error": null
+    },
+    {
+      "path": "assets/furniture/diningroom/1leXkoHmhslSxmZsagb7-model-Modern-Stainless-Steel-Refrigerator.glb",
+      "generation": "1791904371840852",
+      "sha256": "f164d154a5885ad495847f5cd9e71dc1f843014774a93683e0ec99a42f1388a5",
+      "deletedAt": "2026-10-15T18:46:03.756Z",
+      "status": "deleted",
+      "error": null
+    },
+    {
+      "path": "assets/furniture/diningroom/x3hHPlyBgYWVUPB6TGTL-model-Ivory-Gold-Breakfast-Stool_resized.glb",
+      "generation": "1791907511932899",
+      "sha256": "6ff478794fcb15411dfaf5a05ad3efee6a119694455a0afe77e66173660db237",
+      "deletedAt": "2026-10-15T18:46:04.116Z",
+      "status": "deleted",
+      "error": null
+    },
+    {
+      "path": "assets/furniture/diningroom/xytfdR9rejLmC6xcFlU7-model-Ivory-Marble-Center-Table_resized.glb",
+      "generation": "1791907414044649",
+      "sha256": "c866784a1c67ab12a16300be25733f9d548edc3f49daf11e786ff70c7fc845f8",
+      "deletedAt": "2026-10-15T18:46:04.416Z",
+      "status": "deleted",
+      "error": null
+    },
+    {
+      "path": "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+      "generation": "1791557624278300",
+      "sha256": "19662a0c145e5770db1f106df9b322b04ae625bcbebc90073ecea69121aa6089",
+      "deletedAt": "2026-10-15T18:46:04.709Z",
+      "status": "deleted",
+      "error": null
+    },
+    {
+      "path": "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+      "generation": "1791908019155590",
+      "sha256": "ec60bfac5ac58b53ee33227ceaac1ccecb7f3b51f051a33c0c42e8d073e2afa8",
+      "deletedAt": "2026-10-15T18:46:05.008Z",
+      "status": "deleted",
+      "error": null
+    },
+    {
+      "path": "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+      "generation": "1791557386993831",
+      "sha256": "237f2d751cdb396562b4cf4a9bc6a520e742373ea79636b3e8a64f189b64e11a",
+      "deletedAt": "2026-10-15T18:46:05.285Z",
+      "status": "deleted",
+      "error": null
+    },
+    {
+      "path": "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+      "generation": "1791908089417316",
+      "sha256": "36b8d6ce65611c5254b2b9ead17222104da212cde34a1c822a0663fae3925db4",
+      "deletedAt": "2026-10-15T18:46:05.575Z",
+      "status": "deleted",
+      "error": null
+    },
+    {
+      "path": "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+      "generation": "1791907923934027",
+      "sha256": "57985379d63116ab63c038d157ccb0ceedd636050b3cbcf602c60c22111bb6fb",
+      "deletedAt": "2026-10-15T18:46:05.876Z",
+      "status": "deleted",
+      "error": null
+    },
+    {
+      "path": "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+      "generation": "1791083563705036",
+      "sha256": "d59fdad5352d923cd5193f95aa97e150541e9a602ccd2e4bd5027de60589f1e2",
+      "deletedAt": "2026-10-15T18:46:06.180Z",
+      "status": "deleted",
+      "error": null
+    },
+    {
+      "path": "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+      "generation": "1791907690631538",
+      "sha256": "b88b67e21f5a210359d9cc45a2c0643ad15b255f4688678518c9b07791ea0c6a",
+      "deletedAt": "2026-10-15T18:46:06.490Z",
+      "status": "deleted",
+      "error": null
+    },
+    {
+      "path": "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+      "generation": "1791558215335972",
+      "sha256": "4a7a22cc60d3c55238399880f7313acce3a0b65528076a384edb0ceb65d060dd",
+      "deletedAt": "2026-10-15T18:46:06.809Z",
+      "status": "deleted",
+      "error": null
+    },
+    {
+      "path": "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+      "generation": "1791907587889968",
+      "sha256": "ab75032fc6cc07a9bb9a53d56d0f3d0b372a726a2c9c8a0d934fd9137054aee9",
+      "deletedAt": "2026-10-15T18:46:07.098Z",
+      "status": "deleted",
+      "error": null
+    },
+    {
+      "path": "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+      "generation": "1791907978665374",
+      "sha256": "fdb895a566db1a657827b501e7c7ca21465b88fbb372950286e0b88a5d3b8dd6",
+      "deletedAt": "2026-10-15T18:46:07.398Z",
+      "status": "deleted",
+      "error": null
+    },
+    {
+      "path": "assets/furniture/livingroom/steel-frame-shelves-01.glb",
+      "generation": "1790082762917656",
+      "sha256": "479c042fe0a74ac876f21b9e2e74c99b18173f12b6aac15427d9fa8f711a689c",
+      "deletedAt": "2026-10-15T18:46:07.689Z",
+      "status": "deleted",
+      "error": null
+    },
+    {
+      "path": "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb",
+      "generation": "1791908355190757",
+      "sha256": "c47560adb4be42043b72edfe9d7e00a2cd9c590bcd4b18857a0ff80674833673",
+      "deletedAt": "2026-10-15T18:46:08.028Z",
+      "status": "deleted",
+      "error": null
+    },
+    {
+      "path": "assets/furniture/office/gQQOYRG9Cce28WquJ5B0-model-Obsidian-Executive-Chair.glb",
+      "generation": "1791908308529489",
+      "sha256": "02cd7d882f7fefed15ba0f4e18eb9cab405ded2f2c6d3dd5271427d9c4f9656e",
+      "deletedAt": "2026-10-15T18:46:08.369Z",
+      "status": "deleted",
+      "error": null
+    },
+    {
+      "path": "assets/furniture/office/yoAt8ckUEXxmjtmB70p3-model-Saddlewood-Executive-Chair.glb",
+      "generation": "1791908459970372",
+      "sha256": "c47560adb4be42043b72edfe9d7e00a2cd9c590bcd4b18857a0ff80674833673",
+      "deletedAt": "2026-10-15T18:46:08.667Z",
+      "status": "deleted",
+      "error": null
+    },
+    {
+      "path": "assets/wall/tile/vlljo8HQum9D2GBE4oWd-diffuse-wallpaperflare-com_wallpaper.jpg",
+      "generation": "1791083665057268",
+      "sha256": "b5da32a2d2994fc59a7f1711b0a501520e9a4d6200c5b8f8df9d5bb357403903",
+      "deletedAt": "2026-10-15T18:46:08.976Z",
+      "status": "deleted",
+      "error": null
+    }
+  ],
+  "appliedAt": "2026-10-15T18:46:09.009Z"
+}

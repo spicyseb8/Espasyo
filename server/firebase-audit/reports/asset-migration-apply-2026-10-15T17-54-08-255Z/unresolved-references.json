@@ -1,0 +1,8 @@
+[
+  {
+    "kind": "canonical-path-collision",
+    "assetId": "1leXkoHmhslSxmZsagb7",
+    "path": "assets/furniture/diningroom/F-00126/model.glb",
+    "reason": "Canonical destination already exists; it will not be overwritten."
+  }
+]

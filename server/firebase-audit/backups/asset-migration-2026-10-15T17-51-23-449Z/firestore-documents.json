@@ -1,0 +1,1211 @@
+[
+  {
+    "path": "assets/1leXkoHmhslSxmZsagb7",
+    "rootCollection": "assets",
+    "data": {
+      "id": "1leXkoHmhslSxmZsagb7",
+      "name": "Modern Stainless Steel Refrigerator",
+      "asset_type": "furniture",
+      "category": "diningroom",
+      "price": 15000,
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791904361,
+        "nanoseconds": 487000000
+      },
+      "storage_path": "assets/furniture/diningroom/1leXkoHmhslSxmZsagb7-model-Modern-Stainless-Steel-Refrigerator.glb",
+      "model_path": "assets/furniture/diningroom/1leXkoHmhslSxmZsagb7-model-Modern-Stainless-Steel-Refrigerator.glb",
+      "placement_surface": "floor",
+      "rotation_offset_y": 0,
+      "depth_offset": 0,
+      "snap_targets": [
+        "wall",
+        "furniture"
+      ],
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791908491,
+        "nanoseconds": 500000000
+      },
+      "asset_status": "not_available"
+    }
+  },
+  {
+    "path": "assets/4vD9gHQW3UI3K8xLD71B",
+    "rootCollection": "assets",
+    "data": {
+      "id": "4vD9gHQW3UI3K8xLD71B",
+      "asset_type": "furniture",
+      "category": "livingroom",
+      "price": 2500,
+      "asset_status": "available",
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791557618,
+        "nanoseconds": 80000000
+      },
+      "storage_path": "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+      "model_path": "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+      "placement_surface": "floor",
+      "rotation_offset_y": 0,
+      "depth_offset": 0,
+      "snap_targets": [
+        "wall",
+        "furniture"
+      ],
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791558035,
+        "nanoseconds": 552000000
+      },
+      "name": "Barrel Chair"
+    }
+  },
+  {
+    "path": "assets/9pPtBuRt0sQZnCf6NeZY",
+    "rootCollection": "assets",
+    "data": {
+      "id": "9pPtBuRt0sQZnCf6NeZY",
+      "name": "tile test",
+      "asset_type": "floor",
+      "category": "wood",
+      "price": 23,
+      "asset_status": "available",
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791901639,
+        "nanoseconds": 926000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791901639,
+        "nanoseconds": 926000000
+      },
+      "length": 2,
+      "width": 4,
+      "diffuse_path": "assets/floor/wood/9pPtBuRt0sQZnCf6NeZY-diffuse-png-transparent-porcelain-tile-flooring-bathroom-floor-tiles-miscellaneous-texture-kitchen-thumbnail.png",
+      "roughness": 0.8,
+      "metalness": 0
+    }
+  },
+  {
+    "path": "assets/A-26001",
+    "rootCollection": "assets",
+    "data": {
+      "id": "A-26001",
+      "name": "Moonlight Blue",
+      "asset_type": "wall",
+      "category": "paint",
+      "price": 500,
+      "color": "#536D8D",
+      "roughness": 0.8,
+      "metalness": 0,
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789057203,
+        "nanoseconds": 984000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789057203,
+        "nanoseconds": 984000000
+      },
+      "asset_status": "available"
+    }
+  },
+  {
+    "path": "assets/A-26002",
+    "rootCollection": "assets",
+    "data": {
+      "id": "A-26002",
+      "name": "Pale Gold",
+      "asset_type": "wall",
+      "category": "paint",
+      "price": 500,
+      "color": "#BE9A63",
+      "roughness": 0.8,
+      "metalness": 0,
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789057203,
+        "nanoseconds": 984000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789057203,
+        "nanoseconds": 984000000
+      },
+      "asset_status": "available"
+    }
+  },
+  {
+    "path": "assets/A-26003",
+    "rootCollection": "assets",
+    "data": {
+      "id": "A-26003",
+      "name": "Dark Navy",
+      "asset_type": "wall",
+      "category": "paint",
+      "price": 500,
+      "color": "#292A32",
+      "roughness": 0.8,
+      "metalness": 0,
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789057203,
+        "nanoseconds": 984000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789057203,
+        "nanoseconds": 984000000
+      },
+      "asset_status": "available"
+    }
+  },
+  {
+    "path": "assets/A-26004",
+    "rootCollection": "assets",
+    "data": {
+      "id": "A-26004",
+      "name": "Baby's Breath",
+      "asset_type": "wall",
+      "category": "paint",
+      "price": 500,
+      "color": "#E8E2D1",
+      "roughness": 0.8,
+      "metalness": 0,
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789057203,
+        "nanoseconds": 984000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789057203,
+        "nanoseconds": 984000000
+      },
+      "asset_status": "available"
+    }
+  },
+  {
+    "path": "assets/A-26005",
+    "rootCollection": "assets",
+    "data": {
+      "id": "A-26005",
+      "name": "Matte Green",
+      "asset_type": "wall",
+      "category": "paint",
+      "price": 500,
+      "color": "#87927A",
+      "roughness": 0.8,
+      "metalness": 0,
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789057203,
+        "nanoseconds": 984000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789057203,
+        "nanoseconds": 984000000
+      },
+      "asset_status": "available"
+    }
+  },
+  {
+    "path": "assets/A-26006",
+    "rootCollection": "assets",
+    "data": {
+      "id": "A-26006",
+      "name": "Brandy Snifter",
+      "asset_type": "wall",
+      "category": "paint",
+      "price": 500,
+      "color": "#88453F",
+      "roughness": 0.8,
+      "metalness": 0,
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789057203,
+        "nanoseconds": 984000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789057203,
+        "nanoseconds": 984000000
+      },
+      "asset_status": "available"
+    }
+  },
+  {
+    "path": "assets/A-26007",
+    "rootCollection": "assets",
+    "data": {
+      "id": "A-26007",
+      "name": "Blue Ice",
+      "asset_type": "wall",
+      "category": "paint",
+      "price": 500,
+      "color": "#7C88AA",
+      "roughness": 0.8,
+      "metalness": 0,
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789057203,
+        "nanoseconds": 984000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789057203,
+        "nanoseconds": 984000000
+      },
+      "asset_status": "available"
+    }
+  },
+  {
+    "path": "assets/A-26008",
+    "rootCollection": "assets",
+    "data": {
+      "id": "A-26008",
+      "name": "Warm Gray 2 C",
+      "asset_type": "wall",
+      "category": "paint",
+      "price": 500,
+      "color": "#CBC4BC",
+      "roughness": 0.8,
+      "metalness": 0,
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789057203,
+        "nanoseconds": 984000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789057203,
+        "nanoseconds": 984000000
+      },
+      "asset_status": "available"
+    }
+  },
+  {
+    "path": "assets/A-26009",
+    "rootCollection": "assets",
+    "data": {
+      "id": "A-26009",
+      "name": "Medieval Blue",
+      "asset_type": "wall",
+      "category": "paint",
+      "price": 500,
+      "color": "#2B3455",
+      "roughness": 0.8,
+      "metalness": 0,
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789057203,
+        "nanoseconds": 984000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789057203,
+        "nanoseconds": 984000000
+      },
+      "asset_status": "available"
+    }
+  },
+  {
+    "path": "assets/A-26010",
+    "rootCollection": "assets",
+    "data": {
+      "id": "A-26010",
+      "name": "Silver Pine",
+      "asset_type": "wall",
+      "category": "paint",
+      "price": 500,
+      "color": "#58716F",
+      "roughness": 0.8,
+      "metalness": 0,
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789057203,
+        "nanoseconds": 984000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789057203,
+        "nanoseconds": 984000000
+      },
+      "asset_status": "available"
+    }
+  },
+  {
+    "path": "assets/A-26011",
+    "rootCollection": "assets",
+    "data": {
+      "id": "A-26011",
+      "name": "Sun Kiss",
+      "asset_type": "wall",
+      "category": "paint",
+      "price": 500,
+      "color": "#E8CEB9",
+      "roughness": 0.8,
+      "metalness": 0,
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789057203,
+        "nanoseconds": 984000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789057203,
+        "nanoseconds": 984000000
+      },
+      "asset_status": "available"
+    }
+  },
+  {
+    "path": "assets/A-26012",
+    "rootCollection": "assets",
+    "data": {
+      "id": "A-26012",
+      "name": "Whisper White",
+      "asset_type": "wall",
+      "category": "paint",
+      "price": 500,
+      "color": "#B5A994",
+      "roughness": 0.8,
+      "metalness": 0,
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789057203,
+        "nanoseconds": 984000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789057203,
+        "nanoseconds": 984000000
+      },
+      "asset_status": "available"
+    }
+  },
+  {
+    "path": "assets/A-26013",
+    "rootCollection": "assets",
+    "data": {
+      "id": "A-26013",
+      "asset_type": "floor",
+      "category": "brick",
+      "price": 500,
+      "storage_path": "assets/floors/Brick/square_brick_floor",
+      "diffuse_path": "assets/floors/Brick/square_brick_floor/Diffuse.png",
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789397500,
+        "nanoseconds": 524000000
+      },
+      "name": "Square Brick Floors",
+      "length": 3,
+      "width": 3,
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791980837,
+        "nanoseconds": 805000000
+      },
+      "asset_status": "available"
+    }
+  },
+  {
+    "path": "assets/A-26014",
+    "rootCollection": "assets",
+    "data": {
+      "id": "A-26014",
+      "name": "Square Tiles",
+      "asset_type": "floor",
+      "category": "tiles",
+      "storage_path": "assets/floors/Tiles/square_tiles",
+      "diffuse_path": "assets/floors/Tiles/square_tiles/Diffuse.png",
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789397532,
+        "nanoseconds": 352000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789397532,
+        "nanoseconds": 352000000
+      },
+      "asset_status": "available",
+      "model_url": "https://firebasestorage.googleapis.com/v0/b/espasyo-6072d.firebasestorage.app/o/assets%2Ffloors%2FTiles%2Fsquare_tiles%2FDiffuse.png?alt=media&token=b61b4a0f-7440-4258-a9b5-9953de39c2be",
+      "price": 100
+    }
+  },
+  {
+    "path": "assets/A-26015",
+    "rootCollection": "assets",
+    "data": {
+      "id": "A-26015",
+      "name": "Terrazo Tiles",
+      "asset_type": "floor",
+      "category": "tiles",
+      "price": 500,
+      "storage_path": "assets/floors/Tiles/terrazo_tiles",
+      "diffuse_path": "assets/floors/Tiles/terrazo_tiles/Diffuse.png",
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789397564,
+        "nanoseconds": 356000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789397564,
+        "nanoseconds": 356000000
+      },
+      "asset_status": "available"
+    }
+  },
+  {
+    "path": "assets/A-26016",
+    "rootCollection": "assets",
+    "data": {
+      "id": "A-26016",
+      "name": "Plank Flooring",
+      "asset_type": "floor",
+      "category": "wood",
+      "price": 500,
+      "storage_path": "assets/floors/Wood/plank_flooring",
+      "diffuse_path": "assets/floors/Wood/plank_flooring/Diffuse.png",
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789397593,
+        "nanoseconds": 469000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789397593,
+        "nanoseconds": 469000000
+      },
+      "asset_status": "available"
+    }
+  },
+  {
+    "path": "assets/A-26017",
+    "rootCollection": "assets",
+    "data": {
+      "id": "A-26017",
+      "name": "Wooden Floor",
+      "asset_type": "floor",
+      "category": "wood",
+      "price": 500,
+      "storage_path": "assets/floors/Wood/wooden_floor",
+      "diffuse_path": "assets/floors/Wood/wooden_floor/Diffuse.png",
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789397626,
+        "nanoseconds": 723000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789397626,
+        "nanoseconds": 723000000
+      },
+      "asset_status": "available"
+    }
+  },
+  {
+    "path": "assets/A-3X1T1I",
+    "rootCollection": "assets",
+    "data": {
+      "id": "A-3X1T1I",
+      "name": "Single Door",
+      "asset_status": "available",
+      "asset_type": "furniture",
+      "category": "doors",
+      "model_path": "assets/openings/doors/single-door.glb",
+      "thumbnail_path": "",
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789729519,
+        "nanoseconds": 251000000
+      },
+      "model_url": "https://firebasestorage.googleapis.com/v0/b/espasyo-6072d.firebasestorage.app/o/assets%2Fopenings%2Fdoors%2Fsingle-door.glb?alt=media&token=bfa5013b-6ae7-4428-8556-1e1ed794ac40",
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791011905,
+        "nanoseconds": 768000000
+      },
+      "price": 501
+    }
+  },
+  {
+    "path": "assets/A-4BERBM",
+    "rootCollection": "assets",
+    "data": {
+      "id": "A-4BERBM",
+      "name": "TV",
+      "asset_status": "available",
+      "asset_type": "furniture",
+      "category": "livingroom",
+      "price": 500,
+      "placement_surface": "wall",
+      "model_path": "assets/furniture/livingroom/TV.glb",
+      "thumbnail_path": "",
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789729522,
+        "nanoseconds": 938000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789731918,
+        "nanoseconds": 789000000
+      },
+      "model_url": "https://firebasestorage.googleapis.com/v0/b/espasyo-6072d.firebasestorage.app/o/assets%2Ffurniture%2Flivingroom%2FTV.glb?alt=media&token=430b70f9-f919-482b-a86d-e09897d5386a"
+    }
+  },
+  {
+    "path": "assets/A-DF723H",
+    "rootCollection": "assets",
+    "data": {
+      "asset_status": "available",
+      "asset_type": "furniture",
+      "category": "livingroom",
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789133682,
+        "nanoseconds": 0
+      },
+      "id": "A-DF723H",
+      "model_path": "assets/furniture/livingroom/steel-frame-shelves-01.glb",
+      "placement_surface": "floor",
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1790329987,
+        "nanoseconds": 105000000
+      },
+      "price": 10200,
+      "name": "Sofa"
+    }
+  },
+  {
+    "path": "assets/A-ELXX9U",
+    "rootCollection": "assets",
+    "data": {
+      "id": "A-ELXX9U",
+      "name": "Slim Intersection Window",
+      "asset_status": "available",
+      "asset_type": "furniture",
+      "category": "windows",
+      "price": 500,
+      "model_path": "assets/openings/windows/Slim_Intersection_i.glb",
+      "thumbnail_path": "",
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789729518,
+        "nanoseconds": 46000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789731909,
+        "nanoseconds": 352000000
+      },
+      "model_url": "https://firebasestorage.googleapis.com/v0/b/espasyo-6072d.firebasestorage.app/o/assets%2Fopenings%2Fwindows%2FSlim_Intersection_i.glb?alt=media&token=d2d1c6c8-566e-49e3-a6f8-f98c6dd62264"
+    }
+  },
+  {
+    "path": "assets/A-KOSIW0",
+    "rootCollection": "assets",
+    "data": {
+      "id": "A-KOSIW0",
+      "name": "Cabinet",
+      "asset_status": "available",
+      "asset_type": "furniture",
+      "category": "bedroom",
+      "price": 500,
+      "placement_surface": "floor",
+      "model_path": "assets/furniture/bedroom/Cabinet.glb",
+      "thumbnail_path": "",
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789729521,
+        "nanoseconds": 625000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789731916,
+        "nanoseconds": 486000000
+      }
+    }
+  },
+  {
+    "path": "assets/A-WWTI9B",
+    "rootCollection": "assets",
+    "data": {
+      "id": "A-WWTI9B",
+      "name": "Table",
+      "asset_status": "available",
+      "asset_type": "furniture",
+      "category": "diningroom",
+      "price": 500,
+      "placement_surface": "floor",
+      "model_path": "assets/furniture/diningroom/Table.glb",
+      "thumbnail_path": "",
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789729520,
+        "nanoseconds": 432000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1789731914,
+        "nanoseconds": 197000000
+      }
+    }
+  },
+  {
+    "path": "assets/HRgQpL2Tx92bvodO8RZI",
+    "rootCollection": "assets",
+    "data": {
+      "id": "HRgQpL2Tx92bvodO8RZI",
+      "name": "Ivory Pharaoh Chair",
+      "asset_type": "furniture",
+      "category": "livingroom",
+      "price": 6000,
+      "asset_status": "available",
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791908008,
+        "nanoseconds": 729000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791908008,
+        "nanoseconds": 729000000
+      },
+      "storage_path": "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+      "model_path": "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+      "placement_surface": "floor",
+      "rotation_offset_y": 0,
+      "depth_offset": 0,
+      "snap_targets": [
+        "wall",
+        "furniture"
+      ]
+    }
+  },
+  {
+    "path": "assets/HZG0WRHwY8yuH9J0Nc5O",
+    "rootCollection": "assets",
+    "data": {
+      "id": "HZG0WRHwY8yuH9J0Nc5O",
+      "name": "Sofa",
+      "asset_type": "furniture",
+      "category": "livingroom",
+      "price": 15000,
+      "asset_status": "available",
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791557380,
+        "nanoseconds": 625000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791557380,
+        "nanoseconds": 625000000
+      },
+      "storage_path": "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+      "model_path": "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+      "placement_surface": "floor",
+      "rotation_offset_y": 0,
+      "depth_offset": 0,
+      "snap_targets": [
+        "wall",
+        "furniture"
+      ]
+    }
+  },
+  {
+    "path": "assets/I5Mm64NNEKhOFusIqWHe",
+    "rootCollection": "assets",
+    "data": {
+      "id": "I5Mm64NNEKhOFusIqWHe",
+      "name": "Cocoa Curve Lounge",
+      "asset_type": "furniture",
+      "category": "livingroom",
+      "asset_status": "available",
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791908079,
+        "nanoseconds": 12000000
+      },
+      "storage_path": "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+      "model_path": "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+      "placement_surface": "floor",
+      "rotation_offset_y": 0,
+      "depth_offset": 0,
+      "snap_targets": [
+        "wall",
+        "furniture"
+      ],
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791908104,
+        "nanoseconds": 714000000
+      },
+      "price": 18000
+    }
+  },
+  {
+    "path": "assets/PqtRcTuqL5ifuo3GTUUH",
+    "rootCollection": "assets",
+    "data": {
+      "id": "PqtRcTuqL5ifuo3GTUUH",
+      "name": "Ashen Wood Lounge Chair",
+      "asset_type": "furniture",
+      "category": "livingroom",
+      "price": 3500,
+      "asset_status": "available",
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791907913,
+        "nanoseconds": 537000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791907913,
+        "nanoseconds": 537000000
+      },
+      "storage_path": "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+      "model_path": "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+      "placement_surface": "floor",
+      "rotation_offset_y": 0,
+      "depth_offset": 0,
+      "snap_targets": [
+        "wall",
+        "furniture"
+      ]
+    }
+  },
+  {
+    "path": "assets/SreeI98A0JN3AJjsb3UN",
+    "rootCollection": "assets",
+    "data": {
+      "id": "SreeI98A0JN3AJjsb3UN",
+      "name": "Black Ceramic Tiles",
+      "asset_type": "floor",
+      "category": "tile",
+      "price": 23,
+      "asset_status": "available",
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791900892,
+        "nanoseconds": 536000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791900892,
+        "nanoseconds": 536000000
+      },
+      "diffuse_path": "assets/floor/tile/SreeI98A0JN3AJjsb3UN-diffuse-black-stones-tiled-floor.jpg",
+      "roughness": 0.8,
+      "metalness": 1
+    }
+  },
+  {
+    "path": "assets/ewZhEYTdu2niIU6lZF2h",
+    "rootCollection": "assets",
+    "data": {
+      "id": "ewZhEYTdu2niIU6lZF2h",
+      "name": "testing",
+      "asset_type": "furniture",
+      "category": "livingroom",
+      "price": 123,
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791083562,
+        "nanoseconds": 155000000
+      },
+      "storage_path": "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+      "model_path": "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+      "placement_surface": "floor",
+      "rotation_offset_y": 0,
+      "depth_offset": 0,
+      "snap_targets": [
+        "wall",
+        "furniture"
+      ],
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791553906,
+        "nanoseconds": 850000000
+      },
+      "asset_status": "not_available"
+    }
+  },
+  {
+    "path": "assets/gQQOYRG9Cce28WquJ5B0",
+    "rootCollection": "assets",
+    "data": {
+      "id": "gQQOYRG9Cce28WquJ5B0",
+      "name": "Obsidian Executive Chair",
+      "asset_type": "furniture",
+      "category": "office",
+      "price": 8000,
+      "asset_status": "available",
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791908298,
+        "nanoseconds": 121000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791908298,
+        "nanoseconds": 121000000
+      },
+      "storage_path": "assets/furniture/office/gQQOYRG9Cce28WquJ5B0-model-Obsidian-Executive-Chair.glb",
+      "model_path": "assets/furniture/office/gQQOYRG9Cce28WquJ5B0-model-Obsidian-Executive-Chair.glb",
+      "placement_surface": "floor",
+      "rotation_offset_y": 0,
+      "depth_offset": 0,
+      "snap_targets": [
+        "wall",
+        "furniture"
+      ]
+    }
+  },
+  {
+    "path": "assets/kjdY8niuhQPlDK1nzeio",
+    "rootCollection": "assets",
+    "data": {
+      "id": "kjdY8niuhQPlDK1nzeio",
+      "name": "Ivory Cloud U-Sofa",
+      "asset_type": "furniture",
+      "category": "livingroom",
+      "price": 25000,
+      "asset_status": "available",
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791907680,
+        "nanoseconds": 238000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791907680,
+        "nanoseconds": 238000000
+      },
+      "storage_path": "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+      "model_path": "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+      "placement_surface": "floor",
+      "rotation_offset_y": 0,
+      "depth_offset": 0,
+      "snap_targets": [
+        "wall",
+        "furniture"
+      ]
+    }
+  },
+  {
+    "path": "assets/l7aynDwSMh5MpQK9fx7c",
+    "rootCollection": "assets",
+    "data": {
+      "id": "l7aynDwSMh5MpQK9fx7c",
+      "name": "Channel Tufted Camel Bed",
+      "asset_type": "furniture",
+      "category": "bedroom",
+      "price": 17000,
+      "asset_status": "available",
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791904662,
+        "nanoseconds": 922000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791904662,
+        "nanoseconds": 922000000
+      },
+      "storage_path": "assets/furniture/bedroom/l7aynDwSMh5MpQK9fx7c-model-Channel-Tufted-Camel-Bed_scaled_resized.glb",
+      "model_path": "assets/furniture/bedroom/l7aynDwSMh5MpQK9fx7c-model-Channel-Tufted-Camel-Bed_scaled_resized.glb",
+      "placement_surface": "floor",
+      "rotation_offset_y": 0,
+      "depth_offset": 0,
+      "snap_targets": [
+        "wall",
+        "furniture"
+      ]
+    }
+  },
+  {
+    "path": "assets/o9hxXiBMGY3bJZAApUte",
+    "rootCollection": "assets",
+    "data": {
+      "id": "o9hxXiBMGY3bJZAApUte",
+      "name": "Modern Lounge Chair",
+      "asset_type": "furniture",
+      "category": "livingroom",
+      "price": 3500,
+      "asset_status": "available",
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791558208,
+        "nanoseconds": 983000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791558208,
+        "nanoseconds": 983000000
+      },
+      "storage_path": "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+      "model_path": "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+      "placement_surface": "floor",
+      "rotation_offset_y": 0,
+      "depth_offset": 0,
+      "snap_targets": [
+        "wall",
+        "furniture"
+      ]
+    }
+  },
+  {
+    "path": "assets/qQdRA4o2kNzBfZtQrKce",
+    "rootCollection": "assets",
+    "data": {
+      "id": "qQdRA4o2kNzBfZtQrKce",
+      "name": "Goldenrod Comfort Chair",
+      "asset_type": "furniture",
+      "category": "livingroom",
+      "price": 8000,
+      "asset_status": "available",
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791907577,
+        "nanoseconds": 498000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791907577,
+        "nanoseconds": 498000000
+      },
+      "storage_path": "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+      "model_path": "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+      "placement_surface": "floor",
+      "rotation_offset_y": 0,
+      "depth_offset": 0,
+      "snap_targets": [
+        "wall",
+        "furniture"
+      ]
+    }
+  },
+  {
+    "path": "assets/qTnjmIpfmIcZlvFlDnC1",
+    "rootCollection": "assets",
+    "data": {
+      "id": "qTnjmIpfmIcZlvFlDnC1",
+      "name": "Elephant Gray Sectional Couch",
+      "asset_type": "furniture",
+      "category": "livingroom",
+      "price": 22000,
+      "asset_status": "available",
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791907968,
+        "nanoseconds": 268000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791907968,
+        "nanoseconds": 268000000
+      },
+      "storage_path": "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+      "model_path": "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+      "placement_surface": "floor",
+      "rotation_offset_y": 0,
+      "depth_offset": 0,
+      "snap_targets": [
+        "wall",
+        "furniture"
+      ]
+    }
+  },
+  {
+    "path": "assets/vi2bJxz7mkQzycxuRV53",
+    "rootCollection": "assets",
+    "data": {
+      "id": "vi2bJxz7mkQzycxuRV53",
+      "name": "Modern Ash Bed",
+      "asset_type": "furniture",
+      "category": "bedroom",
+      "price": 22000,
+      "asset_status": "available",
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791904759,
+        "nanoseconds": 681000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791904759,
+        "nanoseconds": 681000000
+      },
+      "storage_path": "assets/furniture/bedroom/vi2bJxz7mkQzycxuRV53-model-Modern-Ash-Bed_resized.glb",
+      "model_path": "assets/furniture/bedroom/vi2bJxz7mkQzycxuRV53-model-Modern-Ash-Bed_resized.glb",
+      "placement_surface": "floor",
+      "rotation_offset_y": 0,
+      "depth_offset": 0,
+      "snap_targets": [
+        "wall",
+        "furniture"
+      ]
+    }
+  },
+  {
+    "path": "assets/vlljo8HQum9D2GBE4oWd",
+    "rootCollection": "assets",
+    "data": {
+      "id": "vlljo8HQum9D2GBE4oWd",
+      "name": "testing2",
+      "asset_type": "wall",
+      "category": "tile",
+      "price": 233,
+      "asset_status": "available",
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791083663,
+        "nanoseconds": 458000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791083663,
+        "nanoseconds": 458000000
+      },
+      "diffuse_path": "assets/wall/tile/vlljo8HQum9D2GBE4oWd-diffuse-wallpaperflare-com_wallpaper.jpg",
+      "base_color_path": "assets/wall/tile/vlljo8HQum9D2GBE4oWd-diffuse-wallpaperflare-com_wallpaper.jpg",
+      "roughness": 0.8,
+      "metalness": 0
+    }
+  },
+  {
+    "path": "assets/x3hHPlyBgYWVUPB6TGTL",
+    "rootCollection": "assets",
+    "data": {
+      "id": "x3hHPlyBgYWVUPB6TGTL",
+      "name": "Ivory-Gold Breakfast Stool",
+      "asset_type": "furniture",
+      "category": "diningroom",
+      "price": 4500,
+      "asset_status": "available",
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791907501,
+        "nanoseconds": 552000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791907501,
+        "nanoseconds": 552000000
+      },
+      "storage_path": "assets/furniture/diningroom/x3hHPlyBgYWVUPB6TGTL-model-Ivory-Gold-Breakfast-Stool_resized.glb",
+      "model_path": "assets/furniture/diningroom/x3hHPlyBgYWVUPB6TGTL-model-Ivory-Gold-Breakfast-Stool_resized.glb",
+      "placement_surface": "floor",
+      "rotation_offset_y": 0,
+      "depth_offset": 0,
+      "snap_targets": [
+        "wall",
+        "furniture"
+      ]
+    }
+  },
+  {
+    "path": "assets/xytfdR9rejLmC6xcFlU7",
+    "rootCollection": "assets",
+    "data": {
+      "id": "xytfdR9rejLmC6xcFlU7",
+      "name": "Ivory Marble Center Table",
+      "asset_type": "furniture",
+      "category": "diningroom",
+      "price": 20000,
+      "asset_status": "available",
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791907403,
+        "nanoseconds": 635000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791907403,
+        "nanoseconds": 635000000
+      },
+      "storage_path": "assets/furniture/diningroom/xytfdR9rejLmC6xcFlU7-model-Ivory-Marble-Center-Table_resized.glb",
+      "model_path": "assets/furniture/diningroom/xytfdR9rejLmC6xcFlU7-model-Ivory-Marble-Center-Table_resized.glb",
+      "placement_surface": "floor",
+      "rotation_offset_y": 0,
+      "depth_offset": 0,
+      "snap_targets": [
+        "wall",
+        "furniture"
+      ]
+    }
+  },
+  {
+    "path": "assets/yoAt8ckUEXxmjtmB70p3",
+    "rootCollection": "assets",
+    "data": {
+      "id": "yoAt8ckUEXxmjtmB70p3",
+      "name": "Saddlewood Executive Chair",
+      "asset_type": "furniture",
+      "category": "office",
+      "price": 10000,
+      "asset_status": "available",
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791908449,
+        "nanoseconds": 538000000
+      },
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791908449,
+        "nanoseconds": 538000000
+      },
+      "storage_path": "assets/furniture/office/yoAt8ckUEXxmjtmB70p3-model-Saddlewood-Executive-Chair.glb",
+      "model_path": "assets/furniture/office/yoAt8ckUEXxmjtmB70p3-model-Saddlewood-Executive-Chair.glb",
+      "placement_surface": "floor",
+      "rotation_offset_y": 0,
+      "depth_offset": 0,
+      "snap_targets": [
+        "wall",
+        "furniture"
+      ]
+    }
+  },
+  {
+    "path": "assets/zq3deO69URAqY3XpQMGh",
+    "rootCollection": "assets",
+    "data": {
+      "id": "zq3deO69URAqY3XpQMGh",
+      "name": "Saddlewood Executive Chair",
+      "asset_type": "furniture",
+      "category": "livingroom",
+      "price": 10000,
+      "created_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791908344,
+        "nanoseconds": 766000000
+      },
+      "storage_path": "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb",
+      "model_path": "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb",
+      "placement_surface": "floor",
+      "rotation_offset_y": 0,
+      "depth_offset": 0,
+      "snap_targets": [
+        "wall",
+        "furniture"
+      ],
+      "updated_at": {
+        "__espasyoType": "Timestamp",
+        "seconds": 1791908393,
+        "nanoseconds": 703000000
+      },
+      "asset_status": "not_available"
+    }
+  }
+]

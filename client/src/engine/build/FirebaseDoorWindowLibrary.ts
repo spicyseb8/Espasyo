@@ -6,14 +6,15 @@ import {
 } from "firebase/firestore";
 
 import {
-    getDownloadURL,
-    ref
-} from "firebase/storage";
-
-import {
-    db,
-    storage
+    db
 } from "../../firebase/firebase";
+import {
+    registerAssetDownloadURL,
+    resolveStorageAssetURL
+} from "../../lib/assetLibraryCache";
+import {
+    collectAssetSources
+} from "../../lib/assetLibraryCache";
 
 import {
     BuildTool
@@ -47,6 +48,7 @@ interface FirebaseBuildAssetDocument {
 //==================================================
 
 let cachedAssets: Asset[] = [];
+let cachedDoorWindowStorageSources: string[] = [];
 let catalogLoaded = false;
 let catalogPromise: Promise<Asset[]> | null = null;
 
@@ -72,13 +74,12 @@ async function resolveStorageUrl(
         path.startsWith("https://") ||
         path.startsWith("data:")
     ) {
+        await registerAssetDownloadURL(path);
         return path;
     }
 
     try {
-        return await getDownloadURL(
-            ref(storage, path)
-        );
+        return await resolveStorageAssetURL(path);
     } catch (error) {
         console.error(
             "Failed to resolve Firebase door/window Storage file:",
@@ -106,7 +107,7 @@ async function resolvePreferredUrl(
             value.startsWith("https://") ||
             value.startsWith("data:")
         ) {
-            return value;
+            return resolveStorageUrl(value);
         }
     }
 
@@ -152,7 +153,8 @@ function normalizeCategory(
 
 function getDefaultModelSettings(
     category: "doors" | "windows",
-    modelPath: string
+    modelPath: string,
+    assetName: string
 ): {
     scale: number;
     rotationOffsetY: number;
@@ -164,12 +166,13 @@ function getDefaultModelSettings(
         };
     }
 
-    const normalizedPath = modelPath
-        .trim()
-        .toLowerCase();
+    const normalizedIdentity = `${modelPath} ${assetName}`
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "");
 
     if (
-        normalizedPath.includes("slim_intersection_i")
+        normalizedIdentity.includes("slimintersectioni") ||
+        normalizedIdentity.includes("slimintersectionwindow")
     ) {
         return {
             scale: 0.6,
@@ -178,7 +181,7 @@ function getDefaultModelSettings(
     }
 
     if (
-        normalizedPath.includes("glass_window")
+        normalizedIdentity.includes("glasswindow")
     ) {
         return {
             scale: 0.6,
@@ -262,7 +265,8 @@ async function buildAsset(
 
     const defaults = getDefaultModelSettings(
         category,
-        modelPath
+        modelPath,
+        typeof data.name === "string" ? data.name : ""
     );
 
     const firebaseScale = Number(data.scale);
@@ -312,6 +316,15 @@ async function loadCatalog(): Promise<Asset[]> {
     );
 
     const snapshot = await getDocs(assetsQuery);
+    cachedDoorWindowStorageSources = snapshot.docs
+        .filter(document => {
+            const data = document.data() as FirebaseBuildAssetDocument;
+            return (
+                typeof data.asset_status === "string" &&
+                data.asset_status.trim().toLowerCase() === "available"
+            );
+        })
+        .flatMap(document => collectAssetSources(document.data()));
 
     const results = await Promise.allSettled(
         snapshot.docs.map(
@@ -406,6 +419,10 @@ export function getCachedDoorWindowAsset(
     );
 }
 
+export function getDoorWindowStorageSources(): string[] {
+    return cachedDoorWindowStorageSources;
+}
+
 export function getCachedDoorAsset(
     assetId: string
 ): Asset | undefined {
@@ -432,6 +449,7 @@ export function getCachedWindowAsset(
 
 export async function refreshDoorWindowAssets(): Promise<Asset[]> {
     cachedAssets = [];
+    cachedDoorWindowStorageSources = [];
     catalogLoaded = false;
     catalogPromise = null;
 

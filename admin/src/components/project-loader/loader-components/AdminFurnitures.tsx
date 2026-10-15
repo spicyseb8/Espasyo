@@ -8,6 +8,7 @@ import type {
 } from "../engine/assets/Asset";
 
 import {
+    getCachedFurnitureAsset,
     getFurnitureAssets
 } from "../../../services/assets/furnitureload";
 
@@ -149,6 +150,9 @@ export default function AdminFurnitures({
                                 assetItem =>
                                     assetItem.id ===
                                     item.assetId
+                            ) ??
+                            getCachedFurnitureAsset(
+                                item.assetId
                             );
 
 

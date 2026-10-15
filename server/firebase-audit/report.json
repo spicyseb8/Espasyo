@@ -1,0 +1,2513 @@
+{
+  "generatedAt": "2026-10-15T17:02:51.800Z",
+  "projectId": "espasyo-6072d",
+  "bucket": "espasyo-6072d.firebasestorage.app",
+  "collection": "assets",
+  "summary": {
+    "firestoreDocuments": 44,
+    "storageObjects": 57,
+    "referencesChecked": 60,
+    "validReferences": 55,
+    "missingReferences": 5,
+    "possibleRenamedOrDuplicate": 0,
+    "duplicateReferenceGroups": 23
+  },
+  "documents": [
+    {
+      "documentId": "1leXkoHmhslSxmZsagb7",
+      "id": "1leXkoHmhslSxmZsagb7",
+      "name": "Modern Stainless Steel Refrigerator",
+      "asset_type": "furniture",
+      "category": "diningroom",
+      "asset_status": "not_available",
+      "referenceCount": 2
+    },
+    {
+      "documentId": "4vD9gHQW3UI3K8xLD71B",
+      "id": "4vD9gHQW3UI3K8xLD71B",
+      "name": "Barrel Chair",
+      "asset_type": "furniture",
+      "category": "livingroom",
+      "asset_status": "available",
+      "referenceCount": 2
+    },
+    {
+      "documentId": "9pPtBuRt0sQZnCf6NeZY",
+      "id": "9pPtBuRt0sQZnCf6NeZY",
+      "name": "tile test",
+      "asset_type": "floor",
+      "category": "wood",
+      "asset_status": "available",
+      "referenceCount": 1
+    },
+    {
+      "documentId": "A-26001",
+      "id": "A-26001",
+      "name": "Moonlight Blue",
+      "asset_type": "wall",
+      "category": "paint",
+      "asset_status": "available",
+      "referenceCount": 0
+    },
+    {
+      "documentId": "A-26002",
+      "id": "A-26002",
+      "name": "Pale Gold",
+      "asset_type": "wall",
+      "category": "paint",
+      "asset_status": "available",
+      "referenceCount": 0
+    },
+    {
+      "documentId": "A-26003",
+      "id": "A-26003",
+      "name": "Dark Navy",
+      "asset_type": "wall",
+      "category": "paint",
+      "asset_status": "available",
+      "referenceCount": 0
+    },
+    {
+      "documentId": "A-26004",
+      "id": "A-26004",
+      "name": "Baby's Breath",
+      "asset_type": "wall",
+      "category": "paint",
+      "asset_status": "available",
+      "referenceCount": 0
+    },
+    {
+      "documentId": "A-26005",
+      "id": "A-26005",
+      "name": "Matte Green",
+      "asset_type": "wall",
+      "category": "paint",
+      "asset_status": "available",
+      "referenceCount": 0
+    },
+    {
+      "documentId": "A-26006",
+      "id": "A-26006",
+      "name": "Brandy Snifter",
+      "asset_type": "wall",
+      "category": "paint",
+      "asset_status": "available",
+      "referenceCount": 0
+    },
+    {
+      "documentId": "A-26007",
+      "id": "A-26007",
+      "name": "Blue Ice",
+      "asset_type": "wall",
+      "category": "paint",
+      "asset_status": "available",
+      "referenceCount": 0
+    },
+    {
+      "documentId": "A-26008",
+      "id": "A-26008",
+      "name": "Warm Gray 2 C",
+      "asset_type": "wall",
+      "category": "paint",
+      "asset_status": "available",
+      "referenceCount": 0
+    },
+    {
+      "documentId": "A-26009",
+      "id": "A-26009",
+      "name": "Medieval Blue",
+      "asset_type": "wall",
+      "category": "paint",
+      "asset_status": "available",
+      "referenceCount": 0
+    },
+    {
+      "documentId": "A-26010",
+      "id": "A-26010",
+      "name": "Silver Pine",
+      "asset_type": "wall",
+      "category": "paint",
+      "asset_status": "available",
+      "referenceCount": 0
+    },
+    {
+      "documentId": "A-26011",
+      "id": "A-26011",
+      "name": "Sun Kiss",
+      "asset_type": "wall",
+      "category": "paint",
+      "asset_status": "available",
+      "referenceCount": 0
+    },
+    {
+      "documentId": "A-26012",
+      "id": "A-26012",
+      "name": "Whisper White",
+      "asset_type": "wall",
+      "category": "paint",
+      "asset_status": "available",
+      "referenceCount": 0
+    },
+    {
+      "documentId": "A-26013",
+      "id": "A-26013",
+      "name": "Square Brick Floors",
+      "asset_type": "floor",
+      "category": "brick",
+      "asset_status": "available",
+      "referenceCount": 2
+    },
+    {
+      "documentId": "A-26014",
+      "id": "A-26014",
+      "name": "Square Tiles",
+      "asset_type": "floor",
+      "category": "tiles",
+      "asset_status": "available",
+      "referenceCount": 3
+    },
+    {
+      "documentId": "A-26015",
+      "id": "A-26015",
+      "name": "Terrazo Tiles",
+      "asset_type": "floor",
+      "category": "tiles",
+      "asset_status": "available",
+      "referenceCount": 2
+    },
+    {
+      "documentId": "A-26016",
+      "id": "A-26016",
+      "name": "Plank Flooring",
+      "asset_type": "floor",
+      "category": "wood",
+      "asset_status": "available",
+      "referenceCount": 2
+    },
+    {
+      "documentId": "A-26017",
+      "id": "A-26017",
+      "name": "Wooden Floor",
+      "asset_type": "floor",
+      "category": "wood",
+      "asset_status": "available",
+      "referenceCount": 2
+    },
+    {
+      "documentId": "A-3X1T1I",
+      "id": "A-3X1T1I",
+      "name": "Single Door",
+      "asset_type": "furniture",
+      "category": "doors",
+      "asset_status": "available",
+      "referenceCount": 2
+    },
+    {
+      "documentId": "A-4BERBM",
+      "id": "A-4BERBM",
+      "name": "TV",
+      "asset_type": "furniture",
+      "category": "livingroom",
+      "asset_status": "available",
+      "referenceCount": 2
+    },
+    {
+      "documentId": "A-DF723H",
+      "id": "A-DF723H",
+      "name": "Sofa",
+      "asset_type": "furniture",
+      "category": "livingroom",
+      "asset_status": "available",
+      "referenceCount": 1
+    },
+    {
+      "documentId": "A-ELXX9U",
+      "id": "A-ELXX9U",
+      "name": "Slim Intersection Window",
+      "asset_type": "furniture",
+      "category": "windows",
+      "asset_status": "available",
+      "referenceCount": 2
+    },
+    {
+      "documentId": "A-KOSIW0",
+      "id": "A-KOSIW0",
+      "name": "Cabinet",
+      "asset_type": "furniture",
+      "category": "bedroom",
+      "asset_status": "available",
+      "referenceCount": 1
+    },
+    {
+      "documentId": "A-WWTI9B",
+      "id": "A-WWTI9B",
+      "name": "Table",
+      "asset_type": "furniture",
+      "category": "diningroom",
+      "asset_status": "available",
+      "referenceCount": 1
+    },
+    {
+      "documentId": "HRgQpL2Tx92bvodO8RZI",
+      "id": "HRgQpL2Tx92bvodO8RZI",
+      "name": "Ivory Pharaoh Chair",
+      "asset_type": "furniture",
+      "category": "livingroom",
+      "asset_status": "available",
+      "referenceCount": 2
+    },
+    {
+      "documentId": "HZG0WRHwY8yuH9J0Nc5O",
+      "id": "HZG0WRHwY8yuH9J0Nc5O",
+      "name": "Sofa",
+      "asset_type": "furniture",
+      "category": "livingroom",
+      "asset_status": "available",
+      "referenceCount": 2
+    },
+    {
+      "documentId": "I5Mm64NNEKhOFusIqWHe",
+      "id": "I5Mm64NNEKhOFusIqWHe",
+      "name": "Cocoa Curve Lounge",
+      "asset_type": "furniture",
+      "category": "livingroom",
+      "asset_status": "available",
+      "referenceCount": 2
+    },
+    {
+      "documentId": "PqtRcTuqL5ifuo3GTUUH",
+      "id": "PqtRcTuqL5ifuo3GTUUH",
+      "name": "Ashen Wood Lounge Chair",
+      "asset_type": "furniture",
+      "category": "livingroom",
+      "asset_status": "available",
+      "referenceCount": 2
+    },
+    {
+      "documentId": "SreeI98A0JN3AJjsb3UN",
+      "id": "SreeI98A0JN3AJjsb3UN",
+      "name": "Black Ceramic Tiles",
+      "asset_type": "floor",
+      "category": "tile",
+      "asset_status": "available",
+      "referenceCount": 1
+    },
+    {
+      "documentId": "ewZhEYTdu2niIU6lZF2h",
+      "id": "ewZhEYTdu2niIU6lZF2h",
+      "name": "testing",
+      "asset_type": "furniture",
+      "category": "livingroom",
+      "asset_status": "not_available",
+      "referenceCount": 2
+    },
+    {
+      "documentId": "gQQOYRG9Cce28WquJ5B0",
+      "id": "gQQOYRG9Cce28WquJ5B0",
+      "name": "Obsidian Executive Chair",
+      "asset_type": "furniture",
+      "category": "office",
+      "asset_status": "available",
+      "referenceCount": 2
+    },
+    {
+      "documentId": "kjdY8niuhQPlDK1nzeio",
+      "id": "kjdY8niuhQPlDK1nzeio",
+      "name": "Ivory Cloud U-Sofa",
+      "asset_type": "furniture",
+      "category": "livingroom",
+      "asset_status": "available",
+      "referenceCount": 2
+    },
+    {
+      "documentId": "l7aynDwSMh5MpQK9fx7c",
+      "id": "l7aynDwSMh5MpQK9fx7c",
+      "name": "Channel Tufted Camel Bed",
+      "asset_type": "furniture",
+      "category": "bedroom",
+      "asset_status": "available",
+      "referenceCount": 2
+    },
+    {
+      "documentId": "o9hxXiBMGY3bJZAApUte",
+      "id": "o9hxXiBMGY3bJZAApUte",
+      "name": "Modern Lounge Chair",
+      "asset_type": "furniture",
+      "category": "livingroom",
+      "asset_status": "available",
+      "referenceCount": 2
+    },
+    {
+      "documentId": "qQdRA4o2kNzBfZtQrKce",
+      "id": "qQdRA4o2kNzBfZtQrKce",
+      "name": "Goldenrod Comfort Chair",
+      "asset_type": "furniture",
+      "category": "livingroom",
+      "asset_status": "available",
+      "referenceCount": 2
+    },
+    {
+      "documentId": "qTnjmIpfmIcZlvFlDnC1",
+      "id": "qTnjmIpfmIcZlvFlDnC1",
+      "name": "Elephant Gray Sectional Couch",
+      "asset_type": "furniture",
+      "category": "livingroom",
+      "asset_status": "available",
+      "referenceCount": 2
+    },
+    {
+      "documentId": "vi2bJxz7mkQzycxuRV53",
+      "id": "vi2bJxz7mkQzycxuRV53",
+      "name": "Modern Ash Bed",
+      "asset_type": "furniture",
+      "category": "bedroom",
+      "asset_status": "available",
+      "referenceCount": 2
+    },
+    {
+      "documentId": "vlljo8HQum9D2GBE4oWd",
+      "id": "vlljo8HQum9D2GBE4oWd",
+      "name": "testing2",
+      "asset_type": "wall",
+      "category": "tile",
+      "asset_status": "available",
+      "referenceCount": 2
+    },
+    {
+      "documentId": "x3hHPlyBgYWVUPB6TGTL",
+      "id": "x3hHPlyBgYWVUPB6TGTL",
+      "name": "Ivory-Gold Breakfast Stool",
+      "asset_type": "furniture",
+      "category": "diningroom",
+      "asset_status": "available",
+      "referenceCount": 2
+    },
+    {
+      "documentId": "xytfdR9rejLmC6xcFlU7",
+      "id": "xytfdR9rejLmC6xcFlU7",
+      "name": "Ivory Marble Center Table",
+      "asset_type": "furniture",
+      "category": "diningroom",
+      "asset_status": "available",
+      "referenceCount": 2
+    },
+    {
+      "documentId": "yoAt8ckUEXxmjtmB70p3",
+      "id": "yoAt8ckUEXxmjtmB70p3",
+      "name": "Saddlewood Executive Chair",
+      "asset_type": "furniture",
+      "category": "office",
+      "asset_status": "available",
+      "referenceCount": 2
+    },
+    {
+      "documentId": "zq3deO69URAqY3XpQMGh",
+      "id": "zq3deO69URAqY3XpQMGh",
+      "name": "Saddlewood Executive Chair",
+      "asset_type": "furniture",
+      "category": "livingroom",
+      "asset_status": "not_available",
+      "referenceCount": 2
+    }
+  ],
+  "references": [
+    {
+      "documentId": "1leXkoHmhslSxmZsagb7",
+      "assetId": "1leXkoHmhslSxmZsagb7",
+      "assetName": "Modern Stainless Steel Refrigerator",
+      "assetType": "furniture",
+      "category": "diningroom",
+      "assetStatus": "not_available",
+      "field": "storage_path",
+      "originalValue": "assets/furniture/diningroom/1leXkoHmhslSxmZsagb7-model-Modern-Stainless-Steel-Refrigerator.glb",
+      "storagePath": "assets/furniture/diningroom/1leXkoHmhslSxmZsagb7-model-Modern-Stainless-Steel-Refrigerator.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/diningroom/1leXkoHmhslSxmZsagb7-model-Modern-Stainless-Steel-Refrigerator.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/diningroom/1leXkoHmhslSxmZsagb7-model-Modern-Stainless-Steel-Refrigerator.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/diningroom/",
+        "assets/furniture/diningroom/1leXkoHmhslSxmZsagb7-model-Modern-Stainless-Steel-Refrigerator.glb",
+        "assets/furniture/diningroom/Table.glb",
+        "assets/furniture/diningroom/x3hHPlyBgYWVUPB6TGTL-model-Ivory-Gold-Breakfast-Stool_resized.glb",
+        "assets/furniture/diningroom/xytfdR9rejLmC6xcFlU7-model-Ivory-Marble-Center-Table_resized.glb"
+      ]
+    },
+    {
+      "documentId": "1leXkoHmhslSxmZsagb7",
+      "assetId": "1leXkoHmhslSxmZsagb7",
+      "assetName": "Modern Stainless Steel Refrigerator",
+      "assetType": "furniture",
+      "category": "diningroom",
+      "assetStatus": "not_available",
+      "field": "model_path",
+      "originalValue": "assets/furniture/diningroom/1leXkoHmhslSxmZsagb7-model-Modern-Stainless-Steel-Refrigerator.glb",
+      "storagePath": "assets/furniture/diningroom/1leXkoHmhslSxmZsagb7-model-Modern-Stainless-Steel-Refrigerator.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/diningroom/1leXkoHmhslSxmZsagb7-model-Modern-Stainless-Steel-Refrigerator.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/diningroom/1leXkoHmhslSxmZsagb7-model-Modern-Stainless-Steel-Refrigerator.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/diningroom/",
+        "assets/furniture/diningroom/1leXkoHmhslSxmZsagb7-model-Modern-Stainless-Steel-Refrigerator.glb",
+        "assets/furniture/diningroom/Table.glb",
+        "assets/furniture/diningroom/x3hHPlyBgYWVUPB6TGTL-model-Ivory-Gold-Breakfast-Stool_resized.glb",
+        "assets/furniture/diningroom/xytfdR9rejLmC6xcFlU7-model-Ivory-Marble-Center-Table_resized.glb"
+      ]
+    },
+    {
+      "documentId": "4vD9gHQW3UI3K8xLD71B",
+      "assetId": "4vD9gHQW3UI3K8xLD71B",
+      "assetName": "Barrel Chair",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "assetStatus": "available",
+      "field": "storage_path",
+      "originalValue": "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+      "storagePath": "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/livingroom/",
+        "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+        "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+        "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+        "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+        "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+        "assets/furniture/livingroom/TV.glb",
+        "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+        "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+        "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+        "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+        "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+        "assets/furniture/livingroom/steel-frame-shelves-01.glb",
+        "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb"
+      ]
+    },
+    {
+      "documentId": "4vD9gHQW3UI3K8xLD71B",
+      "assetId": "4vD9gHQW3UI3K8xLD71B",
+      "assetName": "Barrel Chair",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "assetStatus": "available",
+      "field": "model_path",
+      "originalValue": "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+      "storagePath": "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/livingroom/",
+        "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+        "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+        "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+        "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+        "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+        "assets/furniture/livingroom/TV.glb",
+        "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+        "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+        "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+        "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+        "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+        "assets/furniture/livingroom/steel-frame-shelves-01.glb",
+        "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb"
+      ]
+    },
+    {
+      "documentId": "9pPtBuRt0sQZnCf6NeZY",
+      "assetId": "9pPtBuRt0sQZnCf6NeZY",
+      "assetName": "tile test",
+      "assetType": "floor",
+      "category": "wood",
+      "assetStatus": "available",
+      "field": "diffuse_path",
+      "originalValue": "assets/floor/wood/9pPtBuRt0sQZnCf6NeZY-diffuse-png-transparent-porcelain-tile-flooring-bathroom-floor-tiles-miscellaneous-texture-kitchen-thumbnail.png",
+      "storagePath": "assets/floor/wood/9pPtBuRt0sQZnCf6NeZY-diffuse-png-transparent-porcelain-tile-flooring-bathroom-floor-tiles-miscellaneous-texture-kitchen-thumbnail.png",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/floor/wood/9pPtBuRt0sQZnCf6NeZY-diffuse-png-transparent-porcelain-tile-flooring-bathroom-floor-tiles-miscellaneous-texture-kitchen-thumbnail.png"
+      ],
+      "normalizedCandidates": [
+        "assets/floor/wood/9pPtBuRt0sQZnCf6NeZY-diffuse-png-transparent-porcelain-tile-flooring-bathroom-floor-tiles-miscellaneous-texture-kitchen-thumbnail.png"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/floor/wood/9pPtBuRt0sQZnCf6NeZY-diffuse-png-transparent-porcelain-tile-flooring-bathroom-floor-tiles-miscellaneous-texture-kitchen-thumbnail.png"
+      ]
+    },
+    {
+      "documentId": "A-26013",
+      "assetId": "A-26013",
+      "assetName": "Square Brick Floors",
+      "assetType": "floor",
+      "category": "brick",
+      "assetStatus": "available",
+      "field": "storage_path",
+      "originalValue": "assets/floors/Brick/square_brick_floor",
+      "storagePath": "assets/floors/Brick/square_brick_floor",
+      "exists": false,
+      "status": "MISSING",
+      "exactNameCandidates": [],
+      "normalizedCandidates": [],
+      "filesUnderExpectedParent": [
+        "assets/floors/Brick/square_brick_floor/Diffuse.png"
+      ]
+    },
+    {
+      "documentId": "A-26013",
+      "assetId": "A-26013",
+      "assetName": "Square Brick Floors",
+      "assetType": "floor",
+      "category": "brick",
+      "assetStatus": "available",
+      "field": "diffuse_path",
+      "originalValue": "assets/floors/Brick/square_brick_floor/Diffuse.png",
+      "storagePath": "assets/floors/Brick/square_brick_floor/Diffuse.png",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/floors/Brick/square_brick_floor/Diffuse.png",
+        "assets/floors/Tiles/square_tiles/Diffuse.png",
+        "assets/floors/Tiles/terrazo_tiles/Diffuse.png",
+        "assets/floors/Wood/plank_flooring/Diffuse.png",
+        "assets/floors/Wood/wooden_floor/Diffuse.png"
+      ],
+      "normalizedCandidates": [
+        "assets/floors/Brick/square_brick_floor/Diffuse.png",
+        "assets/floors/Tiles/square_tiles/Diffuse.png",
+        "assets/floors/Tiles/terrazo_tiles/Diffuse.png",
+        "assets/floors/Wood/plank_flooring/Diffuse.png",
+        "assets/floors/Wood/wooden_floor/Diffuse.png"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/floors/Brick/square_brick_floor/Diffuse.png"
+      ]
+    },
+    {
+      "documentId": "A-26014",
+      "assetId": "A-26014",
+      "assetName": "Square Tiles",
+      "assetType": "floor",
+      "category": "tiles",
+      "assetStatus": "available",
+      "field": "storage_path",
+      "originalValue": "assets/floors/Tiles/square_tiles",
+      "storagePath": "assets/floors/Tiles/square_tiles",
+      "exists": false,
+      "status": "MISSING",
+      "exactNameCandidates": [],
+      "normalizedCandidates": [],
+      "filesUnderExpectedParent": [
+        "assets/floors/Tiles/square_tiles/Diffuse.png",
+        "assets/floors/Tiles/terrazo_tiles/Diffuse.png"
+      ]
+    },
+    {
+      "documentId": "A-26014",
+      "assetId": "A-26014",
+      "assetName": "Square Tiles",
+      "assetType": "floor",
+      "category": "tiles",
+      "assetStatus": "available",
+      "field": "diffuse_path",
+      "originalValue": "assets/floors/Tiles/square_tiles/Diffuse.png",
+      "storagePath": "assets/floors/Tiles/square_tiles/Diffuse.png",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/floors/Brick/square_brick_floor/Diffuse.png",
+        "assets/floors/Tiles/square_tiles/Diffuse.png",
+        "assets/floors/Tiles/terrazo_tiles/Diffuse.png",
+        "assets/floors/Wood/plank_flooring/Diffuse.png",
+        "assets/floors/Wood/wooden_floor/Diffuse.png"
+      ],
+      "normalizedCandidates": [
+        "assets/floors/Brick/square_brick_floor/Diffuse.png",
+        "assets/floors/Tiles/square_tiles/Diffuse.png",
+        "assets/floors/Tiles/terrazo_tiles/Diffuse.png",
+        "assets/floors/Wood/plank_flooring/Diffuse.png",
+        "assets/floors/Wood/wooden_floor/Diffuse.png"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/floors/Tiles/square_tiles/Diffuse.png"
+      ]
+    },
+    {
+      "documentId": "A-26014",
+      "assetId": "A-26014",
+      "assetName": "Square Tiles",
+      "assetType": "floor",
+      "category": "tiles",
+      "assetStatus": "available",
+      "field": "model_url",
+      "originalValue": "https://firebasestorage.googleapis.com/v0/b/espasyo-6072d.firebasestorage.app/o/assets%2Ffloors%2FTiles%2Fsquare_tiles%2FDiffuse.png?alt=media&token=b61b4a0f-7440-4258-a9b5-9953de39c2be",
+      "storagePath": "assets/floors/Tiles/square_tiles/Diffuse.png",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/floors/Brick/square_brick_floor/Diffuse.png",
+        "assets/floors/Tiles/square_tiles/Diffuse.png",
+        "assets/floors/Tiles/terrazo_tiles/Diffuse.png",
+        "assets/floors/Wood/plank_flooring/Diffuse.png",
+        "assets/floors/Wood/wooden_floor/Diffuse.png"
+      ],
+      "normalizedCandidates": [
+        "assets/floors/Brick/square_brick_floor/Diffuse.png",
+        "assets/floors/Tiles/square_tiles/Diffuse.png",
+        "assets/floors/Tiles/terrazo_tiles/Diffuse.png",
+        "assets/floors/Wood/plank_flooring/Diffuse.png",
+        "assets/floors/Wood/wooden_floor/Diffuse.png"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/floors/Tiles/square_tiles/Diffuse.png"
+      ]
+    },
+    {
+      "documentId": "A-26015",
+      "assetId": "A-26015",
+      "assetName": "Terrazo Tiles",
+      "assetType": "floor",
+      "category": "tiles",
+      "assetStatus": "available",
+      "field": "storage_path",
+      "originalValue": "assets/floors/Tiles/terrazo_tiles",
+      "storagePath": "assets/floors/Tiles/terrazo_tiles",
+      "exists": false,
+      "status": "MISSING",
+      "exactNameCandidates": [],
+      "normalizedCandidates": [],
+      "filesUnderExpectedParent": [
+        "assets/floors/Tiles/square_tiles/Diffuse.png",
+        "assets/floors/Tiles/terrazo_tiles/Diffuse.png"
+      ]
+    },
+    {
+      "documentId": "A-26015",
+      "assetId": "A-26015",
+      "assetName": "Terrazo Tiles",
+      "assetType": "floor",
+      "category": "tiles",
+      "assetStatus": "available",
+      "field": "diffuse_path",
+      "originalValue": "assets/floors/Tiles/terrazo_tiles/Diffuse.png",
+      "storagePath": "assets/floors/Tiles/terrazo_tiles/Diffuse.png",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/floors/Brick/square_brick_floor/Diffuse.png",
+        "assets/floors/Tiles/square_tiles/Diffuse.png",
+        "assets/floors/Tiles/terrazo_tiles/Diffuse.png",
+        "assets/floors/Wood/plank_flooring/Diffuse.png",
+        "assets/floors/Wood/wooden_floor/Diffuse.png"
+      ],
+      "normalizedCandidates": [
+        "assets/floors/Brick/square_brick_floor/Diffuse.png",
+        "assets/floors/Tiles/square_tiles/Diffuse.png",
+        "assets/floors/Tiles/terrazo_tiles/Diffuse.png",
+        "assets/floors/Wood/plank_flooring/Diffuse.png",
+        "assets/floors/Wood/wooden_floor/Diffuse.png"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/floors/Tiles/terrazo_tiles/Diffuse.png"
+      ]
+    },
+    {
+      "documentId": "A-26016",
+      "assetId": "A-26016",
+      "assetName": "Plank Flooring",
+      "assetType": "floor",
+      "category": "wood",
+      "assetStatus": "available",
+      "field": "storage_path",
+      "originalValue": "assets/floors/Wood/plank_flooring",
+      "storagePath": "assets/floors/Wood/plank_flooring",
+      "exists": false,
+      "status": "MISSING",
+      "exactNameCandidates": [],
+      "normalizedCandidates": [],
+      "filesUnderExpectedParent": [
+        "assets/floors/Wood/plank_flooring/Diffuse.png",
+        "assets/floors/Wood/wooden_floor/Diffuse.png"
+      ]
+    },
+    {
+      "documentId": "A-26016",
+      "assetId": "A-26016",
+      "assetName": "Plank Flooring",
+      "assetType": "floor",
+      "category": "wood",
+      "assetStatus": "available",
+      "field": "diffuse_path",
+      "originalValue": "assets/floors/Wood/plank_flooring/Diffuse.png",
+      "storagePath": "assets/floors/Wood/plank_flooring/Diffuse.png",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/floors/Brick/square_brick_floor/Diffuse.png",
+        "assets/floors/Tiles/square_tiles/Diffuse.png",
+        "assets/floors/Tiles/terrazo_tiles/Diffuse.png",
+        "assets/floors/Wood/plank_flooring/Diffuse.png",
+        "assets/floors/Wood/wooden_floor/Diffuse.png"
+      ],
+      "normalizedCandidates": [
+        "assets/floors/Brick/square_brick_floor/Diffuse.png",
+        "assets/floors/Tiles/square_tiles/Diffuse.png",
+        "assets/floors/Tiles/terrazo_tiles/Diffuse.png",
+        "assets/floors/Wood/plank_flooring/Diffuse.png",
+        "assets/floors/Wood/wooden_floor/Diffuse.png"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/floors/Wood/plank_flooring/Diffuse.png"
+      ]
+    },
+    {
+      "documentId": "A-26017",
+      "assetId": "A-26017",
+      "assetName": "Wooden Floor",
+      "assetType": "floor",
+      "category": "wood",
+      "assetStatus": "available",
+      "field": "storage_path",
+      "originalValue": "assets/floors/Wood/wooden_floor",
+      "storagePath": "assets/floors/Wood/wooden_floor",
+      "exists": false,
+      "status": "MISSING",
+      "exactNameCandidates": [],
+      "normalizedCandidates": [],
+      "filesUnderExpectedParent": [
+        "assets/floors/Wood/plank_flooring/Diffuse.png",
+        "assets/floors/Wood/wooden_floor/Diffuse.png"
+      ]
+    },
+    {
+      "documentId": "A-26017",
+      "assetId": "A-26017",
+      "assetName": "Wooden Floor",
+      "assetType": "floor",
+      "category": "wood",
+      "assetStatus": "available",
+      "field": "diffuse_path",
+      "originalValue": "assets/floors/Wood/wooden_floor/Diffuse.png",
+      "storagePath": "assets/floors/Wood/wooden_floor/Diffuse.png",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/floors/Brick/square_brick_floor/Diffuse.png",
+        "assets/floors/Tiles/square_tiles/Diffuse.png",
+        "assets/floors/Tiles/terrazo_tiles/Diffuse.png",
+        "assets/floors/Wood/plank_flooring/Diffuse.png",
+        "assets/floors/Wood/wooden_floor/Diffuse.png"
+      ],
+      "normalizedCandidates": [
+        "assets/floors/Brick/square_brick_floor/Diffuse.png",
+        "assets/floors/Tiles/square_tiles/Diffuse.png",
+        "assets/floors/Tiles/terrazo_tiles/Diffuse.png",
+        "assets/floors/Wood/plank_flooring/Diffuse.png",
+        "assets/floors/Wood/wooden_floor/Diffuse.png"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/floors/Wood/wooden_floor/Diffuse.png"
+      ]
+    },
+    {
+      "documentId": "A-3X1T1I",
+      "assetId": "A-3X1T1I",
+      "assetName": "Single Door",
+      "assetType": "furniture",
+      "category": "doors",
+      "assetStatus": "available",
+      "field": "model_path",
+      "originalValue": "assets/openings/doors/single-door.glb",
+      "storagePath": "assets/openings/doors/single-door.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/openings/doors/single-door.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/openings/doors/single-door.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/openings/doors/",
+        "assets/openings/doors/single-door.glb"
+      ]
+    },
+    {
+      "documentId": "A-3X1T1I",
+      "assetId": "A-3X1T1I",
+      "assetName": "Single Door",
+      "assetType": "furniture",
+      "category": "doors",
+      "assetStatus": "available",
+      "field": "model_url",
+      "originalValue": "https://firebasestorage.googleapis.com/v0/b/espasyo-6072d.firebasestorage.app/o/assets%2Fopenings%2Fdoors%2Fsingle-door.glb?alt=media&token=bfa5013b-6ae7-4428-8556-1e1ed794ac40",
+      "storagePath": "assets/openings/doors/single-door.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/openings/doors/single-door.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/openings/doors/single-door.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/openings/doors/",
+        "assets/openings/doors/single-door.glb"
+      ]
+    },
+    {
+      "documentId": "A-4BERBM",
+      "assetId": "A-4BERBM",
+      "assetName": "TV",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "assetStatus": "available",
+      "field": "model_path",
+      "originalValue": "assets/furniture/livingroom/TV.glb",
+      "storagePath": "assets/furniture/livingroom/TV.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/livingroom/TV.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/livingroom/TV.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/livingroom/",
+        "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+        "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+        "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+        "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+        "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+        "assets/furniture/livingroom/TV.glb",
+        "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+        "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+        "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+        "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+        "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+        "assets/furniture/livingroom/steel-frame-shelves-01.glb",
+        "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb"
+      ]
+    },
+    {
+      "documentId": "A-4BERBM",
+      "assetId": "A-4BERBM",
+      "assetName": "TV",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "assetStatus": "available",
+      "field": "model_url",
+      "originalValue": "https://firebasestorage.googleapis.com/v0/b/espasyo-6072d.firebasestorage.app/o/assets%2Ffurniture%2Flivingroom%2FTV.glb?alt=media&token=430b70f9-f919-482b-a86d-e09897d5386a",
+      "storagePath": "assets/furniture/livingroom/TV.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/livingroom/TV.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/livingroom/TV.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/livingroom/",
+        "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+        "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+        "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+        "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+        "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+        "assets/furniture/livingroom/TV.glb",
+        "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+        "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+        "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+        "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+        "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+        "assets/furniture/livingroom/steel-frame-shelves-01.glb",
+        "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb"
+      ]
+    },
+    {
+      "documentId": "A-DF723H",
+      "assetId": "A-DF723H",
+      "assetName": "Sofa",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "assetStatus": "available",
+      "field": "model_path",
+      "originalValue": "assets/furniture/livingroom/steel-frame-shelves-01.glb",
+      "storagePath": "assets/furniture/livingroom/steel-frame-shelves-01.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/livingroom/steel-frame-shelves-01.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/livingroom/steel-frame-shelves-01.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/livingroom/",
+        "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+        "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+        "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+        "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+        "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+        "assets/furniture/livingroom/TV.glb",
+        "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+        "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+        "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+        "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+        "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+        "assets/furniture/livingroom/steel-frame-shelves-01.glb",
+        "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb"
+      ]
+    },
+    {
+      "documentId": "A-ELXX9U",
+      "assetId": "A-ELXX9U",
+      "assetName": "Slim Intersection Window",
+      "assetType": "furniture",
+      "category": "windows",
+      "assetStatus": "available",
+      "field": "model_path",
+      "originalValue": "assets/openings/windows/Slim_Intersection_i.glb",
+      "storagePath": "assets/openings/windows/Slim_Intersection_i.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/openings/windows/Slim_Intersection_i.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/openings/windows/Slim_Intersection_i.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/openings/windows/",
+        "assets/openings/windows/Slim_Intersection_i.glb"
+      ]
+    },
+    {
+      "documentId": "A-ELXX9U",
+      "assetId": "A-ELXX9U",
+      "assetName": "Slim Intersection Window",
+      "assetType": "furniture",
+      "category": "windows",
+      "assetStatus": "available",
+      "field": "model_url",
+      "originalValue": "https://firebasestorage.googleapis.com/v0/b/espasyo-6072d.firebasestorage.app/o/assets%2Fopenings%2Fwindows%2FSlim_Intersection_i.glb?alt=media&token=d2d1c6c8-566e-49e3-a6f8-f98c6dd62264",
+      "storagePath": "assets/openings/windows/Slim_Intersection_i.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/openings/windows/Slim_Intersection_i.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/openings/windows/Slim_Intersection_i.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/openings/windows/",
+        "assets/openings/windows/Slim_Intersection_i.glb"
+      ]
+    },
+    {
+      "documentId": "A-KOSIW0",
+      "assetId": "A-KOSIW0",
+      "assetName": "Cabinet",
+      "assetType": "furniture",
+      "category": "bedroom",
+      "assetStatus": "available",
+      "field": "model_path",
+      "originalValue": "assets/furniture/bedroom/Cabinet.glb",
+      "storagePath": "assets/furniture/bedroom/Cabinet.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/bedroom/Cabinet.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/bedroom/Cabinet.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/bedroom/",
+        "assets/furniture/bedroom/Cabinet.glb",
+        "assets/furniture/bedroom/l7aynDwSMh5MpQK9fx7c-model-Channel-Tufted-Camel-Bed_scaled_resized.glb",
+        "assets/furniture/bedroom/vi2bJxz7mkQzycxuRV53-model-Modern-Ash-Bed_resized.glb"
+      ]
+    },
+    {
+      "documentId": "A-WWTI9B",
+      "assetId": "A-WWTI9B",
+      "assetName": "Table",
+      "assetType": "furniture",
+      "category": "diningroom",
+      "assetStatus": "available",
+      "field": "model_path",
+      "originalValue": "assets/furniture/diningroom/Table.glb",
+      "storagePath": "assets/furniture/diningroom/Table.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/diningroom/Table.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/diningroom/Table.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/diningroom/",
+        "assets/furniture/diningroom/1leXkoHmhslSxmZsagb7-model-Modern-Stainless-Steel-Refrigerator.glb",
+        "assets/furniture/diningroom/Table.glb",
+        "assets/furniture/diningroom/x3hHPlyBgYWVUPB6TGTL-model-Ivory-Gold-Breakfast-Stool_resized.glb",
+        "assets/furniture/diningroom/xytfdR9rejLmC6xcFlU7-model-Ivory-Marble-Center-Table_resized.glb"
+      ]
+    },
+    {
+      "documentId": "HRgQpL2Tx92bvodO8RZI",
+      "assetId": "HRgQpL2Tx92bvodO8RZI",
+      "assetName": "Ivory Pharaoh Chair",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "assetStatus": "available",
+      "field": "storage_path",
+      "originalValue": "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+      "storagePath": "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/livingroom/",
+        "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+        "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+        "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+        "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+        "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+        "assets/furniture/livingroom/TV.glb",
+        "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+        "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+        "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+        "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+        "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+        "assets/furniture/livingroom/steel-frame-shelves-01.glb",
+        "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb"
+      ]
+    },
+    {
+      "documentId": "HRgQpL2Tx92bvodO8RZI",
+      "assetId": "HRgQpL2Tx92bvodO8RZI",
+      "assetName": "Ivory Pharaoh Chair",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "assetStatus": "available",
+      "field": "model_path",
+      "originalValue": "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+      "storagePath": "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/livingroom/",
+        "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+        "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+        "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+        "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+        "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+        "assets/furniture/livingroom/TV.glb",
+        "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+        "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+        "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+        "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+        "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+        "assets/furniture/livingroom/steel-frame-shelves-01.glb",
+        "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb"
+      ]
+    },
+    {
+      "documentId": "HZG0WRHwY8yuH9J0Nc5O",
+      "assetId": "HZG0WRHwY8yuH9J0Nc5O",
+      "assetName": "Sofa",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "assetStatus": "available",
+      "field": "storage_path",
+      "originalValue": "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+      "storagePath": "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/livingroom/",
+        "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+        "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+        "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+        "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+        "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+        "assets/furniture/livingroom/TV.glb",
+        "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+        "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+        "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+        "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+        "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+        "assets/furniture/livingroom/steel-frame-shelves-01.glb",
+        "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb"
+      ]
+    },
+    {
+      "documentId": "HZG0WRHwY8yuH9J0Nc5O",
+      "assetId": "HZG0WRHwY8yuH9J0Nc5O",
+      "assetName": "Sofa",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "assetStatus": "available",
+      "field": "model_path",
+      "originalValue": "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+      "storagePath": "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/livingroom/",
+        "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+        "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+        "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+        "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+        "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+        "assets/furniture/livingroom/TV.glb",
+        "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+        "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+        "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+        "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+        "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+        "assets/furniture/livingroom/steel-frame-shelves-01.glb",
+        "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb"
+      ]
+    },
+    {
+      "documentId": "I5Mm64NNEKhOFusIqWHe",
+      "assetId": "I5Mm64NNEKhOFusIqWHe",
+      "assetName": "Cocoa Curve Lounge",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "assetStatus": "available",
+      "field": "storage_path",
+      "originalValue": "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+      "storagePath": "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/livingroom/",
+        "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+        "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+        "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+        "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+        "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+        "assets/furniture/livingroom/TV.glb",
+        "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+        "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+        "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+        "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+        "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+        "assets/furniture/livingroom/steel-frame-shelves-01.glb",
+        "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb"
+      ]
+    },
+    {
+      "documentId": "I5Mm64NNEKhOFusIqWHe",
+      "assetId": "I5Mm64NNEKhOFusIqWHe",
+      "assetName": "Cocoa Curve Lounge",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "assetStatus": "available",
+      "field": "model_path",
+      "originalValue": "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+      "storagePath": "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/livingroom/",
+        "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+        "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+        "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+        "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+        "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+        "assets/furniture/livingroom/TV.glb",
+        "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+        "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+        "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+        "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+        "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+        "assets/furniture/livingroom/steel-frame-shelves-01.glb",
+        "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb"
+      ]
+    },
+    {
+      "documentId": "PqtRcTuqL5ifuo3GTUUH",
+      "assetId": "PqtRcTuqL5ifuo3GTUUH",
+      "assetName": "Ashen Wood Lounge Chair",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "assetStatus": "available",
+      "field": "storage_path",
+      "originalValue": "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+      "storagePath": "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/livingroom/",
+        "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+        "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+        "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+        "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+        "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+        "assets/furniture/livingroom/TV.glb",
+        "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+        "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+        "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+        "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+        "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+        "assets/furniture/livingroom/steel-frame-shelves-01.glb",
+        "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb"
+      ]
+    },
+    {
+      "documentId": "PqtRcTuqL5ifuo3GTUUH",
+      "assetId": "PqtRcTuqL5ifuo3GTUUH",
+      "assetName": "Ashen Wood Lounge Chair",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "assetStatus": "available",
+      "field": "model_path",
+      "originalValue": "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+      "storagePath": "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/livingroom/",
+        "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+        "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+        "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+        "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+        "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+        "assets/furniture/livingroom/TV.glb",
+        "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+        "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+        "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+        "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+        "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+        "assets/furniture/livingroom/steel-frame-shelves-01.glb",
+        "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb"
+      ]
+    },
+    {
+      "documentId": "SreeI98A0JN3AJjsb3UN",
+      "assetId": "SreeI98A0JN3AJjsb3UN",
+      "assetName": "Black Ceramic Tiles",
+      "assetType": "floor",
+      "category": "tile",
+      "assetStatus": "available",
+      "field": "diffuse_path",
+      "originalValue": "assets/floor/tile/SreeI98A0JN3AJjsb3UN-diffuse-black-stones-tiled-floor.jpg",
+      "storagePath": "assets/floor/tile/SreeI98A0JN3AJjsb3UN-diffuse-black-stones-tiled-floor.jpg",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/floor/tile/SreeI98A0JN3AJjsb3UN-diffuse-black-stones-tiled-floor.jpg"
+      ],
+      "normalizedCandidates": [
+        "assets/floor/tile/SreeI98A0JN3AJjsb3UN-diffuse-black-stones-tiled-floor.jpg"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/floor/tile/SreeI98A0JN3AJjsb3UN-diffuse-black-stones-tiled-floor.jpg"
+      ]
+    },
+    {
+      "documentId": "ewZhEYTdu2niIU6lZF2h",
+      "assetId": "ewZhEYTdu2niIU6lZF2h",
+      "assetName": "testing",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "assetStatus": "not_available",
+      "field": "storage_path",
+      "originalValue": "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+      "storagePath": "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/livingroom/",
+        "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+        "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+        "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+        "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+        "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+        "assets/furniture/livingroom/TV.glb",
+        "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+        "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+        "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+        "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+        "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+        "assets/furniture/livingroom/steel-frame-shelves-01.glb",
+        "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb"
+      ]
+    },
+    {
+      "documentId": "ewZhEYTdu2niIU6lZF2h",
+      "assetId": "ewZhEYTdu2niIU6lZF2h",
+      "assetName": "testing",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "assetStatus": "not_available",
+      "field": "model_path",
+      "originalValue": "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+      "storagePath": "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/livingroom/",
+        "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+        "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+        "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+        "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+        "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+        "assets/furniture/livingroom/TV.glb",
+        "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+        "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+        "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+        "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+        "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+        "assets/furniture/livingroom/steel-frame-shelves-01.glb",
+        "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb"
+      ]
+    },
+    {
+      "documentId": "gQQOYRG9Cce28WquJ5B0",
+      "assetId": "gQQOYRG9Cce28WquJ5B0",
+      "assetName": "Obsidian Executive Chair",
+      "assetType": "furniture",
+      "category": "office",
+      "assetStatus": "available",
+      "field": "storage_path",
+      "originalValue": "assets/furniture/office/gQQOYRG9Cce28WquJ5B0-model-Obsidian-Executive-Chair.glb",
+      "storagePath": "assets/furniture/office/gQQOYRG9Cce28WquJ5B0-model-Obsidian-Executive-Chair.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/office/gQQOYRG9Cce28WquJ5B0-model-Obsidian-Executive-Chair.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/office/gQQOYRG9Cce28WquJ5B0-model-Obsidian-Executive-Chair.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/office/gQQOYRG9Cce28WquJ5B0-model-Obsidian-Executive-Chair.glb",
+        "assets/furniture/office/yoAt8ckUEXxmjtmB70p3-model-Saddlewood-Executive-Chair.glb"
+      ]
+    },
+    {
+      "documentId": "gQQOYRG9Cce28WquJ5B0",
+      "assetId": "gQQOYRG9Cce28WquJ5B0",
+      "assetName": "Obsidian Executive Chair",
+      "assetType": "furniture",
+      "category": "office",
+      "assetStatus": "available",
+      "field": "model_path",
+      "originalValue": "assets/furniture/office/gQQOYRG9Cce28WquJ5B0-model-Obsidian-Executive-Chair.glb",
+      "storagePath": "assets/furniture/office/gQQOYRG9Cce28WquJ5B0-model-Obsidian-Executive-Chair.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/office/gQQOYRG9Cce28WquJ5B0-model-Obsidian-Executive-Chair.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/office/gQQOYRG9Cce28WquJ5B0-model-Obsidian-Executive-Chair.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/office/gQQOYRG9Cce28WquJ5B0-model-Obsidian-Executive-Chair.glb",
+        "assets/furniture/office/yoAt8ckUEXxmjtmB70p3-model-Saddlewood-Executive-Chair.glb"
+      ]
+    },
+    {
+      "documentId": "kjdY8niuhQPlDK1nzeio",
+      "assetId": "kjdY8niuhQPlDK1nzeio",
+      "assetName": "Ivory Cloud U-Sofa",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "assetStatus": "available",
+      "field": "storage_path",
+      "originalValue": "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+      "storagePath": "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/livingroom/",
+        "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+        "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+        "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+        "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+        "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+        "assets/furniture/livingroom/TV.glb",
+        "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+        "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+        "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+        "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+        "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+        "assets/furniture/livingroom/steel-frame-shelves-01.glb",
+        "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb"
+      ]
+    },
+    {
+      "documentId": "kjdY8niuhQPlDK1nzeio",
+      "assetId": "kjdY8niuhQPlDK1nzeio",
+      "assetName": "Ivory Cloud U-Sofa",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "assetStatus": "available",
+      "field": "model_path",
+      "originalValue": "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+      "storagePath": "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/livingroom/",
+        "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+        "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+        "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+        "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+        "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+        "assets/furniture/livingroom/TV.glb",
+        "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+        "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+        "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+        "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+        "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+        "assets/furniture/livingroom/steel-frame-shelves-01.glb",
+        "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb"
+      ]
+    },
+    {
+      "documentId": "l7aynDwSMh5MpQK9fx7c",
+      "assetId": "l7aynDwSMh5MpQK9fx7c",
+      "assetName": "Channel Tufted Camel Bed",
+      "assetType": "furniture",
+      "category": "bedroom",
+      "assetStatus": "available",
+      "field": "storage_path",
+      "originalValue": "assets/furniture/bedroom/l7aynDwSMh5MpQK9fx7c-model-Channel-Tufted-Camel-Bed_scaled_resized.glb",
+      "storagePath": "assets/furniture/bedroom/l7aynDwSMh5MpQK9fx7c-model-Channel-Tufted-Camel-Bed_scaled_resized.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/bedroom/l7aynDwSMh5MpQK9fx7c-model-Channel-Tufted-Camel-Bed_scaled_resized.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/bedroom/l7aynDwSMh5MpQK9fx7c-model-Channel-Tufted-Camel-Bed_scaled_resized.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/bedroom/",
+        "assets/furniture/bedroom/Cabinet.glb",
+        "assets/furniture/bedroom/l7aynDwSMh5MpQK9fx7c-model-Channel-Tufted-Camel-Bed_scaled_resized.glb",
+        "assets/furniture/bedroom/vi2bJxz7mkQzycxuRV53-model-Modern-Ash-Bed_resized.glb"
+      ]
+    },
+    {
+      "documentId": "l7aynDwSMh5MpQK9fx7c",
+      "assetId": "l7aynDwSMh5MpQK9fx7c",
+      "assetName": "Channel Tufted Camel Bed",
+      "assetType": "furniture",
+      "category": "bedroom",
+      "assetStatus": "available",
+      "field": "model_path",
+      "originalValue": "assets/furniture/bedroom/l7aynDwSMh5MpQK9fx7c-model-Channel-Tufted-Camel-Bed_scaled_resized.glb",
+      "storagePath": "assets/furniture/bedroom/l7aynDwSMh5MpQK9fx7c-model-Channel-Tufted-Camel-Bed_scaled_resized.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/bedroom/l7aynDwSMh5MpQK9fx7c-model-Channel-Tufted-Camel-Bed_scaled_resized.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/bedroom/l7aynDwSMh5MpQK9fx7c-model-Channel-Tufted-Camel-Bed_scaled_resized.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/bedroom/",
+        "assets/furniture/bedroom/Cabinet.glb",
+        "assets/furniture/bedroom/l7aynDwSMh5MpQK9fx7c-model-Channel-Tufted-Camel-Bed_scaled_resized.glb",
+        "assets/furniture/bedroom/vi2bJxz7mkQzycxuRV53-model-Modern-Ash-Bed_resized.glb"
+      ]
+    },
+    {
+      "documentId": "o9hxXiBMGY3bJZAApUte",
+      "assetId": "o9hxXiBMGY3bJZAApUte",
+      "assetName": "Modern Lounge Chair",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "assetStatus": "available",
+      "field": "storage_path",
+      "originalValue": "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+      "storagePath": "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/livingroom/",
+        "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+        "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+        "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+        "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+        "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+        "assets/furniture/livingroom/TV.glb",
+        "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+        "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+        "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+        "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+        "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+        "assets/furniture/livingroom/steel-frame-shelves-01.glb",
+        "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb"
+      ]
+    },
+    {
+      "documentId": "o9hxXiBMGY3bJZAApUte",
+      "assetId": "o9hxXiBMGY3bJZAApUte",
+      "assetName": "Modern Lounge Chair",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "assetStatus": "available",
+      "field": "model_path",
+      "originalValue": "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+      "storagePath": "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/livingroom/",
+        "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+        "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+        "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+        "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+        "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+        "assets/furniture/livingroom/TV.glb",
+        "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+        "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+        "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+        "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+        "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+        "assets/furniture/livingroom/steel-frame-shelves-01.glb",
+        "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb"
+      ]
+    },
+    {
+      "documentId": "qQdRA4o2kNzBfZtQrKce",
+      "assetId": "qQdRA4o2kNzBfZtQrKce",
+      "assetName": "Goldenrod Comfort Chair",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "assetStatus": "available",
+      "field": "storage_path",
+      "originalValue": "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+      "storagePath": "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/livingroom/",
+        "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+        "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+        "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+        "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+        "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+        "assets/furniture/livingroom/TV.glb",
+        "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+        "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+        "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+        "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+        "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+        "assets/furniture/livingroom/steel-frame-shelves-01.glb",
+        "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb"
+      ]
+    },
+    {
+      "documentId": "qQdRA4o2kNzBfZtQrKce",
+      "assetId": "qQdRA4o2kNzBfZtQrKce",
+      "assetName": "Goldenrod Comfort Chair",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "assetStatus": "available",
+      "field": "model_path",
+      "originalValue": "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+      "storagePath": "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/livingroom/",
+        "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+        "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+        "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+        "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+        "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+        "assets/furniture/livingroom/TV.glb",
+        "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+        "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+        "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+        "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+        "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+        "assets/furniture/livingroom/steel-frame-shelves-01.glb",
+        "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb"
+      ]
+    },
+    {
+      "documentId": "qTnjmIpfmIcZlvFlDnC1",
+      "assetId": "qTnjmIpfmIcZlvFlDnC1",
+      "assetName": "Elephant Gray Sectional Couch",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "assetStatus": "available",
+      "field": "storage_path",
+      "originalValue": "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+      "storagePath": "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/livingroom/",
+        "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+        "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+        "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+        "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+        "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+        "assets/furniture/livingroom/TV.glb",
+        "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+        "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+        "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+        "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+        "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+        "assets/furniture/livingroom/steel-frame-shelves-01.glb",
+        "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb"
+      ]
+    },
+    {
+      "documentId": "qTnjmIpfmIcZlvFlDnC1",
+      "assetId": "qTnjmIpfmIcZlvFlDnC1",
+      "assetName": "Elephant Gray Sectional Couch",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "assetStatus": "available",
+      "field": "model_path",
+      "originalValue": "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+      "storagePath": "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/livingroom/",
+        "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+        "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+        "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+        "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+        "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+        "assets/furniture/livingroom/TV.glb",
+        "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+        "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+        "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+        "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+        "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+        "assets/furniture/livingroom/steel-frame-shelves-01.glb",
+        "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb"
+      ]
+    },
+    {
+      "documentId": "vi2bJxz7mkQzycxuRV53",
+      "assetId": "vi2bJxz7mkQzycxuRV53",
+      "assetName": "Modern Ash Bed",
+      "assetType": "furniture",
+      "category": "bedroom",
+      "assetStatus": "available",
+      "field": "storage_path",
+      "originalValue": "assets/furniture/bedroom/vi2bJxz7mkQzycxuRV53-model-Modern-Ash-Bed_resized.glb",
+      "storagePath": "assets/furniture/bedroom/vi2bJxz7mkQzycxuRV53-model-Modern-Ash-Bed_resized.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/bedroom/vi2bJxz7mkQzycxuRV53-model-Modern-Ash-Bed_resized.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/bedroom/vi2bJxz7mkQzycxuRV53-model-Modern-Ash-Bed_resized.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/bedroom/",
+        "assets/furniture/bedroom/Cabinet.glb",
+        "assets/furniture/bedroom/l7aynDwSMh5MpQK9fx7c-model-Channel-Tufted-Camel-Bed_scaled_resized.glb",
+        "assets/furniture/bedroom/vi2bJxz7mkQzycxuRV53-model-Modern-Ash-Bed_resized.glb"
+      ]
+    },
+    {
+      "documentId": "vi2bJxz7mkQzycxuRV53",
+      "assetId": "vi2bJxz7mkQzycxuRV53",
+      "assetName": "Modern Ash Bed",
+      "assetType": "furniture",
+      "category": "bedroom",
+      "assetStatus": "available",
+      "field": "model_path",
+      "originalValue": "assets/furniture/bedroom/vi2bJxz7mkQzycxuRV53-model-Modern-Ash-Bed_resized.glb",
+      "storagePath": "assets/furniture/bedroom/vi2bJxz7mkQzycxuRV53-model-Modern-Ash-Bed_resized.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/bedroom/vi2bJxz7mkQzycxuRV53-model-Modern-Ash-Bed_resized.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/bedroom/vi2bJxz7mkQzycxuRV53-model-Modern-Ash-Bed_resized.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/bedroom/",
+        "assets/furniture/bedroom/Cabinet.glb",
+        "assets/furniture/bedroom/l7aynDwSMh5MpQK9fx7c-model-Channel-Tufted-Camel-Bed_scaled_resized.glb",
+        "assets/furniture/bedroom/vi2bJxz7mkQzycxuRV53-model-Modern-Ash-Bed_resized.glb"
+      ]
+    },
+    {
+      "documentId": "vlljo8HQum9D2GBE4oWd",
+      "assetId": "vlljo8HQum9D2GBE4oWd",
+      "assetName": "testing2",
+      "assetType": "wall",
+      "category": "tile",
+      "assetStatus": "available",
+      "field": "diffuse_path",
+      "originalValue": "assets/wall/tile/vlljo8HQum9D2GBE4oWd-diffuse-wallpaperflare-com_wallpaper.jpg",
+      "storagePath": "assets/wall/tile/vlljo8HQum9D2GBE4oWd-diffuse-wallpaperflare-com_wallpaper.jpg",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/wall/tile/vlljo8HQum9D2GBE4oWd-diffuse-wallpaperflare-com_wallpaper.jpg"
+      ],
+      "normalizedCandidates": [
+        "assets/wall/tile/vlljo8HQum9D2GBE4oWd-diffuse-wallpaperflare-com_wallpaper.jpg"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/wall/tile/vlljo8HQum9D2GBE4oWd-diffuse-wallpaperflare-com_wallpaper.jpg"
+      ]
+    },
+    {
+      "documentId": "vlljo8HQum9D2GBE4oWd",
+      "assetId": "vlljo8HQum9D2GBE4oWd",
+      "assetName": "testing2",
+      "assetType": "wall",
+      "category": "tile",
+      "assetStatus": "available",
+      "field": "base_color_path",
+      "originalValue": "assets/wall/tile/vlljo8HQum9D2GBE4oWd-diffuse-wallpaperflare-com_wallpaper.jpg",
+      "storagePath": "assets/wall/tile/vlljo8HQum9D2GBE4oWd-diffuse-wallpaperflare-com_wallpaper.jpg",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/wall/tile/vlljo8HQum9D2GBE4oWd-diffuse-wallpaperflare-com_wallpaper.jpg"
+      ],
+      "normalizedCandidates": [
+        "assets/wall/tile/vlljo8HQum9D2GBE4oWd-diffuse-wallpaperflare-com_wallpaper.jpg"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/wall/tile/vlljo8HQum9D2GBE4oWd-diffuse-wallpaperflare-com_wallpaper.jpg"
+      ]
+    },
+    {
+      "documentId": "x3hHPlyBgYWVUPB6TGTL",
+      "assetId": "x3hHPlyBgYWVUPB6TGTL",
+      "assetName": "Ivory-Gold Breakfast Stool",
+      "assetType": "furniture",
+      "category": "diningroom",
+      "assetStatus": "available",
+      "field": "storage_path",
+      "originalValue": "assets/furniture/diningroom/x3hHPlyBgYWVUPB6TGTL-model-Ivory-Gold-Breakfast-Stool_resized.glb",
+      "storagePath": "assets/furniture/diningroom/x3hHPlyBgYWVUPB6TGTL-model-Ivory-Gold-Breakfast-Stool_resized.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/diningroom/x3hHPlyBgYWVUPB6TGTL-model-Ivory-Gold-Breakfast-Stool_resized.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/diningroom/x3hHPlyBgYWVUPB6TGTL-model-Ivory-Gold-Breakfast-Stool_resized.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/diningroom/",
+        "assets/furniture/diningroom/1leXkoHmhslSxmZsagb7-model-Modern-Stainless-Steel-Refrigerator.glb",
+        "assets/furniture/diningroom/Table.glb",
+        "assets/furniture/diningroom/x3hHPlyBgYWVUPB6TGTL-model-Ivory-Gold-Breakfast-Stool_resized.glb",
+        "assets/furniture/diningroom/xytfdR9rejLmC6xcFlU7-model-Ivory-Marble-Center-Table_resized.glb"
+      ]
+    },
+    {
+      "documentId": "x3hHPlyBgYWVUPB6TGTL",
+      "assetId": "x3hHPlyBgYWVUPB6TGTL",
+      "assetName": "Ivory-Gold Breakfast Stool",
+      "assetType": "furniture",
+      "category": "diningroom",
+      "assetStatus": "available",
+      "field": "model_path",
+      "originalValue": "assets/furniture/diningroom/x3hHPlyBgYWVUPB6TGTL-model-Ivory-Gold-Breakfast-Stool_resized.glb",
+      "storagePath": "assets/furniture/diningroom/x3hHPlyBgYWVUPB6TGTL-model-Ivory-Gold-Breakfast-Stool_resized.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/diningroom/x3hHPlyBgYWVUPB6TGTL-model-Ivory-Gold-Breakfast-Stool_resized.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/diningroom/x3hHPlyBgYWVUPB6TGTL-model-Ivory-Gold-Breakfast-Stool_resized.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/diningroom/",
+        "assets/furniture/diningroom/1leXkoHmhslSxmZsagb7-model-Modern-Stainless-Steel-Refrigerator.glb",
+        "assets/furniture/diningroom/Table.glb",
+        "assets/furniture/diningroom/x3hHPlyBgYWVUPB6TGTL-model-Ivory-Gold-Breakfast-Stool_resized.glb",
+        "assets/furniture/diningroom/xytfdR9rejLmC6xcFlU7-model-Ivory-Marble-Center-Table_resized.glb"
+      ]
+    },
+    {
+      "documentId": "xytfdR9rejLmC6xcFlU7",
+      "assetId": "xytfdR9rejLmC6xcFlU7",
+      "assetName": "Ivory Marble Center Table",
+      "assetType": "furniture",
+      "category": "diningroom",
+      "assetStatus": "available",
+      "field": "storage_path",
+      "originalValue": "assets/furniture/diningroom/xytfdR9rejLmC6xcFlU7-model-Ivory-Marble-Center-Table_resized.glb",
+      "storagePath": "assets/furniture/diningroom/xytfdR9rejLmC6xcFlU7-model-Ivory-Marble-Center-Table_resized.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/diningroom/xytfdR9rejLmC6xcFlU7-model-Ivory-Marble-Center-Table_resized.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/diningroom/xytfdR9rejLmC6xcFlU7-model-Ivory-Marble-Center-Table_resized.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/diningroom/",
+        "assets/furniture/diningroom/1leXkoHmhslSxmZsagb7-model-Modern-Stainless-Steel-Refrigerator.glb",
+        "assets/furniture/diningroom/Table.glb",
+        "assets/furniture/diningroom/x3hHPlyBgYWVUPB6TGTL-model-Ivory-Gold-Breakfast-Stool_resized.glb",
+        "assets/furniture/diningroom/xytfdR9rejLmC6xcFlU7-model-Ivory-Marble-Center-Table_resized.glb"
+      ]
+    },
+    {
+      "documentId": "xytfdR9rejLmC6xcFlU7",
+      "assetId": "xytfdR9rejLmC6xcFlU7",
+      "assetName": "Ivory Marble Center Table",
+      "assetType": "furniture",
+      "category": "diningroom",
+      "assetStatus": "available",
+      "field": "model_path",
+      "originalValue": "assets/furniture/diningroom/xytfdR9rejLmC6xcFlU7-model-Ivory-Marble-Center-Table_resized.glb",
+      "storagePath": "assets/furniture/diningroom/xytfdR9rejLmC6xcFlU7-model-Ivory-Marble-Center-Table_resized.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/diningroom/xytfdR9rejLmC6xcFlU7-model-Ivory-Marble-Center-Table_resized.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/diningroom/xytfdR9rejLmC6xcFlU7-model-Ivory-Marble-Center-Table_resized.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/diningroom/",
+        "assets/furniture/diningroom/1leXkoHmhslSxmZsagb7-model-Modern-Stainless-Steel-Refrigerator.glb",
+        "assets/furniture/diningroom/Table.glb",
+        "assets/furniture/diningroom/x3hHPlyBgYWVUPB6TGTL-model-Ivory-Gold-Breakfast-Stool_resized.glb",
+        "assets/furniture/diningroom/xytfdR9rejLmC6xcFlU7-model-Ivory-Marble-Center-Table_resized.glb"
+      ]
+    },
+    {
+      "documentId": "yoAt8ckUEXxmjtmB70p3",
+      "assetId": "yoAt8ckUEXxmjtmB70p3",
+      "assetName": "Saddlewood Executive Chair",
+      "assetType": "furniture",
+      "category": "office",
+      "assetStatus": "available",
+      "field": "storage_path",
+      "originalValue": "assets/furniture/office/yoAt8ckUEXxmjtmB70p3-model-Saddlewood-Executive-Chair.glb",
+      "storagePath": "assets/furniture/office/yoAt8ckUEXxmjtmB70p3-model-Saddlewood-Executive-Chair.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/office/yoAt8ckUEXxmjtmB70p3-model-Saddlewood-Executive-Chair.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/office/yoAt8ckUEXxmjtmB70p3-model-Saddlewood-Executive-Chair.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/office/gQQOYRG9Cce28WquJ5B0-model-Obsidian-Executive-Chair.glb",
+        "assets/furniture/office/yoAt8ckUEXxmjtmB70p3-model-Saddlewood-Executive-Chair.glb"
+      ]
+    },
+    {
+      "documentId": "yoAt8ckUEXxmjtmB70p3",
+      "assetId": "yoAt8ckUEXxmjtmB70p3",
+      "assetName": "Saddlewood Executive Chair",
+      "assetType": "furniture",
+      "category": "office",
+      "assetStatus": "available",
+      "field": "model_path",
+      "originalValue": "assets/furniture/office/yoAt8ckUEXxmjtmB70p3-model-Saddlewood-Executive-Chair.glb",
+      "storagePath": "assets/furniture/office/yoAt8ckUEXxmjtmB70p3-model-Saddlewood-Executive-Chair.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/office/yoAt8ckUEXxmjtmB70p3-model-Saddlewood-Executive-Chair.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/office/yoAt8ckUEXxmjtmB70p3-model-Saddlewood-Executive-Chair.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/office/gQQOYRG9Cce28WquJ5B0-model-Obsidian-Executive-Chair.glb",
+        "assets/furniture/office/yoAt8ckUEXxmjtmB70p3-model-Saddlewood-Executive-Chair.glb"
+      ]
+    },
+    {
+      "documentId": "zq3deO69URAqY3XpQMGh",
+      "assetId": "zq3deO69URAqY3XpQMGh",
+      "assetName": "Saddlewood Executive Chair",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "assetStatus": "not_available",
+      "field": "storage_path",
+      "originalValue": "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb",
+      "storagePath": "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/livingroom/",
+        "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+        "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+        "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+        "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+        "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+        "assets/furniture/livingroom/TV.glb",
+        "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+        "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+        "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+        "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+        "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+        "assets/furniture/livingroom/steel-frame-shelves-01.glb",
+        "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb"
+      ]
+    },
+    {
+      "documentId": "zq3deO69URAqY3XpQMGh",
+      "assetId": "zq3deO69URAqY3XpQMGh",
+      "assetName": "Saddlewood Executive Chair",
+      "assetType": "furniture",
+      "category": "livingroom",
+      "assetStatus": "not_available",
+      "field": "model_path",
+      "originalValue": "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb",
+      "storagePath": "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb",
+      "exists": true,
+      "status": "OK",
+      "exactNameCandidates": [
+        "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb"
+      ],
+      "normalizedCandidates": [
+        "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb"
+      ],
+      "filesUnderExpectedParent": [
+        "assets/furniture/livingroom/",
+        "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+        "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+        "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+        "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+        "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+        "assets/furniture/livingroom/TV.glb",
+        "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+        "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+        "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+        "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+        "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+        "assets/furniture/livingroom/steel-frame-shelves-01.glb",
+        "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb"
+      ]
+    }
+  ],
+  "duplicateReferences": [
+    {
+      "storagePath": "assets/furniture/diningroom/1leXkoHmhslSxmZsagb7-model-Modern-Stainless-Steel-Refrigerator.glb",
+      "count": 2,
+      "documents": [
+        {
+          "documentId": "1leXkoHmhslSxmZsagb7",
+          "assetName": "Modern Stainless Steel Refrigerator",
+          "field": "storage_path"
+        },
+        {
+          "documentId": "1leXkoHmhslSxmZsagb7",
+          "assetName": "Modern Stainless Steel Refrigerator",
+          "field": "model_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+      "count": 2,
+      "documents": [
+        {
+          "documentId": "4vD9gHQW3UI3K8xLD71B",
+          "assetName": "Barrel Chair",
+          "field": "storage_path"
+        },
+        {
+          "documentId": "4vD9gHQW3UI3K8xLD71B",
+          "assetName": "Barrel Chair",
+          "field": "model_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/floors/Tiles/square_tiles/Diffuse.png",
+      "count": 2,
+      "documents": [
+        {
+          "documentId": "A-26014",
+          "assetName": "Square Tiles",
+          "field": "diffuse_path"
+        },
+        {
+          "documentId": "A-26014",
+          "assetName": "Square Tiles",
+          "field": "model_url"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/openings/doors/single-door.glb",
+      "count": 2,
+      "documents": [
+        {
+          "documentId": "A-3X1T1I",
+          "assetName": "Single Door",
+          "field": "model_path"
+        },
+        {
+          "documentId": "A-3X1T1I",
+          "assetName": "Single Door",
+          "field": "model_url"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/livingroom/TV.glb",
+      "count": 2,
+      "documents": [
+        {
+          "documentId": "A-4BERBM",
+          "assetName": "TV",
+          "field": "model_path"
+        },
+        {
+          "documentId": "A-4BERBM",
+          "assetName": "TV",
+          "field": "model_url"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/openings/windows/Slim_Intersection_i.glb",
+      "count": 2,
+      "documents": [
+        {
+          "documentId": "A-ELXX9U",
+          "assetName": "Slim Intersection Window",
+          "field": "model_path"
+        },
+        {
+          "documentId": "A-ELXX9U",
+          "assetName": "Slim Intersection Window",
+          "field": "model_url"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+      "count": 2,
+      "documents": [
+        {
+          "documentId": "HRgQpL2Tx92bvodO8RZI",
+          "assetName": "Ivory Pharaoh Chair",
+          "field": "storage_path"
+        },
+        {
+          "documentId": "HRgQpL2Tx92bvodO8RZI",
+          "assetName": "Ivory Pharaoh Chair",
+          "field": "model_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+      "count": 2,
+      "documents": [
+        {
+          "documentId": "HZG0WRHwY8yuH9J0Nc5O",
+          "assetName": "Sofa",
+          "field": "storage_path"
+        },
+        {
+          "documentId": "HZG0WRHwY8yuH9J0Nc5O",
+          "assetName": "Sofa",
+          "field": "model_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+      "count": 2,
+      "documents": [
+        {
+          "documentId": "I5Mm64NNEKhOFusIqWHe",
+          "assetName": "Cocoa Curve Lounge",
+          "field": "storage_path"
+        },
+        {
+          "documentId": "I5Mm64NNEKhOFusIqWHe",
+          "assetName": "Cocoa Curve Lounge",
+          "field": "model_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+      "count": 2,
+      "documents": [
+        {
+          "documentId": "PqtRcTuqL5ifuo3GTUUH",
+          "assetName": "Ashen Wood Lounge Chair",
+          "field": "storage_path"
+        },
+        {
+          "documentId": "PqtRcTuqL5ifuo3GTUUH",
+          "assetName": "Ashen Wood Lounge Chair",
+          "field": "model_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+      "count": 2,
+      "documents": [
+        {
+          "documentId": "ewZhEYTdu2niIU6lZF2h",
+          "assetName": "testing",
+          "field": "storage_path"
+        },
+        {
+          "documentId": "ewZhEYTdu2niIU6lZF2h",
+          "assetName": "testing",
+          "field": "model_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/office/gQQOYRG9Cce28WquJ5B0-model-Obsidian-Executive-Chair.glb",
+      "count": 2,
+      "documents": [
+        {
+          "documentId": "gQQOYRG9Cce28WquJ5B0",
+          "assetName": "Obsidian Executive Chair",
+          "field": "storage_path"
+        },
+        {
+          "documentId": "gQQOYRG9Cce28WquJ5B0",
+          "assetName": "Obsidian Executive Chair",
+          "field": "model_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+      "count": 2,
+      "documents": [
+        {
+          "documentId": "kjdY8niuhQPlDK1nzeio",
+          "assetName": "Ivory Cloud U-Sofa",
+          "field": "storage_path"
+        },
+        {
+          "documentId": "kjdY8niuhQPlDK1nzeio",
+          "assetName": "Ivory Cloud U-Sofa",
+          "field": "model_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/bedroom/l7aynDwSMh5MpQK9fx7c-model-Channel-Tufted-Camel-Bed_scaled_resized.glb",
+      "count": 2,
+      "documents": [
+        {
+          "documentId": "l7aynDwSMh5MpQK9fx7c",
+          "assetName": "Channel Tufted Camel Bed",
+          "field": "storage_path"
+        },
+        {
+          "documentId": "l7aynDwSMh5MpQK9fx7c",
+          "assetName": "Channel Tufted Camel Bed",
+          "field": "model_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+      "count": 2,
+      "documents": [
+        {
+          "documentId": "o9hxXiBMGY3bJZAApUte",
+          "assetName": "Modern Lounge Chair",
+          "field": "storage_path"
+        },
+        {
+          "documentId": "o9hxXiBMGY3bJZAApUte",
+          "assetName": "Modern Lounge Chair",
+          "field": "model_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+      "count": 2,
+      "documents": [
+        {
+          "documentId": "qQdRA4o2kNzBfZtQrKce",
+          "assetName": "Goldenrod Comfort Chair",
+          "field": "storage_path"
+        },
+        {
+          "documentId": "qQdRA4o2kNzBfZtQrKce",
+          "assetName": "Goldenrod Comfort Chair",
+          "field": "model_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+      "count": 2,
+      "documents": [
+        {
+          "documentId": "qTnjmIpfmIcZlvFlDnC1",
+          "assetName": "Elephant Gray Sectional Couch",
+          "field": "storage_path"
+        },
+        {
+          "documentId": "qTnjmIpfmIcZlvFlDnC1",
+          "assetName": "Elephant Gray Sectional Couch",
+          "field": "model_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/bedroom/vi2bJxz7mkQzycxuRV53-model-Modern-Ash-Bed_resized.glb",
+      "count": 2,
+      "documents": [
+        {
+          "documentId": "vi2bJxz7mkQzycxuRV53",
+          "assetName": "Modern Ash Bed",
+          "field": "storage_path"
+        },
+        {
+          "documentId": "vi2bJxz7mkQzycxuRV53",
+          "assetName": "Modern Ash Bed",
+          "field": "model_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/wall/tile/vlljo8HQum9D2GBE4oWd-diffuse-wallpaperflare-com_wallpaper.jpg",
+      "count": 2,
+      "documents": [
+        {
+          "documentId": "vlljo8HQum9D2GBE4oWd",
+          "assetName": "testing2",
+          "field": "diffuse_path"
+        },
+        {
+          "documentId": "vlljo8HQum9D2GBE4oWd",
+          "assetName": "testing2",
+          "field": "base_color_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/diningroom/x3hHPlyBgYWVUPB6TGTL-model-Ivory-Gold-Breakfast-Stool_resized.glb",
+      "count": 2,
+      "documents": [
+        {
+          "documentId": "x3hHPlyBgYWVUPB6TGTL",
+          "assetName": "Ivory-Gold Breakfast Stool",
+          "field": "storage_path"
+        },
+        {
+          "documentId": "x3hHPlyBgYWVUPB6TGTL",
+          "assetName": "Ivory-Gold Breakfast Stool",
+          "field": "model_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/diningroom/xytfdR9rejLmC6xcFlU7-model-Ivory-Marble-Center-Table_resized.glb",
+      "count": 2,
+      "documents": [
+        {
+          "documentId": "xytfdR9rejLmC6xcFlU7",
+          "assetName": "Ivory Marble Center Table",
+          "field": "storage_path"
+        },
+        {
+          "documentId": "xytfdR9rejLmC6xcFlU7",
+          "assetName": "Ivory Marble Center Table",
+          "field": "model_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/office/yoAt8ckUEXxmjtmB70p3-model-Saddlewood-Executive-Chair.glb",
+      "count": 2,
+      "documents": [
+        {
+          "documentId": "yoAt8ckUEXxmjtmB70p3",
+          "assetName": "Saddlewood Executive Chair",
+          "field": "storage_path"
+        },
+        {
+          "documentId": "yoAt8ckUEXxmjtmB70p3",
+          "assetName": "Saddlewood Executive Chair",
+          "field": "model_path"
+        }
+      ]
+    },
+    {
+      "storagePath": "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb",
+      "count": 2,
+      "documents": [
+        {
+          "documentId": "zq3deO69URAqY3XpQMGh",
+          "assetName": "Saddlewood Executive Chair",
+          "field": "storage_path"
+        },
+        {
+          "documentId": "zq3deO69URAqY3XpQMGh",
+          "assetName": "Saddlewood Executive Chair",
+          "field": "model_path"
+        }
+      ]
+    }
+  ]
+}

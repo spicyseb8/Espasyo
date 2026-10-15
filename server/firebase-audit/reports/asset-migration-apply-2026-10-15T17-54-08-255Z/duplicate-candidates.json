@@ -1,0 +1,26 @@
+[
+  {
+    "size": 18025560,
+    "md5Hash": "fUGMP5sxqtQuyOtTWpvV/A==",
+    "crc32c": "3CIQUw==",
+    "paths": [
+      "assets/furniture/diningroom/1leXkoHmhslSxmZsagb7-model-Modern-Stainless-Steel-Refrigerator.glb",
+      "assets/furniture/diningroom/F-00126/model.glb"
+    ],
+    "candidateOnly": true,
+    "deletionApproved": false,
+    "reason": "Matching Cloud Storage MD5 and CRC32C metadata; references and canonical copies still require verification."
+  },
+  {
+    "size": 34482280,
+    "md5Hash": "ir3ocZYC+7yPcohXszFisw==",
+    "crc32c": "J5+FtQ==",
+    "paths": [
+      "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb",
+      "assets/furniture/office/yoAt8ckUEXxmjtmB70p3-model-Saddlewood-Executive-Chair.glb"
+    ],
+    "candidateOnly": true,
+    "deletionApproved": false,
+    "reason": "Matching Cloud Storage MD5 and CRC32C metadata; references and canonical copies still require verification."
+  }
+]

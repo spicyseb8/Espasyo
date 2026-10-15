@@ -52,6 +52,7 @@ export default function AssetThumbnail({
   const [modelURL, setModelURL] = useState<string | null>(null);
   const [textureURL, setTextureURL] = useState<string | null>(null);
   const { asset_type } = asset;
+  const cacheable = asset.asset_status?.trim().toLowerCase() === "available";
   const modelPath = asset.model_url?.trim() || asset.storage_path?.trim() || asset.model_path?.trim();
   const texturePath = asset.diffuse_url?.trim() || asset.base_color_url?.trim() || asset.diffuse_path?.trim() || asset.base_color_path?.trim();
 
@@ -60,8 +61,8 @@ export default function AssetThumbnail({
 
     const loadPreviewURLs = async () => {
       const [model, texture] = await Promise.all([
-        asset_type === "furniture" && modelPath ? resolveStoragePath(modelPath) : null,
-        texturePath ? resolveStoragePath(texturePath) : null,
+        asset_type === "furniture" && modelPath ? resolveStoragePath(modelPath, cacheable) : null,
+        texturePath ? resolveStoragePath(texturePath, cacheable) : null,
       ]);
       if (!cancelled) {
         setModelURL(model);
@@ -73,7 +74,7 @@ export default function AssetThumbnail({
     return () => {
       cancelled = true;
     };
-  }, [asset_type, modelPath, texturePath]);
+  }, [asset_type, cacheable, modelPath, texturePath]);
 
   if (modelURL && (asset_type === "furniture" || !textureURL)) {
     return (

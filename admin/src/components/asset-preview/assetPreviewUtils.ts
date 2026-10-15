@@ -39,7 +39,8 @@ export async function resolveModelURL(
   }
 
   return resolveStoragePath(
-    asset.storage_path
+    asset.storage_path,
+    asset.asset_status?.trim().toLowerCase() === "available",
   );
 }
 
@@ -58,7 +59,8 @@ export async function resolveTextureURLs(
 
   const diffuseURL =
     await resolveStoragePath(
-      asset.diffuse_path
+      asset.diffuse_path,
+      asset.asset_status?.trim().toLowerCase() === "available",
     );
 
   return {
@@ -83,7 +85,8 @@ export async function resolvePreviewURLs(
     resolveModelURL(asset),
 
     resolveStoragePath(
-      asset.diffuse_path
+      asset.diffuse_path,
+      asset.asset_status?.trim().toLowerCase() === "available",
     ),
   ]);
 
@@ -185,12 +188,26 @@ function normalizeStoragePath(
     );
 }
 
+function safeAssetPathLabel(path: string): string {
+  try {
+    const url = new URL(path);
+    if (url.protocol === "http:" || url.protocol === "https:") {
+      return `${url.origin}${url.pathname}`;
+    }
+  } catch {
+    return path;
+  }
+
+  return path;
+}
+
 // ==================================================
 // RESOLVE TEXTURE URL
 // ==================================================
 
 async function resolveTextureURL(
-  normalizedPath: string
+  normalizedPath: string,
+  cacheable = true,
 ): Promise<string | null> {
 
   // --------------------------------------------------
@@ -203,6 +220,9 @@ async function resolveTextureURL(
     );
 
   if (cachedURL) {
+    if (cacheable) {
+      await resolveStoragePath(cachedURL, true);
+    }
     return cachedURL;
   }
 
@@ -216,7 +236,11 @@ async function resolveTextureURL(
     );
 
   if (existingPromise) {
-    return existingPromise;
+    const url = await existingPromise;
+    if (url && cacheable) {
+      await resolveStoragePath(url, true);
+    }
+    return url;
   }
 
   // --------------------------------------------------
@@ -230,13 +254,14 @@ async function resolveTextureURL(
 
         const url =
           await resolveStoragePath(
-            normalizedPath
+            normalizedPath,
+            cacheable
           );
 
         if (!url) {
           console.error(
             "[AssetPreview] Could not resolve texture URL:",
-            normalizedPath
+            safeAssetPathLabel(normalizedPath)
           );
 
           return null;
@@ -254,7 +279,7 @@ async function resolveTextureURL(
         console.error(
           "[AssetPreview] Failed to resolve texture URL:",
           {
-            path: normalizedPath,
+            path: safeAssetPathLabel(normalizedPath),
             error,
           }
         );
@@ -288,6 +313,7 @@ export async function loadTexture(
   options?: {
     repeat?: [number, number];
     anisotropy?: number;
+    cacheable?: boolean;
   }
 ): Promise<THREE.Texture | null> {
 
@@ -345,7 +371,8 @@ export async function loadTexture(
 
       const url =
         await resolveTextureURL(
-          normalizedPath
+          normalizedPath,
+          options?.cacheable
         );
 
       if (!url) {
@@ -357,8 +384,7 @@ export async function loadTexture(
         console.log(
           "[AssetPreview] Loading diffuse texture:",
           {
-            path: normalizedPath,
-            url,
+            path: safeAssetPathLabel(normalizedPath),
           }
         );
 
@@ -428,8 +454,7 @@ export async function loadTexture(
         console.error(
           "[AssetPreview] Failed to load diffuse texture:",
           {
-            path: normalizedPath,
-            url,
+            path: safeAssetPathLabel(normalizedPath),
             error,
           }
         );
@@ -479,6 +504,7 @@ export async function loadAssetTextures(
       {
         repeat: [1, 1],
         anisotropy: 8,
+        cacheable: asset.asset_status?.trim().toLowerCase() === "available",
       }
     );
 

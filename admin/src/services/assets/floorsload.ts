@@ -6,11 +6,6 @@ import {
 } from "firebase/firestore";
 
 import {
-    getDownloadURL,
-    ref
-} from "firebase/storage";
-
-import {
     RepeatWrapping,
     SRGBColorSpace,
     Texture,
@@ -18,9 +13,12 @@ import {
 } from "three";
 
 import {
-    db,
-    storage
+    db
 } from "../../firebase/firebase";
+import {
+    registerAssetDownloadURL,
+    resolveStorageAssetURL
+} from "@/lib/assetLibraryCache";
 
 import type {
     Material
@@ -48,7 +46,7 @@ import localDefaultFloorTexture from "../../assets/assets_floors_Tiles_terrazo_t
 //==================================================
 
 export const DEFAULT_FLOOR_MATERIAL_ID =
-    "A-26015";
+    "FL-00426";
 
 
 //==================================================
@@ -262,7 +260,8 @@ function createLocalDefaultFloorMaterial(
 //==================================================
 
 async function resolveStorageUrl(
-    value?: string
+    value?: string,
+    cacheable = false,
 ): Promise<string | undefined> {
 
     if (
@@ -288,6 +287,9 @@ async function resolveStorageUrl(
         path.startsWith("data:")
     ) {
 
+        if (cacheable) {
+            await registerAssetDownloadURL(path);
+        }
         return path;
     }
 
@@ -298,12 +300,7 @@ async function resolveStorageUrl(
 
     try {
 
-        return await getDownloadURL(
-            ref(
-                storage,
-                path
-            )
-        );
+        return await resolveStorageAssetURL(path, cacheable);
 
     } catch (error) {
 
@@ -331,6 +328,9 @@ async function buildFloorMaterial(
     const materialId =
         data.id?.trim() ||
         documentId;
+    const cacheable =
+        typeof data.asset_status === "string" &&
+        data.asset_status.trim().toLowerCase() === "available";
 
 
     //--------------------------------------------------
@@ -345,9 +345,10 @@ async function buildFloorMaterial(
     //--------------------------------------------------
 
     const texture =
-        data.diffuse_url?.trim() ||
         await resolveStorageUrl(
-            data.diffuse_path
+            data.diffuse_url?.trim() ||
+            data.diffuse_path,
+            cacheable,
         );
 
 
@@ -392,7 +393,10 @@ async function buildFloorMaterial(
         ) {
 
             thumbnail =
-                data.thumbnail_url.trim();
+                await resolveStorageUrl(
+                    data.thumbnail_url.trim(),
+                    cacheable,
+                );
 
         }
 
@@ -407,7 +411,8 @@ async function buildFloorMaterial(
 
             thumbnail =
                 await resolveStorageUrl(
-                    data.thumbnail_path
+                    data.thumbnail_path,
+                    cacheable,
                 ) ??
                 texture;
 

@@ -6,14 +6,15 @@ import {
 } from "firebase/firestore";
 
 import {
-    getDownloadURL,
-    ref
-} from "firebase/storage";
-
-import {
     db,
-    storage
 } from "../../firebase/firebase";
+import {
+    registerAssetDownloadURL,
+    resolveStorageAssetURL
+} from "../../lib/assetLibraryCache";
+import {
+    collectAssetSources
+} from "../../lib/assetLibraryCache";
 
 import {
     BuildTool
@@ -76,6 +77,8 @@ interface FirebaseFurnitureAsset {
 //==================================================
 
 let cachedFurnitureAssets: Asset[] = [];
+let cachedAllFurnitureAssets: Asset[] = [];
+let cachedFurnitureStorageSources: string[] = [];
 let furnitureCatalogLoaded = false;
 let furnitureCatalogPromise: Promise<Asset[]> | null = null;
 
@@ -101,13 +104,12 @@ async function resolveStorageUrl(
         path.startsWith("https://") ||
         path.startsWith("data:")
     ) {
+        await registerAssetDownloadURL(path);
         return path;
     }
 
     try {
-        return await getDownloadURL(
-            ref(storage, path)
-        );
+        return await resolveStorageAssetURL(path);
     } catch (error) {
         console.error(
             "Failed to resolve Firebase furniture storage file:",
@@ -135,7 +137,7 @@ async function resolvePreferredUrl(
             value.startsWith("https://") ||
             value.startsWith("data:")
         ) {
-            return value;
+            return resolveStorageUrl(value);
         }
     }
 
@@ -292,11 +294,12 @@ async function buildFurnitureAsset(
         return null;
     }
 
-    // Only explicitly available furniture is loaded.
-    if (
-        typeof data.asset_status !== "string" ||
-        data.asset_status.trim().toLowerCase() !== "available"
-    ) {
+    const status =
+        typeof data.asset_status === "string"
+            ? data.asset_status.trim().toLowerCase()
+            : "";
+
+    if (status !== "available" && status !== "not_available") {
         return null;
     }
 
@@ -403,23 +406,51 @@ async function loadFurnitureAssets(): Promise<Asset[]> {
     );
 
     const snapshot = await getDocs(furnitureQuery);
+    cachedFurnitureStorageSources = snapshot.docs
+        .filter(document => {
+            const data = document.data() as FirebaseFurnitureAsset;
+            const status =
+                typeof data.asset_status === "string"
+                    ? data.asset_status.trim().toLowerCase()
+                    : "";
+
+            return (
+                data.asset_type === "furniture" &&
+                (status === "available" || status === "not_available")
+            );
+        })
+        .flatMap(document => collectAssetSources(document.data()));
 
     const results = await Promise.allSettled(
         snapshot.docs.map(
-            async document =>
-                buildFurnitureAsset(
+            async document => ({
+                status: (
+                    document.data() as FirebaseFurnitureAsset
+                ).asset_status,
+                asset: await buildFurnitureAsset(
                     document.id,
                     document.data() as FirebaseFurnitureAsset
                 )
+            })
         )
     );
 
     const assets: Asset[] = [];
+    const allAssets: Asset[] = [];
 
     for (const result of results) {
         if (result.status === "fulfilled") {
-            if (result.value) {
-                assets.push(result.value);
+            const asset = result.value.asset;
+
+            if (asset) {
+                allAssets.push(asset);
+
+                if (
+                    typeof result.value.status === "string" &&
+                    result.value.status.trim().toLowerCase() === "available"
+                ) {
+                    assets.push(asset);
+                }
             }
         } else {
             console.error(
@@ -435,6 +466,7 @@ async function loadFurnitureAssets(): Promise<Asset[]> {
     );
 
     cachedFurnitureAssets = assets;
+    cachedAllFurnitureAssets = allAssets;
     furnitureCatalogLoaded = true;
 
     return cachedFurnitureAssets;
@@ -468,7 +500,7 @@ export async function getFurnitureAssets(): Promise<Asset[]> {
 export function getCachedFurnitureAsset(
     assetId: string
 ): Asset | undefined {
-    return cachedFurnitureAssets.find(
+    return cachedAllFurnitureAssets.find(
         asset => asset.id === assetId
     );
 }
@@ -481,12 +513,17 @@ export function getCachedFurnitureAssets(): Asset[] {
     return cachedFurnitureAssets;
 }
 
+export function getFurnitureStorageSources(): string[] {
+    return cachedFurnitureStorageSources;
+}
 //==================================================
 // REFRESH FURNITURE ASSETS
 //==================================================
 
 export async function refreshFurnitureAssets(): Promise<Asset[]> {
     cachedFurnitureAssets = [];
+    cachedAllFurnitureAssets = [];
+    cachedFurnitureStorageSources = [];
     furnitureCatalogLoaded = false;
     furnitureCatalogPromise = null;
 

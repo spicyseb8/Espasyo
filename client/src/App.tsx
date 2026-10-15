@@ -23,8 +23,8 @@ import AuthPage
 import StudioLoadProject
     from "./pages/StudioLoadProject";
 
-import AssetPreloader
-    from "./engine/AssetPreloader";
+import AssetStartupGate
+    from "./engine/AssetStartupGate";
 
 function App() {
 
@@ -32,10 +32,8 @@ function App() {
 
         <BrowserRouter>
 
-            {/* Start Firebase asset preloading on app startup. */}
-            <AssetPreloader />
-
-            <Routes>
+            <AssetStartupGate>
+                <Routes>
 
                 {/* HOME */}
 
@@ -98,11 +96,11 @@ function App() {
                     }
                 />
 
-            </Routes>
+                </Routes>
+            </AssetStartupGate>
 
         </BrowserRouter>
     );
 }
 
 export default App;
-

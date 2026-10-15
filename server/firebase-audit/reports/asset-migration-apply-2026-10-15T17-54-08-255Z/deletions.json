@@ -1,0 +1,462 @@
+[
+  {
+    "path": "assets/floor/tile/SreeI98A0JN3AJjsb3UN-diffuse-black-stones-tiled-floor.jpg",
+    "size": 3807339,
+    "md5Hash": "D9DXUhHTG5zplFRHSLnClw==",
+    "crc32c": "8Yxncg==",
+    "currentlyReferenced": true,
+    "plannedReplacementPaths": [
+      "assets/floors/tile/FL-00726/diffuse.jpg"
+    ],
+    "replacementVerified": false,
+    "eligibleAfterApply": true,
+    "deletionScheduled": false,
+    "reason": "Can be considered only after every replacement and reference update is verified."
+  },
+  {
+    "path": "assets/floor/wood/9pPtBuRt0sQZnCf6NeZY-diffuse-png-transparent-porcelain-tile-flooring-bathroom-floor-tiles-miscellaneous-texture-kitchen-thumbnail.png",
+    "size": 17970,
+    "md5Hash": "NtNdBHeaJ2yeHFb60BTsyA==",
+    "crc32c": "gK6Ctw==",
+    "currentlyReferenced": true,
+    "plannedReplacementPaths": [
+      "assets/floors/wood/FL-00126/diffuse.png"
+    ],
+    "replacementVerified": false,
+    "eligibleAfterApply": true,
+    "deletionScheduled": false,
+    "reason": "Can be considered only after every replacement and reference update is verified."
+  },
+  {
+    "path": "assets/floors/Brick/square_brick_floor/Diffuse.png",
+    "size": 20601848,
+    "md5Hash": "yYmyFYFneYk7dTOeUMSEsw==",
+    "crc32c": "JMh8fg==",
+    "currentlyReferenced": true,
+    "plannedReplacementPaths": [
+      "assets/floors/brick/FL-00226/diffuse.png"
+    ],
+    "replacementVerified": false,
+    "eligibleAfterApply": true,
+    "deletionScheduled": false,
+    "reason": "Can be considered only after every replacement and reference update is verified."
+  },
+  {
+    "path": "assets/floors/Tiles/square_tiles/Diffuse.png",
+    "size": 22023097,
+    "md5Hash": "J/uktGqY9Wg3T8gmG+K29Q==",
+    "crc32c": "vwzERw==",
+    "currentlyReferenced": true,
+    "plannedReplacementPaths": [
+      "assets/floors/tiles/FL-00326/diffuse.png"
+    ],
+    "replacementVerified": false,
+    "eligibleAfterApply": true,
+    "deletionScheduled": false,
+    "reason": "Can be considered only after every replacement and reference update is verified."
+  },
+  {
+    "path": "assets/floors/Tiles/terrazo_tiles/Diffuse.png",
+    "size": 27115185,
+    "md5Hash": "opvJmVsIs1+dsATMrF0WqQ==",
+    "crc32c": "nzg/+Q==",
+    "currentlyReferenced": true,
+    "plannedReplacementPaths": [
+      "assets/floors/tiles/FL-00426/diffuse.png"
+    ],
+    "replacementVerified": false,
+    "eligibleAfterApply": true,
+    "deletionScheduled": false,
+    "reason": "Can be considered only after every replacement and reference update is verified."
+  },
+  {
+    "path": "assets/floors/Wood/plank_flooring/Diffuse.png",
+    "size": 20659527,
+    "md5Hash": "jGOB6VLkRn46kXnOQXqGUQ==",
+    "crc32c": "AErodw==",
+    "currentlyReferenced": true,
+    "plannedReplacementPaths": [
+      "assets/floors/wood/FL-00526/diffuse.png"
+    ],
+    "replacementVerified": false,
+    "eligibleAfterApply": true,
+    "deletionScheduled": false,
+    "reason": "Can be considered only after every replacement and reference update is verified."
+  },
+  {
+    "path": "assets/floors/Wood/wooden_floor/Diffuse.png",
+    "size": 25432245,
+    "md5Hash": "ktt/4hdNO9Gzhjy2elqsyg==",
+    "crc32c": "xjqv/w==",
+    "currentlyReferenced": true,
+    "plannedReplacementPaths": [
+      "assets/floors/wood/FL-00626/diffuse.png"
+    ],
+    "replacementVerified": false,
+    "eligibleAfterApply": true,
+    "deletionScheduled": false,
+    "reason": "Can be considered only after every replacement and reference update is verified."
+  },
+  {
+    "path": "assets/furniture/bedroom/Cabinet.glb",
+    "size": 5161440,
+    "md5Hash": "QNUN7wVrLWdZROcdzKz46A==",
+    "crc32c": "JpDCfw==",
+    "currentlyReferenced": true,
+    "plannedReplacementPaths": [
+      "assets/furniture/bedroom/F-00726/model.glb"
+    ],
+    "replacementVerified": false,
+    "eligibleAfterApply": true,
+    "deletionScheduled": false,
+    "reason": "Can be considered only after every replacement and reference update is verified."
+  },
+  {
+    "path": "assets/furniture/bedroom/l7aynDwSMh5MpQK9fx7c-model-Channel-Tufted-Camel-Bed_scaled_resized.glb",
+    "size": 15284736,
+    "md5Hash": "qD9+Llk0IHi+2ZQmyrhPTg==",
+    "crc32c": "vf61gg==",
+    "currentlyReferenced": true,
+    "plannedReplacementPaths": [
+      "assets/furniture/bedroom/F-01526/model.glb"
+    ],
+    "replacementVerified": false,
+    "eligibleAfterApply": true,
+    "deletionScheduled": false,
+    "reason": "Can be considered only after every replacement and reference update is verified."
+  },
+  {
+    "path": "assets/furniture/bedroom/vi2bJxz7mkQzycxuRV53-model-Modern-Ash-Bed_resized.glb",
+    "size": 22870548,
+    "md5Hash": "AueMhCgoMc/bGQ5zNDKJ1A==",
+    "crc32c": "jSz3OA==",
+    "currentlyReferenced": true,
+    "plannedReplacementPaths": [
+      "assets/furniture/bedroom/F-02026/model.glb"
+    ],
+    "replacementVerified": false,
+    "eligibleAfterApply": true,
+    "deletionScheduled": false,
+    "reason": "Can be considered only after every replacement and reference update is verified."
+  },
+  {
+    "path": "assets/furniture/diningroom/1leXkoHmhslSxmZsagb7-model-Modern-Stainless-Steel-Refrigerator.glb",
+    "size": 18025560,
+    "md5Hash": "fUGMP5sxqtQuyOtTWpvV/A==",
+    "crc32c": "3CIQUw==",
+    "currentlyReferenced": true,
+    "plannedReplacementPaths": [
+      "assets/furniture/diningroom/F-00126/model.glb"
+    ],
+    "replacementVerified": false,
+    "eligibleAfterApply": true,
+    "deletionScheduled": false,
+    "reason": "Can be considered only after every replacement and reference update is verified."
+  },
+  {
+    "path": "assets/furniture/diningroom/F-00126/model.glb",
+    "size": 18025560,
+    "md5Hash": "fUGMP5sxqtQuyOtTWpvV/A==",
+    "crc32c": "3CIQUw==",
+    "currentlyReferenced": false,
+    "plannedReplacementPaths": [],
+    "replacementVerified": false,
+    "eligibleAfterApply": false,
+    "deletionScheduled": false,
+    "reason": "Unreferenced asset-scope object has no replacement; retained conservatively."
+  },
+  {
+    "path": "assets/furniture/diningroom/Table.glb",
+    "size": 12219000,
+    "md5Hash": "6cHd4dvVn+rNw2/8sLApIQ==",
+    "crc32c": "R0Ay3g==",
+    "currentlyReferenced": true,
+    "plannedReplacementPaths": [
+      "assets/furniture/diningroom/F-00826/model.glb"
+    ],
+    "replacementVerified": false,
+    "eligibleAfterApply": true,
+    "deletionScheduled": false,
+    "reason": "Can be considered only after every replacement and reference update is verified."
+  },
+  {
+    "path": "assets/furniture/diningroom/x3hHPlyBgYWVUPB6TGTL-model-Ivory-Gold-Breakfast-Stool_resized.glb",
+    "size": 47615236,
+    "md5Hash": "QRcJIuGevHqG60CZK+BB7w==",
+    "crc32c": "kQI4SQ==",
+    "currentlyReferenced": true,
+    "plannedReplacementPaths": [
+      "assets/furniture/diningroom/F-02126/model.glb"
+    ],
+    "replacementVerified": false,
+    "eligibleAfterApply": true,
+    "deletionScheduled": false,
+    "reason": "Can be considered only after every replacement and reference update is verified."
+  },
+  {
+    "path": "assets/furniture/diningroom/xytfdR9rejLmC6xcFlU7-model-Ivory-Marble-Center-Table_resized.glb",
+    "size": 55674584,
+    "md5Hash": "KenJN/GOmX2oZ8ZKVOPFmQ==",
+    "crc32c": "X9Zs5Q==",
+    "currentlyReferenced": true,
+    "plannedReplacementPaths": [
+      "assets/furniture/diningroom/F-02226/model.glb"
+    ],
+    "replacementVerified": false,
+    "eligibleAfterApply": true,
+    "deletionScheduled": false,
+    "reason": "Can be considered only after every replacement and reference update is verified."
+  },
+  {
+    "path": "assets/furniture/livingroom/4vD9gHQW3UI3K8xLD71B-model-1rDt5ABKrQcQnPylesEqv.glb",
+    "size": 31515020,
+    "md5Hash": "2LLN+vtz7qehRrpwTnQ4QA==",
+    "crc32c": "/1zkRQ==",
+    "currentlyReferenced": true,
+    "plannedReplacementPaths": [
+      "assets/furniture/livingroom/F-00226/model.glb"
+    ],
+    "replacementVerified": false,
+    "eligibleAfterApply": true,
+    "deletionScheduled": false,
+    "reason": "Can be considered only after every replacement and reference update is verified."
+  },
+  {
+    "path": "assets/furniture/livingroom/HRgQpL2Tx92bvodO8RZI-model-Ivory-Pharaoh-Chair_resized.glb",
+    "size": 35986292,
+    "md5Hash": "68RfAlliTyhF84M5P7iB2A==",
+    "crc32c": "yC2YCw==",
+    "currentlyReferenced": true,
+    "plannedReplacementPaths": [
+      "assets/furniture/livingroom/F-01126/model.glb"
+    ],
+    "replacementVerified": false,
+    "eligibleAfterApply": true,
+    "deletionScheduled": false,
+    "reason": "Can be considered only after every replacement and reference update is verified."
+  },
+  {
+    "path": "assets/furniture/livingroom/HZG0WRHwY8yuH9J0Nc5O-model-1AYPR1p5WYRgjYsQVmyLE.glb",
+    "size": 27213144,
+    "md5Hash": "HMVuzXAvCw3I2Ecz4HAlEw==",
+    "crc32c": "zwYMAg==",
+    "currentlyReferenced": true,
+    "plannedReplacementPaths": [
+      "assets/furniture/livingroom/F-01226/model.glb"
+    ],
+    "replacementVerified": false,
+    "eligibleAfterApply": true,
+    "deletionScheduled": false,
+    "reason": "Can be considered only after every replacement and reference update is verified."
+  },
+  {
+    "path": "assets/furniture/livingroom/I5Mm64NNEKhOFusIqWHe-model-Cocoa-Curve-Lounge_resized.glb",
+    "size": 50035900,
+    "md5Hash": "2jBoBxrF94ZexIrOlF1/cQ==",
+    "crc32c": "xlvTVQ==",
+    "currentlyReferenced": true,
+    "plannedReplacementPaths": [
+      "assets/furniture/livingroom/F-01326/model.glb"
+    ],
+    "replacementVerified": false,
+    "eligibleAfterApply": true,
+    "deletionScheduled": false,
+    "reason": "Can be considered only after every replacement and reference update is verified."
+  },
+  {
+    "path": "assets/furniture/livingroom/PqtRcTuqL5ifuo3GTUUH-model-Ashen-Wood-Lounge-Chair_resized.glb",
+    "size": 46000932,
+    "md5Hash": "QjGea7Vth9I8UDRcPQq5Ew==",
+    "crc32c": "8e2tmg==",
+    "currentlyReferenced": true,
+    "plannedReplacementPaths": [
+      "assets/furniture/livingroom/F-01726/model.glb"
+    ],
+    "replacementVerified": false,
+    "eligibleAfterApply": true,
+    "deletionScheduled": false,
+    "reason": "Can be considered only after every replacement and reference update is verified."
+  },
+  {
+    "path": "assets/furniture/livingroom/TV.glb",
+    "size": 1116556,
+    "md5Hash": "YNlv70CmXGPyhUpvLVBfFw==",
+    "crc32c": "ubyCOw==",
+    "currentlyReferenced": true,
+    "plannedReplacementPaths": [
+      "assets/furniture/livingroom/F-00426/model.glb"
+    ],
+    "replacementVerified": false,
+    "eligibleAfterApply": true,
+    "deletionScheduled": false,
+    "reason": "Can be considered only after every replacement and reference update is verified."
+  },
+  {
+    "path": "assets/furniture/livingroom/ewZhEYTdu2niIU6lZF2h-model-waifu020.glb",
+    "size": 44606820,
+    "md5Hash": "1tOPv4A87hvqYSlRYibByw==",
+    "crc32c": "vvNRpg==",
+    "currentlyReferenced": true,
+    "plannedReplacementPaths": [
+      "assets/furniture/livingroom/F-00926/model.glb"
+    ],
+    "replacementVerified": false,
+    "eligibleAfterApply": true,
+    "deletionScheduled": false,
+    "reason": "Can be considered only after every replacement and reference update is verified."
+  },
+  {
+    "path": "assets/furniture/livingroom/kjdY8niuhQPlDK1nzeio-model-Ivory-Cloud-U-Sofa_resized.glb",
+    "size": 39703028,
+    "md5Hash": "3fYFRLgfH4VZY8R9PKKYQw==",
+    "crc32c": "ywx3tQ==",
+    "currentlyReferenced": true,
+    "plannedReplacementPaths": [
+      "assets/furniture/livingroom/F-01426/model.glb"
+    ],
+    "replacementVerified": false,
+    "eligibleAfterApply": true,
+    "deletionScheduled": false,
+    "reason": "Can be considered only after every replacement and reference update is verified."
+  },
+  {
+    "path": "assets/furniture/livingroom/o9hxXiBMGY3bJZAApUte-model-6vDVgE3HKplFw_K3oIBEU.glb",
+    "size": 45749440,
+    "md5Hash": "3RnHfEyIDEl6Pzj+70Dqog==",
+    "crc32c": "8+JRfQ==",
+    "currentlyReferenced": true,
+    "plannedReplacementPaths": [
+      "assets/furniture/livingroom/F-01626/model.glb"
+    ],
+    "replacementVerified": false,
+    "eligibleAfterApply": true,
+    "deletionScheduled": false,
+    "reason": "Can be considered only after every replacement and reference update is verified."
+  },
+  {
+    "path": "assets/furniture/livingroom/qQdRA4o2kNzBfZtQrKce-model-Goldenrod-Comfort-Chair_resized.glb",
+    "size": 42128656,
+    "md5Hash": "vzA7R+ZqyOO2gYhN/mdJ0w==",
+    "crc32c": "v39x3w==",
+    "currentlyReferenced": true,
+    "plannedReplacementPaths": [
+      "assets/furniture/livingroom/F-01826/model.glb"
+    ],
+    "replacementVerified": false,
+    "eligibleAfterApply": true,
+    "deletionScheduled": false,
+    "reason": "Can be considered only after every replacement and reference update is verified."
+  },
+  {
+    "path": "assets/furniture/livingroom/qTnjmIpfmIcZlvFlDnC1-model-Elephant-Gray-Sectional-Couch_resized.glb",
+    "size": 12843064,
+    "md5Hash": "uUIITpSWqNPIzW2GsQxZUw==",
+    "crc32c": "53j5ZQ==",
+    "currentlyReferenced": true,
+    "plannedReplacementPaths": [
+      "assets/furniture/livingroom/F-01926/model.glb"
+    ],
+    "replacementVerified": false,
+    "eligibleAfterApply": true,
+    "deletionScheduled": false,
+    "reason": "Can be considered only after every replacement and reference update is verified."
+  },
+  {
+    "path": "assets/furniture/livingroom/steel-frame-shelves-01.glb",
+    "size": 1596392,
+    "md5Hash": "d6paLSsUFaZEXmIkkJe0nQ==",
+    "crc32c": "Cjs+qw==",
+    "currentlyReferenced": true,
+    "plannedReplacementPaths": [
+      "assets/furniture/livingroom/F-00526/model.glb"
+    ],
+    "replacementVerified": false,
+    "eligibleAfterApply": true,
+    "deletionScheduled": false,
+    "reason": "Can be considered only after every replacement and reference update is verified."
+  },
+  {
+    "path": "assets/furniture/livingroom/zq3deO69URAqY3XpQMGh-model-Saddlewood-Executive-Chair.glb",
+    "size": 34482280,
+    "md5Hash": "ir3ocZYC+7yPcohXszFisw==",
+    "crc32c": "J5+FtQ==",
+    "currentlyReferenced": true,
+    "plannedReplacementPaths": [
+      "assets/furniture/livingroom/F-02426/model.glb"
+    ],
+    "replacementVerified": false,
+    "eligibleAfterApply": true,
+    "deletionScheduled": false,
+    "reason": "Can be considered only after every replacement and reference update is verified."
+  },
+  {
+    "path": "assets/furniture/office/gQQOYRG9Cce28WquJ5B0-model-Obsidian-Executive-Chair.glb",
+    "size": 25427900,
+    "md5Hash": "c6reOmTWy2B0Q2xW+P8xoQ==",
+    "crc32c": "jucF/w==",
+    "currentlyReferenced": true,
+    "plannedReplacementPaths": [
+      "assets/furniture/office/F-01026/model.glb"
+    ],
+    "replacementVerified": false,
+    "eligibleAfterApply": true,
+    "deletionScheduled": false,
+    "reason": "Can be considered only after every replacement and reference update is verified."
+  },
+  {
+    "path": "assets/furniture/office/yoAt8ckUEXxmjtmB70p3-model-Saddlewood-Executive-Chair.glb",
+    "size": 34482280,
+    "md5Hash": "ir3ocZYC+7yPcohXszFisw==",
+    "crc32c": "J5+FtQ==",
+    "currentlyReferenced": true,
+    "plannedReplacementPaths": [
+      "assets/furniture/office/F-02326/model.glb"
+    ],
+    "replacementVerified": false,
+    "eligibleAfterApply": true,
+    "deletionScheduled": false,
+    "reason": "Can be considered only after every replacement and reference update is verified."
+  },
+  {
+    "path": "assets/openings/doors/single-door.glb",
+    "size": 12186500,
+    "md5Hash": "DFXWR3Y5rto3l85WzGaiwA==",
+    "crc32c": "GLX8Dw==",
+    "currentlyReferenced": true,
+    "plannedReplacementPaths": [
+      "assets/furniture/doors/F-00326/model.glb"
+    ],
+    "replacementVerified": false,
+    "eligibleAfterApply": true,
+    "deletionScheduled": false,
+    "reason": "Can be considered only after every replacement and reference update is verified."
+  },
+  {
+    "path": "assets/openings/windows/Slim_Intersection_i.glb",
+    "size": 1606112,
+    "md5Hash": "rnNEQABg8zAMUB5UMoJeMw==",
+    "crc32c": "NoYCtA==",
+    "currentlyReferenced": true,
+    "plannedReplacementPaths": [
+      "assets/furniture/windows/F-00626/model.glb"
+    ],
+    "replacementVerified": false,
+    "eligibleAfterApply": true,
+    "deletionScheduled": false,
+    "reason": "Can be considered only after every replacement and reference update is verified."
+  },
+  {
+    "path": "assets/wall/tile/vlljo8HQum9D2GBE4oWd-diffuse-wallpaperflare-com_wallpaper.jpg",
+    "size": 4265398,
+    "md5Hash": "yKzdpPFHS4nzrMvUN/3uqA==",
+    "crc32c": "0eCCbA==",
+    "currentlyReferenced": true,
+    "plannedReplacementPaths": [
+      "assets/walls/tile/W-01326/diffuse.jpg"
+    ],
+    "replacementVerified": false,
+    "eligibleAfterApply": true,
+    "deletionScheduled": false,
+    "reason": "Can be considered only after every replacement and reference update is verified."
+  }
+]

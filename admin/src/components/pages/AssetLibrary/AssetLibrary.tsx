@@ -39,6 +39,7 @@ import { getFurnitureAssets } from "@/services/assets/furniture";
 import { getWallAssets } from "@/services/assets/walls";
 import { getFloorAssets } from "@/services/assets/floors";
 import { updateAsset } from "@/services/assets/update";
+import { invalidateAssetCacheSources } from "@/lib/assetLibraryCache";
 
 import type {
   Asset,
@@ -146,6 +147,7 @@ export default function AssetLibrary({
             loadTexture(asset.diffuse_path, {
               repeat: [1, 1],
               anisotropy: 8,
+              cacheable: asset.asset_status?.trim().toLowerCase() === "available",
             });
           }
         });
@@ -391,6 +393,19 @@ export default function AssetLibrary({
         ...(floorDimensions ?? {}),
       });
 
+      let cacheWarning = false;
+      if (
+        selectedAsset.asset_status !== editStatus &&
+        editStatus !== "available"
+      ) {
+        try {
+          await invalidateAssetCacheSources(selectedAsset);
+        } catch (error) {
+          console.error("Failed to clear the unpublished asset cache:", error);
+          cacheWarning = true;
+        }
+      }
+
       const updatedAsset: Asset = {
         ...selectedAsset,
         name: trimmedName,
@@ -410,6 +425,11 @@ export default function AssetLibrary({
       );
 
       setDetailPage(1);
+      setSaveError(
+        cacheWarning
+          ? "Changes were saved, but this browser could not clear the cached asset preview."
+          : ""
+      );
     } catch (err) {
       console.error("Failed to update asset:", err);
 

@@ -6,14 +6,12 @@ import {
 } from "firebase/firestore";
 
 import {
-    getDownloadURL,
-    ref
-} from "firebase/storage";
-
-import {
-    db,
-    storage
+    db
 } from "@/firebase/firebase";
+import {
+    registerAssetDownloadURL,
+    resolveStorageAssetURL
+} from "@/lib/assetLibraryCache";
 
 import type {
     Asset
@@ -72,6 +70,9 @@ interface FirebaseFurnitureAsset {
 let cachedFurnitureAssets:
     Asset[] = [];
 
+let cachedAllFurnitureAssets:
+    Asset[] = [];
+
 let furnitureCatalogLoaded =
     false;
 
@@ -84,7 +85,8 @@ let furnitureCatalogPromise:
 //==================================================
 
 async function resolveStorageUrl(
-    value: unknown
+    value: unknown,
+    cacheable: boolean,
 ): Promise<string | undefined> {
 
     if (
@@ -112,18 +114,16 @@ async function resolveStorageUrl(
         path.startsWith("data:")
     ) {
 
+        if (cacheable) {
+            await registerAssetDownloadURL(path);
+        }
         return path;
 
     }
 
     try {
 
-        return await getDownloadURL(
-            ref(
-                storage,
-                path
-            )
-        );
+        return await resolveStorageAssetURL(path, cacheable);
 
     } catch (error) {
 
@@ -146,7 +146,8 @@ async function resolveStorageUrl(
 
 async function resolvePreferredUrl(
     directUrl: unknown,
-    storagePath: unknown
+    storagePath: unknown,
+    cacheable: boolean,
 ): Promise<string | undefined> {
 
     if (
@@ -162,14 +163,15 @@ async function resolvePreferredUrl(
             value.startsWith("data:")
         ) {
 
-            return value;
+            return resolveStorageUrl(value, cacheable);
 
         }
 
     }
 
     return resolveStorageUrl(
-        storagePath
+        storagePath,
+        cacheable,
     );
 
 }
@@ -396,37 +398,20 @@ async function buildFurnitureAsset(
     data: FirebaseFurnitureAsset
 ): Promise<Asset | null> {
 
-    //--------------------------------------------------
-    // Only furniture documents.
-    //
-    // Doors/windows are also stored as "furniture"
-    // in Firebase, so category normalization below
-    // prevents those from being loaded here.
-    //--------------------------------------------------
-
-    if (
-        typeof data.asset_type === "string" &&
-        data.asset_type
-            .trim()
-            .toLowerCase() !==
-            "furniture"
-    ) {
+    if (data.asset_type !== "furniture") {
 
         return null;
 
     }
 
-    //--------------------------------------------------
-    // Only available assets
-    //--------------------------------------------------
+    const status =
+        typeof data.asset_status === "string"
+            ? data.asset_status.trim().toLowerCase()
+            : "";
 
     if (
-        typeof data.asset_status === "string" &&
-        data.asset_status.trim() !== "" &&
-        data.asset_status
-            .trim()
-            .toLowerCase() !==
-            "available"
+        status !== "available" &&
+        status !== "not_available"
     ) {
 
         return null;
@@ -450,6 +435,10 @@ async function buildFurnitureAsset(
 
     }
 
+    const cacheable =
+        typeof data.asset_status === "string" &&
+        data.asset_status.trim().toLowerCase() === "available";
+
     //--------------------------------------------------
     // Model URL
     //--------------------------------------------------
@@ -457,7 +446,8 @@ async function buildFurnitureAsset(
     const modelUrl =
         await resolvePreferredUrl(
             data.model_url,
-            data.model_path
+            data.model_path,
+            cacheable,
         );
 
     if (
@@ -482,7 +472,8 @@ async function buildFurnitureAsset(
     const thumbnailUrl =
         await resolvePreferredUrl(
             data.thumbnail_url,
-            data.thumbnail_path
+            data.thumbnail_path,
+            cacheable,
         );
 
     //--------------------------------------------------
@@ -635,12 +626,18 @@ async function loadFurnitureAssets():
         await Promise.allSettled(
 
             snapshot.docs.map(
-                document =>
-                    buildFurnitureAsset(
+                async document => ({
+                    status: (
+                        document.data() as
+                            FirebaseFurnitureAsset
+                    ).asset_status,
+                    asset: await buildFurnitureAsset(
                         document.id,
                         document.data() as
                             FirebaseFurnitureAsset
                     )
+                })
+
             )
 
         );
@@ -648,24 +645,26 @@ async function loadFurnitureAssets():
     const assets:
         Asset[] = [];
 
-    for (
-        const result
-        of results
-    ) {
+    const allAssets:
+        Asset[] = [];
 
+    for (const result of results) {
         if (
             result.status ===
             "fulfilled"
         ) {
 
-            if (
-                result.value
-            ) {
+            const asset = result.value.asset;
 
-                assets.push(
-                    result.value
-                );
+            if (asset) {
+                allAssets.push(asset);
 
+                if (
+                    typeof result.value.status === "string" &&
+                    result.value.status.trim().toLowerCase() === "available"
+                ) {
+                    assets.push(asset);
+                }
             }
 
         } else {
@@ -691,6 +690,9 @@ async function loadFurnitureAssets():
 
     cachedFurnitureAssets =
         assets;
+
+    cachedAllFurnitureAssets =
+        allAssets;
 
     furnitureCatalogLoaded =
         true;
@@ -747,7 +749,7 @@ export function getCachedFurnitureAsset(
     assetId: string
 ): Asset | undefined {
 
-    return cachedFurnitureAssets.find(
+    return cachedAllFurnitureAssets.find(
         asset =>
             asset.id ===
             assetId
@@ -776,6 +778,7 @@ export async function refreshFurnitureAssets():
     Promise<Asset[]> {
 
     cachedFurnitureAssets = [];
+    cachedAllFurnitureAssets = [];
 
     furnitureCatalogLoaded =
         false;

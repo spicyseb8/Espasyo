@@ -6,14 +6,15 @@ import {
 } from "firebase/firestore";
 
 import {
-    getDownloadURL,
-    ref
-} from "firebase/storage";
-
-import {
-    db,
-    storage
+    db
 } from "../../firebase/firebase";
+import {
+    registerAssetDownloadURL,
+    resolveStorageAssetURL
+} from "../../lib/assetLibraryCache";
+import {
+    collectAssetSources
+} from "../../lib/assetLibraryCache";
 
 import type {
     Material
@@ -37,6 +38,7 @@ interface FirebaseWallAsset {
 }
 
 let cachedWallMaterials: Material[] = [];
+let cachedWallStorageSources: string[] = [];
 let wallMaterialsLoaded = false;
 let wallMaterialsPromise: Promise<Material[]> | null = null;
 
@@ -55,15 +57,14 @@ async function resolveStorageUrl(
         path.startsWith("data:") ||
         path.startsWith("blob:")
     ) {
+        await registerAssetDownloadURL(path);
         return path;
     }
 
     const normalizedPath = path.replace(/^\/+/, "");
 
     try {
-        return await getDownloadURL(
-            ref(storage, normalizedPath)
-        );
+        return await resolveStorageAssetURL(normalizedPath);
     } catch (error) {
         console.error(
             "Failed to resolve Firebase Storage file:",
@@ -106,6 +107,15 @@ async function loadWallMaterials(): Promise<Material[]> {
     );
 
     const snapshot = await getDocs(q);
+    cachedWallStorageSources = snapshot.docs
+        .filter(document => {
+            const data = document.data() as FirebaseWallAsset;
+            return (
+                typeof data.asset_status === "string" &&
+                data.asset_status.trim().toLowerCase() === "available"
+            );
+        })
+        .flatMap(document => collectAssetSources(document.data()));
 
     console.log(
         "Firebase wall asset documents found:",
@@ -219,8 +229,13 @@ export function findCachedWallMaterial(
     );
 }
 
+export function getWallStorageSources(): string[] {
+    return cachedWallStorageSources;
+}
+
 export async function refreshWallMaterials(): Promise<Material[]> {
     cachedWallMaterials = [];
+    cachedWallStorageSources = [];
     wallMaterialsLoaded = false;
     wallMaterialsPromise = null;
 

@@ -6,14 +6,12 @@ import {
 } from "firebase/firestore";
 
 import {
-    getDownloadURL,
-    ref
-} from "firebase/storage";
-
-import {
-    db,
-    storage
+    db
 } from "@/firebase/firebase";
+import {
+    registerAssetDownloadURL,
+    resolveStorageAssetURL
+} from "@/lib/assetLibraryCache";
 
 import type {
     Asset
@@ -71,7 +69,8 @@ let catalogPromise:
 //==================================================
 
 async function resolveStorageUrl(
-    value: unknown
+    value: unknown,
+    cacheable: boolean,
 ): Promise<string | undefined> {
 
     if (
@@ -101,6 +100,9 @@ async function resolveStorageUrl(
         path.startsWith("data:")
     ) {
 
+        if (cacheable) {
+            await registerAssetDownloadURL(path);
+        }
         return path;
     }
 
@@ -110,12 +112,7 @@ async function resolveStorageUrl(
 
     try {
 
-        return await getDownloadURL(
-            ref(
-                storage,
-                path
-            )
-        );
+        return await resolveStorageAssetURL(path, cacheable);
 
     } catch (error) {
 
@@ -136,7 +133,8 @@ async function resolveStorageUrl(
 
 async function resolvePreferredUrl(
     directUrl: unknown,
-    storagePath: unknown
+    storagePath: unknown,
+    cacheable: boolean,
 ): Promise<string | undefined> {
 
     //--------------------------------------------------
@@ -156,7 +154,7 @@ async function resolvePreferredUrl(
             value.startsWith("data:")
         ) {
 
-            return value;
+            return resolveStorageUrl(value, cacheable);
         }
     }
 
@@ -165,7 +163,8 @@ async function resolvePreferredUrl(
     //--------------------------------------------------
 
     return resolveStorageUrl(
-        storagePath
+        storagePath,
+        cacheable,
     );
 }
 
@@ -220,7 +219,8 @@ function normalizeCategory(
 
 function getDefaultModelSettings(
     category: "doors" | "windows",
-    modelPath: string
+    modelPath: string,
+    assetName: string
 ): {
     scale: number;
     rotationOffsetY: number;
@@ -249,14 +249,20 @@ function getDefaultModelSettings(
     // Slim Intersection window
     //--------------------------------------------------
 
-    const normalizedPath =
-        modelPath
-            .trim()
-            .toLowerCase();
+    const normalizedIdentity =
+        `${modelPath} ${assetName}`
+            .toLowerCase()
+            .replace(
+                /[^a-z0-9]+/g,
+                ""
+            );
 
     if (
-        normalizedPath.includes(
-            "slim_intersection_i"
+        normalizedIdentity.includes(
+            "slimintersectioni"
+        ) ||
+        normalizedIdentity.includes(
+            "slimintersectionwindow"
         )
     ) {
 
@@ -276,8 +282,8 @@ function getDefaultModelSettings(
     //--------------------------------------------------
 
     if (
-        normalizedPath.includes(
-            "glass_window"
+        normalizedIdentity.includes(
+            "glasswindow"
         )
     ) {
 
@@ -369,6 +375,10 @@ async function buildAsset(
     // Model URL / path
     //--------------------------------------------------
 
+    const cacheable =
+        typeof data.asset_status === "string" &&
+        data.asset_status.trim().toLowerCase() === "available";
+
     const modelPath =
         typeof data.model_path === "string"
             ? data.model_path.trim()
@@ -377,7 +387,8 @@ async function buildAsset(
     const modelUrl =
         await resolvePreferredUrl(
             data.model_url,
-            modelPath
+            modelPath,
+            cacheable,
         );
 
     if (
@@ -400,7 +411,8 @@ async function buildAsset(
     const thumbnailUrl =
         await resolvePreferredUrl(
             data.thumbnail_url,
-            data.thumbnail_path
+            data.thumbnail_path,
+            cacheable,
         );
 
     //--------------------------------------------------
@@ -439,7 +451,10 @@ async function buildAsset(
     const defaults =
         getDefaultModelSettings(
             category,
-            modelPath
+            modelPath,
+            typeof data.name === "string"
+                ? data.name
+                : ""
         );
 
     //--------------------------------------------------
