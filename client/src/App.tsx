@@ -1,3 +1,4 @@
+
 import {
     BrowserRouter,
     Routes,
@@ -18,7 +19,12 @@ import LibraryPage
 
 import AuthPage
     from "./pages/auth/AuthPage";
-import StudioLoadProject from "./pages/StudioLoadProject";
+
+import StudioLoadProject
+    from "./pages/StudioLoadProject";
+
+import AssetPreloader
+    from "./engine/AssetPreloader";
 
 function App() {
 
@@ -26,11 +32,12 @@ function App() {
 
         <BrowserRouter>
 
+            {/* Start Firebase asset preloading on app startup. */}
+            <AssetPreloader />
+
             <Routes>
 
-                {/* ------------------------------------------
-                    HOME
-                ------------------------------------------ */}
+                {/* HOME */}
 
                 <Route
                     path="/"
@@ -46,10 +53,7 @@ function App() {
                     }
                 />
 
-
-                {/* ------------------------------------------
-                    AUTH
-                ------------------------------------------ */}
+                {/* AUTH */}
 
                 <Route
                     path="/auth"
@@ -58,10 +62,7 @@ function App() {
                     }
                 />
 
-
-                {/* ------------------------------------------
-                    LIBRARY
-                ------------------------------------------ */}
+                {/* LIBRARY */}
 
                 <Route
                     path="/library"
@@ -70,10 +71,7 @@ function App() {
                     }
                 />
 
-
-                {/* ------------------------------------------
-                    STUDIO / PROJECT MANAGEMENT
-                ------------------------------------------ */}
+                {/* STUDIO / PROJECT MANAGEMENT */}
 
                 <Route
                     path="/studio"
@@ -82,10 +80,7 @@ function App() {
                     }
                 />
 
-
-                {/* ------------------------------------------
-                    ACTUAL 3D EDITOR
-                ------------------------------------------ */}
+                {/* ACTUAL 3D EDITOR */}
 
                 <Route
                     path="/studio/editor"
@@ -94,12 +89,14 @@ function App() {
                     }
                 />
 
+                {/* LOAD SAVED PROJECT */}
+
                 <Route
-    path="/studio/load/:projectId"
-    element={
-        <StudioLoadProject />
-    }
-/>
+                    path="/studio/load/:projectId"
+                    element={
+                        <StudioLoadProject />
+                    }
+                />
 
             </Routes>
 
@@ -108,3 +105,4 @@ function App() {
 }
 
 export default App;
+

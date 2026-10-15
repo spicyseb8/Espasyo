@@ -44,22 +44,14 @@ import {
     checkFurnitureCollision
 } from "../engine/furniture/FurnitureCollision";
 
-
-//======================================================
-// ICONS
-//======================================================
-
 function RotateIcon() {
-
     return (
-
         <svg
             width="16"
             height="16"
             viewBox="0 0 24 24"
             fill="none"
         >
-
             <path
                 d="M20 11a8 8 0 1 0-2.6 6.2"
                 stroke="currentColor"
@@ -67,7 +59,6 @@ function RotateIcon() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
             />
-
             <path
                 d="M20 5v6h-6"
                 stroke="currentColor"
@@ -75,25 +66,18 @@ function RotateIcon() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
             />
-
         </svg>
-
     );
-
 }
 
-
 function MoveIcon() {
-
     return (
-
         <svg
             width="16"
             height="16"
             viewBox="0 0 24 24"
             fill="none"
         >
-
             <path
                 d="M12 3v18M3 12h18M6 6l-3 3 3 3M18 6l3 3-3 3M6 18l-3-3 3-3M18 18l3-3-3-3"
                 stroke="currentColor"
@@ -101,25 +85,18 @@ function MoveIcon() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
             />
-
         </svg>
-
     );
-
 }
 
-
 function DuplicateIcon() {
-
     return (
-
         <svg
             width="16"
             height="16"
             viewBox="0 0 24 24"
             fill="none"
         >
-
             <rect
                 x="8"
                 y="8"
@@ -129,50 +106,34 @@ function DuplicateIcon() {
                 stroke="currentColor"
                 strokeWidth="1.7"
             />
-
             <path
                 d="M6 16H5.5A2.5 2.5 0 0 1 3 13.5v-8A2.5 2.5 0 0 1 5.5 3h8A2.5 2.5 0 0 1 16 5.5V6"
                 stroke="currentColor"
                 strokeWidth="1.7"
                 strokeLinecap="round"
             />
-
         </svg>
-
     );
-
 }
 
-
 function TrashIcon() {
-
     return (
-
         <svg
             width="16"
             height="16"
             viewBox="0 0 24 24"
             fill="none"
         >
-
             <path
-    d="M4 7h16M9 7V4.8c0-.44.36-.8.8-.8h4.4c.44 0 .8.36.8.8V7m-9 0 .9 12.1c.05.65.6 1.15 1.25 1.15h6.7c.65 0 1.2-.5 1.25-1.15L18 7"
-    stroke="currentColor"
-    strokeWidth="1.7"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-/>
-
+                d="M4 7h16M9 7V4.8c0-.44.36-.8.8-.8h4.4c.44 0 .8.36.8.8V7m-9 0 .9 12.1c.05.65.6 1.15 1.25 1.15h6.7c.65 0 1.2-.5 1.25-1.15L18 7"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
         </svg>
-
     );
-
 }
-
-
-//======================================================
-// TOOLBAR STYLES
-//======================================================
 
 const TOOLBAR_STYLES = `
 
@@ -343,11 +304,6 @@ const TOOLBAR_STYLES = `
 
 `;
 
-
-//======================================================
-// DELETE DIALOG
-//======================================================
-
 interface DeleteDialogProps {
 
     label:
@@ -360,7 +316,6 @@ interface DeleteDialogProps {
         () => void;
 
 }
-
 
 function DeleteDialog({
 
@@ -475,7 +430,6 @@ function DeleteDialog({
 
                 </div>
 
-
                 <div>
 
                     <div
@@ -496,7 +450,6 @@ function DeleteDialog({
                         Delete {label}?
 
                     </div>
-
 
                     <div
                         style={{
@@ -520,7 +473,6 @@ function DeleteDialog({
                 </div>
 
             </div>
-
 
             <div
                 style={{
@@ -573,7 +525,6 @@ function DeleteDialog({
 
                 </button>
 
-
                 <button
                     type="button"
                     onClick={onConfirm}
@@ -618,21 +569,11 @@ function DeleteDialog({
 
 }
 
-
-//======================================================
-// ANGLE HELPERS
-//======================================================
-
 const TWO_PI =
     Math.PI * 2;
 
 const QUARTER_TURN =
     Math.PI / 2;
-
-
-//------------------------------------------------------
-// Normalize angle to 0 ... 2PI
-//------------------------------------------------------
 
 function normalizeAngle(
     angle: number
@@ -653,12 +594,6 @@ function normalizeAngle(
     return result;
 }
 
-
-//------------------------------------------------------
-// Difference between two angles.
-// Result is -PI ... +PI.
-//------------------------------------------------------
-
 function shortestAngleDifference(
     angle: number,
     target: number
@@ -667,7 +602,6 @@ function shortestAngleDifference(
     let difference =
         normalizeAngle(angle) -
         normalizeAngle(target);
-
 
     while (
         difference > Math.PI
@@ -678,7 +612,6 @@ function shortestAngleDifference(
 
     }
 
-
     while (
         difference < -Math.PI
     ) {
@@ -688,25 +621,8 @@ function shortestAngleDifference(
 
     }
 
-
     return difference;
 }
-
-
-//------------------------------------------------------
-// SOFT 90° SNAP
-//
-// This is intentionally NOT a hard snap.
-//
-// Example:
-//
-// 83° -> slightly pulled toward 90°
-// 87° -> more strongly pulled toward 90°
-// 89° -> very close to 90°
-// 90° -> exactly 90°
-//
-// Outside the snap range, the angle remains free.
-//------------------------------------------------------
 
 function softSnapRotation(
     angle: number
@@ -735,16 +651,8 @@ function softSnapRotation(
             difference
         );
 
-    //--------------------------------------------------
-    // Larger magnetic range.
-    //
-    // The snap starts being noticeable roughly
-    // 15 degrees before a 90-degree angle.
-    //--------------------------------------------------
-
     const snapRange =
         Math.PI / 4.5;
-        // 15 degrees
 
     if (
         distance >=
@@ -754,21 +662,12 @@ function softSnapRotation(
         return normalized;
     }
 
-    //--------------------------------------------------
-    // 0 at the outside of the snap range.
-    // 1 directly on the 90-degree angle.
-    //--------------------------------------------------
-
     const normalizedDistance =
         1 -
         (
             distance /
             snapRange
         );
-
-    //--------------------------------------------------
-    // Smooth magnetic curve.
-    //--------------------------------------------------
 
     const smoothStrength =
         normalizedDistance *
@@ -779,10 +678,6 @@ function softSnapRotation(
             normalizedDistance
         );
 
-    //--------------------------------------------------
-    // Stronger pull toward 90°.
-    //--------------------------------------------------
-
     const pullStrength =
         1.0 *
         smoothStrength;
@@ -791,10 +686,6 @@ function softSnapRotation(
         normalized -
         difference *
         pullStrength;
-
-    //--------------------------------------------------
-    // Exact 90° remains exact.
-    //--------------------------------------------------
 
     if (
         distance <=
@@ -811,11 +702,6 @@ function softSnapRotation(
     );
 }
 
-
-//------------------------------------------------------
-// Pointer angle around rotation ring
-//------------------------------------------------------
-
 function getPointerAngle(
     clientX: number,
     clientY: number,
@@ -830,7 +716,6 @@ function getPointerAngle(
         rect.top +
         rect.height * 0.5;
 
-
     return Math.atan2(
 
         clientY -
@@ -841,11 +726,6 @@ function getPointerAngle(
 
     );
 }
-
-
-//------------------------------------------------------
-// Unwrap the delta between two pointer angles.
-//------------------------------------------------------
 
 function unwrapAngleDelta(
     delta: number
@@ -860,7 +740,6 @@ function unwrapAngleDelta(
 
     }
 
-
     while (
         delta < -Math.PI
     ) {
@@ -870,14 +749,8 @@ function unwrapAngleDelta(
 
     }
 
-
     return delta;
 }
-
-
-//======================================================
-// COMPONENT
-//======================================================
 
 export default function SelectionToolbar() {
 
@@ -886,44 +759,30 @@ export default function SelectionToolbar() {
         dispatch
     } = useEditor();
 
-
-    //==================================================
-    // DELETE
-    //==================================================
-
     const [
         deleteOpen,
         setDeleteOpen
     ] = useState(false);
-
-
-    //==================================================
-    // ROTATION
-    //==================================================
 
     const [
         rotationMode,
         setRotationMode
     ] = useState(false);
 
-
     const [
         rotationDisplayY,
         setRotationDisplayY
     ] = useState(0);
-
 
     const [
         rotationValid,
         setRotationValid
     ] = useState(true);
 
-
     const rotationRingRef =
         useRef<HTMLDivElement | null>(
             null
         );
-
 
     const rotationDragRef =
         useRef<{
@@ -956,16 +815,10 @@ export default function SelectionToolbar() {
             null
         );
 
-
-    //==================================================
-    // FURNITURE CATALOG
-    //==================================================
-
     const [
         furnitureCatalogLoaded,
         setFurnitureCatalogLoaded
     ] = useState(false);
-
 
     useEffect(
 
@@ -973,7 +826,6 @@ export default function SelectionToolbar() {
 
             let cancelled =
                 false;
-
 
             getFurnitureAssets()
 
@@ -1007,7 +859,6 @@ export default function SelectionToolbar() {
 
                         );
 
-
                         if (
                             !cancelled
                         ) {
@@ -1022,7 +873,6 @@ export default function SelectionToolbar() {
 
                 );
 
-
             return () => {
 
                 cancelled =
@@ -1036,13 +886,7 @@ export default function SelectionToolbar() {
 
     );
 
-
     void furnitureCatalogLoaded;
-
-
-    //==================================================
-    // SELECTED FURNITURE
-    //==================================================
 
     const furniture =
         state.furniture.find(
@@ -1053,11 +897,6 @@ export default function SelectionToolbar() {
 
         ) ?? null;
 
-
-    //==================================================
-    // SELECTED DOOR
-    //==================================================
-
     const door =
         state.doors.find(
 
@@ -1066,11 +905,6 @@ export default function SelectionToolbar() {
                 state.selectedDoorId
 
         ) ?? null;
-
-
-    //==================================================
-    // SELECTED WINDOW
-    //==================================================
 
     const selectedWindow =
         state.windows.find(
@@ -1081,16 +915,10 @@ export default function SelectionToolbar() {
 
         ) ?? null;
 
-
-    //==================================================
-    // CLEAN ROTATION DRAG
-    //==================================================
-
     function cleanupRotationDrag() {
 
         const drag =
             rotationDragRef.current;
-
 
         if (
             !drag
@@ -1098,33 +926,24 @@ export default function SelectionToolbar() {
             return;
         }
 
-
         window.removeEventListener(
             "pointermove",
             drag.handleMove
         );
-
 
         window.removeEventListener(
             "pointerup",
             drag.handleUp
         );
 
-
         window.removeEventListener(
             "pointercancel",
             drag.handleUp
         );
 
-
         rotationDragRef.current =
             null;
     }
-
-
-    //==================================================
-    // COMPONENT CLEANUP
-    //==================================================
 
     useEffect(
 
@@ -1145,11 +964,6 @@ export default function SelectionToolbar() {
 
     );
 
-
-    //==================================================
-    // ESCAPE
-    //==================================================
-
     useEffect(
 
         () => {
@@ -1159,7 +973,6 @@ export default function SelectionToolbar() {
             ) {
                 return;
             }
-
 
             const onKeyDown =
                 (
@@ -1175,13 +988,10 @@ export default function SelectionToolbar() {
 
                     }
 
-
                     cleanupRotationDrag();
-
 
                     furnitureInteraction
                         .clearRotationPreview();
-
 
                     setRotationMode(
                         false
@@ -1189,12 +999,10 @@ export default function SelectionToolbar() {
 
                 };
 
-
             window.addEventListener(
                 "keydown",
                 onKeyDown
             );
-
 
             return () => {
 
@@ -1213,11 +1021,6 @@ export default function SelectionToolbar() {
 
     );
 
-
-    //==================================================
-    // NO SELECTION
-    //==================================================
-
     if (
 
         !furniture &&
@@ -1232,17 +1035,11 @@ export default function SelectionToolbar() {
 
     }
 
-
-    //==================================================
-    // SELECTED TYPE
-    //==================================================
-
     let selectedType:
         | "furniture"
         | "door"
         | "window" =
         "furniture";
-
 
     if (
         furniture
@@ -1269,11 +1066,6 @@ export default function SelectionToolbar() {
 
     }
 
-
-    //==================================================
-    // SELECTED FURNITURE ASSET
-    //==================================================
-
     const furnitureAsset =
         furniture
 
@@ -1293,11 +1085,6 @@ export default function SelectionToolbar() {
 
             : null;
 
-
-    //==================================================
-    // WALL FURNITURE
-    //==================================================
-
     const isWallFurniture =
 
         selectedType ===
@@ -1315,14 +1102,8 @@ export default function SelectionToolbar() {
 
         );
 
-
-    //==================================================
-    // TOOLBAR ANCHOR
-    //==================================================
-
     const anchor =
         new Vector3();
-
 
     if (
         furniture
@@ -1366,11 +1147,6 @@ export default function SelectionToolbar() {
 
     }
 
-
-    //==================================================
-    // LABEL
-    //==================================================
-
     const label =
 
         selectedType ===
@@ -1385,32 +1161,17 @@ export default function SelectionToolbar() {
 
                 : "Window";
 
-
-    //==================================================
-    // START DUPLICATE FURNITURE
-    //
-    // IMPORTANT:
-    //
-    // No ADD_FURNITURE happens here.
-    //
-    // We simply enter normal furniture placement mode.
-    // The existing FurnitureInteractionEvents will add
-    // the furniture only after the user clicks.
-    //==================================================
-
     function duplicateFurniture() {
 
         setDeleteOpen(
             false
         );
 
-
         if (
             !furniture
         ) {
             return;
         }
-
 
         const asset =
             getCachedFurnitureAsset(
@@ -1419,7 +1180,6 @@ export default function SelectionToolbar() {
             findAsset(
                 furniture.assetId
             );
-
 
         if (
             !asset
@@ -1437,11 +1197,6 @@ export default function SelectionToolbar() {
 
         }
 
-
-        //--------------------------------------------------
-        // Cancel any old rotation session.
-        //--------------------------------------------------
-
         cleanupRotationDrag();
 
         furnitureInteraction
@@ -1453,22 +1208,12 @@ export default function SelectionToolbar() {
         furnitureInteraction
             .resetRotation();
 
-
-        //--------------------------------------------------
-        // Remove the existing object's selection UI.
-        //--------------------------------------------------
-
         dispatch({
 
             type:
                 "CLEAR_SELECTION"
 
         });
-
-
-        //--------------------------------------------------
-        // Start a NEW furniture placement session.
-        //--------------------------------------------------
 
         dispatch({
 
@@ -1479,7 +1224,6 @@ export default function SelectionToolbar() {
                 asset
 
         });
-
 
         dispatch({
 
@@ -1493,17 +1237,11 @@ export default function SelectionToolbar() {
 
     }
 
-
-    //==================================================
-    // START DUPLICATE DOOR
-    //==================================================
-
     function duplicateDoor() {
 
         setDeleteOpen(
             false
         );
-
 
         if (
             !door
@@ -1511,12 +1249,10 @@ export default function SelectionToolbar() {
             return;
         }
 
-
         const asset =
             findAsset(
                 door.assetId
             );
-
 
         if (
             !asset
@@ -1534,9 +1270,7 @@ export default function SelectionToolbar() {
 
         }
 
-
         buildInteraction.clear();
-
 
         dispatch({
 
@@ -1544,7 +1278,6 @@ export default function SelectionToolbar() {
                 "CLEAR_SELECTION"
 
         });
-
 
         dispatch({
 
@@ -1555,7 +1288,6 @@ export default function SelectionToolbar() {
                 asset
 
         });
-
 
         dispatch({
 
@@ -1569,17 +1301,11 @@ export default function SelectionToolbar() {
 
     }
 
-
-    //==================================================
-    // START DUPLICATE WINDOW
-    //==================================================
-
     function duplicateWindow() {
 
         setDeleteOpen(
             false
         );
-
 
         if (
             !selectedWindow
@@ -1587,12 +1313,10 @@ export default function SelectionToolbar() {
             return;
         }
 
-
         const asset =
             findAsset(
                 selectedWindow.assetId
             );
-
 
         if (
             !asset
@@ -1610,9 +1334,7 @@ export default function SelectionToolbar() {
 
         }
 
-
         buildInteraction.clear();
-
 
         dispatch({
 
@@ -1620,7 +1342,6 @@ export default function SelectionToolbar() {
                 "CLEAR_SELECTION"
 
         });
-
 
         dispatch({
 
@@ -1631,7 +1352,6 @@ export default function SelectionToolbar() {
                 asset
 
         });
-
 
         dispatch({
 
@@ -1645,17 +1365,11 @@ export default function SelectionToolbar() {
 
     }
 
-
-    //==================================================
-    // ENTER ROTATION MODE
-    //==================================================
-
     function enterRotationMode() {
 
         setDeleteOpen(
             false
         );
-
 
         if (
             !furniture
@@ -1663,34 +1377,25 @@ export default function SelectionToolbar() {
             return;
         }
 
-
         if (
             isWallFurniture
         ) {
             return;
         }
 
-
         setRotationDisplayY(
             furniture.rotationY
         );
 
-
         setRotationValid(
             true
         );
-
 
         setRotationMode(
             true
         );
 
     }
-
-
-    //==================================================
-    // BEGIN FREE ROTATION
-    //==================================================
 
     function beginRotationDrag(
 
@@ -1705,14 +1410,11 @@ export default function SelectionToolbar() {
             return;
         }
 
-
         event.preventDefault();
         event.stopPropagation();
 
-
         const ring =
             rotationRingRef.current;
-
 
         if (
             !ring
@@ -1720,13 +1422,10 @@ export default function SelectionToolbar() {
             return;
         }
 
-
         cleanupRotationDrag();
-
 
         const rect =
             ring.getBoundingClientRect();
-
 
         const startPointerAngle =
             getPointerAngle(
@@ -1737,12 +1436,10 @@ export default function SelectionToolbar() {
 
             );
 
-
         const startRotation =
             normalizeAngle(
                 furniture.rotationY
             );
-
 
         furnitureInteraction
             .startRotation(
@@ -1752,16 +1449,13 @@ export default function SelectionToolbar() {
 
             );
 
-
         setRotationDisplayY(
             startRotation
         );
 
-
         setRotationValid(
             true
         );
-
 
         const drag = {
 
@@ -1781,10 +1475,6 @@ export default function SelectionToolbar() {
             currentValid:
                 true,
 
-            //--------------------------------------------------
-            // POINTER MOVE
-            //--------------------------------------------------
-
             handleMove:
     (moveEvent: PointerEvent) => {
 
@@ -1800,21 +1490,6 @@ export default function SelectionToolbar() {
                 currentRect
             );
 
-        //--------------------------------------------------
-        // IMPORTANT:
-        //
-        // Reverse the pointer delta so the furniture
-        // follows the SAME direction as the mouse drag.
-        //
-        // Mouse clockwise
-        //     ↓
-        // Furniture clockwise
-        //
-        // Mouse counter-clockwise
-        //     ↓
-        // Furniture counter-clockwise
-        //--------------------------------------------------
-
         const delta =
             unwrapAngleDelta(
                 drag.lastPointerAngle -
@@ -1827,10 +1502,6 @@ export default function SelectionToolbar() {
         drag.lastPointerAngle =
             currentPointerAngle;
 
-        //--------------------------------------------------
-        // Free rotation.
-        //--------------------------------------------------
-
         const rawRotation =
             normalizeAngle(
 
@@ -1839,18 +1510,10 @@ export default function SelectionToolbar() {
 
             );
 
-        //--------------------------------------------------
-        // Apply noticeable soft 90° snap.
-        //--------------------------------------------------
-
         const candidateRotation =
             softSnapRotation(
                 rawRotation
             );
-
-        //--------------------------------------------------
-        // Collision test.
-        //--------------------------------------------------
 
         const collision =
             checkFurnitureCollision(
@@ -1886,19 +1549,11 @@ export default function SelectionToolbar() {
         const valid =
             collision.valid;
 
-        //--------------------------------------------------
-        // Save current rotation.
-        //--------------------------------------------------
-
         drag.currentRotation =
             candidateRotation;
 
         drag.currentValid =
             valid;
-
-        //--------------------------------------------------
-        // Update 3D furniture preview.
-        //--------------------------------------------------
 
         furnitureInteraction
             .setRotationPreview(
@@ -1911,10 +1566,6 @@ export default function SelectionToolbar() {
 
             );
 
-        //--------------------------------------------------
-        // Update toolbar UI.
-        //--------------------------------------------------
-
         setRotationDisplayY(
             candidateRotation
         );
@@ -1924,17 +1575,8 @@ export default function SelectionToolbar() {
         );
     },
 
-
-            //--------------------------------------------------
-            // POINTER UP
-            //--------------------------------------------------
-
             handleUp:
                 () => {
-
-                    //--------------------------------------------------
-                    // Only commit a safe rotation.
-                    //--------------------------------------------------
 
                     if (
                         drag.currentValid
@@ -1963,13 +1605,10 @@ export default function SelectionToolbar() {
 
                     }
 
-
                     cleanupRotationDrag();
-
 
                     furnitureInteraction
                         .clearRotationPreview();
-
 
                     setRotationMode(
                         false
@@ -1979,22 +1618,18 @@ export default function SelectionToolbar() {
 
         };
 
-
         rotationDragRef.current =
             drag;
-
 
         window.addEventListener(
             "pointermove",
             drag.handleMove
         );
 
-
         window.addEventListener(
             "pointerup",
             drag.handleUp
         );
-
 
         window.addEventListener(
             "pointercancel",
@@ -2003,19 +1638,12 @@ export default function SelectionToolbar() {
 
     }
 
-
-    //==================================================
-    // CANCEL ROTATION
-    //==================================================
-
     function cancelRotation() {
 
         cleanupRotationDrag();
 
-
         furnitureInteraction
             .clearRotationPreview();
-
 
         setRotationMode(
             false
@@ -2023,17 +1651,11 @@ export default function SelectionToolbar() {
 
     }
 
-
-    //==================================================
-    // MOVE FURNITURE
-    //==================================================
-
     function moveFurniture() {
 
         setDeleteOpen(
             false
         );
-
 
         if (
             !furniture
@@ -2041,9 +1663,7 @@ export default function SelectionToolbar() {
             return;
         }
 
-
         cancelRotation();
-
 
         furnitureInteraction.startEditing(
 
@@ -2052,7 +1672,6 @@ export default function SelectionToolbar() {
             furniture.rotationY
 
         );
-
 
         dispatch({
 
@@ -2066,17 +1685,11 @@ export default function SelectionToolbar() {
 
     }
 
-
-    //==================================================
-    // MOVE DOOR
-    //==================================================
-
     function moveDoor() {
 
         setDeleteOpen(
             false
         );
-
 
         if (
             !door
@@ -2084,11 +1697,9 @@ export default function SelectionToolbar() {
             return;
         }
 
-
         buildInteraction.beginDoorMove(
             door.id
         );
-
 
         dispatch({
 
@@ -2099,7 +1710,6 @@ export default function SelectionToolbar() {
                 null
 
         });
-
 
         dispatch({
 
@@ -2113,17 +1723,11 @@ export default function SelectionToolbar() {
 
     }
 
-
-    //==================================================
-    // MOVE WINDOW
-    //==================================================
-
     function moveWindow() {
 
         setDeleteOpen(
             false
         );
-
 
         if (
             !selectedWindow
@@ -2131,11 +1735,9 @@ export default function SelectionToolbar() {
             return;
         }
 
-
         buildInteraction.beginWindowMove(
             selectedWindow.id
         );
-
 
         dispatch({
 
@@ -2146,7 +1748,6 @@ export default function SelectionToolbar() {
                 null
 
         });
-
 
         dispatch({
 
@@ -2160,17 +1761,11 @@ export default function SelectionToolbar() {
 
     }
 
-
-    //==================================================
-    // DELETE
-    //==================================================
-
     function confirmDelete() {
 
         setDeleteOpen(
             false
         );
-
 
         if (
 
@@ -2182,7 +1777,6 @@ export default function SelectionToolbar() {
         ) {
 
             cancelRotation();
-
 
             dispatch({
 
@@ -2197,7 +1791,6 @@ export default function SelectionToolbar() {
             return;
 
         }
-
 
         if (
 
@@ -2222,7 +1815,6 @@ export default function SelectionToolbar() {
 
         }
 
-
         if (
 
             selectedType ===
@@ -2246,11 +1838,6 @@ export default function SelectionToolbar() {
 
     }
 
-
-    //==================================================
-    // ROTATION DISPLAY
-    //==================================================
-
     const displayDegrees =
         Math.round(
 
@@ -2262,12 +1849,10 @@ export default function SelectionToolbar() {
 
         ) % 360;
 
-
     const handleAngle =
         normalizeAngle(
             -rotationDisplayY
         );
-
 
     const handleX =
         50 +
@@ -2277,7 +1862,6 @@ export default function SelectionToolbar() {
         ) *
         42;
 
-
     const handleY =
         50 +
         Math.sin(
@@ -2285,11 +1869,6 @@ export default function SelectionToolbar() {
             Math.PI / 2
         ) *
         42;
-
-
-    //==================================================
-    // ROTATION MODE UI
-    //==================================================
 
     if (
         rotationMode &&
@@ -2317,7 +1896,6 @@ export default function SelectionToolbar() {
                         TOOLBAR_STYLES
                     }
                 </style>
-
 
                 <div
 
@@ -2410,10 +1988,6 @@ export default function SelectionToolbar() {
                         }}
                     >
 
-                        {/*------------------------------------------
-                            CENTER ICON
-                        ------------------------------------------*/}
-
                         <div
                             style={{
 
@@ -2468,11 +2042,6 @@ export default function SelectionToolbar() {
 
                         </div>
 
-
-                        {/*------------------------------------------
-                            ROTATION HANDLE
-                        ------------------------------------------*/}
-
                         <div
                             style={{
 
@@ -2520,11 +2089,6 @@ export default function SelectionToolbar() {
 
                             }}
                         />
-
-
-                        {/*------------------------------------------
-                            ANGLE
-                        ------------------------------------------*/}
 
                         <div
                             style={{
@@ -2578,11 +2142,6 @@ export default function SelectionToolbar() {
                             }
 
                         </div>
-
-
-                        {/*------------------------------------------
-                            CANCEL
-                        ------------------------------------------*/}
 
                         <button
 
@@ -2666,11 +2225,6 @@ export default function SelectionToolbar() {
 
     }
 
-
-    //==================================================
-    // NORMAL TOOLBAR
-    //==================================================
-
     return (
 
         <Html
@@ -2693,7 +2247,6 @@ export default function SelectionToolbar() {
                 }
             </style>
 
-
             <div
                 style={{
 
@@ -2702,12 +2255,6 @@ export default function SelectionToolbar() {
 
                 }}
             >
-
-                {/*==================================================
-                    CONNECTOR
-                ==================================================*/}
-
-
 
                 <div
 
@@ -2786,10 +2333,6 @@ export default function SelectionToolbar() {
 
                     }}
                 >
-                    
-                    {/*==================================================
-                        FURNITURE
-                    ==================================================*/}
 
                     {
                         selectedType ===
@@ -2822,7 +2365,6 @@ export default function SelectionToolbar() {
                                     )
                                 }
 
-
                                 <button
                                     type="button"
                                     className="est-btn"
@@ -2841,7 +2383,6 @@ export default function SelectionToolbar() {
                                     </span>
 
                                 </button>
-
 
                                 <button
                                     type="button"
@@ -2866,11 +2407,6 @@ export default function SelectionToolbar() {
 
                         )
                     }
-
-
-                    {/*==================================================
-                        DOOR
-                    ==================================================*/}
 
                     {
                         selectedType ===
@@ -2897,7 +2433,6 @@ export default function SelectionToolbar() {
 
                                 </button>
 
-
                                 <button
                                     type="button"
                                     className="est-btn"
@@ -2921,11 +2456,6 @@ export default function SelectionToolbar() {
 
                         )
                     }
-
-
-                    {/*==================================================
-                        WINDOW
-                    ==================================================*/}
 
                     {
                         selectedType ===
@@ -2952,7 +2482,6 @@ export default function SelectionToolbar() {
 
                                 </button>
 
-
                                 <button
                                     type="button"
                                     className="est-btn"
@@ -2977,11 +2506,6 @@ export default function SelectionToolbar() {
                         )
                     }
 
-
-                    {/*==================================================
-                        DIVIDER
-                    ==================================================*/}
-
                     <div
                         style={{
 
@@ -2996,11 +2520,6 @@ export default function SelectionToolbar() {
 
                         }}
                     />
-
-
-                    {/*==================================================
-                        DELETE
-                    ==================================================*/}
 
                     <button
                         type="button"
@@ -3024,11 +2543,6 @@ export default function SelectionToolbar() {
                         </span>
 
                     </button>
-
-
-                    {/*==================================================
-                        DELETE DIALOG
-                    ==================================================*/}
 
                     {
                         deleteOpen && (
