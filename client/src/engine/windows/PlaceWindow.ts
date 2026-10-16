@@ -1,6 +1,7 @@
 import type { Asset } from "../../assets/Asset";
 import type { PlacementTransform } from "../../scene/Build/BuildPlacement";
 import type { AssetBounds } from "../../scene/Build/AssetBounds";
+import { getCurrentPreviewWidth } from "../../scene/Build/BuildElementCollision";
 
 import type { Window } from "./WindowTypes";
 
@@ -14,17 +15,9 @@ function getOccupiedDimensions(
     const cos = Math.abs(Math.cos(rotationOffsetY));
     const sin = Math.abs(Math.sin(rotationOffsetY));
 
-    const occupiedWidth =
-        width * sin +
-        depth * cos;
-
-    const occupiedDepth =
-        width * cos +
-        depth * sin;
-
     return {
-        width: occupiedWidth,
-        depth: occupiedDepth
+        width: width * sin + depth * cos,
+        depth: width * cos + depth * sin
     };
 }
 
@@ -34,14 +27,9 @@ export function placeWindow(
     bounds: AssetBounds
 ): Window {
 
-    const rotationOffsetY =
-        asset.rotationOffsetY ?? 0;
+    const rotationOffsetY = asset.rotationOffsetY ?? 0;
 
-    const occupiedDimensions =
-        getOccupiedDimensions(
-            bounds,
-            rotationOffsetY
-        );
+    const occupied = getOccupiedDimensions(bounds, rotationOffsetY);
 
     return {
         id: crypto.randomUUID(),
@@ -54,10 +42,13 @@ export function placeWindow(
 
         rotationY: transform.rotationY,
 
-        width: occupiedDimensions.width,
+        width: occupied.width,
 
         height: bounds.height,
 
-        depth: occupiedDimensions.depth
+        depth: occupied.depth,
+
+        // Extent along the wall, same math as the preview.
+        wallWidth: getCurrentPreviewWidth(asset, transform, bounds)
     };
 }

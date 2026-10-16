@@ -43,7 +43,9 @@ import {
 import {
     checkFurnitureCollision
 } from "../engine/furniture/FurnitureCollision";
-
+import {
+    getDoorWindowAssets
+} from "../engine/build/FirebaseDoorWindowLibrary";
 function RotateIcon() {
     return (
         <svg
@@ -1237,133 +1239,99 @@ export default function SelectionToolbar() {
 
     }
 
-    function duplicateDoor() {
+    async function duplicateDoor() {
+    setDeleteOpen(false);
 
-        setDeleteOpen(
-            false
-        );
+    if (!door) {
+        return;
+    }
 
-        if (
-            !door
-        ) {
-            return;
-        }
+    try {
+        const doorWindowAssets = await getDoorWindowAssets();
 
         const asset =
-            findAsset(
-                door.assetId
-            );
+            doorWindowAssets.find(
+                item => item.id === door.assetId
+            ) ??
+            findAsset(door.assetId);
 
-        if (
-            !asset
-        ) {
-
+        if (!asset) {
             console.error(
-
-                "Unable to duplicate door: asset not found.",
-
+                "Unable to duplicate door: asset not found in Firebase or local library.",
                 door.assetId
-
             );
-
             return;
-
         }
 
         buildInteraction.clear();
 
         dispatch({
-
-            type:
-                "CLEAR_SELECTION"
-
+            type: "CLEAR_SELECTION"
         });
 
         dispatch({
-
-            type:
-                "SET_SELECTED_ASSET",
-
-            payload:
-                asset
-
+            type: "SET_SELECTED_ASSET",
+            payload: asset
         });
 
         dispatch({
-
-            type:
-                "SET_BUILD_TOOL",
-
-            payload:
-                BuildTool.Door
-
+            type: "SET_BUILD_TOOL",
+            payload: BuildTool.Door
         });
+    } catch (error) {
+        console.error(
+            "Unable to load door asset for duplication:",
+            error
+        );
+    }
+}
 
+    async function duplicateWindow() {
+    setDeleteOpen(false);
+
+    if (!selectedWindow) {
+        return;
     }
 
-    function duplicateWindow() {
-
-        setDeleteOpen(
-            false
-        );
-
-        if (
-            !selectedWindow
-        ) {
-            return;
-        }
+    try {
+        const doorWindowAssets = await getDoorWindowAssets();
 
         const asset =
-            findAsset(
-                selectedWindow.assetId
-            );
+            doorWindowAssets.find(
+                item => item.id === selectedWindow.assetId
+            ) ??
+            findAsset(selectedWindow.assetId);
 
-        if (
-            !asset
-        ) {
-
+        if (!asset) {
             console.error(
-
-                "Unable to duplicate window: asset not found.",
-
+                "Unable to duplicate window: asset not found in Firebase or local library.",
                 selectedWindow.assetId
-
             );
-
             return;
-
         }
 
         buildInteraction.clear();
 
         dispatch({
-
-            type:
-                "CLEAR_SELECTION"
-
+            type: "CLEAR_SELECTION"
         });
 
         dispatch({
-
-            type:
-                "SET_SELECTED_ASSET",
-
-            payload:
-                asset
-
+            type: "SET_SELECTED_ASSET",
+            payload: asset
         });
 
         dispatch({
-
-            type:
-                "SET_BUILD_TOOL",
-
-            payload:
-                BuildTool.Window
-
+            type: "SET_BUILD_TOOL",
+            payload: BuildTool.Window
         });
-
+    } catch (error) {
+        console.error(
+            "Unable to load window asset for duplication:",
+            error
+        );
     }
+}
 
     function enterRotationMode() {
 

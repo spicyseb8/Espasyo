@@ -18,5 +18,5 @@ export interface Door {
     height: number;
 
     depth: number;
-
+    wallWidth?: number;
 }

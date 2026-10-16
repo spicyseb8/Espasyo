@@ -14,6 +14,6 @@ export interface Window {
     width: number;
 
     height: number;
-
+    wallWidth?: number;
     depth: number;
 }

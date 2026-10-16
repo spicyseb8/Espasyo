@@ -1,37 +1,16 @@
-import {
-    Vector3
-} from "three";
+import { Vector3 } from "three";
 
-import {
-    BuildTool
-} from "../../context/BuildTool";
+import { BuildTool } from "../../context/BuildTool";
 
-import type {
-    Asset
-} from "../../assets/Asset";
-
-import type {
-    Door
-} from "../../engine/doors/DoorTypes";
-
-import type {
-    Window
-} from "../../engine/windows/WindowTypes";
-
-import type {
-    Opening
-} from "../../engine/openings/OpeningTypes";
-
-import type {
-    PlacementTransform
-} from "./BuildPlacement";
-
-import type {
-    AssetBounds
-} from "./AssetBounds";
+import type { Asset } from "../../assets/Asset";
+import type { Door } from "../../engine/doors/DoorTypes";
+import type { Window } from "../../engine/windows/WindowTypes";
+import type { Opening } from "../../engine/openings/OpeningTypes";
+import type { PlacementTransform } from "./BuildPlacement";
+import type { AssetBounds } from "./AssetBounds";
 
 //==================================================
-// Collision reason
+// Types
 //==================================================
 
 export type BuildElementCollisionReason =
@@ -40,145 +19,78 @@ export type BuildElementCollisionReason =
     | "window"
     | "opening";
 
-//==================================================
-// Collision result
-//==================================================
-
 export interface BuildElementCollisionResult {
-
-    valid:
-        boolean;
-
-    reason:
-        BuildElementCollisionReason;
+    valid: boolean;
+    reason: BuildElementCollisionReason;
 }
-
-//==================================================
-// Interval
-//==================================================
 
 interface Interval {
-
-    start:
-        number;
-
-    end:
-        number;
+    start: number;
+    end: number;
 }
 
 //==================================================
-// Collision tolerance
-//
-// A tiny amount of touching is allowed.
-// Actual overlap becomes invalid.
+// Collision tolerance (touching is allowed)
 //==================================================
 
-const COLLISION_TOLERANCE =
-    0.001;
+const COLLISION_TOLERANCE = 0.001;
 
-//==================================================
-// Check interval overlap
-//==================================================
-
-function intervalsOverlap(
-    a: Interval,
-    b: Interval
-): boolean {
-
+function intervalsOverlap(a: Interval, b: Interval): boolean {
     return (
-        a.start <
-            b.end -
-            COLLISION_TOLERANCE &&
-
-        b.start <
-            a.end -
-            COLLISION_TOLERANCE
+        a.start < b.end - COLLISION_TOLERANCE &&
+        b.start < a.end - COLLISION_TOLERANCE
     );
 }
 
 //==================================================
-// Get wall direction
+// Wall direction
+//
+// FIX: zero Y *before* normalizing.
 //==================================================
 
-function getWallDirection(
-    wall: PlacementTransform["wall"]
-): Vector3 {
+function getWallDirection(wall: PlacementTransform["wall"]): Vector3 {
 
-    const direction =
-        new Vector3()
-            .subVectors(
-                wall.end.position,
-                wall.start.position
-            );
+    const direction = new Vector3().subVectors(
+        wall.end.position,
+        wall.start.position
+    );
 
-    if (
-        direction.lengthSq() <=
-        0.000001
-    ) {
+    direction.y = 0;
 
-        return new Vector3(
-            1,
-            0,
-            0
-        );
+    if (direction.lengthSq() <= 0.000001) {
+        return new Vector3(1, 0, 0);
     }
 
-    direction.normalize();
-
-    direction.y =
-        0;
-
-    return direction;
+    return direction.normalize();
 }
 
 //==================================================
-// Get local X axis for a Y rotation
+// Local axes for a Three.js Y rotation
+//
+// FIX: signs were flipped.
+// Three.js rotation.y = θ:
+//   local X -> ( cos θ, 0, -sin θ)
+//   local Z -> ( sin θ, 0,  cos θ)
 //==================================================
 
-function getLocalXAxis(
-    rotationY: number
-): Vector3 {
-
+function getLocalXAxis(rotationY: number): Vector3 {
     return new Vector3(
-        Math.cos(
-            rotationY
-        ),
+        Math.cos(rotationY),
         0,
-        Math.sin(
-            rotationY
-        )
+        -Math.sin(rotationY)
+    ).normalize();
+}
+
+function getLocalZAxis(rotationY: number): Vector3 {
+    return new Vector3(
+        Math.sin(rotationY),
+        0,
+        Math.cos(rotationY)
     ).normalize();
 }
 
 //==================================================
-// Get local Z axis for a Y rotation
-//==================================================
-
-function getLocalZAxis(
-    rotationY: number
-): Vector3 {
-
-    return new Vector3(
-        -Math.sin(
-            rotationY
-        ),
-        0,
-        Math.cos(
-            rotationY
-        )
-    ).normalize();
-}
-
-//==================================================
-// Get actual width of an object along the wall
-//
-// This is the important part.
-//
-// A rectangular object may be rotated relative to
-// the wall, so its width along the wall isn't always
-// simply "width".
-//
-// We project BOTH local dimensions onto the wall.
+// Width of a rotated rectangle along the wall
 //==================================================
 
 function getProjectedWidthAlongWall(
@@ -188,45 +100,22 @@ function getProjectedWidthAlongWall(
     wallDirection: Vector3
 ): number {
 
-    const localX =
-        getLocalXAxis(
-            rotationY
-        );
+    const xProjection = Math.abs(
+        getLocalXAxis(rotationY).dot(wallDirection)
+    );
 
-    const localZ =
-        getLocalZAxis(
-            rotationY
-        );
-
-    const xProjection =
-        Math.abs(
-            localX.dot(
-                wallDirection
-            )
-        );
-
-    const zProjection =
-        Math.abs(
-            localZ.dot(
-                wallDirection
-            )
-        );
-
-    const projectedWidth =
-        width *
-            xProjection +
-
-        depth *
-            zProjection;
+    const zProjection = Math.abs(
+        getLocalZAxis(rotationY).dot(wallDirection)
+    );
 
     return Math.max(
-        projectedWidth,
+        width * xProjection + depth * zProjection,
         0.001
     );
 }
 
 //==================================================
-// Get center distance along wall
+// Distance of a point along the wall
 //==================================================
 
 function getDistanceAlongWall(
@@ -234,121 +123,57 @@ function getDistanceAlongWall(
     wall: PlacementTransform["wall"]
 ): number {
 
-    const direction =
-        getWallDirection(
-            wall
-        );
-
-    const relative =
-        position
-            .clone()
-            .sub(
-                wall.start.position
-            );
-
-    return relative.dot(
-        direction
-    );
+    return position
+        .clone()
+        .sub(wall.start.position)
+        .dot(getWallDirection(wall));
 }
-
-//==================================================
-// Create horizontal interval
-//==================================================
 
 function createHorizontalInterval(
     centerDistance: number,
     width: number
 ): Interval {
 
-    const halfWidth =
-        width *
-        0.5;
+    const half = width * 0.5;
 
     return {
-
-        start:
-            centerDistance -
-            halfWidth,
-
-        end:
-            centerDistance +
-            halfWidth
+        start: centerDistance - half,
+        end: centerDistance + half
     };
 }
 
 //==================================================
-// CURRENT PREVIEW WIDTH
-//==================================================
+// CURRENT PREVIEW WIDTH ALONG WALL
 //
-// This is based on the ACTUAL preview rotation.
-//
-// For Door / Window:
-//
-// finalRotation =
-//     wall rotation +
-//     asset rotation offset
-//
-// For Opening:
-//
-// width is already directly along the wall.
+// EXPORTED: placeDoor / placeWindow call this so the
+// placed item stores the exact same width the preview
+// used. Preview and placed items can no longer disagree.
 //==================================================
 
-function getCurrentPreviewWidth(
+export function getCurrentPreviewWidth(
     asset: Asset,
     transform: PlacementTransform,
     bounds: AssetBounds
 ): number {
 
-    //--------------------------------------------------
-    // Opening
-    //--------------------------------------------------
-
-    if (
-        asset.type ===
-        BuildTool.Opening
-    ) {
-
-        return Math.max(
-            bounds.width,
-            0.001
-        );
+    if (asset.type === BuildTool.Opening) {
+        return Math.max(bounds.width, 0.001);
     }
-
-    //--------------------------------------------------
-    // Final model rotation
-    //--------------------------------------------------
-
-    const rotationOffsetY =
-        asset.rotationOffsetY ??
-        0;
 
     const finalRotationY =
         transform.rotationY +
-        rotationOffsetY;
-
-    //--------------------------------------------------
-    // Wall direction
-    //--------------------------------------------------
-
-    const wallDirection =
-        getWallDirection(
-            transform.wall
-        );
-
-    //--------------------------------------------------
-    // Project actual model footprint
-    //--------------------------------------------------
+        (asset.rotationOffsetY ?? 0);
 
     return getProjectedWidthAlongWall(
         bounds.width,
         bounds.depth,
         finalRotationY,
-        wallDirection
+        getWallDirection(transform.wall)
     );
 }
 
 //==================================================
-// CURRENT HORIZONTAL INTERVAL
+// CURRENT PREVIEW INTERVALS
 //==================================================
 
 function getCurrentHorizontalInterval(
@@ -357,28 +182,11 @@ function getCurrentHorizontalInterval(
     bounds: AssetBounds
 ): Interval {
 
-    const centerDistance =
-        getDistanceAlongWall(
-            transform.position,
-            transform.wall
-        );
-
-    const width =
-        getCurrentPreviewWidth(
-            asset,
-            transform,
-            bounds
-        );
-
     return createHorizontalInterval(
-        centerDistance,
-        width
+        getDistanceAlongWall(transform.position, transform.wall),
+        getCurrentPreviewWidth(asset, transform, bounds)
     );
 }
-
-//==================================================
-// CURRENT VERTICAL INTERVAL
-//==================================================
 
 function getCurrentVerticalInterval(
     asset: Asset,
@@ -387,221 +195,74 @@ function getCurrentVerticalInterval(
     wallHeight: number
 ): Interval {
 
-    //--------------------------------------------------
-    // Door
-    //--------------------------------------------------
-
     if (
-        asset.type ===
-        BuildTool.Door
+        asset.type === BuildTool.Door ||
+        asset.type === BuildTool.Opening
     ) {
-
         return {
-
-            start:
-                0,
-
-            end:
-                Math.min(
-                    wallHeight,
-                    bounds.height
-                )
+            start: 0,
+            end: Math.min(wallHeight, bounds.height)
         };
     }
 
-    //--------------------------------------------------
-    // Opening
-    //--------------------------------------------------
-
-    if (
-        asset.type ===
-        BuildTool.Opening
-    ) {
-
-        return {
-
-            start:
-                0,
-
-            end:
-                Math.min(
-                    wallHeight,
-                    bounds.height
-                )
-        };
-    }
-
-    //--------------------------------------------------
-    // Window
-    //
-    // BuildPlacement centers windows at wallHeight / 2.
-    //--------------------------------------------------
-
-    const halfHeight =
-        bounds.height *
-        0.5;
+    // Window: centered on position.y
+    const half = bounds.height * 0.5;
 
     return {
-
-        start:
-            Math.max(
-                0,
-                transform.position.y -
-                halfHeight
-            ),
-
-        end:
-            Math.min(
-                wallHeight,
-                transform.position.y +
-                halfHeight
-            )
+        start: Math.max(0, transform.position.y - half),
+        end: Math.min(wallHeight, transform.position.y + half)
     };
 }
 
 //==================================================
-// EXISTING DOOR HORIZONTAL WIDTH
+// EXISTING ITEM WIDTHS
+//
+// FIX: use the stored wallWidth (already along the
+// wall). Fallback to width for legacy saved items.
+// No second projection.
 //==================================================
 
-function getExistingDoorWidth(
-    door: Door,
-    wall: PlacementTransform["wall"]
-): number {
+function getExistingDoorWidth(door: Door): number {
+    return Math.max(door.wallWidth ?? door.width, 0.001);
+}
 
-    //--------------------------------------------------
-    // Door placement stores its width/depth as the
-    // model footprint.
-    //
-    // Project both dimensions against the wall.
-    //--------------------------------------------------
+function getExistingWindowWidth(window: Window): number {
+    return Math.max(window.wallWidth ?? window.width, 0.001);
+}
 
-    return getProjectedWidthAlongWall(
-        door.width,
-        door.depth,
-        door.rotationY,
-        getWallDirection(
-            wall
-        )
-    );
+function getExistingOpeningWidth(opening: Opening): number {
+    return Math.max(opening.width, 0.001);
 }
 
 //==================================================
-// EXISTING WINDOW HORIZONTAL WIDTH
-//==================================================
-
-function getExistingWindowWidth(
-    window: Window,
-    wall: PlacementTransform["wall"]
-): number {
-
-    //--------------------------------------------------
-    // placeWindow() already stores the physical model
-    // width/depth.
-    //
-    // Project that footprint against this wall.
-    //--------------------------------------------------
-
-    return getProjectedWidthAlongWall(
-        window.width,
-        window.depth,
-        window.rotationY,
-        getWallDirection(
-            wall
-        )
-    );
-}
-
-//==================================================
-// EXISTING OPENING WIDTH
-//==================================================
-
-function getExistingOpeningWidth(
-    opening: Opening
-): number {
-
-    //--------------------------------------------------
-    // Opening width is directly along the wall.
-    //--------------------------------------------------
-
-    return Math.max(
-        opening.width,
-        0.001
-    );
-}
-
-//==================================================
-// EXISTING DOOR VERTICAL INTERVAL
+// EXISTING ITEM VERTICAL INTERVALS
 //==================================================
 
 function getExistingDoorVerticalInterval(
     door: Door,
     wallHeight: number
 ): Interval {
-
-    return {
-
-        start:
-            0,
-
-        end:
-            Math.min(
-                wallHeight,
-                door.height
-            )
-    };
+    return { start: 0, end: Math.min(wallHeight, door.height) };
 }
-
-//==================================================
-// EXISTING WINDOW VERTICAL INTERVAL
-//==================================================
 
 function getExistingWindowVerticalInterval(
     window: Window,
     wallHeight: number
 ): Interval {
 
-    const halfHeight =
-        window.height *
-        0.5;
+    const half = window.height * 0.5;
 
     return {
-
-        start:
-            Math.max(
-                0,
-                window.position.y -
-                halfHeight
-            ),
-
-        end:
-            Math.min(
-                wallHeight,
-                window.position.y +
-                halfHeight
-            )
+        start: Math.max(0, window.position.y - half),
+        end: Math.min(wallHeight, window.position.y + half)
     };
 }
-
-//==================================================
-// EXISTING OPENING VERTICAL INTERVAL
-//==================================================
 
 function getExistingOpeningVerticalInterval(
     opening: Opening,
     wallHeight: number
 ): Interval {
-
-    return {
-
-        start:
-            0,
-
-        end:
-            Math.min(
-                wallHeight,
-                opening.height
-            )
-    };
+    return { start: 0, end: Math.min(wallHeight, opening.height) };
 }
 
 //==================================================
@@ -618,300 +279,95 @@ export function checkBuildElementCollision(
     wallHeight: number
 ): BuildElementCollisionResult {
 
-    //==================================================
-    // CURRENT PREVIEW
-    //==================================================
-
     const currentHorizontal =
-        getCurrentHorizontalInterval(
-            asset,
-            transform,
-            bounds
-        );
+        getCurrentHorizontalInterval(asset, transform, bounds);
 
     const currentVertical =
-        getCurrentVerticalInterval(
-            asset,
-            transform,
-            bounds,
-            wallHeight
+        getCurrentVerticalInterval(asset, transform, bounds, wallHeight);
+
+    //--------------------------------------------------
+    // Keep preview inside wall
+    //--------------------------------------------------
+
+    if (
+        currentHorizontal.start < -COLLISION_TOLERANCE ||
+        currentHorizontal.end >
+            transform.wallLength + COLLISION_TOLERANCE
+    ) {
+        return { valid: false, reason: "none" };
+    }
+
+    //--------------------------------------------------
+    // Doors
+    //--------------------------------------------------
+
+    for (const door of doors) {
+
+        if (door.wallId !== transform.wall.id) continue;
+
+        const horizontal = createHorizontalInterval(
+            getDistanceAlongWall(door.position, transform.wall),
+            getExistingDoorWidth(door)
         );
 
-    //==================================================
-    // KEEP PREVIEW INSIDE WALL
-    //==================================================
-
-    if (
-        currentHorizontal.start <
-        -COLLISION_TOLERANCE
-    ) {
-
-        return {
-
-            valid:
-                false,
-
-            reason:
-                "none"
-        };
-    }
-
-    if (
-        currentHorizontal.end >
-        transform.wallLength +
-        COLLISION_TOLERANCE
-    ) {
-
-        return {
-
-            valid:
-                false,
-
-            reason:
-                "none"
-        };
-    }
-
-    //==================================================
-    // DOORS
-    //==================================================
-
-    for (
-        const door of doors
-    ) {
-
-        //--------------------------------------------------
-        // Different wall = no collision.
-        //--------------------------------------------------
+        const vertical =
+            getExistingDoorVerticalInterval(door, wallHeight);
 
         if (
-            door.wallId !==
-            transform.wall.id
+            intervalsOverlap(currentHorizontal, horizontal) &&
+            intervalsOverlap(currentVertical, vertical)
         ) {
-            continue;
+            return { valid: false, reason: "door" };
         }
+    }
 
-        //--------------------------------------------------
-        // Door center along current wall.
-        //--------------------------------------------------
+    //--------------------------------------------------
+    // Windows
+    //--------------------------------------------------
 
-        const centerDistance =
-            getDistanceAlongWall(
-                door.position,
-                transform.wall
-            );
+    for (const window of windows) {
 
-        //--------------------------------------------------
-        // Actual door footprint along wall.
-        //--------------------------------------------------
+        if (window.wallId !== transform.wall.id) continue;
 
-        const width =
-            getExistingDoorWidth(
-                door,
-                transform.wall
-            );
-
-        const horizontal =
-            createHorizontalInterval(
-                centerDistance,
-                width
-            );
+        const horizontal = createHorizontalInterval(
+            getDistanceAlongWall(window.position, transform.wall),
+            getExistingWindowWidth(window)
+        );
 
         const vertical =
-            getExistingDoorVerticalInterval(
-                door,
-                wallHeight
-            );
-
-        //--------------------------------------------------
-        // PREVIEW FOOTPRINT vs DOOR FOOTPRINT
-        //--------------------------------------------------
+            getExistingWindowVerticalInterval(window, wallHeight);
 
         if (
-            intervalsOverlap(
-                currentHorizontal,
-                horizontal
-            ) &&
-
-            intervalsOverlap(
-                currentVertical,
-                vertical
-            )
+            intervalsOverlap(currentHorizontal, horizontal) &&
+            intervalsOverlap(currentVertical, vertical)
         ) {
-
-            return {
-
-                valid:
-                    false,
-
-                reason:
-                    "door"
-            };
+            return { valid: false, reason: "window" };
         }
     }
 
-    //==================================================
-    // WINDOWS
-    //==================================================
+    //--------------------------------------------------
+    // Openings
+    //--------------------------------------------------
 
-    for (
-        const window of windows
-    ) {
+    for (const opening of openings) {
 
-        //--------------------------------------------------
-        // Different wall = no collision.
-        //--------------------------------------------------
+        if (opening.wallId !== transform.wall.id) continue;
 
-        if (
-            window.wallId !==
-            transform.wall.id
-        ) {
-            continue;
-        }
-
-        //--------------------------------------------------
-        // Window center along wall.
-        //--------------------------------------------------
-
-        const centerDistance =
-            getDistanceAlongWall(
-                window.position,
-                transform.wall
-            );
-
-        //--------------------------------------------------
-        // Actual window footprint along wall.
-        //--------------------------------------------------
-
-        const width =
-            getExistingWindowWidth(
-                window,
-                transform.wall
-            );
-
-        const horizontal =
-            createHorizontalInterval(
-                centerDistance,
-                width
-            );
+        const horizontal = createHorizontalInterval(
+            getDistanceAlongWall(opening.position, transform.wall),
+            getExistingOpeningWidth(opening)
+        );
 
         const vertical =
-            getExistingWindowVerticalInterval(
-                window,
-                wallHeight
-            );
-
-        //--------------------------------------------------
-        // PREVIEW FOOTPRINT vs WINDOW FOOTPRINT
-        //--------------------------------------------------
+            getExistingOpeningVerticalInterval(opening, wallHeight);
 
         if (
-            intervalsOverlap(
-                currentHorizontal,
-                horizontal
-            ) &&
-
-            intervalsOverlap(
-                currentVertical,
-                vertical
-            )
+            intervalsOverlap(currentHorizontal, horizontal) &&
+            intervalsOverlap(currentVertical, vertical)
         ) {
-
-            return {
-
-                valid:
-                    false,
-
-                reason:
-                    "window"
-            };
+            return { valid: false, reason: "opening" };
         }
     }
 
-    //==================================================
-    // OPENINGS
-    //==================================================
-
-    for (
-        const opening of openings
-    ) {
-
-        //--------------------------------------------------
-        // Different wall = no collision.
-        //--------------------------------------------------
-
-        if (
-            opening.wallId !==
-            transform.wall.id
-        ) {
-            continue;
-        }
-
-        //--------------------------------------------------
-        // Opening center along wall.
-        //--------------------------------------------------
-
-        const centerDistance =
-            getDistanceAlongWall(
-                opening.position,
-                transform.wall
-            );
-
-        //--------------------------------------------------
-        // Opening footprint.
-        //--------------------------------------------------
-
-        const horizontal =
-            createHorizontalInterval(
-                centerDistance,
-                getExistingOpeningWidth(
-                    opening
-                )
-            );
-
-        const vertical =
-            getExistingOpeningVerticalInterval(
-                opening,
-                wallHeight
-            );
-
-        //--------------------------------------------------
-        // PREVIEW FOOTPRINT vs OPENING FOOTPRINT
-        //--------------------------------------------------
-
-        if (
-            intervalsOverlap(
-                currentHorizontal,
-                horizontal
-            ) &&
-
-            intervalsOverlap(
-                currentVertical,
-                vertical
-            )
-        ) {
-
-            return {
-
-                valid:
-                    false,
-
-                reason:
-                    "opening"
-            };
-        }
-    }
-
-    //==================================================
-    // NO COLLISION
-    //==================================================
-
-    return {
-
-        valid:
-            true,
-
-        reason:
-            "none"
-    };
+    return { valid: true, reason: "none" };
 }
