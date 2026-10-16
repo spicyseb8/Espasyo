@@ -1,4 +1,3 @@
-
 import {
     useEffect,
     useMemo
@@ -73,6 +72,35 @@ function findSelectionId(
     return null;
 }
 
+// Identify floor and wall meshes so their clicks
+// are not mistaken for empty-scene clicks.
+function isFloorOrWall(
+    object: Object3D
+): boolean {
+
+    let current: Object3D | null = object;
+
+    while (current) {
+
+        if (
+            current.userData?.isFloor === true
+        ) {
+            return true;
+        }
+
+        if (
+            typeof current.userData?.wallId ===
+            "string"
+        ) {
+            return true;
+        }
+
+        current = current.parent;
+    }
+
+    return false;
+}
+
 function isInsideUi(
     target: EventTarget | null
 ): boolean {
@@ -115,7 +143,7 @@ export default function SelectionInteractionEvents() {
 
         const canvas = gl.domElement;
 
-        // Right-click anywhere clears the current selection.
+        // Right-click clears the current selection.
         function onRightPointerDown(
             event: PointerEvent
         ) {
@@ -133,14 +161,11 @@ export default function SelectionInteractionEvents() {
             });
         }
 
-        // Runs after the scene's click handlers.
-        // This allows an object to remain selected even if
-        // ClearSelection also receives the same click.
         function onClick(
             event: MouseEvent
         ) {
 
-            // Only process clicks made directly on the scene canvas.
+            // Only process clicks on the scene canvas.
             if (event.target !== canvas) {
                 return;
             }
@@ -203,74 +228,82 @@ export default function SelectionInteractionEvents() {
 
             for (const hit of hits) {
 
+                // Handle furniture, doors, and windows.
                 const selection =
                     findSelectionId(
                         hit.object
                     );
 
-                if (!selection) {
-                    continue;
+                if (selection) {
+
+                    if (
+                        selection.type ===
+                        "furniture"
+                    ) {
+                        dispatch({
+                            type: "SELECT_FURNITURE",
+                            payload: selection.id
+                        });
+
+                        return;
+                    }
+
+                    if (
+                        selection.type ===
+                        "door"
+                    ) {
+                        dispatch({
+                            type: "SELECT_DOOR",
+                            payload: selection.id
+                        });
+
+                        return;
+                    }
+
+                    if (
+                        selection.type ===
+                        "window"
+                    ) {
+                        dispatch({
+                            type: "SELECT_WINDOW",
+                            payload: selection.id
+                        });
+
+                        return;
+                    }
                 }
 
+                // Floor.tsx and WallPiece.tsx handle
+                // their own selection. Do not clear
+                // their selection from this handler.
                 if (
-                    selection.type ===
-                    "furniture"
+                    isFloorOrWall(
+                        hit.object
+                    )
                 ) {
-                    dispatch({
-                        type: "SELECT_FURNITURE",
-                        payload: selection.id
-                    });
-
-                    return;
-                }
-
-                if (
-                    selection.type ===
-                    "door"
-                ) {
-                    dispatch({
-                        type: "SELECT_DOOR",
-                        payload: selection.id
-                    });
-
-                    return;
-                }
-
-                if (
-                    selection.type ===
-                    "window"
-                ) {
-                    dispatch({
-                        type: "SELECT_WINDOW",
-                        payload: selection.id
-                    });
-
                     return;
                 }
             }
 
-            // Clicking empty scene space clears the selection.
+            // No selectable furniture, door, window,
+            // floor, or wall was hit.
             dispatch({
                 type: "CLEAR_SELECTION"
             });
         }
 
-        // Suppress the browser context menu on right-click.
         function onContextMenu(
             event: MouseEvent
         ) {
-
             event.preventDefault();
         }
 
-        // Capture right-clicks before other scene/UI handlers.
         window.addEventListener(
             "pointerdown",
             onRightPointerDown,
             true
         );
 
-        // Window bubble phase runs after the canvas click handlers.
         window.addEventListener(
             "click",
             onClick

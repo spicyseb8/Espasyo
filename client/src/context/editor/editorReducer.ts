@@ -8,7 +8,7 @@ import type { Door } from "../../engine/doors/DoorTypes";
 import type { Furniture } from "../../engine/furniture/FurnitureTypes";
 import type { Window } from "../../engine/windows/WindowTypes";
 import type { Opening } from "../../engine/openings/OpeningTypes";
-
+const WALL_SIDE_FINISH_BUCKET = "__wall_side_finishes__";
 export function editorReducer(
     state: EditorState,
     action: EditorAction
@@ -60,24 +60,45 @@ export function editorReducer(
                 wallThickness: action.payload
             };
         case "SET_WALL_FINISH": {
-            if (state.walkthroughMode) return state;
-            const {
-                regionId,
-                wallId,
-                materialId
-            } = action.payload;
-            return {
-                ...state,
-                wallFinishes: {
-                    ...state.wallFinishes,
-                    [regionId]: {
-                        ...(state.wallFinishes[regionId] ?? {}),
-                        [wallId]:
-                            materialId
-                    }
+    if (state.walkthroughMode) return state;
+
+    const {
+        regionId,
+        wallId,
+        materialId,
+        side
+    } = action.payload;
+
+    // Save a finish for one specific side of the wall.
+    if (side !== undefined) {
+        const sideKey = `${wallId}::side:${side}`;
+
+        return {
+            ...state,
+            wallFinishes: {
+                ...state.wallFinishes,
+                [WALL_SIDE_FINISH_BUCKET]: {
+                    ...(state.wallFinishes[WALL_SIDE_FINISH_BUCKET] ?? {}),
+                    [sideKey]: materialId
                 }
-            };
+            }
+        };
+    }
+
+    // Preserve compatibility with existing room-based finishes.
+    if (!regionId) return state;
+
+    return {
+        ...state,
+        wallFinishes: {
+            ...state.wallFinishes,
+            [regionId]: {
+                ...(state.wallFinishes[regionId] ?? {}),
+                [wallId]: materialId
+            }
         }
+    };
+}
         case "REMOVE_WALL":
             if (state.walkthroughMode) return state;
             return {
@@ -182,6 +203,7 @@ export function editorReducer(
                 selectedWallRegionId: null,
                 selectedRegionId: null,
                 selectedCornerId: null,
+                selectedWallSide: null,
                 selectedOpeningId: null,
                 selectedFurnitureId: null,
                 selectedDoorId: null,
@@ -193,23 +215,25 @@ export function editorReducer(
                 ...state,
                 selectedWallId:
                     action.payload,
+                    selectedWallSide: null,
                 selectedWallRegionId: null
+
             };
-        case "SELECT_WALL_SIDE":
-            if (state.walkthroughMode) return state;
-            return {
-                ...state,
-                selectedWallId:
-                    action.payload.wallId,
-                selectedWallRegionId:
-                    action.payload.regionId,
-                selectedRegionId: null,
-                selectedCornerId: null,
-                selectedOpeningId: null,
-                selectedFurnitureId: null,
-                selectedDoorId: null,
-                selectedWindowId: null
-            };
+       case "SELECT_WALL_SIDE":
+    if (state.walkthroughMode) return state;
+
+    return {
+        ...state,
+        selectedWallId: action.payload.wallId,
+        selectedWallRegionId: action.payload.regionId,
+        selectedWallSide: action.payload.side,
+        selectedRegionId: null,
+        selectedCornerId: null,
+        selectedOpeningId: null,
+        selectedFurnitureId: null,
+        selectedDoorId: null,
+        selectedWindowId: null
+    };
         case "SELECT_REGION":
             if (state.walkthroughMode) return state;
             return {
@@ -221,6 +245,7 @@ export function editorReducer(
                 selectedCornerId: null,
                 selectedOpeningId: null,
                 selectedFurnitureId: null,
+                selectedWallSide: null,
                 selectedDoorId: null,
                 selectedWindowId: null
             };

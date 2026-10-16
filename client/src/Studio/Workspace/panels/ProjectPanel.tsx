@@ -2,42 +2,208 @@ import {
     useEffect,
     useState
 } from "react";
+
 import {
     useParams,
     useSearchParams
 } from "react-router-dom";
+
 import useEditor
     from "../../../context/editor/useEditor";
+
 import {
     auth,
     db,
     storage
 } from "../../../firebase/firebase";
+
 import {
     doc,
     getDoc,
+    runTransaction,
     setDoc,
     serverTimestamp
 } from "firebase/firestore";
+
 import {
     saveProjectBaseline
 } from "../../../services/projectEditSessionService";
+
 import {
     getDownloadURL,
     ref,
     uploadString
 } from "firebase/storage";
+
 import {
     createProjectData
 } from "../../../services/projectSerializer";
+
 import {
     captureSceneThumbnail
 } from "../../../services/projectThumbnail";
+
 import {
     deleteDraft,
     getDraft
 } from "../../../services/projectDraftService";
+
 import "./ProjectPanel.css";
+
+//======================================================
+// PROJECT ID FORMAT
+//
+// PRJ-00126
+//     001 = sequence number
+//      26 = year 2026
+//
+// The counter is stored in Firestore at:
+// idCounters/projects-2026
+//
+// The transaction prevents two simultaneous requests
+// from allocating the same sequence number.
+//======================================================
+
+function getPhilippineYear(): number {
+    const year = new Intl.DateTimeFormat(
+        "en-US",
+        {
+            timeZone: "Asia/Manila",
+            year: "numeric"
+        }
+    ).format(new Date());
+
+    return Number(year);
+}
+
+function formatProjectId(
+    sequence: number,
+    year: number
+): string {
+    const sequenceCode = String(
+        sequence
+    ).padStart(3, "0");
+
+    const yearCode = String(
+        year % 100
+    ).padStart(2, "0");
+
+    return `PRJ-${sequenceCode}${yearCode}`;
+}
+
+//======================================================
+// GENERATE THE NEXT PROJECT ID
+//======================================================
+
+async function generateNextProjectId(): Promise<string> {
+    const year = getPhilippineYear();
+
+    const counterRef = doc(
+        db,
+        "idCounters",
+        "projects-${year}"
+    );
+
+    return runTransaction(
+        db,
+        async transaction => {
+            const counterSnapshot =
+                await transaction.get(counterRef);
+
+            const storedSequence =
+                counterSnapshot.exists()
+                    ? Number(
+                        counterSnapshot.data().lastSequence ?? 0
+                    )
+                    : 0;
+
+            if (
+                !Number.isSafeInteger(storedSequence) ||
+                storedSequence < 0
+            ) {
+                throw new Error(
+                    "The project ID counter is invalid."
+                );
+            }
+
+            let nextSequence =
+                storedSequence + 1;
+
+            let nextProjectId =
+                formatProjectId(
+                    nextSequence,
+                    year
+                );
+
+            // Check the destination document in case a project
+            // already exists beyond the saved counter.
+            let destinationRef = doc(
+                db,
+                "projects",
+                nextProjectId
+            );
+
+            let destinationSnapshot =
+                await transaction.get(destinationRef);
+
+            // Skip existing IDs instead of overwriting projects.
+            while (destinationSnapshot.exists()) {
+                nextSequence += 1;
+
+                if (!Number.isSafeInteger(nextSequence)) {
+                    throw new Error(
+                        "Unable to generate another project ID."
+                    );
+                }
+
+                nextProjectId = formatProjectId(
+                    nextSequence,
+                    year
+                );
+
+                destinationRef = doc(
+                    db,
+                    "projects",
+                    nextProjectId
+                );
+
+                destinationSnapshot =
+                    await transaction.get(destinationRef);
+            }
+
+            // Reserve the sequence atomically.
+            transaction.set(
+                counterRef,
+                {
+                    lastSequence: nextSequence,
+                    year,
+                    updatedAt: serverTimestamp()
+                },
+                {
+                    merge: true
+                }
+            );
+
+            return nextProjectId;
+        }
+    );
+}
+
+//======================================================
+// CHECK WHETHER AN ID USES THE NEW PROJECT FORMAT
+//======================================================
+
+function usesProjectIdFormat(
+    value: string
+): boolean {
+    return /^PRJ-\d{3,}\d{2}$/.test(
+        value
+    );
+}
+
+//======================================================
+// PROJECT PANEL
+//======================================================
 
 export default function ProjectPanel() {
     const {
@@ -45,8 +211,7 @@ export default function ProjectPanel() {
     } = useEditor();
 
     const {
-        projectId:
-            routeProjectId
+        projectId: routeProjectId
     } = useParams<{
         projectId?: string;
     }>();
@@ -66,9 +231,7 @@ export default function ProjectPanel() {
     const [
         projectId,
         setProjectId
-    ] = useState<string | null>(
-        null
-    );
+    ] = useState<string | null>(null);
 
     const [
         saving,
@@ -81,131 +244,127 @@ export default function ProjectPanel() {
     ] = useState("");
 
     const isExistingProject =
-        Boolean(
-            routeProjectId
-        );
+        Boolean(routeProjectId);
 
     const isDraftProject =
-        Boolean(
-            draftId
-        );
+        Boolean(draftId);
+
+    //==================================================
+    // LOAD EXISTING PROJECT OR DRAFT
+    //==================================================
 
     useEffect(() => {
-    if (
-        routeProjectId
-    ) {
-        const existingProjectId =
-            routeProjectId;
+        let cancelled = false;
 
-        setProjectId(
-            existingProjectId
-        );
+        async function initializeProject() {
+            if (routeProjectId) {
+                const existingProjectId =
+                    routeProjectId;
 
-        async function loadExistingProject() {
-            try {
-                const projectRef =
-                    doc(
+                setProjectId(
+                    existingProjectId
+                );
+
+                try {
+                    const projectRef = doc(
                         db,
                         "projects",
                         existingProjectId
                     );
 
-                const projectSnapshot =
-                    await getDoc(
-                        projectRef
-                    );
+                    const projectSnapshot =
+                        await getDoc(projectRef);
 
-                if (
-                    !projectSnapshot.exists()
-                ) {
-                    return;
+                    if (
+                        cancelled ||
+                        !projectSnapshot.exists()
+                    ) {
+                        return;
+                    }
+
+                    const data =
+                        projectSnapshot.data();
+
+                    if (
+                        typeof data.projectName === "string" &&
+                        data.projectName.trim() !== ""
+                    ) {
+                        setProjectName(
+                            data.projectName
+                        );
+
+                        localStorage.setItem(
+                            "espasyo_project_name",
+                            data.projectName
+                        );
+                    }
+                } catch (error: unknown) {
+                    console.error(
+                        "Failed to load existing project:",
+                        error
+                    );
                 }
 
-                const data =
-                    projectSnapshot.data();
-
-                if (
-                    typeof data.projectName === "string" &&
-                    data.projectName.trim() !== ""
-                ) {
-                    setProjectName(
-                        data.projectName
-                    );
-
-                    localStorage.setItem(
-                        "espasyo_project_name",
-                        data.projectName
-                    );
-                }
-            } catch (
-                error: unknown
-            ) {
-                console.error(
-                    "Failed to load existing project:",
-                    error
-                );
+                return;
             }
+
+            if (!draftId) {
+                return;
+            }
+
+            const ownerId =
+                auth.currentUser?.uid ??
+                localStorage.getItem(
+                    "espasyo_current_user_uid"
+                );
+
+            if (!ownerId) {
+                return;
+            }
+
+            const draft = getDraft(
+                ownerId,
+                draftId
+            );
+
+            if (!draft || cancelled) {
+                return;
+            }
+
+            setProjectId(
+                draft.projectId
+            );
+
+            setProjectName(
+                draft.projectName
+            );
+
+            localStorage.setItem(
+                "espasyo_project_name",
+                draft.projectName
+            );
         }
 
-        loadExistingProject();
+        void initializeProject();
 
-        return;
-    }
+        return () => {
+            cancelled = true;
+        };
+    }, [
+        routeProjectId,
+        draftId
+    ]);
 
-    if (
-        !draftId
-    ) {
-        return;
-    }
-
-    const ownerId =
-        auth.currentUser?.uid ??
-        localStorage.getItem(
-            "espasyo_current_user_uid"
-        );
-
-    if (
-        !ownerId
-    ) {
-        return;
-    }
-
-    const draft =
-        getDraft(
-            ownerId,
-            draftId
-        );
-
-    if (
-        !draft
-    ) {
-        return;
-    }
-
-    setProjectId(
-        draft.projectId
-    );
-
-    setProjectName(
-        draft.projectName
-    );
-
-    localStorage.setItem(
-        "espasyo_project_name",
-        draft.projectName
-    );
-}, [
-    routeProjectId,
-    draftId
-]);
+    //==================================================
+    // SAVE PROJECT NAME LOCALLY
+    //==================================================
 
     useEffect(() => {
-        if (
-            !projectName.trim()
-        ) {
+        if (!projectName.trim()) {
             localStorage.removeItem(
                 "espasyo_project_name"
             );
+
             return;
         }
 
@@ -217,55 +376,64 @@ export default function ProjectPanel() {
         projectName
     ]);
 
+    //==================================================
+    // SAVE PROJECT
+    //==================================================
+
     async function handleSave() {
         const user =
             auth.currentUser;
 
-        if (
-            !user
-        ) {
+        if (!user) {
             setMessage(
                 "Please log in before saving a project."
             );
+
             return;
         }
 
         const trimmedName =
             projectName.trim();
 
-        if (
-            trimmedName === ""
-        ) {
+        if (!trimmedName) {
             setMessage(
                 "Please enter a project name."
             );
+
             return;
         }
 
-        if (
-            saving
-        ) {
+        if (saving) {
             return;
         }
 
         try {
-            setSaving(
-                true
-            );
+            setSaving(true);
 
             setMessage(
                 "Preparing project..."
             );
 
-            const currentProjectId =
-                routeProjectId ??
-                projectId ??
-                crypto.randomUUID();
+            // Existing projects keep their original ID.
+            // New projects receive the formatted ID.
+            //
+            // A generated ID is reused after an unsuccessful
+            // save attempt to avoid unnecessary sequence gaps.
+            let currentProjectId: string;
 
-            if (
-                !routeProjectId &&
-                !projectId
+            if (routeProjectId) {
+                currentProjectId =
+                    routeProjectId;
+            } else if (
+                projectId &&
+                usesProjectIdFormat(projectId)
             ) {
+                currentProjectId =
+                    projectId;
+            } else {
+                currentProjectId =
+                    await generateNextProjectId();
+
                 setProjectId(
                     currentProjectId
                 );
@@ -273,6 +441,10 @@ export default function ProjectPanel() {
 
             const isNewProject =
                 !routeProjectId;
+
+            //==================================================
+            // PREPARE PROJECT JSON
+            //==================================================
 
             const projectData =
                 createProjectData(
@@ -292,14 +464,17 @@ export default function ProjectPanel() {
                     2
                 );
 
+            //==================================================
+            // UPLOAD PROJECT JSON TO FIREBASE STORAGE
+            //==================================================
+
             const storagePath =
                 `projects/${user.uid}/${currentProjectId}.json`;
 
-            const storageRef =
-                ref(
-                    storage,
-                    storagePath
-                );
+            const storageRef = ref(
+                storage,
+                storagePath
+            );
 
             setMessage(
                 "Saving project..."
@@ -320,6 +495,10 @@ export default function ProjectPanel() {
                     storageRef
                 );
 
+            //==================================================
+            // CAPTURE AND UPLOAD THUMBNAIL
+            //==================================================
+
             const thumbnailDataUrl =
                 captureSceneThumbnail();
 
@@ -329,17 +508,14 @@ export default function ProjectPanel() {
             let thumbnailUrl:
                 string | undefined;
 
-            if (
-                thumbnailDataUrl
-            ) {
+            if (thumbnailDataUrl) {
                 thumbnailPath =
                     `projects/${user.uid}/${currentProjectId}.jpg`;
 
-                const thumbnailRef =
-                    ref(
-                        storage,
-                        thumbnailPath
-                    );
+                const thumbnailRef = ref(
+                    storage,
+                    thumbnailPath
+                );
 
                 setMessage(
                     "Saving project thumbnail..."
@@ -361,46 +537,59 @@ export default function ProjectPanel() {
                     );
             }
 
+            //==================================================
+            // BUILD FIRESTORE PROJECT METADATA
+            //==================================================
+
             const projectMetadata:
                 Record<string, unknown> = {
                 projectId:
                     currentProjectId,
+
                 projectName:
                     trimmedName,
+
                 ownerId:
                     user.uid,
+
                 jsonPath:
                     storagePath,
+
                 jsonUrl:
                     downloadUrl,
+
                 schemaVersion:
                     1,
+
                 estimatedCost:
                     estimatedCost,
+
                 updatedAt:
                     serverTimestamp()
             };
 
-            if (
-                thumbnailPath
-            ) {
+            if (thumbnailPath) {
                 projectMetadata.thumbnailPath =
                     thumbnailPath;
             }
 
-            if (
-                thumbnailUrl
-            ) {
+            if (thumbnailUrl) {
                 projectMetadata.thumbnailUrl =
                     thumbnailUrl;
             }
 
-            if (
-                isNewProject
-            ) {
+            if (isNewProject) {
                 projectMetadata.createdAt =
                     serverTimestamp();
             }
+
+            //==================================================
+            // SAVE METADATA TO FIRESTORE
+            //==================================================
+            //
+            // Firestore document ID and embedded projectId
+            // both use the same formatted project ID.
+            //==================================================
 
             await setDoc(
                 doc(
@@ -410,32 +599,34 @@ export default function ProjectPanel() {
                 ),
                 projectMetadata,
                 {
-                    merge:
-                        true
+                    merge: true
                 }
             );
-            saveProjectBaseline(
-    currentProjectId,
-    projectData
-);
 
-localStorage.setItem(
-    "espasyo_project_name",
-    trimmedName
-);
-            if (
-                draftId
-            ) {
-                deleteDraft(
-                    user.uid,
-                    draftId
-                );
-            }
+            //==================================================
+            // SAVE BASELINE
+            //==================================================
+
+            saveProjectBaseline(
+                currentProjectId,
+                projectData
+            );
 
             localStorage.setItem(
                 "espasyo_project_name",
                 trimmedName
             );
+
+            //==================================================
+            // DELETE DRAFT AFTER SUCCESSFUL SAVE
+            //==================================================
+
+            if (draftId) {
+                deleteDraft(
+                    user.uid,
+                    draftId
+                );
+            }
 
             setMessage(
                 isExistingProject
@@ -444,9 +635,7 @@ localStorage.setItem(
                         ? "Draft saved successfully."
                         : "Project saved successfully."
             );
-        } catch (
-            error: unknown
-        ) {
+        } catch (error: unknown) {
             console.error(
                 "Failed to save project:",
                 error
@@ -468,11 +657,13 @@ localStorage.setItem(
                 }`
             );
         } finally {
-            setSaving(
-                false
-            );
+            setSaving(false);
         }
     }
+
+    //==================================================
+    // RENDER
+    //==================================================
 
     return (
         <aside className="design-sidebar">
@@ -500,18 +691,13 @@ localStorage.setItem(
                         className="setting-input project-name-input"
                         type="text"
                         placeholder="Enter project name"
-                        value={
-                            projectName
+                        value={projectName}
+                        onChange={event =>
+                            setProjectName(
+                                event.target.value
+                            )
                         }
-                        onChange={
-                            event =>
-                                setProjectName(
-                                    event.target.value
-                                )
-                        }
-                        disabled={
-                            saving
-                        }
+                        disabled={saving}
                     />
                 </div>
 
@@ -520,9 +706,7 @@ localStorage.setItem(
                         routeProjectId ??
                         projectId
                     ) && (
-                        <div
-                            className="project-id-display"
-                        >
+                        <div className="project-id-display">
                             <span>
                                 Project ID
                             </span>
@@ -540,12 +724,8 @@ localStorage.setItem(
                 <button
                     type="button"
                     className="confirm-layout-button"
-                    onClick={
-                        handleSave
-                    }
-                    disabled={
-                        saving
-                    }
+                    onClick={handleSave}
+                    disabled={saving}
                 >
                     {
                         saving
@@ -562,9 +742,7 @@ localStorage.setItem(
                             className="save-message"
                             role="status"
                         >
-                            {
-                                message
-                            }
+                            {message}
                         </div>
                     )
                 }

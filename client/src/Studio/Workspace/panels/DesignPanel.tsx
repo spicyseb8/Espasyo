@@ -1,24 +1,34 @@
+
 import {
     useEffect,
     useMemo,
     useState
 } from "react";
+
 import useEditor
     from "../../../context/editor/useEditor";
+
 import type {
     Material
 } from "../../../engine/materials/MaterialTypes";
+
 import {
     getWallMaterials
 } from "../../../engine/materials/walls";
+
 import {
     getFloorMaterials
 } from "../../../engine/materials/floors";
+
 import {
     solveRegions
 } from "../../../engine/regions/RegionSolver";
+
 import MaterialSection
     from "./MaterialSection";
+
+const WALL_SIDE_FINISH_BUCKET =
+    "__wall_side_finishes__";
 
 export default function DesignPanel() {
     const {
@@ -26,111 +36,78 @@ export default function DesignPanel() {
         dispatch
     } = useEditor();
 
-    const regions =
-        useMemo(
-            () =>
-                solveRegions(
-                    state.corners,
-                    state.walls
-                ),
-            [
+    const regions = useMemo(
+        () =>
+            solveRegions(
                 state.corners,
                 state.walls
-            ]
-        );
+            ),
+        [
+            state.corners,
+            state.walls
+        ]
+    );
 
     const [
         flooringMaterials,
         setFlooringMaterials
-    ] =
-        useState<Material[]>(
-            []
-        );
+    ] = useState<Material[]>([]);
 
     const [
         floorMaterialsLoading,
         setFloorMaterialsLoading
-    ] =
-        useState(true);
+    ] = useState(true);
 
     const [
         floorMaterialsError,
         setFloorMaterialsError
-    ] =
-        useState(false);
+    ] = useState(false);
 
     const [
         wallMaterials,
         setWallMaterials
-    ] =
-        useState<Material[]>(
-            []
-        );
+    ] = useState<Material[]>([]);
 
     const [
         wallMaterialsLoading,
         setWallMaterialsLoading
-    ] =
-        useState(true);
+    ] = useState(true);
 
     const [
         wallMaterialsError,
         setWallMaterialsError
-    ] =
-        useState(false);
+    ] = useState(false);
 
     useEffect(() => {
-        let cancelled =
-            false;
+        let cancelled = false;
 
         async function loadFloorMaterials() {
             try {
-                setFloorMaterialsLoading(
-                    true
-                );
+                setFloorMaterialsLoading(true);
+                setFloorMaterialsError(false);
 
-                setFloorMaterialsError(
-                    false
-                );
+                const materials = await getFloorMaterials();
 
-                const materials =
-                    await getFloorMaterials();
-
-                if (
-                    cancelled
-                ) {
+                if (cancelled) {
                     return;
                 }
 
-                setFlooringMaterials(
-                    materials
-                );
+                setFlooringMaterials(materials);
             } catch (error) {
                 console.error(
                     "Failed to load floor materials:",
                     error
                 );
 
-                if (
-                    cancelled
-                ) {
+                if (cancelled) {
                     return;
                 }
 
-                setFlooringMaterials(
-                    []
-                );
-
-                setFloorMaterialsError(
-                    true
-                );
+                setFlooringMaterials([]);
+                setFloorMaterialsError(true);
             } finally {
-                if (
-                    !cancelled
-                ) {
-                    setFloorMaterialsLoading(
-                        false
-                    );
+                if (!cancelled) {
+                    setFloorMaterialsLoading(false);
                 }
             }
         }
@@ -138,63 +115,40 @@ export default function DesignPanel() {
         loadFloorMaterials();
 
         return () => {
-            cancelled =
-                true;
+            cancelled = true;
         };
     }, []);
 
     useEffect(() => {
-        let cancelled =
-            false;
+        let cancelled = false;
 
         async function loadWallMaterials() {
             try {
-                setWallMaterialsLoading(
-                    true
-                );
+                setWallMaterialsLoading(true);
+                setWallMaterialsError(false);
 
-                setWallMaterialsError(
-                    false
-                );
+                const materials = await getWallMaterials();
 
-                const materials =
-                    await getWallMaterials();
-
-                if (
-                    cancelled
-                ) {
+                if (cancelled) {
                     return;
                 }
 
-                setWallMaterials(
-                    materials
-                );
+                setWallMaterials(materials);
             } catch (error) {
                 console.error(
                     "Failed to load wall materials:",
                     error
                 );
 
-                if (
-                    cancelled
-                ) {
+                if (cancelled) {
                     return;
                 }
 
-                setWallMaterials(
-                    []
-                );
-
-                setWallMaterialsError(
-                    true
-                );
+                setWallMaterials([]);
+                setWallMaterialsError(true);
             } finally {
-                if (
-                    !cancelled
-                ) {
-                    setWallMaterialsLoading(
-                        false
-                    );
+                if (!cancelled) {
+                    setWallMaterialsLoading(false);
                 }
             }
         }
@@ -202,23 +156,20 @@ export default function DesignPanel() {
         loadWallMaterials();
 
         return () => {
-            cancelled =
-                true;
+            cancelled = true;
         };
     }, []);
 
     const selectedRegion =
         regions.find(
             region =>
-                region.id ===
-                state.selectedRegionId
+                region.id === state.selectedRegionId
         ) ?? null;
 
     const selectedWallRegion =
         regions.find(
             region =>
-                region.id ===
-                state.selectedWallRegionId
+                region.id === state.selectedWallRegionId
         ) ?? null;
 
     const selectedWallRegionForEdit =
@@ -228,8 +179,7 @@ export default function DesignPanel() {
             state.selectedWallId &&
             selectedRegion.walls.some(
                 wall =>
-                    wall.id ===
-                    state.selectedWallId
+                    wall.id === state.selectedWallId
             )
                 ? selectedRegion
                 : null
@@ -248,20 +198,38 @@ export default function DesignPanel() {
             selectedWallRegionForEdit &&
             selectedWallRegionForEdit.walls.some(
                 wall =>
-                    wall.id ===
-                    state.selectedWallId
+                    wall.id === state.selectedWallId
             )
         );
 
-    const currentWallMaterialId =
+    // Read the material assigned to the actual selected face.
+    const selectedWallSideKey =
+        state.selectedWallId &&
+        state.selectedWallSide !== null &&
+        state.selectedWallSide !== undefined
+            ? `${state.selectedWallId}::side:${state.selectedWallSide}`
+            : null;
+
+    const sideWallMaterialId =
+        selectedWallSideKey
+            ? state.wallFinishes[
+                WALL_SIDE_FINISH_BUCKET
+            ]?.[selectedWallSideKey] ?? null
+            : null;
+
+    // Preserve compatibility with existing room-based wall finishes.
+    const legacyWallMaterialId =
         selectedWallBelongsToRoom &&
-        selectedWallRegionForEdit
+        selectedWallRegionForEdit &&
+        state.selectedWallId
             ? state.wallFinishes[
                 selectedWallRegionForEdit.id
-            ]?.[
-                state.selectedWallId!
-            ] ?? null
+            ]?.[state.selectedWallId] ?? null
             : null;
+
+    const currentWallMaterialId =
+        sideWallMaterialId ??
+        legacyWallMaterialId;
 
     const selectedFloorMaterialId =
         state.activeFloorMaterialId ??
@@ -276,21 +244,16 @@ export default function DesignPanel() {
             state.activeFloorMaterialId &&
             flooringMaterials.length > 0
         ) {
-            const exists =
-                flooringMaterials.some(
-                    material =>
-                        material.id ===
-                        state.activeFloorMaterialId
-                );
+            const exists = flooringMaterials.some(
+                material =>
+                    material.id ===
+                    state.activeFloorMaterialId
+            );
 
-            if (
-                !exists
-            ) {
+            if (!exists) {
                 dispatch({
-                    type:
-                        "SET_ACTIVE_FLOOR_MATERIAL",
-                    payload:
-                        null
+                    type: "SET_ACTIVE_FLOOR_MATERIAL",
+                    payload: null
                 });
             }
         }
@@ -305,21 +268,16 @@ export default function DesignPanel() {
             state.activeWallMaterialId &&
             wallMaterials.length > 0
         ) {
-            const exists =
-                wallMaterials.some(
-                    material =>
-                        material.id ===
-                        state.activeWallMaterialId
-                );
+            const exists = wallMaterials.some(
+                material =>
+                    material.id ===
+                    state.activeWallMaterialId
+            );
 
-            if (
-                !exists
-            ) {
+            if (!exists) {
                 dispatch({
-                    type:
-                        "SET_ACTIVE_WALL_MATERIAL",
-                    payload:
-                        null
+                    type: "SET_ACTIVE_WALL_MATERIAL",
+                    payload: null
                 });
             }
         }
@@ -329,338 +287,242 @@ export default function DesignPanel() {
         dispatch
     ]);
 
-    const handleSelectFloorMaterial =
-        (
-            materialId: string
-        ) => {
-            if (
-                !state.layoutConfirmed
-            ) {
-                return;
+    const handleSelectFloorMaterial = (
+        materialId: string
+    ) => {
+        if (!state.layoutConfirmed) {
+            return;
+        }
+
+        dispatch({
+            type: "SET_ACTIVE_FLOOR_MATERIAL",
+            payload: materialId
+        });
+    };
+
+    const handleSelectWallMaterial = (
+        materialId: string
+    ) => {
+        if (!state.layoutConfirmed) {
+            return;
+        }
+
+        dispatch({
+            type: "SET_ACTIVE_WALL_MATERIAL",
+            payload: materialId
+        });
+    };
+
+    const handleApplyFloor = () => {
+        if (
+            !state.layoutConfirmed ||
+            !state.selectedRegionId ||
+            !selectedFloorMaterialId
+        ) {
+            return;
+        }
+
+        dispatch({
+            type: "SET_FLOOR_FINISH",
+            payload: {
+                regionId: state.selectedRegionId,
+                materialId: selectedFloorMaterialId
             }
+        });
+    };
 
+    const handleApplyFloorToAll = () => {
+        if (
+            !state.layoutConfirmed ||
+            !selectedFloorMaterialId
+        ) {
+            return;
+        }
+
+        for (const region of regions) {
             dispatch({
-                type:
-                    "SET_ACTIVE_FLOOR_MATERIAL",
-                payload:
-                    materialId
-            });
-        };
-
-    const handleSelectWallMaterial =
-        (
-            materialId: string
-        ) => {
-            if (
-                !state.layoutConfirmed
-            ) {
-                return;
-            }
-
-            dispatch({
-                type:
-                    "SET_ACTIVE_WALL_MATERIAL",
-                payload:
-                    materialId
-            });
-        };
-
-    const handleApplyFloor =
-        () => {
-            if (
-                !state.layoutConfirmed ||
-                !state.selectedRegionId ||
-                !selectedFloorMaterialId
-            ) {
-                return;
-            }
-
-            dispatch({
-                type:
-                    "SET_FLOOR_FINISH",
+                type: "SET_FLOOR_FINISH",
                 payload: {
-                    regionId:
-                        state.selectedRegionId,
-                    materialId:
-                        selectedFloorMaterialId
+                    regionId: region.id,
+                    materialId: selectedFloorMaterialId
                 }
             });
-        };
+        }
+    };
 
-    const handleApplyFloorToAll =
-        () => {
-            if (
-                !state.layoutConfirmed ||
-                !selectedFloorMaterialId
-            ) {
-                return;
+    // Apply the selected material to only the clicked wall face.
+    const handleApplyWall = () => {
+        if (
+            !state.layoutConfirmed ||
+            !state.selectedWallId ||
+            state.selectedWallSide === null ||
+            state.selectedWallSide === undefined ||
+            !selectedWallMaterialId
+        ) {
+            return;
+        }
+
+        dispatch({
+            type: "SET_WALL_FINISH",
+            payload: {
+                regionId:
+                    selectedWallRegionForEdit?.id ?? null,
+                wallId: state.selectedWallId,
+                materialId: selectedWallMaterialId,
+                side: state.selectedWallSide
             }
+        });
+    };
 
-            for (
-                const region
-                of regions
-            ) {
-                dispatch({
-                    type:
-                        "SET_FLOOR_FINISH",
-                    payload: {
-                        regionId:
-                            region.id,
-                        materialId:
-                            selectedFloorMaterialId
-                    }
-                });
-            }
-        };
+    const handleApplyWallToRoom = () => {
+        if (
+            !state.layoutConfirmed ||
+            !selectedWallRegionForEdit ||
+            !selectedWallMaterialId
+        ) {
+            return;
+        }
 
-    const handleApplyWall =
-        () => {
-            if (
-                !state.layoutConfirmed ||
-                !state.selectedWallId ||
-                !selectedWallRegionForEdit ||
-                !selectedWallBelongsToRoom ||
-                !selectedWallMaterialId
-            ) {
-                return;
-            }
+        const wallIds = new Set(
+            selectedWallRegionForEdit.walls.map(
+                wall => wall.id
+            )
+        );
 
+        for (const wallId of wallIds) {
             dispatch({
-                type:
-                    "SET_WALL_FINISH",
+                type: "SET_WALL_FINISH",
                 payload: {
-                    regionId:
-                        selectedWallRegionForEdit.id,
-                    wallId:
-                        state.selectedWallId,
-                    materialId:
-                        selectedWallMaterialId
+                    regionId: selectedWallRegionForEdit.id,
+                    wallId,
+                    materialId: selectedWallMaterialId
                 }
             });
-        };
+        }
+    };
 
-    const handleApplyWallToRoom =
-        () => {
-            if (
-                !state.layoutConfirmed ||
-                !selectedWallRegionForEdit ||
-                !selectedWallMaterialId
-            ) {
-                return;
-            }
+    const handleApplyWallToAll = () => {
+        if (
+            !state.layoutConfirmed ||
+            !selectedWallMaterialId
+        ) {
+            return;
+        }
 
-            const wallIds =
-                new Set(
-                    selectedWallRegionForEdit.walls.map(
-                        wall =>
-                            wall.id
-                    )
-                );
+        for (const region of regions) {
+            const wallIds = new Set(
+                region.walls.map(wall => wall.id)
+            );
 
-            for (
-                const wallId
-                of wallIds
-            ) {
+            for (const wallId of wallIds) {
                 dispatch({
-                    type:
-                        "SET_WALL_FINISH",
+                    type: "SET_WALL_FINISH",
                     payload: {
-                        regionId:
-                            selectedWallRegionForEdit.id,
+                        regionId: region.id,
                         wallId,
-                        materialId:
-                            selectedWallMaterialId
+                        materialId: selectedWallMaterialId
                     }
                 });
             }
-        };
-
-    const handleApplyWallToAll =
-        () => {
-            if (
-                !state.layoutConfirmed ||
-                !selectedWallMaterialId
-            ) {
-                return;
-            }
-
-            for (
-                const region
-                of regions
-            ) {
-                const wallIds =
-                    new Set(
-                        region.walls.map(
-                            wall =>
-                                wall.id
-                        )
-                    );
-
-                for (
-                    const wallId
-                    of wallIds
-                ) {
-                    dispatch({
-                        type:
-                            "SET_WALL_FINISH",
-                        payload: {
-                            regionId:
-                                region.id,
-                            wallId,
-                            materialId:
-                                selectedWallMaterialId
-                        }
-                    });
-                }
-            }
-        };
+        }
+    };
 
     const layoutConfirmed =
         state.layoutConfirmed;
+
+    const canApplyWall =
+        Boolean(
+            layoutConfirmed &&
+            state.selectedWallId &&
+            state.selectedWallSide !== null &&
+            state.selectedWallSide !== undefined &&
+            selectedWallMaterialId
+        );
 
     return (
         <div
             className="design-panel"
             style={{
-                opacity:
-                    layoutConfirmed
-                        ? 1
-                        : 0.5
+                opacity: layoutConfirmed ? 1 : 0.5
             }}
         >
-            {
-                !layoutConfirmed && (
-                    <div
-                        className="material-empty"
-                        style={{
-                            marginBottom:
-                                "10px",
-                            textAlign:
-                                "center"
-                        }}
-                    >
-                        Confirm the layout first before applying floor or wall finishes.
-                    </div>
-                )
-            }
+            {!layoutConfirmed && (
+                <div
+                    className="material-empty"
+                    style={{
+                        marginBottom: "10px",
+                        textAlign: "center"
+                    }}
+                >
+                    Confirm the layout first before applying floor or wall finishes.
+                </div>
+            )}
 
             <MaterialSection
                 title="Floor"
-                materials={
-                    flooringMaterials
-                }
-                selectedMaterialId={
+                materials={flooringMaterials}
+                selectedMaterialId={selectedFloorMaterialId}
+                onSelect={handleSelectFloorMaterial}
+                onApply={handleApplyFloor}
+                onApplyToAll={handleApplyFloorToAll}
+                canApply={Boolean(
+                    layoutConfirmed &&
+                    state.selectedRegionId &&
                     selectedFloorMaterialId
-                }
-                onSelect={
-                    handleSelectFloorMaterial
-                }
-                onApply={
-                    handleApplyFloor
-                }
-                onApplyToAll={
-                    handleApplyFloorToAll
-                }
-                canApply={
-                    Boolean(
-                        layoutConfirmed &&
-                        state.selectedRegionId &&
-                        selectedFloorMaterialId
-                    )
-                }
-                canApplyToAll={
-                    Boolean(
-                        layoutConfirmed &&
-                        selectedFloorMaterialId &&
-                        regions.length > 0
-                    )
-                }
+                )}
+                canApplyToAll={Boolean(
+                    layoutConfirmed &&
+                    selectedFloorMaterialId &&
+                    regions.length > 0
+                )}
             />
 
             <MaterialSection
                 title="Walls"
-                materials={
-                    wallMaterials
-                }
-                selectedMaterialId={
+                materials={wallMaterials}
+                selectedMaterialId={selectedWallMaterialId}
+                onSelect={handleSelectWallMaterial}
+                onApply={handleApplyWall}
+                onApplyToRoom={handleApplyWallToRoom}
+                onApplyToAll={handleApplyWallToAll}
+                canApply={canApplyWall}
+                canApplyToRoom={Boolean(
+                    layoutConfirmed &&
+                    selectedWallRegionForEdit &&
                     selectedWallMaterialId
-                }
-                onSelect={
-                    handleSelectWallMaterial
-                }
-                onApply={
-                    handleApplyWall
-                }
-                onApplyToRoom={
-                    handleApplyWallToRoom
-                }
-                onApplyToAll={
-                    handleApplyWallToAll
-                }
-                canApply={
-                    Boolean(
-                        layoutConfirmed &&
-                        selectedWallBelongsToRoom &&
-                        selectedWallMaterialId
-                    )
-                }
-                canApplyToRoom={
-                    Boolean(
-                        layoutConfirmed &&
-                        selectedWallRegionForEdit &&
-                        selectedWallMaterialId
-                    )
-                }
-                canApplyToAll={
-                    Boolean(
-                        layoutConfirmed &&
-                        selectedWallMaterialId &&
-                        regions.length > 0
-                    )
-                }
+                )}
+                canApplyToAll={Boolean(
+                    layoutConfirmed &&
+                    selectedWallMaterialId &&
+                    regions.length > 0
+                )}
             />
 
-            {
-                floorMaterialsLoading && (
-                    <div
-                        className="material-empty"
-                    >
-                        Loading floor materials...
-                    </div>
-                )
-            }
+            {floorMaterialsLoading && (
+                <div className="material-empty">
+                    Loading floor materials...
+                </div>
+            )}
 
-            {
-                !floorMaterialsLoading &&
+            {!floorMaterialsLoading &&
                 floorMaterialsError && (
-                    <div
-                        className="material-empty"
-                    >
+                    <div className="material-empty">
                         Failed to load floor materials.
                     </div>
-                )
-            }
+                )}
 
-            {
-                wallMaterialsLoading && (
-                    <div
-                        className="material-empty"
-                    >
-                        Loading wall paints...
-                    </div>
-                )
-            }
+            {wallMaterialsLoading && (
+                <div className="material-empty">
+                    Loading wall paints...
+                </div>
+            )}
 
-            {
-                !wallMaterialsLoading &&
+            {!wallMaterialsLoading &&
                 wallMaterialsError && (
-                    <div
-                        className="material-empty"
-                    >
+                    <div className="material-empty">
                         Failed to load wall paints.
                     </div>
-                )
-            }
+                )}
         </div>
     );
 }
