@@ -17,8 +17,6 @@ import type { Asset } from "../assets/Asset";
 import type { Material } from "../engine/materials/MaterialTypes";
 import type { FurnitureCategory } from "../engine/furniture/FurnitureCategory";
 
-import AssetModelThumbnail from "../Studio/Workspace/AssetModelThumbnail";
-
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -37,8 +35,6 @@ interface LibraryItem {
   label: string;
   /** Furniture + floors */
   image?: string;
-  /** Furniture only (3D fallback thumbnail) */
-  model?: string;
   /** Walls only */
   color?: string;
 }
@@ -135,7 +131,6 @@ function mapFurnitureAsset(asset: Asset): LibraryItem {
       ? FURNITURE_CATEGORY_LABELS[asset.furnitureCategory]
       : "Furniture",
     image: asset.thumbnail ?? "",
-    model: asset.model ?? "",
   };
 }
 
@@ -262,11 +257,9 @@ function CollectionCard({ item }: { item: LibraryItem }) {
                   onError={() => setImgError(true)}
                   className="h-full w-full object-contain"
                 />
-              ) : item.model ? (
-                <AssetModelThumbnail model={item.model} />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-[9px] uppercase tracking-wider text-black/30">
-                  No preview
+                  Preview unavailable
                 </div>
               )}
             </div>
