@@ -19,101 +19,61 @@ const EMPLOYEES_COLLECTION = "adminEmployees";
 
 async function generateAccountId() {
   const year = new Date().getFullYear().toString().slice(-2);
-
   const prefix = `U-${year}`;
+  const userCollection = adminDb.collection(USERS_COLLECTION);
+  const employeeCollection = adminDb.collection(EMPLOYEES_COLLECTION);
+  const counterRef = adminDb
+    .collection("systemCounters")
+    .doc(`account-U-${year}`);
+  const idPattern = new RegExp(`^${prefix}(\\d{3,})$`);
 
-  let highestNumber = 0;
+  return adminDb.runTransaction(async (transaction) => {
+    const [usersSnapshot, employeesSnapshot, counterSnapshot] =
+      await Promise.all([
+        transaction.get(userCollection),
+        transaction.get(employeeCollection),
+        transaction.get(counterRef),
+      ]);
 
-  // ----------------------------------------------
-  // Check users
-  // ----------------------------------------------
+    let highestNumber = Number(counterSnapshot.data()?.value) || 0;
 
-  const usersSnapshot = await adminDb
-    .collection(USERS_COLLECTION)
-    .get();
+    for (const document of [
+      ...usersSnapshot.docs,
+      ...employeesSnapshot.docs,
+    ]) {
+      const data = document.data();
+      const id =
+        typeof data.id === "string" ? data.id : document.id;
+      const match = id.match(idPattern);
 
-  for (const document of usersSnapshot.docs) {
-    const data = document.data();
-
-    const id = data.id || document.id;
-
-    if (typeof id !== "string") {
-      continue;
-    }
-
-    const match = id.match(
-      new RegExp(`^U-${year}(\\d{3,})$`)
-    );
-
-    if (match) {
-      const number = Number(match[1]);
-
-      if (number > highestNumber) {
-        highestNumber = number;
+      if (match) {
+        highestNumber = Math.max(highestNumber, Number(match[1]));
       }
     }
-  }
 
-  // ----------------------------------------------
-  // Check employees
-  // ----------------------------------------------
+    let nextNumber = highestNumber + 1;
+    let candidateId = `${prefix}${String(nextNumber).padStart(3, "0")}`;
+    let [userDoc, employeeDoc] = await Promise.all([
+      transaction.get(userCollection.doc(candidateId)),
+      transaction.get(employeeCollection.doc(candidateId)),
+    ]);
 
-  const employeesSnapshot = await adminDb
-    .collection(EMPLOYEES_COLLECTION)
-    .get();
-
-  for (const document of employeesSnapshot.docs) {
-    const data = document.data();
-
-    const id = data.id || document.id;
-
-    if (typeof id !== "string") {
-      continue;
+    while (userDoc.exists || employeeDoc.exists) {
+      nextNumber += 1;
+      candidateId = `${prefix}${String(nextNumber).padStart(3, "0")}`;
+      [userDoc, employeeDoc] = await Promise.all([
+        transaction.get(userCollection.doc(candidateId)),
+        transaction.get(employeeCollection.doc(candidateId)),
+      ]);
     }
 
-    const match = id.match(
-      new RegExp(`^U-${year}(\\d{3,})$`)
-    );
+    transaction.set(counterRef, {
+      value: nextNumber,
+      updated_at: new Date(),
+    });
 
-    if (match) {
-      const number = Number(match[1]);
-
-      if (number > highestNumber) {
-        highestNumber = number;
-      }
-    }
-  }
-
-  // ----------------------------------------------
-  // Generate next number
-  // ----------------------------------------------
-
-  let nextNumber = highestNumber + 1;
-
-  while (true) {
-    const formattedNumber = String(nextNumber).padStart(
-      3,
-      "0"
-    );
-
-    const candidateId = `${prefix}${formattedNumber}`;
-
-    const userDoc = await adminDb
-      .collection(USERS_COLLECTION)
-      .doc(candidateId)
-      .get();
-
-    const employeeDoc = await adminDb
-      .collection(EMPLOYEES_COLLECTION)
-      .doc(candidateId)
-      .get();
-
-    if (!userDoc.exists && !employeeDoc.exists) {
-      return candidateId;
-    }
-
-    nextNumber++;
-  }
+    return candidateId;
+  });
 }
 
 // --------------------------------------------------
@@ -213,6 +173,28 @@ router.post("/accounts", requireRole("superadmin"), async (req, res) => {
     const normalizedEmail =
       email.trim().toLowerCase();
 
+    const [usersSnapshot, employeesSnapshot] = await Promise.all([
+      adminDb.collection(USERS_COLLECTION).get(),
+      adminDb.collection(EMPLOYEES_COLLECTION).get(),
+    ]);
+    const emailAlreadyRecorded = [
+      ...usersSnapshot.docs,
+      ...employeesSnapshot.docs,
+    ].some((document) => {
+      const existingEmail = document.data().email;
+      return (
+        typeof existingEmail === "string" &&
+        existingEmail.trim().toLowerCase() === normalizedEmail
+      );
+    });
+
+    if (emailAlreadyRecorded) {
+      return res.status(409).json({
+        success: false,
+        message: "An account with this email already exists.",
+      });
+    }
+
     // ----------------------------------------------
     // Check email in Firebase Authentication
     // ----------------------------------------------
@@ -254,6 +236,13 @@ router.post("/accounts", requireRole("superadmin"), async (req, res) => {
           displayName: name.trim(),
         });
     } catch (error) {
+      if (error.code === "auth/email-already-exists") {
+        return res.status(409).json({
+          success: false,
+          message: "An account with this email already exists.",
+        });
+      }
+
       console.error(
         "Firebase Auth creation failed:",
         error
@@ -314,7 +303,7 @@ router.post("/accounts", requireRole("superadmin"), async (req, res) => {
         await adminDb
           .collection(USERS_COLLECTION)
           .doc(accountId)
-          .set(userData);
+          .create(userData);
       } catch (error) {
         // ------------------------------------------
         // Roll back Firebase Auth if Firestore fails
@@ -382,7 +371,7 @@ router.post("/accounts", requireRole("superadmin"), async (req, res) => {
       await adminDb
         .collection(EMPLOYEES_COLLECTION)
         .doc(accountId)
-        .set(employeeData);
+        .create(employeeData);
     } catch (error) {
       // --------------------------------------------
       // Roll back Firebase Auth if Firestore fails

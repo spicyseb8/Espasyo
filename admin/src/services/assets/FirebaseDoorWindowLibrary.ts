@@ -780,6 +780,13 @@ export function getCachedWindowAsset(
 }
 
 
+export function removeCachedDoorWindowAsset(assetId: string): void {
+    cachedAssets = cachedAssets.filter(
+        asset => asset.id !== assetId
+    );
+}
+
+
 //==================================================
 // REFRESH
 //==================================================

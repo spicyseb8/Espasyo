@@ -5,6 +5,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/firebase/firebase";
 import { getAdminProject } from "@/services/assets/projectService";
 import type { AdminProject } from "@/services/assets/projectService";
+import { filterUnavailableProjectAssets } from "@/services/assets/filterUnavailableProjectAssets";
 
 import type { SavedProjectData } from "./ProjectTypes";
 import AdminProjectViewer from "./AdminProjectViewer";
@@ -116,12 +117,18 @@ export default function AdminProjectLoader() {
 
                 if (cancelled) return;
 
+                const projectData = await filterUnavailableProjectAssets(
+                    data as SavedProjectData
+                );
+
+                if (cancelled) return;
+
                 //==================================================
                 // STORE
                 //==================================================
                 setLoadedProject({
                     metadata,
-                    data: data as SavedProjectData
+                    data: projectData
                 });
 
                 setLoading(false);

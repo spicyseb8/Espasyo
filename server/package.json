@@ -9,14 +9,17 @@
     "seed-test-data": "node src/seed-test-data.js",
     "inspect:firestore": "node src/inspect-firestore.js",
     "inspect:assets": "node src/inspect-assets.js",
-    "seed:assets": "node src/seed-assets.js"
+    "seed:assets": "node src/seed-assets.js",
+    "seed:furniture-previews": "node src/seed-furniture-previews.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^18.0.8",
     "express": "^5.3.0",
     "firebase-admin": "^13.10.0",
-    "multer": "^2.4.0"
+    "multer": "^2.4.0",
+    "playwright": "^1.58.2",
+    "three": "^0.186.0"
   },
   "allowScripts": {
     "@firebase/util@1.15.3": true,

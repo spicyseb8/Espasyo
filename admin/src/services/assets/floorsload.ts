@@ -325,6 +325,13 @@ async function buildFloorMaterial(
     includeThumbnail: boolean
 ): Promise<Material | null> {
 
+    if (
+        typeof data.asset_status === "string" &&
+        data.asset_status.trim().toLowerCase() === "not_available"
+    ) {
+        return null;
+    }
+
     const materialId =
         data.id?.trim() ||
         documentId;
@@ -800,6 +807,17 @@ export function findCachedFloorMaterial(
 
 
     return undefined;
+}
+
+
+export function removeCachedFloorMaterial(materialId: string): void {
+    cachedFloorMaterials = cachedFloorMaterials.filter(
+        material => material.id !== materialId
+    );
+
+    if (cachedDefaultFloorMaterial?.id === materialId) {
+        cachedDefaultFloorMaterial = null;
+    }
 }
 
 

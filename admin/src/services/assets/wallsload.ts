@@ -282,6 +282,14 @@ async function loadWallMaterials():
                     const data =
                         doc.data() as
                         FirebaseWallAsset;
+
+                    if (
+                        typeof data.asset_status === "string" &&
+                        data.asset_status.trim().toLowerCase() === "not_available"
+                    ) {
+                        return null;
+                    }
+
                     const cacheable =
                         typeof data.asset_status === "string" &&
                         data.asset_status.trim().toLowerCase() === "available";
@@ -386,6 +394,10 @@ async function loadWallMaterials():
 
             const material =
                 result.value;
+
+            if (!material) {
+                continue;
+            }
 
 
             //--------------------------------------------------

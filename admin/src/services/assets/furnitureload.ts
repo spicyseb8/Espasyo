@@ -770,6 +770,16 @@ export function getCachedFurnitureAssets():
 }
 
 
+export function removeCachedFurnitureAsset(assetId: string): void {
+    cachedFurnitureAssets = cachedFurnitureAssets.filter(
+        asset => asset.id !== assetId
+    );
+    cachedAllFurnitureAssets = cachedAllFurnitureAssets.filter(
+        asset => asset.id !== assetId
+    );
+}
+
+
 //==================================================
 // REFRESH
 //==================================================

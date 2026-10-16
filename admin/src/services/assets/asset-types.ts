@@ -76,6 +76,10 @@ export interface Asset {
     | string
     | null;
 
+  thumbnail_url?:
+    | string
+    | null;
+
   ao_path?:
     | string
     | null;

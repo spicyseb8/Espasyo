@@ -47,8 +47,12 @@ import type {
   AssetStatus,
 } from "@/services/assets/asset-types";
 
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { deleteAsset } from "@/services/assets/deleteAsset";
+import { removeCachedDoorWindowAsset } from "@/services/assets/FirebaseDoorWindowLibrary";
+import { removeCachedFloorMaterial } from "@/services/assets/floorsload";
+import { removeCachedFurnitureAsset } from "@/services/assets/furnitureload";
 
 interface AssetLibraryProps {
   type: AssetType;
@@ -102,6 +106,9 @@ export default function AssetLibrary({
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [createNotice, setCreateNotice] = useState("");
 
@@ -441,6 +448,51 @@ export default function AssetLibrary({
     }
   };
 
+  const handleDelete = async () => {
+    if (!selectedAsset || !canCreateAssets) return;
+
+    const assetToDelete = selectedAsset;
+    setDeleteError(null);
+    setDeleting(true);
+
+    try {
+      await deleteAsset(assetToDelete.id);
+
+      let cacheWarning = false;
+      try {
+        await invalidateAssetCacheSources(assetToDelete);
+      } catch (cacheError) {
+        console.error("Failed to clear the deleted asset cache:", cacheError);
+        cacheWarning = true;
+      }
+
+      removeCachedFurnitureAsset(assetToDelete.id);
+      removeCachedFloorMaterial(assetToDelete.id);
+      removeCachedDoorWindowAsset(assetToDelete.id);
+
+      setAssets((current) =>
+        current.filter((asset) => asset.id !== assetToDelete.id)
+      );
+      setSelectedAsset(null);
+      setDetailPage(1);
+      setDeleteConfirmOpen(false);
+      setCreateNotice(
+        cacheWarning
+          ? `${assetToDelete.name} was deleted. This browser could not clear its cached preview.`
+          : `${assetToDelete.name} was deleted.`
+      );
+    } catch (error) {
+      console.error("Failed to delete asset:", error);
+      setDeleteError(
+        error instanceof Error
+          ? error.message
+          : "Failed to delete asset."
+      );
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   //==================================================
   // RENDER
   //==================================================
@@ -530,7 +582,7 @@ export default function AssetLibrary({
             <div className="flex h-full flex-col">
               <div className="h-56 shrink-0 overflow-hidden rounded-2xl bg-muted">
                 {selectedAsset.asset_type === "furniture" ? (
-                  <AssetThumbnail asset={selectedAsset} />
+                  <AssetThumbnail asset={selectedAsset} staticPreview />
                 ) : (
                   <PreviewScene asset={selectedAsset} />
                 )}
@@ -603,14 +655,35 @@ export default function AssetLibrary({
                 </div>
               )}
 
+              {deleteError && (
+                <p className="mt-3 text-xs text-destructive" role="alert">
+                  {deleteError}
+                </p>
+              )}
+
               <div className="mt-auto pt-4">
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  className="w-full rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background transition-opacity hover:opacity-90"
-                >
-                  Edit
-                </button>
+                <div className="flex gap-2">
+                  {canCreateAssets && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDeleteError(null);
+                        setDeleteConfirmOpen(true);
+                      }}
+                      className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-destructive/40 px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
+                    >
+                      <Trash2 size={15} />
+                      Delete
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleNext}
+                    className="flex-1 rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background transition-opacity hover:opacity-90"
+                  >
+                    Edit
+                  </button>
+                </div>
               </div>
             </div>
           ) : (
@@ -636,7 +709,7 @@ export default function AssetLibrary({
                   </label>
 
                   <div className="h-36 overflow-hidden rounded-xl border border-border bg-muted">
-                    <AssetThumbnail asset={selectedAsset} />
+                    <AssetThumbnail asset={selectedAsset} staticPreview />
                   </div>
                 </div>
 
@@ -923,7 +996,7 @@ export default function AssetLibrary({
                     }`}
                   >
                     <AssetCard
-                      preview={<AssetThumbnail asset={asset} />}
+                      preview={<AssetThumbnail asset={asset} staticPreview />}
                       title={asset.name}
                       categories={[asset.category]}
                       className="max-w-none"
@@ -1030,6 +1103,40 @@ export default function AssetLibrary({
               }}
             >
               {saving ? "Saving..." : "Yes, Save Changes"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={deleteConfirmOpen}
+        onOpenChange={(open) => {
+          if (!deleting) setDeleteConfirmOpen(open);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this asset?</AlertDialogTitle>
+            <AlertDialogDescription>
+              <strong>{selectedAsset?.name}</strong> and its stored files will be
+              permanently deleted. Saved projects that reference it will omit
+              the deleted asset when they are loaded.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async (event) => {
+                event.preventDefault();
+                await handleDelete();
+              }}
+            >
+              {deleting ? "Deleting..." : "Delete Asset"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

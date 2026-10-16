@@ -47,6 +47,8 @@ const FURNITURE_CATEGORIES = [
   ["kitchen", "Kitchen"],
   ["bathroom", "Bathroom"],
   ["office", "Office"],
+  ["doors", "Doors"],
+  ["windows", "Windows"],
 ] as const;
 
 const CATEGORY_OPTIONS: Record<
