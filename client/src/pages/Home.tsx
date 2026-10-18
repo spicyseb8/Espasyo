@@ -5,6 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useProgress } from "@react-three/drei";
 import NavBar from "./NavBar";
 import { WAYPOINTS } from "./Waypoints";
+import { usePagedScroll } from "./usePagedScroll";
 import "./Home.css";
 
 const RoomScene = lazy(() => import("./Roomscene"));
@@ -49,11 +50,13 @@ function LoadingOverlay({ ready }: { ready: boolean }) {
 export default function Home() {
   const reduce = useReducedMotion();
   const stageRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLDivElement>(null);
   const progress = useRef(0); // 0 → WAYPOINTS.length - 1, read by the 3D rig
 
   // active: -1 = hero, 0..n-1 = rooms
   const [active, setActive] = useState(-1);
   const [showDots, setShowDots] = useState(false);
+  const [footerOn, setFooterOn] = useState(false);
   const [ready, setReady] = useState(hasLoadedOnce);
 
   const handleLoaded = useCallback(() => {
@@ -61,9 +64,15 @@ export default function Home() {
     setReady(true);
   }, []);
 
+  // One wheel / swipe / key press = exactly one panel (0 = hero, 1..N = rooms).
+  const goToPanel = usePagedScroll(stageRef, WAYPOINTS.length, reduce);
+  const goTo = (index: number) => goToPanel(index + 1); // dots still work
+
   /*
    * Stage = (N + 1) viewport-heights. Panel 0 is the hero (camera parked on
    * room 1). Room i is reached when panel i + 1's top hits the viewport top.
+   * The LAST room is the footer: instead of a caption card, a dark gradient
+   * fades in over it as the camera arrives and the footer content appears.
    */
   useEffect(() => {
     let raf = 0;
@@ -86,6 +95,15 @@ export default function Home() {
 
       const dots = rel > 0.5 && rel < N + 0.4;
       setShowDots((prev) => (prev === dots ? prev : dots));
+
+      // Dark gradient: starts a little way into the last camera move and is
+      // fully in place when the camera lands on the last room.
+      const fade = Math.min(1, Math.max(0, (p - (N - 2) - 0.35) / 0.65));
+      canvasRef.current?.style.setProperty("--outro-fade", String(fade));
+
+      // Footer content appears once the gradient is dark enough to read on.
+      const footerVisible = p > N - 1.15;
+      setFooterOn((prev) => (prev === footerVisible ? prev : footerVisible));
     };
 
     const onScroll = () => {
@@ -102,26 +120,17 @@ export default function Home() {
     };
   }, []);
 
-  const goTo = (index: number) => {
-    const stage = stageRef.current;
-    if (!stage) return;
-    const stageTop = stage.getBoundingClientRect().top + window.scrollY;
-    window.scrollTo({
-      top: stageTop + (index + 1) * window.innerHeight,
-      behavior: reduce ? "auto" : "smooth",
-    });
-  };
-
   const heroOn = active === -1 && ready;
   const rise = reduce ? 0 : 14;
+  const lastIndex = WAYPOINTS.length - 1;
 
   return (
     <div className="home">
       <NavBar />
 
       <div className="home__stage" ref={stageRef}>
-        {/* Sticky 3D canvas: pinned for the whole stage, hero included */}
-        <div className="home__canvas">
+        {/* Sticky 3D canvas: pinned for the whole stage */}
+        <div className="home__canvas" ref={canvasRef}>
           <Suspense fallback={null}>
             <RoomScene progress={progress} onLoaded={handleLoaded} />
           </Suspense>
@@ -133,6 +142,10 @@ export default function Home() {
             transition={{ duration: 0.5 }}
           />
           <div className="home__vignette" aria-hidden />
+
+          {/* Dark gradient that fades in over the last room (driven by scroll) */}
+          <div className="home__outro-scrim" aria-hidden />
+
           <LoadingOverlay ready={ready} />
         </div>
 
@@ -186,60 +199,78 @@ export default function Home() {
             </div>
           </section>
 
-          {/* ───────── One panel per room ───────── */}
-          {WAYPOINTS.map((wp, i) => (
-            <section key={wp.id} className="home__panel" aria-label={wp.name}>
-              <div className="home__container">
-                <motion.div
-                  className="home__caption"
-                  initial={false}
-                  animate={{ opacity: active === i ? 1 : 0, y: active === i ? 0 : rise }}
-                  transition={SPRING}
-                >
-                  <p className="home__room-index">
-                    {pad(i + 1)} <span>/ {pad(WAYPOINTS.length)}</span>
-                  </p>
-                  <h2 className="home__heading-2">{wp.name}</h2>
-                  <p className="home__caption-body">{wp.blurb}</p>
-                  <div className="home__caption-track" aria-hidden>
-                    <div
-                      className="home__caption-fill"
-                      style={{ transform: `scaleX(${(i + 1) / WAYPOINTS.length})` }}
-                    />
-                  </div>
-                </motion.div>
-              </div>
-            </section>
-          ))}
+          {/* ───────── One panel per room; the last one is the footer ───────── */}
+          {WAYPOINTS.map((wp, i) =>
+            i === lastIndex ? (
+              <section
+                key={wp.id}
+                className="home__panel home__panel--outro"
+                aria-label="Get started"
+              >
+                <div className="home__container">
+                  <motion.div
+                    className="home__outro"
+                    initial={false}
+                    animate={{ opacity: footerOn ? 1 : 0, y: footerOn ? 0 : rise }}
+                    transition={SPRING}
+                    style={{ pointerEvents: footerOn ? "auto" : "none" }}
+                    aria-hidden={!footerOn}
+                  >
+                    <div className="home__outro-cta">
+                      <p className="home__eyebrow home__eyebrow--light">Your turn</p>
+                      <h2 className="home__footer-title">
+                        Ready to design
+                        <br />
+                        the real thing?
+                      </h2>
+                      <Link
+                        to="/signup"
+                        className="home__cta home__cta--light"
+                        tabIndex={footerOn ? 0 : -1}
+                      >
+                        Start designing
+                        <ArrowRight className="home__cta-icon" strokeWidth={2} />
+                      </Link>
+                    </div>
+
+                    <footer className="home__footer-bottom">
+                      <p>© {new Date().getFullYear()} Espasyo. All rights reserved.</p>
+                      <nav aria-label="Footer">
+                        <Link to="/library" tabIndex={footerOn ? 0 : -1}>Library</Link>
+                        <Link to="/studio" tabIndex={footerOn ? 0 : -1}>Studio</Link>
+                        <Link to="/signup" tabIndex={footerOn ? 0 : -1}>Sign up</Link>
+                      </nav>
+                    </footer>
+                  </motion.div>
+                </div>
+              </section>
+            ) : (
+              <section key={wp.id} className="home__panel" aria-label={wp.name}>
+                <div className="home__container">
+                  <motion.div
+                    className="home__caption"
+                    initial={false}
+                    animate={{ opacity: active === i ? 1 : 0, y: active === i ? 0 : rise }}
+                    transition={SPRING}
+                  >
+                    <p className="home__room-index">
+                      {pad(i + 1)} <span>/ {pad(WAYPOINTS.length)}</span>
+                    </p>
+                    <h2 className="home__heading-2">{wp.name}</h2>
+                    <p className="home__caption-body">{wp.blurb}</p>
+                    <div className="home__caption-track" aria-hidden>
+                      <div
+                        className="home__caption-fill"
+                        style={{ transform: `scaleX(${(i + 1) / WAYPOINTS.length})` }}
+                      />
+                    </div>
+                  </motion.div>
+                </div>
+              </section>
+            ),
+          )}
         </div>
       </div>
-
-      {/* ───────── Footer ───────── */}
-      <footer className="home__footer">
-        <div className="home__container">
-          <div className="home__footer-cta">
-            <p className="home__eyebrow home__eyebrow--light">Your turn</p>
-            <h2 className="home__footer-title">
-              Ready to design
-              <br />
-              the real thing?
-            </h2>
-            <Link to="/signup" className="home__cta home__cta--light">
-              Start designing
-              <ArrowRight className="home__cta-icon" strokeWidth={2} />
-            </Link>
-          </div>
-
-          <div className="home__footer-bottom">
-            <p>© {new Date().getFullYear()} Espasyo. All rights reserved.</p>
-            <nav aria-label="Footer">
-              <Link to="/library">Library</Link>
-              <Link to="/studio">Studio</Link>
-              <Link to="/signup">Sign up</Link>
-            </nav>
-          </div>
-        </div>
-      </footer>
 
       {/* Room navigation (only while inside the rooms) */}
       <nav
@@ -252,12 +283,12 @@ export default function Home() {
             key={wp.id}
             type="button"
             className={`home__dot${active === i ? " is-active" : ""}`}
-            aria-label={`Go to ${wp.name}`}
+            aria-label={i === lastIndex ? "Go to the end" : `Go to ${wp.name}`}
             aria-current={active === i}
             tabIndex={showDots ? 0 : -1}
             onClick={() => goTo(i)}
           >
-            <span className="home__dot-label">{wp.name}</span>
+            <span className="home__dot-label">{i === lastIndex ? "Get started" : wp.name}</span>
           </button>
         ))}
       </nav>

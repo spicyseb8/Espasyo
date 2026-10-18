@@ -7,6 +7,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../firebase/firebase";
 import { getDrafts } from "../services/projectDraftService";
 import type { DraftProject } from "../services/projectDraftService";
+import NavBar from "./NavBar";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -36,6 +37,13 @@ interface StudioItem {
   thumbnail?: string;
   onOpen: () => void;
 }
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+// Put the hero image in /public (e.g. /public/studio-hero.jpg) and point this at it.
+const STUDIO_HERO_IMAGE = "public/background/studio-bg.jpg";
+const HERO_SURFACE = "#f4f4f2"; // should match the image's light background
 
 // ---------------------------------------------------------------------------
 // Date helpers
@@ -90,6 +98,111 @@ const PRIMARY_BUTTON =
   "inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-[#1b1b1b] bg-[#1b1b1b] px-5 py-2.5 text-[12px] font-medium text-white transition hover:bg-black active:translate-y-px";
 
 const GRID = "grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
+
+// Hero: full-width first division of the page (image + welcome text).
+// The navbar floats over the top of it.
+interface HeroStat {
+  label: string;
+  value: number;
+}
+
+function StudioHero({
+  firstName,
+  stats,
+  loading,
+  onCreate,
+}: {
+  firstName: string;
+  stats: HeroStat[];
+  loading: boolean;
+  onCreate: () => void;
+}) {
+  const [mounted, setMounted] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  return (
+    <section
+      aria-labelledby="studio-title"
+      className="relative flex w-full flex-col overflow-hidden md:block md:h-[clamp(440px,42vw,640px)]"
+      style={{ backgroundColor: HERO_SURFACE }}
+    >
+      {/* Image: fills the whole division on desktop, sits below the text on mobile */}
+      <div className="relative order-2 h-56 md:absolute md:inset-0 md:h-full">
+        {!imageFailed && (
+          <img
+            src={STUDIO_HERO_IMAGE}
+            alt=""
+            aria-hidden="true"
+            draggable={false}
+            onLoad={() => setImageLoaded(true)}
+            onError={() => setImageFailed(true)}
+            className={`h-full w-full object-cover object-right transition-all duration-1000 ease-out motion-reduce:transition-none ${
+              imageLoaded ? "scale-100 opacity-100" : "scale-105 opacity-0"
+            }`}
+          />
+        )}
+      </div>
+
+      {/* Soft fade on the left so the text always reads cleanly */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 hidden md:block"
+        style={{
+          background: `linear-gradient(to right, ${HERO_SURFACE} 0%, rgba(244,244,242,0) 48%)`,
+        }}
+      />
+
+      {/* Text, aligned with the page content below; top padding clears the navbar */}
+      <div className="relative z-10 order-1 mx-auto w-full max-w-[1400px] px-6 pb-6 pt-24 md:flex md:h-full md:items-center md:px-10 md:pb-0 md:pt-[72px]">
+        <div
+          className={`transition-all duration-700 ease-out motion-reduce:transition-none md:max-w-[46%] ${
+            mounted ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0"
+          }`}
+        >
+
+          <h1
+            id="studio-title"
+            className="mt-3 text-4xl font-semibold tracking-tight text-[#1b1b1b] md:text-5xl"
+          >
+            {firstName ? `Welcome back, ${firstName}` : "Your projects"}
+          </h1>
+          <p className="mt-3 max-w-sm text-[13px] leading-relaxed text-black/55">
+            Pick up where you left off, or start a new room from scratch.
+          </p>
+
+          <button type="button" className={`${PRIMARY_BUTTON} mt-6`} onClick={onCreate}>
+            <Plus className="h-3.5 w-3.5" strokeWidth={2} />
+            New project
+          </button>
+
+          <ul className="mt-7 flex items-center gap-5">
+            {stats.map((stat, index) => (
+              <li
+                key={stat.label}
+                className={`flex items-baseline gap-1.5 ${
+                  index > 0 ? "border-l border-black/10 pl-5" : ""
+                }`}
+              >
+                <span className="text-[15px] font-semibold tabular-nums text-[#1b1b1b]">
+                  {loading ? "–" : stat.value}
+                </span>
+                <span className="text-[10px] uppercase tracking-[0.12em] text-black/45">
+                  {stat.label}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function ProjectCard({ item }: { item: StudioItem }) {
   const [imgError, setImgError] = useState(false);
@@ -351,29 +464,25 @@ export default function Studio() {
   const showNewTile = !isSearching && filter !== "drafts";
   const hasAnything = items.length > 0;
 
+  const heroStats: HeroStat[] = [
+    { label: "Projects", value: projects.length },
+    { label: "Drafts", value: drafts.length },
+  ];
+
   return (
-    <div className="min-h-[calc(100vh-63px)] w-full bg-white font-sans text-[#1b1b1b] antialiased">
+    <div className="min-h-screen w-full bg-white font-sans text-[#1b1b1b] antialiased">
+      <NavBar />
+
+      {/* Division 1: full-width hero (image + welcome text) */}
+      <StudioHero
+        firstName={firstName}
+        stats={heroStats}
+        loading={loading}
+        onCreate={handleCreateProject}
+      />
+
+      {/* Division 2: your projects */}
       <main className="mx-auto max-w-[1400px] px-6 pb-20 pt-10 md:px-10">
-        {/* Title row */}
-        <div className="mb-10 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.16em] text-black/45">
-              Espasyo Studio
-            </p>
-            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">
-              {firstName ? `Welcome back, ${firstName}` : "Your projects"}
-            </h1>
-            <p className="mt-3 max-w-[520px] text-[13px] leading-relaxed text-black/50">
-              Pick up where you left off, or start a new room from scratch.
-            </p>
-          </div>
-
-          <button type="button" className={PRIMARY_BUTTON} onClick={handleCreateProject}>
-            <Plus className="h-3.5 w-3.5" strokeWidth={2} />
-            New project
-          </button>
-        </div>
-
         {/* Controls */}
         {!loading && !error && hasAnything && (
           <div className="mb-8 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">

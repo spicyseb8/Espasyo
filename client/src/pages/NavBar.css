@@ -1,10 +1,12 @@
-/* Floating glass bar. Fixed, so pages need ~88px top offset (AppLayout adds it). */
+/* Floating glass bar. Fixed, so pages need ~88px top offset (AppLayout adds it).
+   z-index sits below shadcn's overlays (z-50) so the menu and the logout
+   dialog always render above the bar. */
 .navbar {
   position: fixed;
   top: 12px;
   left: 0;
   right: 0;
-  z-index: 100;
+  z-index: 40;
   padding: 0 clamp(12px, 3vw, 40px);
   pointer-events: none;
 }
@@ -14,26 +16,17 @@
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   max-width: 1400px;
-  height: 52px;
+  height: 56px;
   margin: 0 auto;
-  padding: 0 8px 0 10px;
-  border: 1px solid rgba(0, 0, 0, 0.07);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.62);
-  backdrop-filter: blur(18px) saturate(1.7);
-  -webkit-backdrop-filter: blur(18px) saturate(1.7);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.7),
-    0 0 0 rgba(0, 0, 0, 0);
-  pointer-events: auto;
-  transition: background 0.3s, box-shadow 0.3s, border-color 0.3s;
+  padding: 0 10px 0 10px;
+  /* No bar behind the items: logo, links and avatar float on their own. */
+  /* The row itself ignores clicks, so the empty gaps never block the page. */
+  pointer-events: none;
 }
-.navbar__inner.is-scrolled {
-  border-color: rgba(0, 0, 0, 0.09);
-  background: rgba(255, 255, 255, 0.82);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.8),
-    0 8px 30px rgba(0, 0, 0, 0.08);
+.navbar__logo,
+.navbar__links,
+.navbar__action {
+  pointer-events: auto;
 }
 
 /* Logo */
@@ -49,11 +42,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: 999px;
   background: #1b1b1b;
   color: #fff;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.navbar__logo:hover .navbar__logo-badge {
+  transform: rotate(-8deg) scale(1.05);
 }
 .navbar__logo-icon {
   width: 16px;
@@ -66,17 +63,20 @@
   text-transform: uppercase;
 }
 
-/* Links */
+/* Links: segmented-control track with a white sliding pill */
 .navbar__links {
   display: flex;
   align-items: center;
   gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.045);
 }
 .navbar__link {
   position: relative;
   display: inline-flex;
   align-items: center;
-  height: 34px;
+  height: 32px;
   padding: 0 16px;
   border-radius: 999px;
   color: rgba(0, 0, 0, 0.5);
@@ -91,7 +91,8 @@
 }
 .navbar__link:focus-visible,
 .navbar__signin:focus-visible,
-.navbar__logo:focus-visible {
+.navbar__logo:focus-visible,
+.navbar__avatar-btn:focus-visible {
   outline: 2px solid #1b1b1b;
   outline-offset: 2px;
 }
@@ -99,17 +100,23 @@
   position: absolute;
   inset: 0;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.07);
+  background: #fff;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.08),
+    0 0 0 1px rgba(0, 0, 0, 0.05);
 }
 .navbar__link-text {
   position: relative;
   z-index: 1;
 }
 
-/* Action */
+/* Action slot */
 .navbar__action {
   display: inline-flex;
+  align-items: center;
   justify-self: end;
+  min-width: 36px;
+  min-height: 36px;
 }
 .navbar__signin {
   display: inline-flex;
@@ -122,10 +129,58 @@
   font-size: 12px;
   font-weight: 500;
   text-decoration: none;
-  transition: background 0.2s;
+  transition: background 0.2s, transform 0.2s;
 }
 .navbar__signin:hover {
   background: #000;
+}
+
+/* Avatar button */
+.navbar__avatar-btn {
+  display: inline-flex;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.95),
+    0 0 0 3px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.navbar__avatar-btn:hover,
+.navbar__avatar-btn[data-state="open"] {
+  box-shadow:
+    0 0 0 2px #fff,
+    0 0 0 3px #1b1b1b;
+}
+.navbar__avatar-btn:active {
+  transform: scale(0.96);
+}
+
+/* Placeholder while the session loads, so the slot never flashes "Sign in" */
+.navbar__avatar-skeleton {
+  display: block;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.08);
+  animation: navbar-pulse 1.4s ease-in-out infinite;
+}
+@keyframes navbar-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navbar__avatar-skeleton {
+    animation: none;
+  }
+  .navbar__logo-badge {
+    transition: none;
+  }
 }
 
 @media (max-width: 560px) {

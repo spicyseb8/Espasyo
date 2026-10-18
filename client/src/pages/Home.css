@@ -6,7 +6,7 @@
   --cream: 250, 247, 242;
   --gutter: clamp(24px, 5vw, 56px);
 
-  background: #fff;
+  background: #0b0b0b; /* matches the outro, so the very end of the page is never white */
   color: var(--ink);
   font-family: inherit;
   -webkit-font-smoothing: antialiased;
@@ -72,6 +72,22 @@
     linear-gradient(0deg, rgba(0, 0, 0, 0.22) 0%, rgba(0, 0, 0, 0) 22%);
 }
 
+/* Dark gradient over the last room. Its opacity (--outro-fade, 0 → 1) is set
+   from the scroll handler, so it deepens as you reach the end of the page. */
+.home__outro-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  opacity: var(--outro-fade, 0);
+  background: linear-gradient(
+    180deg,
+    rgba(11, 11, 11, 0.74) 0%,
+    rgba(11, 11, 11, 0.9) 55%,
+    rgba(11, 11, 11, 0.97) 100%
+  );
+}
+
 /* Panels overlay the canvas */
 .home__stage-panels {
   position: relative;
@@ -93,6 +109,17 @@
   align-items: center;
   padding-top: 88px;
   padding-bottom: 0;
+}
+
+/* Outro panel: footer content over the darkened last room */
+.home__panel--outro {
+  align-items: stretch;
+  padding: 88px 0 0;
+  color: #fff;
+}
+.home__panel--outro .home__container {
+  display: flex;
+  flex-direction: column;
 }
 
 /* ───────── Loader ───────── */
@@ -404,15 +431,17 @@
   transform: translate(0, -50%);
 }
 
-/* ───────── Footer ───────── */
-.home__footer {
-  position: relative;
-  z-index: 3;
-  background: #0b0b0b;
+/* ───────── Outro (footer content over the last room) ───────── */
+.home__outro {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   color: #fff;
+  will-change: transform, opacity;
 }
-.home__footer-cta {
-  padding: clamp(96px, 16vh, 160px) 0 clamp(72px, 12vh, 120px);
+.home__outro-cta {
+  margin: auto 0;
+  padding: 24px 0;
 }
 .home__footer-title {
   margin: 0 0 36px;

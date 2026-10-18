@@ -9,9 +9,6 @@ import {
   WAYPOINTS,
 } from "./Waypoints";
 
-const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
-const smoothstep = (t: number) => t * t * (3 - 2 * t);
-
 function Room() {
   // drei's useGLTF enables Meshopt + Draco decoding automatically.
   const { scene } = useGLTF(MODEL_URL);
@@ -79,8 +76,9 @@ function CameraRig({ progress }: { progress: MutableRefObject<number> }) {
     const i = Math.min(Math.floor(p), last - 1);
     const f = p - i;
 
-    // Dwell near each waypoint, travel in the middle of the scroll span.
-    const t = smoothstep(clamp01((f - 0.3) / 0.4));
+    // The scroll itself is already eased (see usePagedScroll), so the camera
+    // follows it linearly instead of dwelling near each waypoint.
+    const t = f;
 
     const from = WAYPOINTS[i];
     const to = WAYPOINTS[i + 1];
@@ -93,7 +91,7 @@ function CameraRig({ progress }: { progress: MutableRefObject<number> }) {
       .lerp(state.b.set(...to.target), t);
 
     // Frame-rate independent damping.
-    const k = 1 - Math.exp(-4 * dt);
+    const k = 1 - Math.exp(-8 * dt);
     state.pos.lerp(state.desiredPos, k);
     state.look.lerp(state.desiredLook, k);
 

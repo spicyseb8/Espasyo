@@ -3,14 +3,14 @@ import "./FlatLay.css";
 // Any aspect ratio works: each image is cropped to fill its board (object-fit: cover).
 // Put your files in /public/woods/ or import them and list them here.
 const IMAGES = [
-  "/woods/oak.jpg",
-  "/woods/walnut.jpg",
-  "/woods/ebony.jpg",
-  "/woods/ash.jpg",
-  "/woods/teak.jpg",
-  "/woods/maple.jpg",
-  "/woods/zebrano.jpg",
-  "/woods/rosewood.jpg",
+  "/textures/text1.jpg",
+  "/textures/text2.jpg",
+  "/textures/text3.jpg",
+  "/textures/text4.jpg",
+  "/textures/text5.jpg",
+  "/textures/text6.jpg",
+  "/textures/text7.jpg",
+  "/textures/text8.jpg",
 ];
 
 // Board sizes in grid cells (cols × rows). Cycled so the layout feels varied.

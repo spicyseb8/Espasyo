@@ -1,17 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import {
-  Armchair,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  Info,
-  Search,
-} from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Info, Search } from "lucide-react";
 
 import { getFurnitureAssets } from "../engine/furniture/FirebaseFurnitureLibrary";
 import { getFloorMaterials } from "../engine/materials/floors";
 import { getWallMaterials } from "../engine/materials/walls";
+import NavBar from "./NavBar";
 
 import type { Asset } from "../assets/Asset";
 import type { Material } from "../engine/materials/MaterialTypes";
@@ -47,6 +40,10 @@ type SortKey = "default" | "priceAsc" | "priceDesc" | "nameAsc";
 const COLUMNS = 4;
 const ROWS = 3;
 const ITEMS_PER_PAGE = COLUMNS * ROWS; // 12
+
+// Put the hero image in /public (e.g. /public/library-hero.jpg) and point this at it.
+const LIBRARY_HERO_IMAGE = "/public/background/library-bg.jpg";
+const HERO_SURFACE = "#f4f4f2"; // should match the image's light background
 
 const DIVISIONS: { key: Division; label: string }[] = [
   { key: "furniture", label: "Furniture" },
@@ -164,6 +161,99 @@ function mapWallMaterial(material: Material): LibraryItem {
     label: "Paint",
     color: (material.color && material.color.trim()) || "#cccccc",
   };
+}
+
+// ---------------------------------------------------------------------------
+// Hero: full-width first division of the page (image + intro text).
+// The navbar floats over the top of it.
+// ---------------------------------------------------------------------------
+interface HeroStat {
+  label: string;
+  value: number;
+  loading: boolean;
+}
+
+function LibraryHero({ stats }: { stats: HeroStat[] }) {
+  const [mounted, setMounted] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  return (
+    <section
+      aria-labelledby="library-title"
+      className="relative flex w-full flex-col overflow-hidden md:block md:h-[clamp(440px,42vw,640px)]"
+      style={{ backgroundColor: HERO_SURFACE }}
+    >
+      {/* Image: fills the whole division on desktop, sits below the text on mobile */}
+      <div className="relative order-2 h-56 md:absolute md:inset-0 md:h-full">
+        {!imageFailed && (
+          <img
+            src={LIBRARY_HERO_IMAGE}
+            alt=""
+            aria-hidden="true"
+            draggable={false}
+            onLoad={() => setImageLoaded(true)}
+            onError={() => setImageFailed(true)}
+            className={`h-full w-full object-cover object-right transition-all duration-1000 ease-out motion-reduce:transition-none ${
+              imageLoaded ? "scale-100 opacity-100" : "scale-105 opacity-0"
+            }`}
+          />
+        )}
+      </div>
+
+      {/* Soft fade on the left so the text always reads cleanly */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 hidden md:block"
+        style={{
+          background: `linear-gradient(to right, ${HERO_SURFACE} 0%, rgba(244,244,242,0) 48%)`,
+        }}
+      />
+
+      {/* Text, aligned with the page content below; top padding clears the navbar */}
+      <div className="relative z-10 order-1 mx-auto w-full max-w-[1400px] px-6 pb-6 pt-24 md:flex md:h-full md:items-center md:px-10 md:pb-0 md:pt-[72px]">
+        <div
+          className={`transition-all duration-700 ease-out motion-reduce:transition-none md:max-w-[46%] ${
+            mounted ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0"
+          }`}
+        >
+          <h1
+            id="library-title"
+            className="mt-3 text-4xl font-semibold tracking-tight text-[#1b1b1b] md:text-5xl"
+          >
+            Our collection
+          </h1>
+          <p className="mt-3 max-w-sm text-[13px] leading-relaxed text-black/55">
+            Furniture, floors and wall colors to design your space. Browse,
+            compare and pick what fits.
+          </p>
+
+          <ul className="mt-6 flex items-center gap-5">
+            {stats.map((stat, index) => (
+              <li
+                key={stat.label}
+                className={`flex items-baseline gap-1.5 ${
+                  index > 0 ? "border-l border-black/10 pl-5" : ""
+                }`}
+              >
+                <span className="text-[15px] font-semibold tabular-nums text-[#1b1b1b]">
+                  {stat.loading ? "–" : stat.value}
+                </span>
+                <span className="text-[10px] uppercase tracking-[0.12em] text-black/45">
+                  {stat.label}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </section>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -360,12 +450,6 @@ function RoundArrow({
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
-const NAV_LINKS = [
-  { label: "Home", to: "/" },
-  { label: "Library", to: "/library" },
-  { label: "Studio", to: "/studio" },
-];
-
 export default function LibraryPage() {
   const [division, setDivision] = useState<Division>("furniture");
   const [category, setCategory] = useState("all");
@@ -478,66 +562,21 @@ export default function LibraryPage() {
   const isLoading = loading[division];
   const title = DIVISIONS.find((d) => d.key === division)?.label ?? "";
 
+  const heroStats: HeroStat[] = [
+    { label: "Furniture", value: furnitureItems.length, loading: loading.furniture },
+    { label: "Floors", value: floorItems.length, loading: loading.floors },
+    { label: "Walls", value: wallItems.length, loading: loading.walls },
+  ];
+
   return (
     <div className="min-h-screen w-full bg-white font-sans text-[#1b1b1b] antialiased">
-      {/* Nav */}
-      <header>
-        <div className="mx-auto flex max-w-[1400px] items-center justify-between px-6 py-6 md:px-10">
-          <Link to="/" className="flex items-center gap-2.5">
-            <Armchair className="h-6 w-6 text-[#1b1b1b]" strokeWidth={1.25} />
-            <span className="text-[14px] font-medium uppercase tracking-[0.16em] text-[#1b1b1b]">
-              Espasyo
-            </span>
-          </Link>
+      <NavBar />
 
-          <nav className="hidden items-center gap-8 sm:flex">
-            {NAV_LINKS.map((link) => {
-              const active = link.label === "Library";
-              return (
-                <Link
-                  key={link.label}
-                  to={link.to}
-                  className={`text-[11px] font-medium transition ${
-                    active
-                      ? "text-[#1b1b1b]"
-                      : "text-black/50 hover:text-[#1b1b1b]"
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
-          </nav>
+      {/* Division 1: full-width hero (image + intro text) */}
+      <LibraryHero stats={heroStats} />
 
-          <Link
-            to="/login"
-            className="rounded-md border border-black/25 px-4 py-2 text-[11px] font-medium text-[#1b1b1b] transition hover:bg-[#1b1b1b] hover:text-white"
-          >
-            Sign in
-          </Link>
-        </div>
-      </header>
-
+      {/* Division 2: the collection */}
       <main className="mx-auto max-w-[1400px] px-6 pb-16 pt-10 md:px-10">
-        {/* Title row */}
-        <div className="mb-6 flex items-center justify-between gap-4">
-          <h1 className="text-4xl font-semibold tracking-tight text-[#1b1b1b] md:text-5xl">
-            Our collection
-          </h1>
-          <div className="flex items-center gap-2">
-            <RoundArrow
-              direction="prev"
-              disabled={safePage === 1}
-              onClick={() => setPage(Math.max(1, safePage - 1))}
-            />
-            <RoundArrow
-              direction="next"
-              disabled={safePage === totalPages}
-              onClick={() => setPage(Math.min(totalPages, safePage + 1))}
-            />
-          </div>
-        </div>
-
         {/* Division tabs */}
         <div className="mb-4 flex items-center gap-2">
           {DIVISIONS.map((d) => (
@@ -608,21 +647,37 @@ export default function LibraryPage() {
           </div>
         )}
 
-        {/* Footer: dots + count */}
-        <div className="mt-6 flex items-center justify-between">
+        {/* Footer: dots + count + page arrows */}
+        <div className="mt-6 flex items-center justify-between gap-4">
           <PageDots
             currentPage={safePage}
             totalPages={totalPages}
             onChange={setPage}
           />
-          <p className="text-[11px] text-black/45">
-            {filtered.length > 0
-              ? `${startIndex + 1}–${Math.min(
-                  startIndex + ITEMS_PER_PAGE,
-                  filtered.length,
-                )} of ${filtered.length}`
-              : "0 items"}
-          </p>
+          <div className="flex items-center gap-4">
+            <p className="text-[11px] text-black/45">
+              {filtered.length > 0
+                ? `${startIndex + 1}–${Math.min(
+                    startIndex + ITEMS_PER_PAGE,
+                    filtered.length,
+                  )} of ${filtered.length}`
+                : "0 items"}
+            </p>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <RoundArrow
+                  direction="prev"
+                  disabled={safePage === 1}
+                  onClick={() => setPage(Math.max(1, safePage - 1))}
+                />
+                <RoundArrow
+                  direction="next"
+                  disabled={safePage === totalPages}
+                  onClick={() => setPage(Math.min(totalPages, safePage + 1))}
+                />
+              </div>
+            )}
+          </div>
         </div>
       </main>
     </div>
