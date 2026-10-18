@@ -40,11 +40,18 @@ import {
     saveProjectBaseline
 } from "../services/projectEditSessionService";
 
+import {
+    clearActiveProjectDeadline,
+    isDeadlinePassed,
+    isValidProjectDeadline,
+    setActiveProjectDeadline,
+    subscribeToProjectDeadline
+} from "../services/projectDeadlineService";
+
 // Avoid a brief flash, without imposing a 5.5-second delay.
 const MIN_LOADING_MS = 300;
 
 function LoadProjectContent() {
-
     const {
         projectId
     } = useParams<{
@@ -55,8 +62,7 @@ function LoadProjectContent() {
         dispatch
     } = useEditor();
 
-    const navigate =
-        useNavigate();
+    const navigate = useNavigate();
 
     const [
         loading,
@@ -73,12 +79,21 @@ function LoadProjectContent() {
         setMinTimeElapsed
     ] = useState(false);
 
+    const [
+        deadline,
+        setDeadline
+    ] = useState<string | null>(null);
+
+    const [
+        deadlinePassed,
+        setDeadlinePassed
+    ] = useState(false);
+
     //==================================================
     // MINIMUM LOADING SCREEN TIME
     //==================================================
 
     useEffect(() => {
-
         setMinTimeElapsed(false);
 
         const timer = window.setTimeout(
@@ -91,21 +106,52 @@ function LoadProjectContent() {
         return () => {
             window.clearTimeout(timer);
         };
+    }, [
+        projectId
+    ]);
 
-    }, [projectId]);
+    //==================================================
+    // UPDATE DEADLINE STATUS
+    //==================================================
+
+    useEffect(() => {
+        const updateDeadlineStatus = () => {
+            setDeadlinePassed(
+                isDeadlinePassed(deadline)
+            );
+        };
+
+        updateDeadlineStatus();
+
+        const unsubscribe =
+            subscribeToProjectDeadline(
+                updateDeadlineStatus
+            );
+
+        // Recheck periodically so a project that remains
+        // open overnight becomes read-only automatically.
+        const timer = window.setInterval(
+            updateDeadlineStatus,
+            15_000
+        );
+
+        return () => {
+            unsubscribe();
+            window.clearInterval(timer);
+        };
+    }, [
+        deadline
+    ]);
 
     //==================================================
     // LOAD PROJECT
     //==================================================
 
     useEffect(() => {
-
         let cancelled = false;
 
         async function loadProject() {
-
             if (!projectId) {
-
                 setError(
                     "No project was selected."
                 );
@@ -118,7 +164,6 @@ function LoadProjectContent() {
             const user = auth.currentUser;
 
             if (!user) {
-
                 setError(
                     "Please log in before opening a project."
                 );
@@ -129,9 +174,11 @@ function LoadProjectContent() {
             }
 
             try {
-
                 setLoading(true);
                 setError("");
+
+                setDeadline(null);
+                setDeadlinePassed(false);
 
                 //==================================================
                 // FETCH PROJECT METADATA
@@ -148,7 +195,6 @@ function LoadProjectContent() {
                 );
 
                 if (!projectSnapshot.exists()) {
-
                     throw new Error(
                         "Project does not exist."
                     );
@@ -161,11 +207,40 @@ function LoadProjectContent() {
                     projectMetadata.ownerId !==
                     user.uid
                 ) {
-
                     throw new Error(
                         "You do not have access to this project."
                     );
                 }
+
+                //==================================================
+                // LOAD THE ADMIN-SET DEADLINE
+                //==================================================
+
+                const projectDeadline =
+                    isValidProjectDeadline(
+                        projectMetadata.deadline
+                    )
+                        ? projectMetadata.deadline
+                        : null;
+
+                if (cancelled) {
+                    return;
+                }
+
+                setDeadline(
+                    projectDeadline
+                );
+
+                setActiveProjectDeadline(
+                    projectId,
+                    projectDeadline
+                );
+
+                setDeadlinePassed(
+                    isDeadlinePassed(
+                        projectDeadline
+                    )
+                );
 
                 //==================================================
                 // VALIDATE PROJECT JSON URL
@@ -178,7 +253,6 @@ function LoadProjectContent() {
                     typeof jsonUrl !== "string" ||
                     jsonUrl.trim() === ""
                 ) {
-
                     throw new Error(
                         "This project does not have a valid JSON URL."
                     );
@@ -197,7 +271,6 @@ function LoadProjectContent() {
                 );
 
                 if (!response.ok) {
-
                     throw new Error(
                         `Failed to download project JSON (${response.status}).`
                     );
@@ -247,7 +320,6 @@ function LoadProjectContent() {
                         "string" &&
                     projectData.projectName.trim() !== ""
                 ) {
-
                     localStorage.setItem(
                         "espasyo_project_name",
                         projectData.projectName
@@ -255,9 +327,7 @@ function LoadProjectContent() {
                 }
 
                 setLoading(false);
-
             } catch (loadError) {
-
                 console.error(
                     "Failed to load project:",
                     loadError
@@ -266,6 +336,13 @@ function LoadProjectContent() {
                 if (cancelled) {
                     return;
                 }
+
+                clearActiveProjectDeadline(
+                    projectId
+                );
+
+                setDeadline(null);
+                setDeadlinePassed(false);
 
                 setError(
                     loadError instanceof Error
@@ -281,8 +358,11 @@ function LoadProjectContent() {
 
         return () => {
             cancelled = true;
-        };
 
+            clearActiveProjectDeadline(
+                projectId
+            );
+        };
     }, [
         projectId,
         dispatch
@@ -299,7 +379,6 @@ function LoadProjectContent() {
             !minTimeElapsed
         )
     ) {
-
         return <LoadingScreen />;
     }
 
@@ -308,11 +387,9 @@ function LoadProjectContent() {
     //==================================================
 
     if (error) {
-
         return (
             <div className="project-loading">
                 <div>
-
                     <h2>
                         Unable to open project
                     </h2>
@@ -329,7 +406,6 @@ function LoadProjectContent() {
                     >
                         Back to Projects
                     </button>
-
                 </div>
             </div>
         );
@@ -339,7 +415,38 @@ function LoadProjectContent() {
     // EDITOR
     //==================================================
 
-    return <Editor />;
+    return (
+        <div className="relative h-screen w-screen">
+            <Editor />
+
+            {deadlinePassed && (
+                <div
+                    role="alert"
+                    style={{
+                        position: "fixed",
+                        top: 16,
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        zIndex: 99999,
+                        width: "max-content",
+                        maxWidth: "calc(100vw - 32px)",
+                        padding: "12px 18px",
+                        border: "1px solid #f1c98c",
+                        borderRadius: 10,
+                        background: "#fff8e9",
+                        color: "#7a4b00",
+                        boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+                        fontSize: 13,
+                        fontWeight: 600,
+                        textAlign: "center"
+                    }}
+                >
+                    Deadline passed — this project is now read-only.
+                    You can still view your design.
+                </div>
+            )}
+        </div>
+    );
 }
 
 //==================================================
@@ -347,7 +454,6 @@ function LoadProjectContent() {
 //==================================================
 
 export default function StudioLoadProject() {
-
     return (
         <EditorProvider>
             <LoadProjectContent />

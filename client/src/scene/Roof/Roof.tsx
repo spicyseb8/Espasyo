@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo } from "react";
 import { useLoader } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
@@ -33,7 +32,17 @@ const CEILING_AO_URL =
     "/ceiling/concrete/Poliigon_ConcreteWorn_8690_AmbientOcclusion.jpg";
 
 const CEILING_LIGHT_MODEL_URL =
-"/models/default_light/ceiling.glb";
+    "/models/default_light/ceiling.glb";
+
+// Single source of truth for the texture list.
+// Used by BOTH useLoader and useLoader.preload so the
+// cache key matches (same URLs, same order).
+const CEILING_TEXTURE_URLS = [
+    CEILING_BASE_COLOR_URL,
+    CEILING_NORMAL_URL,
+    CEILING_ROUGHNESS_URL,
+    CEILING_AO_URL
+];
 
 const CEILING_TILE_SIZE = 1;
 const CEILING_LIGHT_TARGET_WIDTH = 0.35;
@@ -177,12 +186,7 @@ function RoomCeiling({
         sourceAO
     ] = useLoader(
         TextureLoader,
-        [
-            CEILING_BASE_COLOR_URL,
-            CEILING_NORMAL_URL,
-            CEILING_ROUGHNESS_URL,
-            CEILING_AO_URL
-        ]
+        CEILING_TEXTURE_URLS
     );
 
     const [
@@ -338,4 +342,16 @@ export default function Roof() {
     );
 }
 
+//==================================================
+// PRELOAD
+//
+// Fetch + decode these at app load, so the roof never
+// suspends the first time walkthrough spawn is confirmed.
+//==================================================
+
 useGLTF.preload(CEILING_LIGHT_MODEL_URL);
+
+useLoader.preload(
+    TextureLoader,
+    CEILING_TEXTURE_URLS
+);

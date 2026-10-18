@@ -1,3 +1,4 @@
+
 import {
     useEffect,
     useState
@@ -47,6 +48,14 @@ import {
     deleteDraft,
     getDraft
 } from "../../../services/projectDraftService";
+
+import {
+    isDeadlinePassed,
+    isProjectReadOnlyByDeadline,
+    isValidProjectDeadline,
+    setActiveProjectDeadline,
+    subscribeToProjectDeadline
+} from "../../../services/projectDeadlineService";
 
 import "./ProjectPanel.css";
 
@@ -243,11 +252,49 @@ export default function ProjectPanel() {
         setMessage
     ] = useState("");
 
+    const [
+        deadlineLocked,
+        setDeadlineLocked
+    ] = useState(
+        isProjectReadOnlyByDeadline()
+    );
+
     const isExistingProject =
         Boolean(routeProjectId);
 
     const isDraftProject =
         Boolean(draftId);
+
+    //==================================================
+    // WATCH DEADLINE LOCK STATUS
+    //==================================================
+
+    useEffect(() => {
+        const updateLockStatus = () => {
+            setDeadlineLocked(
+                isProjectReadOnlyByDeadline()
+            );
+        };
+
+        updateLockStatus();
+
+        const unsubscribe =
+            subscribeToProjectDeadline(
+                updateLockStatus
+            );
+
+        // Update the UI if the deadline passes while
+        // the editor remains open.
+        const timer = window.setInterval(
+            updateLockStatus,
+            15_000
+        );
+
+        return () => {
+            unsubscribe();
+            window.clearInterval(timer);
+        };
+    }, []);
 
     //==================================================
     // LOAD EXISTING PROJECT OR DRAFT
@@ -284,6 +331,26 @@ export default function ProjectPanel() {
 
                     const data =
                         projectSnapshot.data();
+
+                    // Keep the deadline synchronized with
+                    // the Firestore metadata for this project.
+                    const currentDeadline =
+                        isValidProjectDeadline(
+                            data.deadline
+                        )
+                            ? data.deadline
+                            : null;
+
+                    setActiveProjectDeadline(
+                        existingProjectId,
+                        currentDeadline
+                    );
+
+                    setDeadlineLocked(
+                        isDeadlinePassed(
+                            currentDeadline
+                        )
+                    );
 
                     if (
                         typeof data.projectName === "string" &&
@@ -414,6 +481,79 @@ export default function ProjectPanel() {
                 "Preparing project..."
             );
 
+            //==================================================
+            // CHECK THE CURRENT FIRESTORE DEADLINE
+            //==================================================
+
+            if (routeProjectId) {
+                const projectRef = doc(
+                    db,
+                    "projects",
+                    routeProjectId
+                );
+
+                const projectSnapshot =
+                    await getDoc(projectRef);
+
+                if (!projectSnapshot.exists()) {
+                    throw new Error(
+                        "This project no longer exists."
+                    );
+                }
+
+                const metadata =
+                    projectSnapshot.data();
+
+                if (
+                    metadata.ownerId !== user.uid
+                ) {
+                    throw new Error(
+                        "You do not have permission to edit this project."
+                    );
+                }
+
+                const currentDeadline =
+                    isValidProjectDeadline(
+                        metadata.deadline
+                    )
+                        ? metadata.deadline
+                        : null;
+
+                setActiveProjectDeadline(
+                    routeProjectId,
+                    currentDeadline
+                );
+
+                setDeadlineLocked(
+                    isDeadlinePassed(
+                        currentDeadline
+                    )
+                );
+
+                if (
+                    isDeadlinePassed(
+                        currentDeadline
+                    )
+                ) {
+                    setMessage(
+                        "Deadline passed. This project is read-only, and your changes cannot be saved."
+                    );
+
+                    return;
+                }
+            }
+
+            // Check the currently active project's lock as well.
+            if (isProjectReadOnlyByDeadline()) {
+                setDeadlineLocked(true);
+
+                setMessage(
+                    "Deadline passed. This project is read-only, and your changes cannot be saved."
+                );
+
+                return;
+            }
+
             // Existing projects keep their original ID.
             // New projects receive the formatted ID.
             //
@@ -446,13 +586,17 @@ export default function ProjectPanel() {
             // PREPARE PROJECT JSON
             //==================================================
 
-            const projectData =
-                createProjectData(
+            const projectData = {
+                ...createProjectData(
                     state,
                     currentProjectId,
                     trimmedName,
                     user.uid
-                );
+                ),
+
+                // Explicitly include both wall-side finishes.
+                wallFinishes: state.wallFinishes
+            };
 
             const estimatedCost =
                 projectData.costEstimate.total;
@@ -564,6 +708,9 @@ export default function ProjectPanel() {
                 estimatedCost:
                     estimatedCost,
 
+                wallFinishes:
+                    state.wallFinishes,
+
                 updatedAt:
                     serverTimestamp()
             };
@@ -670,13 +817,26 @@ export default function ProjectPanel() {
             <div className="panel-card">
                 <h3 className="section-title">
                     {
-                        isExistingProject
-                            ? "Edit Project"
-                            : isDraftProject
-                                ? "Continue Draft"
-                                : "Save Project"
+                        deadlineLocked
+                            ? "Project Read Only"
+                            : isExistingProject
+                                ? "Edit Project"
+                                : isDraftProject
+                                    ? "Continue Draft"
+                                    : "Save Project"
                     }
                 </h3>
+
+                {deadlineLocked && (
+                    <div
+                        role="alert"
+                        className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800"
+                    >
+                        The project deadline has passed.
+                        Editing and saving are disabled.
+                        You can still view the design.
+                    </div>
+                )}
 
                 <div className="setting-group">
                     <label
@@ -697,7 +857,10 @@ export default function ProjectPanel() {
                                 event.target.value
                             )
                         }
-                        disabled={saving}
+                        disabled={
+                            saving ||
+                            deadlineLocked
+                        }
                     />
                 </div>
 
@@ -725,14 +888,19 @@ export default function ProjectPanel() {
                     type="button"
                     className="confirm-layout-button"
                     onClick={handleSave}
-                    disabled={saving}
+                    disabled={
+                        saving ||
+                        deadlineLocked
+                    }
                 >
                     {
-                        saving
-                            ? "Saving..."
-                            : isExistingProject
-                                ? "Save Changes"
-                                : "Save Project"
+                        deadlineLocked
+                            ? "Read Only"
+                            : saving
+                                ? "Saving..."
+                                : isExistingProject
+                                    ? "Save Changes"
+                                    : "Save Project"
                     }
                 </button>
 

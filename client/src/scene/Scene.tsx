@@ -1,5 +1,5 @@
-
 import {
+    Suspense,
     useEffect,
     useRef,
     useState
@@ -85,6 +85,13 @@ import {
     type AdminComment
 } from "../services/adminCommentService";
 
+import {
+    getActiveProjectDeadline,
+    isDeadlinePassed,
+    isValidProjectDeadline,
+    subscribeToProjectDeadline
+} from "../services/projectDeadlineService";
+
 //==================================================
 // PROPS
 //==================================================
@@ -102,15 +109,39 @@ interface SceneProps {
 }
 
 //==================================================
-// SCENE READY SIGNAL
+// FORMAT PROJECT DEADLINE
 //==================================================
+
+function formatDeadlineDate(
+    deadline: string
+): string {
+    const [
+        year,
+        month,
+        day
+    ] = deadline
+        .split("-")
+        .map(Number);
+
+    return new Date(
+        year,
+        month - 1,
+        day
+    ).toLocaleDateString(
+        "en-US",
+        {
+            month: "long",
+            day: "numeric",
+            year: "numeric"
+        }
+    );
+}
+
+//==================================================
+// SCENE READY SIGNAL
 //
-// This component runs inside the Canvas.
-//
-// It signals readiness after two rendered frames.
-// If the scene is waiting for a Suspense-loaded model,
-// this signal cannot run until that suspended content
-// becomes available.
+// Runs inside the Canvas. Signals readiness after
+// two rendered frames.
 //==================================================
 
 function SceneReadySignal({
@@ -118,7 +149,6 @@ function SceneReadySignal({
 }: {
     onReady?: () => void;
 }) {
-
     const renderedFrames =
         useRef(0);
 
@@ -126,7 +156,6 @@ function SceneReadySignal({
         useRef(false);
 
     useFrame(() => {
-
         if (notified.current) {
             return;
         }
@@ -136,7 +165,6 @@ function SceneReadySignal({
         if (
             renderedFrames.current >= 2
         ) {
-
             notified.current = true;
 
             onReady?.();
@@ -155,7 +183,6 @@ export default function Scene({
     walkthroughSpawnConfirmed,
     onSceneReady
 }: SceneProps) {
-
     const {
         state
     } = useEditor();
@@ -169,18 +196,77 @@ export default function Scene({
     const [
         comments,
         setComments
-    ] = useState<
-        AdminComment[]
-    >([]);
+    ] = useState<AdminComment[]>([]);
+
+    //==================================================
+    // PROJECT DEADLINE
+    //==================================================
+
+    const [
+        projectDeadline,
+        setProjectDeadline
+    ] = useState<string | null>(
+        getActiveProjectDeadline()
+    );
+
+    const [
+        deadlinePassed,
+        setDeadlinePassed
+    ] = useState(
+        isDeadlinePassed(
+            getActiveProjectDeadline()
+        )
+    );
+
+    //==================================================
+    // WATCH PROJECT DEADLINE
+    //==================================================
+
+    useEffect(() => {
+        const updateDeadline = () => {
+            const currentDeadline =
+                getActiveProjectDeadline();
+
+            setProjectDeadline(
+                currentDeadline
+            );
+
+            setDeadlinePassed(
+                isDeadlinePassed(
+                    currentDeadline
+                )
+            );
+        };
+
+        updateDeadline();
+
+        const unsubscribe =
+            subscribeToProjectDeadline(
+                updateDeadline
+            );
+
+        // Refresh the reminder if the deadline
+        // passes while the project remains open.
+        const timer = window.setInterval(
+            updateDeadline,
+            15_000
+        );
+
+        return () => {
+            unsubscribe();
+
+            window.clearInterval(
+                timer
+            );
+        };
+    }, []);
 
     //==================================================
     // ADMIN COMMENTS
     //==================================================
 
     useEffect(() => {
-
         if (!projectId) {
-
             setComments([]);
 
             return;
@@ -190,14 +276,12 @@ export default function Scene({
             projectId,
             setComments,
             error => {
-
                 console.error(
                     "Failed to load admin comments:",
                     error
                 );
             }
         );
-
     }, [
         projectId
     ]);
@@ -207,127 +291,170 @@ export default function Scene({
     //==================================================
 
     return (
-
-        <Canvas
-            shadows
-            gl={{
-                preserveDrawingBuffer: true
-            }}
-            camera={{
-                position: [
-                    8,
-                    8,
-                    8
-                ],
-                fov: 50
-            }}
+        <div
             style={{
+                position: "relative",
                 width: "100%",
-                height: "100%",
-                background: "#ffffff"
+                height: "100%"
             }}
         >
+            <Canvas
+                shadows
+                gl={{
+                    preserveDrawingBuffer: true
+                }}
+                camera={{
+                    position: [
+                        8,
+                        8,
+                        8
+                    ],
+                    fov: 50
+                }}
+                style={{
+                    width: "100%",
+                    height: "100%",
+                    background: "#ffffff"
+                }}
+            >
+                <color
+                    attach="background"
+                    args={[
+                        "#ffffff"
+                    ]}
+                />
 
-            <color
-                attach="background"
-                args={[
-                    "#ffffff"
-                ]}
-            />
+                {/* Camera and room rendering */}
 
-            {/* Camera and room rendering */}
+                <Lights />
 
-            <Lights />
+                <Grid />
 
-            <Grid />
+                <BlueprintScene />
 
-            <BlueprintScene />
+                <Camera
+                    adminComments={
+                        comments
+                    }
+                />
 
-            <Camera
-                adminComments={
-                    comments
+                <Floors />
+
+                <Walls />
+
+                <Doors />
+
+                <Windows />
+
+                <FurnitureScene />
+
+                <AdminCommentMarkers
+                    comments={
+                        comments
+                    }
+                />
+
+                {/* Walkthrough roof.
+                    Wrapped in its own Suspense so loading the
+                    ceiling assets can never block the rest of the
+                    scene (including the spawn confirmation). */}
+
+                {
+                    state.walkthroughMode &&
+                    walkthroughSpawnConfirmed && (
+                        <Suspense
+                            fallback={
+                                null
+                            }
+                        >
+                            <Roof />
+                        </Suspense>
+                    )
                 }
-            />
 
-            <Floors />
+                {/* Editing interactions */}
 
-            <Walls />
+                {
+                    !state.walkthroughMode && (
+                        <>
+                            <SelectionToolbar />
 
-            <Doors />
+                            <ClearSelection />
 
-            <Windows />
+                            <BuildInteractionEvents />
 
-            <FurnitureScene />
+                            <WallMeasurements />
 
-            <AdminCommentMarkers
-                comments={
-                    comments
+                            <AssetPreview />
+
+                            <WallDrawer />
+
+                            <FurniturePreview />
+
+                            <FurnitureInteractionEvents />
+
+                            <SelectionInteractionEvents />
+                        </>
+                    )
                 }
-            />
 
-            {/* Walkthrough roof */}
+                {/* Walkthrough controller */}
+
+                {
+                    state.walkthroughMode && (
+                        <WalkthroughController
+                            onSpawnConfirmed={
+                                onSpawnConfirmed
+                            }
+                        />
+                    )
+                }
+
+                {/* Notify the editor after the scene renders. */}
+
+                <SceneReadySignal
+                    onReady={
+                        onSceneReady
+                    }
+                />
+            </Canvas>
+
+            {/*==================================================
+                PROJECT DEADLINE REMINDER
+            ==================================================*/}
 
             {
-                state.walkthroughMode &&
-                walkthroughSpawnConfirmed && (
-
-                    <Roof />
-
+                projectDeadline &&
+                isValidProjectDeadline(projectDeadline) &&
+                !deadlinePassed && (
+                    <div
+                        role="status"
+                        style={{
+                            position: "fixed",
+                            top: "74px",
+                            left: "50%",
+                            transform: "translateX(-50%)",
+                            zIndex: 9999,
+                            pointerEvents: "none",
+                            maxWidth: "calc(100vw - 32px)",
+                            padding: "7px 14px",
+                            background: "#FFF8E9",
+                            border: "1px solid #F1C98C",
+                            borderRadius: "8px",
+                            color: "#7A4B00",
+                            boxShadow: "0 3px 10px rgba(0, 0, 0, 0.12)",
+                            fontSize: "11px",
+                            fontWeight: 600,
+                            lineHeight: "16px",
+                            textAlign: "center",
+                            whiteSpace: "normal"
+                        }}
+                    >
+                        You may edit until{" "}
+                        {formatDeadlineDate(projectDeadline)}.
+                    </div>
                 )
             }
-
-            {/* Editing interactions */}
-
-            {
-                !state.walkthroughMode && (
-
-                    <>
-
-                        <SelectionToolbar />
-
-                        <ClearSelection />
-
-                        <BuildInteractionEvents />
-
-                        <WallMeasurements />
-
-                        <AssetPreview />
-
-                        <WallDrawer />
-
-                        <FurniturePreview />
-
-                        <FurnitureInteractionEvents />
-
-                        <SelectionInteractionEvents />
-
-                    </>
-
-                )
-            }
-
-            {/* Walkthrough controller */}
-
-            {
-                state.walkthroughMode && (
-
-                    <WalkthroughController
-                        onSpawnConfirmed={
-                            onSpawnConfirmed
-                        }
-                    />
-
-                )
-            }
-
-            {/* Notify the editor after the scene renders. */}
-
-            <SceneReadySignal
-                onReady={
-                    onSceneReady
-                }
-            />
-
-        </Canvas>
+        </div>
     );
 }

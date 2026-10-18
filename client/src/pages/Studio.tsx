@@ -7,7 +7,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../firebase/firebase";
 import { getDrafts } from "../services/projectDraftService";
 import type { DraftProject } from "../services/projectDraftService";
-
+import NavBar from "../pages/NavBar";
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -352,6 +352,9 @@ export default function Studio() {
   const hasAnything = items.length > 0;
 
   return (
+  <>
+    <NavBar />
+
     <div className="min-h-[calc(100vh-63px)] w-full bg-white font-sans text-[#1b1b1b] antialiased">
       <main className="mx-auto max-w-[1400px] px-6 pb-20 pt-10 md:px-10">
         {/* Title row */}
@@ -484,5 +487,6 @@ export default function Studio() {
         )}
       </main>
     </div>
+    </>
   );
 }

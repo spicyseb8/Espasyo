@@ -950,24 +950,29 @@ export default function ProjectManagement() {
             </Card>
 
             <ProjectDetailsModal
-                project={
-                    selectedProject
-                }
-                onOpenChange={
-                    open => {
-                        if (
-                            !open
-                        ) {
-                            setSelectedProject(
-                                null
-                            );
-                        }
-                    }
-                }
-                onOpenProject={
-                    handleOpenProject
-                }
-            />
+    project={selectedProject}
+    onOpenChange={open => {
+        if (!open) {
+            setSelectedProject(null);
+        }
+    }}
+    onOpenProject={handleOpenProject}
+    onDeadlineSaved={(projectId, deadline) => {
+        setProjects(current =>
+            current.map(project =>
+                project.projectId === projectId
+                    ? { ...project, deadline }
+                    : project
+            )
+        );
+
+        setSelectedProject(current =>
+            current?.projectId === projectId
+                ? { ...current, deadline }
+                : current
+        );
+    }}
+/>
         </div>
     );
 }

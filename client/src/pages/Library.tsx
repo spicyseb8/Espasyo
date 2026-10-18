@@ -1,13 +1,14 @@
+
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import {
-  Armchair,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   Info,
   Search,
 } from "lucide-react";
+
+import NavBar from "../pages/NavBar";
 
 import { getFurnitureAssets } from "../engine/furniture/FirebaseFurnitureLibrary";
 import { getFloorMaterials } from "../engine/materials/floors";
@@ -120,6 +121,7 @@ function normalizeFloorCategory(raw?: string): FloorCategory | undefined {
 
 function mapFurnitureAsset(asset: Asset): LibraryItem {
   const price = asset.price ?? 0;
+
   return {
     id: asset.id,
     type: "furniture",
@@ -135,7 +137,11 @@ function mapFurnitureAsset(asset: Asset): LibraryItem {
 }
 
 function mapFloorMaterial(material: Material): LibraryItem | null {
-  const image = material.thumbnail?.trim() || material.texture?.trim() || "";
+  const image =
+    material.thumbnail?.trim() ||
+    material.texture?.trim() ||
+    "";
+
   if (!image) return null;
 
   const price = material.pricePerSquareMeter ?? 0;
@@ -155,6 +161,7 @@ function mapFloorMaterial(material: Material): LibraryItem | null {
 
 function mapWallMaterial(material: Material): LibraryItem {
   const price = material.pricePerSquareMeter ?? 0;
+
   return {
     id: material.id,
     type: "walls",
@@ -190,6 +197,7 @@ function FilterSelect({
       <span className="pointer-events-none absolute left-3 top-1.5 text-[8px] font-medium uppercase tracking-[0.12em] text-black/50">
         {label}
       </span>
+
       <select
         value={value}
         disabled={disabled}
@@ -202,6 +210,7 @@ function FilterSelect({
           </option>
         ))}
       </select>
+
       <ChevronDown
         className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-black/60"
         strokeWidth={1.75}
@@ -215,21 +224,26 @@ function FilterSelect({
 // ---------------------------------------------------------------------------
 function CollectionCard({ item }: { item: LibraryItem }) {
   const [imgError, setImgError] = useState(false);
-  const hasImage = Boolean(item.image?.trim()) && !imgError;
+
+  const hasImage =
+    Boolean(item.image?.trim()) && !imgError;
+
   const isFurniture = item.type === "furniture";
 
   return (
     <article className="flex aspect-[4/5] flex-col rounded-xl bg-black/[0.05] p-3.5 transition-colors duration-200 hover:bg-black/[0.08]">
-      {/* top row */}
+      {/* Top row */}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <h3 className="truncate text-[12px] font-medium leading-tight text-[#1b1b1b]">
             {item.name}
           </h3>
+
           <p className="mt-0.5 truncate text-[9px] uppercase tracking-wide text-black/45">
             {item.price}
           </p>
         </div>
+
         <span
           className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-black/5 text-black/60"
           aria-hidden
@@ -238,16 +252,16 @@ function CollectionCard({ item }: { item: LibraryItem }) {
         </span>
       </div>
 
-      {/* swatch */}
+      {/* Swatch */}
       <div className="flex min-h-0 flex-1 items-center justify-center py-3">
         {isFurniture ? (
-          // Furniture: no backdrop, just the object with a soft shadow
           <div className="relative h-full w-full">
-            {/* ground shadow */}
+            {/* Ground shadow */}
             <div
               aria-hidden
               className="pointer-events-none absolute bottom-[6%] left-1/2 h-[9%] w-[62%] -translate-x-1/2 rounded-[50%] bg-black/25 blur-md"
             />
+
             <div className="relative h-full w-full drop-shadow-[0_6px_8px_rgba(0,0,0,0.18)]">
               {hasImage ? (
                 <img
@@ -288,7 +302,7 @@ function CollectionCard({ item }: { item: LibraryItem }) {
         )}
       </div>
 
-      {/* bottom label */}
+      {/* Bottom label */}
       <p className="text-[9px] font-medium uppercase tracking-[0.1em] text-black/55">
         {item.label}
       </p>
@@ -344,12 +358,16 @@ function RoundArrow({
   disabled: boolean;
   onClick: () => void;
 }) {
-  const Icon = direction === "next" ? ChevronRight : ChevronLeft;
+  const Icon =
+    direction === "next" ? ChevronRight : ChevronLeft;
+
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      aria-label={direction === "next" ? "Next page" : "Previous page"}
+      aria-label={
+        direction === "next" ? "Next page" : "Previous page"
+      }
       className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1b1b1b] text-white shadow-md transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-30"
     >
       <Icon className="h-4 w-4" strokeWidth={2} />
@@ -360,52 +378,63 @@ function RoundArrow({
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
-const NAV_LINKS = [
-  { label: "Home", to: "/" },
-  { label: "Library", to: "/library" },
-  { label: "Studio", to: "/studio" },
-];
-
 export default function LibraryPage() {
-  const [division, setDivision] = useState<Division>("furniture");
+  const [division, setDivision] =
+    useState<Division>("furniture");
+
   const [category, setCategory] = useState("all");
   const [sort, setSort] = useState<SortKey>("default");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
 
-  //--------------------------------------------------
   // Firebase-backed state
-  //--------------------------------------------------
-  const [furnitureItems, setFurnitureItems] = useState<LibraryItem[]>([]);
-  const [floorItems, setFloorItems] = useState<LibraryItem[]>([]);
-  const [wallItems, setWallItems] = useState<LibraryItem[]>([]);
+  const [furnitureItems, setFurnitureItems] =
+    useState<LibraryItem[]>([]);
 
-  const [loading, setLoading] = useState<Record<Division, boolean>>({
-    furniture: true,
-    floors: true,
-    walls: true,
-  });
+  const [floorItems, setFloorItems] =
+    useState<LibraryItem[]>([]);
+
+  const [wallItems, setWallItems] =
+    useState<LibraryItem[]>([]);
+
+  const [loading, setLoading] =
+    useState<Record<Division, boolean>>({
+      furniture: true,
+      floors: true,
+      walls: true,
+    });
 
   useEffect(() => {
     let cancelled = false;
 
     const done = (key: Division) => {
-      if (!cancelled) setLoading((prev) => ({ ...prev, [key]: false }));
+      if (!cancelled) {
+        setLoading((prev) => ({
+          ...prev,
+          [key]: false,
+        }));
+      }
     };
 
     getFurnitureAssets()
       .then((assets) => {
-        if (!cancelled) setFurnitureItems(assets.map(mapFurnitureAsset));
+        if (!cancelled) {
+          setFurnitureItems(assets.map(mapFurnitureAsset));
+        }
       })
       .catch((err) => {
         console.error("Failed to load furniture assets:", err);
-        if (!cancelled) setFurnitureItems([]);
+
+        if (!cancelled) {
+          setFurnitureItems([]);
+        }
       })
       .finally(() => done("furniture"));
 
     getFloorMaterials()
       .then((materials) => {
         if (cancelled) return;
+
         setFloorItems(
           materials
             .map(mapFloorMaterial)
@@ -414,17 +443,25 @@ export default function LibraryPage() {
       })
       .catch((err) => {
         console.error("Failed to load floor materials:", err);
-        if (!cancelled) setFloorItems([]);
+
+        if (!cancelled) {
+          setFloorItems([]);
+        }
       })
       .finally(() => done("floors"));
 
     getWallMaterials()
       .then((materials) => {
-        if (!cancelled) setWallItems(materials.map(mapWallMaterial));
+        if (!cancelled) {
+          setWallItems(materials.map(mapWallMaterial));
+        }
       })
       .catch((err) => {
         console.error("Failed to load wall materials:", err);
-        if (!cancelled) setWallItems([]);
+
+        if (!cancelled) {
+          setWallItems([]);
+        }
       })
       .finally(() => done("walls"));
 
@@ -433,7 +470,7 @@ export default function LibraryPage() {
     };
   }, []);
 
-  // Reset to the first page whenever the visible set changes
+  // Reset to the first page whenever the visible set changes.
   useEffect(() => {
     setPage(1);
   }, [division, category, sort, query]);
@@ -454,86 +491,79 @@ export default function LibraryPage() {
     const q = query.trim().toLowerCase();
 
     let list = source.filter((i) => {
-      if (category !== "all" && i.category !== category) return false;
-      if (q && !i.name.toLowerCase().includes(q)) return false;
+      if (category !== "all" && i.category !== category) {
+        return false;
+      }
+
+      if (q && !i.name.toLowerCase().includes(q)) {
+        return false;
+      }
+
       return true;
     });
 
     if (sort === "nameAsc") {
-      list = [...list].sort((a, b) => a.name.localeCompare(b.name));
+      list = [...list].sort((a, b) =>
+        a.name.localeCompare(b.name),
+      );
     } else if (sort === "priceAsc") {
-      list = [...list].sort((a, b) => a.priceValue - b.priceValue);
+      list = [...list].sort(
+        (a, b) => a.priceValue - b.priceValue,
+      );
     } else if (sort === "priceDesc") {
-      list = [...list].sort((a, b) => b.priceValue - a.priceValue);
+      list = [...list].sort(
+        (a, b) => b.priceValue - a.priceValue,
+      );
     }
 
     return list;
   }, [source, category, sort, query]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filtered.length / ITEMS_PER_PAGE),
+  );
+
   const safePage = Math.min(page, totalPages);
   const startIndex = (safePage - 1) * ITEMS_PER_PAGE;
-  const paginated = filtered.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+  const paginated = filtered.slice(
+    startIndex,
+    startIndex + ITEMS_PER_PAGE,
+  );
 
   const isLoading = loading[division];
-  const title = DIVISIONS.find((d) => d.key === division)?.label ?? "";
+
+  const title =
+    DIVISIONS.find((d) => d.key === division)?.label ?? "";
 
   return (
     <div className="min-h-screen w-full bg-white font-sans text-[#1b1b1b] antialiased">
-      {/* Nav */}
-      <header>
-        <div className="mx-auto flex max-w-[1400px] items-center justify-between px-6 py-6 md:px-10">
-          <Link to="/" className="flex items-center gap-2.5">
-            <Armchair className="h-6 w-6 text-[#1b1b1b]" strokeWidth={1.25} />
-            <span className="text-[14px] font-medium uppercase tracking-[0.16em] text-[#1b1b1b]">
-              Espasyo
-            </span>
-          </Link>
+      {/* Shared navbar */}
+      <NavBar />
 
-          <nav className="hidden items-center gap-8 sm:flex">
-            {NAV_LINKS.map((link) => {
-              const active = link.label === "Library";
-              return (
-                <Link
-                  key={link.label}
-                  to={link.to}
-                  className={`text-[11px] font-medium transition ${
-                    active
-                      ? "text-[#1b1b1b]"
-                      : "text-black/50 hover:text-[#1b1b1b]"
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
-          </nav>
-
-          <Link
-            to="/login"
-            className="rounded-md border border-black/25 px-4 py-2 text-[11px] font-medium text-[#1b1b1b] transition hover:bg-[#1b1b1b] hover:text-white"
-          >
-            Sign in
-          </Link>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-[1400px] px-6 pb-16 pt-10 md:px-10">
+      <main className="mx-auto max-w-[1400px] px-6 pb-16 pt-24 md:px-10 md:pt-28">
         {/* Title row */}
         <div className="mb-6 flex items-center justify-between gap-4">
           <h1 className="text-4xl font-semibold tracking-tight text-[#1b1b1b] md:text-5xl">
             Our collection
           </h1>
+
           <div className="flex items-center gap-2">
             <RoundArrow
               direction="prev"
               disabled={safePage === 1}
-              onClick={() => setPage(Math.max(1, safePage - 1))}
+              onClick={() =>
+                setPage(Math.max(1, safePage - 1))
+              }
             />
+
             <RoundArrow
               direction="next"
               disabled={safePage === totalPages}
-              onClick={() => setPage(Math.min(totalPages, safePage + 1))}
+              onClick={() =>
+                setPage(Math.min(totalPages, safePage + 1))
+              }
             />
           </div>
         </div>
@@ -564,16 +594,22 @@ export default function LibraryPage() {
             onChange={setCategory}
             disabled={division === "walls"}
           />
+
           <FilterSelect
             label="Sort by"
             value={sort}
             options={SORT_OPTIONS}
             onChange={(v) => setSort(v as SortKey)}
           />
-          <label className="relative block" aria-label="Search">
+
+          <label
+            className="relative block"
+            aria-label="Search"
+          >
             <span className="pointer-events-none absolute left-3 top-1.5 text-[8px] font-medium uppercase tracking-[0.12em] text-black/50">
               Search
             </span>
+
             <input
               type="search"
               value={query}
@@ -581,6 +617,7 @@ export default function LibraryPage() {
               placeholder={`Search ${title.toLowerCase()}`}
               className="h-[38px] w-full rounded-md border border-black/15 bg-white px-3 pb-0 pr-9 pt-3.5 text-[11px] font-medium text-[#1b1b1b] outline-none transition placeholder:text-black/30 hover:border-black/35 focus:border-black/60"
             />
+
             <Search
               className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-black/60"
               strokeWidth={1.75}
@@ -591,9 +628,12 @@ export default function LibraryPage() {
         {/* Grid: 4 columns x 3 rows */}
         {isLoading ? (
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            {Array.from({ length: ITEMS_PER_PAGE }, (_, i) => (
-              <SkeletonCard key={i} />
-            ))}
+            {Array.from(
+              { length: ITEMS_PER_PAGE },
+              (_, i) => (
+                <SkeletonCard key={i} />
+              ),
+            )}
           </div>
         ) : paginated.length === 0 ? (
           <div className="flex h-[320px] items-center justify-center rounded-xl bg-black/[0.05] text-[13px] text-black/45">
@@ -603,7 +643,10 @@ export default function LibraryPage() {
         ) : (
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             {paginated.map((item) => (
-              <CollectionCard key={`${item.type}-${item.id}`} item={item} />
+              <CollectionCard
+                key={`${item.type}-${item.id}`}
+                item={item}
+              />
             ))}
           </div>
         )}
@@ -615,6 +658,7 @@ export default function LibraryPage() {
             totalPages={totalPages}
             onChange={setPage}
           />
+
           <p className="text-[11px] text-black/45">
             {filtered.length > 0
               ? `${startIndex + 1}–${Math.min(
