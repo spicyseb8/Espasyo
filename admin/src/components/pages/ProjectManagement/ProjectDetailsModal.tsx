@@ -1,4 +1,3 @@
-
 import {
     useEffect,
     useState
@@ -80,6 +79,10 @@ export default function ProjectDetailsModal({
     const [deadlineError, setDeadlineError] =
         useState("");
 
+    // True when the thumbnail URL exists but the image failed to load.
+    const [thumbnailFailed, setThumbnailFailed] =
+        useState(false);
+
     // Load the stored deadline whenever a different project is opened.
     useEffect(() => {
         setDeadline(project?.deadline ?? "");
@@ -88,6 +91,14 @@ export default function ProjectDetailsModal({
     }, [
         project?.projectId,
         project?.deadline
+    ]);
+
+    // Reset the thumbnail error state when the project or its image changes.
+    useEffect(() => {
+        setThumbnailFailed(false);
+    }, [
+        project?.projectId,
+        project?.thumbnailUrl
     ]);
 
     function handleDialogChange(open: boolean) {
@@ -206,6 +217,10 @@ export default function ProjectDetailsModal({
         }
     }
 
+    const showThumbnail =
+        Boolean(project?.thumbnailUrl) &&
+        !thumbnailFailed;
+
     return (
         <Dialog
             open={project !== null}
@@ -226,19 +241,28 @@ export default function ProjectDetailsModal({
 
                         <div className="grid min-h-0 flex-1 md:grid-cols-[1.6fr_1fr]">
                             <div className="min-h-0 border-b border-border/60 bg-muted/10 p-6 md:border-b-0 md:border-r">
-                                <div className="flex h-full items-center justify-center rounded-2xl border border-border/60 bg-background">
-                                    <div className="text-center">
-                                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-border/60 bg-muted/40">
-                                            <FolderOpen
-                                                size={28}
-                                                className="text-muted-foreground"
-                                            />
-                                        </div>
+                                <div className="flex h-full items-center justify-center overflow-hidden rounded-2xl border border-border/60 bg-background">
+                                    {showThumbnail ? (
+                                        <img
+                                            src={project.thumbnailUrl}
+                                            alt={`${project.projectName} preview`}
+                                            onError={() => setThumbnailFailed(true)}
+                                            className="h-full w-full object-contain"
+                                        />
+                                    ) : (
+                                        <div className="text-center">
+                                            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-border/60 bg-muted/40">
+                                                <FolderOpen
+                                                    size={28}
+                                                    className="text-muted-foreground"
+                                                />
+                                            </div>
 
-                                        <p className="text-sm text-muted-foreground">
-                                            3D preview
-                                        </p>
-                                    </div>
+                                            <p className="text-sm text-muted-foreground">
+                                                No preview available
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
