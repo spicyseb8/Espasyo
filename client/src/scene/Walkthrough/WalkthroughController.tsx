@@ -167,6 +167,23 @@ export default function WalkthroughController({
     } = useEditor();
 
     //==================================================
+    // KEEP THE LATEST CALLBACK
+    //==================================================
+    //
+    // The callback can receive a new reference when
+    // the parent component re-renders.
+    //
+    // Using a ref prevents that change from restarting
+    // the walkthrough spawn-selection effect.
+    //==================================================
+
+    const onSpawnConfirmedRef =
+        useRef(onSpawnConfirmed);
+
+    onSpawnConfirmedRef.current =
+        onSpawnConfirmed;
+
+    //==================================================
     // POINTER
     //==================================================
 
@@ -274,16 +291,23 @@ export default function WalkthroughController({
     //==================================================
     // START WALKTHROUGH
     //==================================================
+    //
+    // IMPORTANT:
+    // This effect only restarts when walkthrough mode
+    // changes. A changed onSpawnConfirmed callback must
+    // not reset spawnConfirmed after the user spawns.
+    //==================================================
 
     useEffect(() => {
         if (!state.walkthroughMode) {
             return;
         }
 
-        // Start in spawn-selection mode.
+        // Start in spawn-selection mode when entering
+        // walkthrough mode.
         setSpawnConfirmed(false);
 
-        onSpawnConfirmed?.(false);
+        onSpawnConfirmedRef.current?.(false);
 
         spawnPosition.current = null;
         spawnValid.current = false;
@@ -305,8 +329,7 @@ export default function WalkthroughController({
             personPreviewRef.current.visible = false;
         }
     }, [
-        state.walkthroughMode,
-        onSpawnConfirmed
+        state.walkthroughMode
     ]);
 
     //==================================================
@@ -375,7 +398,7 @@ export default function WalkthroughController({
                 clearMovementKeys(keys);
 
                 setSpawnConfirmed(false);
-                onSpawnConfirmed?.(false);
+                onSpawnConfirmedRef.current?.(false);
 
                 spawnPosition.current = null;
                 spawnValid.current = false;
@@ -489,8 +512,7 @@ export default function WalkthroughController({
         state.walkthroughMode,
         dispatch,
         gl,
-        camera,
-        onSpawnConfirmed
+        camera
     ]);
 
     //==================================================
@@ -565,14 +587,15 @@ export default function WalkthroughController({
             bobStrength.current = 0;
             cameraBobOffset.current.set(0, 0, 0);
 
-            // Confirm spawn.
+            // Confirm spawn and exit spawn-selection mode.
             setSpawnConfirmed(true);
-            onSpawnConfirmed?.(true);
+
+            onSpawnConfirmedRef.current?.(true);
 
             // Tell Camera.tsx to cancel its transition.
             walkthroughSpawnState.confirmed = true;
 
-            // Hide preview.
+            // Hide preview immediately.
             if (personPreviewRef.current) {
                 personPreviewRef.current.visible = false;
             }
@@ -607,8 +630,7 @@ export default function WalkthroughController({
         gl,
         camera,
         state.walkthroughMode,
-        spawnConfirmed,
-        onSpawnConfirmed
+        spawnConfirmed
     ]);
 
     //==================================================

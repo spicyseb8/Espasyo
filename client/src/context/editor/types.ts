@@ -23,6 +23,7 @@ export interface EditorState {
     blueprintCalibrationEnd: BlueprintCalibrationPoint | null;
     walls: Wall[];
     corners: Corner[];
+    selectedWallSide: 1 | -1 | null;
     selectedWallId: string | null;
     selectedWallRegionId: string | null;
     selectedRegionId: string | null;

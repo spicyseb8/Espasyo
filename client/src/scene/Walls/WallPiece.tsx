@@ -1,27 +1,39 @@
+
 import {
     memo,
     useMemo,
     useState,
     useEffect
 } from "react";
+
+import type {
+    ThreeEvent
+} from "@react-three/fiber";
+
 import {
     ExtrudeGeometry,
     Shape,
     Vector3
 } from "three";
+
 import useEditor
     from "../../context/editor/useEditor";
+
 import type {
     WallPiece as WallPieceType
 } from "../../engine/walls/WallPiece";
+
 import WallFinishSurface
     from "./WallFinishSurface";
+
 import type {
     WallFinishSide
 } from "./WallFinishUtils";
+
 import {
     solveRegions
 } from "../../engine/regions/RegionSolver";
+
 import {
     getRegionWallSide
 } from "./WallFinishUtils";
@@ -31,7 +43,6 @@ interface Props {
     piece: WallPieceType;
     finishSides?: WallFinishSide[];
 }
-
 
 const WALL_TRIM_HEIGHT = 0.20;
 const WALL_TRIM_DEPTH = 0.045;
@@ -52,14 +63,20 @@ function WallTrim({
         Math.max(0.02, piece.height * 0.25)
     );
 
-    const profileScale = trimHeight / WALL_TRIM_HEIGHT;
-    const baseY = -piece.height * 0.5;
-    const trimLength = piece.width + 0.008;
+    const profileScale =
+        trimHeight / WALL_TRIM_HEIGHT;
 
-    const mountZ = side * (
-        piece.thickness * 0.5 +
-        WALL_FINISH_OUTER_OFFSET
-    );
+    const baseY =
+        -piece.height * 0.5;
+
+    const trimLength =
+        piece.width + 0.008;
+
+    const mountZ =
+        side * (
+            piece.thickness * 0.5 +
+            WALL_FINISH_OUTER_OFFSET
+        );
 
     const geometry = useMemo(() => {
         const shape = new Shape();
@@ -222,21 +239,18 @@ function WallTrim({
                 raycast={() => null}
                 renderOrder={3}
             >
-                
-<meshStandardMaterial
-    color={WALL_TRIM_COLOR}
-    roughness={0.72}
-    metalness={0}
-    emissive="#8C8272"
-    emissiveIntensity={0.3}
-    toneMapped={false}
-/>
-
+                <meshStandardMaterial
+                    color={WALL_TRIM_COLOR}
+                    roughness={0.72}
+                    metalness={0}
+                    emissive="#8C8272"
+                    emissiveIntensity={0.3}
+                    toneMapped={false}
+                />
             </mesh>
         </group>
     );
 }
-
 
 function WallPiece({
     wallId,
@@ -253,383 +267,231 @@ function WallPiece({
         setHovered
     ] = useState(false);
 
-    const regions =
-        useMemo(
-            () =>
-                solveRegions(
-                    state.corners,
-                    state.walls
-                ),
-            [
+    const regions = useMemo(
+        () =>
+            solveRegions(
                 state.corners,
                 state.walls
-            ]
-        );
+            ),
+        [
+            state.corners,
+            state.walls
+        ]
+    );
 
     const selected =
-        state.selectedWallId ===
-        wallId;
+        state.selectedWallId === wallId;
 
     const walkthroughMode =
         state.walkthroughMode;
 
     const showSelected =
-        selected &&
-        !walkthroughMode;
+        selected && !walkthroughMode;
 
     const physicalWall =
         state.walls.find(
-            wall =>
-                wall.id ===
-                wallId
+            wall => wall.id === wallId
         ) ?? null;
 
     const pieceBottom =
         piece.position.y -
-        piece.height *
-            0.5;
+        piece.height * 0.5;
 
     const touchesFloor =
-        pieceBottom <=
-        0.02;
+        pieceBottom <= 0.02;
 
-    const trimSides =
-        useMemo(
-            () => {
-                if (
-                    !physicalWall ||
-                    !touchesFloor
-                ) {
-                    return [] as (
-                        | 1
-                        | -1
-                    )[];
-                }
+    const trimSides = useMemo(() => {
+        if (!physicalWall || !touchesFloor) {
+            return [] as (1 | -1)[];
+        }
 
-                const sides =
-                    new Set<
-                        1 | -1
-                    >();
+        const sides = new Set<1 | -1>();
 
-                for (
-                    const region
-                    of regions
-                ) {
-                    const belongsToRegion =
-                        region.walls.some(
-                            regionWall =>
-                                regionWall.id ===
-                                wallId
-                        );
-
-                    if (
-                        !belongsToRegion
-                    ) {
-                        continue;
-                    }
-
-                    const side =
-                        getRegionWallSide(
-                            physicalWall,
-                            region
-                        );
-
-                    if (
-                        side !==
-                        null
-                    ) {
-                        sides.add(
-                            side
-                        );
-                    }
-                }
-
-                return Array.from(
-                    sides
+        for (const region of regions) {
+            const belongsToRegion =
+                region.walls.some(
+                    regionWall =>
+                        regionWall.id === wallId
                 );
-            },
-            [
+
+            if (!belongsToRegion) {
+                continue;
+            }
+
+            const side = getRegionWallSide(
                 physicalWall,
-                regions,
-                wallId,
-                touchesFloor
-            ]
-        );
-
-    const getClickedWallSide =
-        (
-            clickPoint: Vector3
-        ):
-            1 | -1 | null => {
-            if (
-                !physicalWall
-            ) {
-                return null;
-            }
-
-            const start =
-                physicalWall.start.position;
-
-            const end =
-                physicalWall.end.position;
-
-            const direction =
-                new Vector3()
-                    .subVectors(
-                        end,
-                        start
-                    );
-
-            const length =
-                direction.length();
-
-            if (
-                length <=
-                0.001
-            ) {
-                return null;
-            }
-
-            direction.normalize();
-
-            const normal =
-                new Vector3(
-                    -direction.z,
-                    0,
-                    direction.x
-                ).normalize();
-
-            const center =
-                start
-                    .clone()
-                    .add(
-                        direction
-                            .clone()
-                            .multiplyScalar(
-                                length *
-                                    0.5
-                            )
-                    );
-
-            const toClick =
-                clickPoint
-                    .clone()
-                    .sub(
-                        center
-                    );
-
-            const sideValue =
-                toClick.x *
-                    normal.x +
-                toClick.z *
-                    normal.z;
-
-            if (
-                Math.abs(
-                    sideValue
-                ) <
-                0.0001
-            ) {
-                return null;
-            }
-
-            return sideValue >
-                0
-                ? 1
-                : -1;
-        };
-
-    const getRegionForWallClick =
-        (
-            clickPoint: Vector3
-        ) => {
-            if (
-                !physicalWall
-            ) {
-                return null;
-            }
-
-            const clickedSide =
-                getClickedWallSide(
-                    clickPoint
-                );
-
-            if (
-                clickedSide !==
-                null
-            ) {
-                const matchingRegion =
-                    regions.find(
-                        region => {
-                            const belongsToRegion =
-                                region.walls.some(
-                                    regionWall =>
-                                        regionWall.id ===
-                                        wallId
-                                );
-
-                            if (
-                                !belongsToRegion
-                            ) {
-                                return false;
-                            }
-
-                            const regionSide =
-                                getRegionWallSide(
-                                    physicalWall,
-                                    region
-                                );
-
-                            return (
-                                regionSide ===
-                                clickedSide
-                            );
-                        }
-                    );
-
-                if (
-                    matchingRegion
-                ) {
-                    return matchingRegion;
-                }
-            }
-
-            if (
-                state.selectedWallRegionId
-            ) {
-                const selectedWallRegion =
-                    regions.find(
-                        region =>
-                            region.id ===
-                            state.selectedWallRegionId
-                    );
-
-                if (
-                    selectedWallRegion &&
-                    selectedWallRegion.walls.some(
-                        regionWall =>
-                            regionWall.id ===
-                            wallId
-                    )
-                ) {
-                    return selectedWallRegion;
-                }
-            }
-
-            if (
-                state.selectedRegionId
-            ) {
-                const selectedRegion =
-                    regions.find(
-                        region =>
-                            region.id ===
-                            state.selectedRegionId
-                    );
-
-                if (
-                    selectedRegion &&
-                    selectedRegion.walls.some(
-                        regionWall =>
-                            regionWall.id ===
-                            wallId
-                    )
-                ) {
-                    return selectedRegion;
-                }
-            }
-
-            const owningRegions =
-                regions.filter(
-                    region =>
-                        region.walls.some(
-                            regionWall =>
-                                regionWall.id ===
-                                wallId
-                        )
-                );
-
-            if (
-                owningRegions.length ===
-                1
-            ) {
-                return owningRegions[0];
-            }
-
-            return null;
-        };
-
-   const handleWallClick =
-    (
-        e: any
-    ) => {
-        if (
-            walkthroughMode
-        ) {
-            return;
-        }
-
-        e.stopPropagation();
-
-        if (
-            !e.point
-        ) {
-            return;
-        }
-
-        const clickPoint =
-            e.point.clone();
-
-        const region =
-            getRegionForWallClick(
-                clickPoint
+                region
             );
 
-        if (
-            !region
-        ) {
+            if (side !== null) {
+                sides.add(side);
+            }
+        }
+
+        return Array.from(sides);
+    }, [
+        physicalWall,
+        regions,
+        wallId,
+        touchesFloor
+    ]);
+
+    /**
+     * Determines which physical face was clicked.
+     *
+     * +1 = normal side
+     * -1 = opposite side
+     *
+     * This does not require the clicked side to belong to
+     * an existing room region.
+     */
+    const getClickedWallSide = (
+        clickPoint: Vector3
+    ): 1 | -1 | null => {
+        if (!physicalWall) {
+            return null;
+        }
+
+        const start =
+            physicalWall.start.position;
+
+        const end =
+            physicalWall.end.position;
+
+        const direction =
+            new Vector3().subVectors(
+                end,
+                start
+            );
+
+        const length =
+            direction.length();
+
+        if (length <= 0.001) {
+            return null;
+        }
+
+        direction.normalize();
+
+        const normal = new Vector3(
+            -direction.z,
+            0,
+            direction.x
+        ).normalize();
+
+        const center = start.clone().add(
+            direction.clone().multiplyScalar(
+                length * 0.5
+            )
+        );
+
+        const toClick =
+            clickPoint.clone().sub(center);
+
+        const sideValue =
+            toClick.x * normal.x +
+            toClick.z * normal.z;
+
+        if (Math.abs(sideValue) < 0.0001) {
+            return null;
+        }
+
+        return sideValue > 0 ? 1 : -1;
+    };
+
+    /**
+     * Finds a room region only if it is on the face
+     * that the user actually clicked.
+     *
+     * Returns null for an outside face with no room.
+     * It never falls back to a room on the opposite side.
+     */
+    const getRegionForWallClick = (
+        clickedSide: 1 | -1
+    ) => {
+        if (!physicalWall) {
+            return null;
+        }
+
+        return (
+            regions.find(region => {
+                const belongsToRegion =
+                    region.walls.some(
+                        regionWall =>
+                            regionWall.id === wallId
+                    );
+
+                if (!belongsToRegion) {
+                    return false;
+                }
+
+                const regionSide =
+                    getRegionWallSide(
+                        physicalWall,
+                        region
+                    );
+
+                return regionSide === clickedSide;
+            }) ?? null
+        );
+    };
+
+    const handleWallClick = (
+        event: ThreeEvent<MouseEvent>
+    ) => {
+        if (state.walkthroughMode) {
             return;
         }
 
+        event.stopPropagation();
+
+        const clickPoint = event.point;
+
+        const side =
+            getClickedWallSide(clickPoint);
+
+        if (side === null) {
+            dispatch({
+                type: "SELECT_WALL",
+                payload: wallId
+            });
+
+            return;
+        }
+
+        const region =
+            getRegionForWallClick(side);
+
+        // Record the clicked side even when the outside
+        // face does not belong to any room.
         dispatch({
-            type:
-                "SELECT_WALL_SIDE",
+            type: "SELECT_WALL_SIDE",
             payload: {
                 wallId,
-                regionId:
-                    region.id
+                regionId: region?.id ?? null,
+                side
             }
         });
     };
 
-    const handlePointerOver =
-        (
-            e: any
-        ) => {
-            if (
-                walkthroughMode
-            ) {
-                return;
-            }
+    const handlePointerOver = (
+        e: ThreeEvent<PointerEvent>
+    ) => {
+        if (walkthroughMode) {
+            return;
+        }
 
-            e.stopPropagation();
+        e.stopPropagation();
+        setHovered(true);
+    };
 
-            setHovered(
-                true
-            );
-        };
+    const handlePointerOut = () => {
+        if (walkthroughMode) {
+            return;
+        }
 
-    const handlePointerOut =
-        () => {
-            if (
-                walkthroughMode
-            ) {
-                return;
-            }
-
-            setHovered(
-                false
-            );
-        };
+        setHovered(false);
+    };
 
     void hovered;
 
@@ -639,8 +501,7 @@ function WallPiece({
             : "#D9D9D9";
 
     if (
-        piece.kind ===
-            "arch" &&
+        piece.kind === "arch" &&
         piece.arch
     ) {
         const {
@@ -649,38 +510,31 @@ function WallPiece({
         } = piece.arch;
 
         const radius =
-            openingWidth *
-            0.5;
+            openingWidth * 0.5;
 
-        const shape =
-            new Shape();
+        const shape = new Shape();
 
         shape.moveTo(
-            -openingWidth *
-                0.5,
+            -openingWidth * 0.5,
             openingHeight
         );
 
         shape.lineTo(
-            -openingWidth *
-                0.5,
+            -openingWidth * 0.5,
             piece.height
         );
 
         shape.lineTo(
-            openingWidth *
-                0.5,
+            openingWidth * 0.5,
             piece.height
         );
 
         shape.lineTo(
-            openingWidth *
-                0.5,
+            openingWidth * 0.5,
             openingHeight
         );
 
-        const segments =
-            24;
+        const segments = 24;
 
         for (
             let i = segments;
@@ -688,57 +542,36 @@ function WallPiece({
             i--
         ) {
             const angle =
-                Math.PI *
-                (
-                    i /
-                    segments
-                );
+                Math.PI * (i / segments);
 
             const x =
-                Math.cos(
-                    angle
-                ) *
-                radius;
+                Math.cos(angle) * radius;
 
             const y =
                 openingHeight +
-                Math.sin(
-                    angle
-                ) *
-                radius;
+                Math.sin(angle) * radius;
 
-            shape.lineTo(
-                x,
-                y
-            );
+            shape.lineTo(x, y);
         }
 
         shape.closePath();
 
-        const geometry =
-            new ExtrudeGeometry(
-                shape,
-                {
-                    depth:
-                        piece.thickness,
-                    bevelEnabled:
-                        false,
-                    steps:
-                        1
-                }
-            );
+        const geometry = new ExtrudeGeometry(
+            shape,
+            {
+                depth: piece.thickness,
+                bevelEnabled: false,
+                steps: 1
+            }
+        );
 
         geometry.center();
 
         return (
             <group>
                 <mesh
-                    geometry={
-                        geometry
-                    }
-                    position={
-                        piece.position
-                    }
+                    geometry={geometry}
+                    position={piece.position}
                     rotation={[
                         0,
                         -piece.rotationY,
@@ -749,39 +582,22 @@ function WallPiece({
                     }}
                     castShadow
                     receiveShadow
-                    onPointerOver={
-                        handlePointerOver
-                    }
-                    onPointerOut={
-                        handlePointerOut
-                    }
-                    onClick={
-                        handleWallClick
-                    }
+                    onPointerOver={handlePointerOver}
+                    onPointerOut={handlePointerOut}
+                    onClick={handleWallClick}
                 >
                     <meshStandardMaterial
-                        color={
-                            wallColor
-                        }
+                        color={wallColor}
                     />
                 </mesh>
-                {
-                    finishSides.map(
-                        finish => (
-                            <WallFinishSurface
-                                key={
-                                    `${finish.regionId}-${finish.wallId}-arch`
-                                }
-                                piece={
-                                    piece
-                                }
-                                finish={
-                                    finish
-                                }
-                            />
-                        )
-                    )
-                }
+
+                {finishSides.map(finish => (
+                    <WallFinishSurface
+                        key={`${finish.regionId}-${finish.wallId}-arch-${finish.side}`}
+                        piece={piece}
+                        finish={finish}
+                    />
+                ))}
             </group>
         );
     }
@@ -789,9 +605,7 @@ function WallPiece({
     return (
         <group>
             <mesh
-                position={
-                    piece.position
-                }
+                position={piece.position}
                 rotation={[
                     0,
                     -piece.rotationY,
@@ -802,15 +616,9 @@ function WallPiece({
                 }}
                 castShadow
                 receiveShadow
-                onPointerOver={
-                    handlePointerOver
-                }
-                onPointerOut={
-                    handlePointerOut
-                }
-                onClick={
-                    handleWallClick
-                }
+                onPointerOver={handlePointerOver}
+                onPointerOut={handlePointerOut}
+                onClick={handleWallClick}
             >
                 <boxGeometry
                     args={[
@@ -819,51 +627,30 @@ function WallPiece({
                         piece.thickness
                     ]}
                 />
+
                 <meshStandardMaterial
-                    color={
-                        wallColor
-                    }
+                    color={wallColor}
                 />
             </mesh>
-            {
-                touchesFloor &&
-                trimSides.map(
-                    side => (
-                        <WallTrim
-                            key={
-                                `${wallId}-${side}`
-                            }
-                            piece={
-                                piece
-                            }
-                            side={
-                                side
-                            }
-                        />
-                    )
-                )
-            }
-            {
-                finishSides.map(
-                    finish => (
-                        <WallFinishSurface
-                            key={
-                                `${finish.regionId}-${finish.wallId}`
-                            }
-                            piece={
-                                piece
-                            }
-                            finish={
-                                finish
-                            }
-                        />
-                    )
-                )
-            }
+
+            {touchesFloor &&
+                trimSides.map(side => (
+                    <WallTrim
+                        key={`${wallId}-${side}`}
+                        piece={piece}
+                        side={side}
+                    />
+                ))}
+
+            {finishSides.map(finish => (
+                <WallFinishSurface
+                    key={`${finish.regionId}-${finish.wallId}-${finish.side}`}
+                    piece={piece}
+                    finish={finish}
+                />
+            ))}
         </group>
     );
 }
 
-export default memo(
-    WallPiece
-);
+export default memo(WallPiece);

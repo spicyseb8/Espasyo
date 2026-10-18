@@ -20,7 +20,9 @@ import {
 import type {
     EditorState
 } from "./editor/types";
-
+import {
+    isProjectReadOnlyByDeadline
+} from "../services/projectDeadlineService";
 import type {
     EditorAction
 } from "./editor/editorActions";
@@ -484,24 +486,24 @@ export default function EditorProvider({
     //==================================================
 
     const dispatch =
-        useCallback(
-            (
-                action:
-                    EditorAction
-            ) => {
+    useCallback(
+        (
+            action:
+                EditorAction
+        ) => {
 
-                const currentState =
-                    stateRef.current;
+   
 
-                //==================================================
-// LOAD PROJECT
-//==================================================
-//
-// Loading a project establishes a completely new
-// editor state.
-//
-// It must NOT become an undo/redo history entry.
-//==================================================
+            if (
+                action.type !== "LOAD_PROJECT" &&
+                isProjectReadOnlyByDeadline()
+            ) {
+                return;
+            }
+
+            const currentState =
+                stateRef.current;
+
 
 if (
     action.type ===
@@ -925,10 +927,15 @@ if (
     //==================================================
 
     const undo =
-        useCallback(() => {
+    useCallback(() => {
 
-            const currentState =
-                stateRef.current;
+        // Do not allow undo after the project deadline.
+        if (isProjectReadOnlyByDeadline()) {
+            return;
+        }
+
+        const currentState =
+            stateRef.current;
 
             //--------------------------------------------------
             // Never modify anything while in walkthrough.
@@ -1066,10 +1073,15 @@ if (
     //==================================================
 
     const redo =
-        useCallback(() => {
+    useCallback(() => {
 
-            const currentState =
-                stateRef.current;
+        // Do not allow redo after the project deadline.
+        if (isProjectReadOnlyByDeadline()) {
+            return;
+        }
+
+        const currentState =
+            stateRef.current;
 
             //--------------------------------------------------
             // Never modify anything while in walkthrough.

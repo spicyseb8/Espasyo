@@ -11,6 +11,7 @@ export const initialState: EditorState = {
     selectedWallRegionId: null,
     selectedRegionId: null,
     selectedCornerId: null,
+    selectedWallSide: null,
     walkthroughMode: false,
     selectedOpeningId: null,
     selectedFurnitureId: null,

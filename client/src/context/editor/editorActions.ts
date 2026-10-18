@@ -24,7 +24,6 @@ export type EditorAction =
     | { type: "SET_CORNERS"; payload: Corner[]; }
     | { type: "REMOVE_CORNER"; payload: string; }
     | { type: "SELECT_WALL"; payload: string | null; }
-    | { type: "SELECT_WALL_SIDE"; payload: { wallId: string; regionId: string; }; }
     | { type: "SELECT_REGION"; payload: string | null; }
     | { type: "SELECT_CORNER"; payload: string | null; }
     | { type: "SELECT_OPENING"; payload: string | null; }
@@ -36,11 +35,12 @@ export type EditorAction =
     | { type: "SET_MOVING_FURNITURE"; payload: string | null; }
     | { type: "SET_GRID_SIZE"; payload: number; }
     | { type: "TOGGLE_SNAP"; }
+    | {type: "SELECT_WALL_SIDE"; payload: {wallId: string;regionId: string | null;side: 1 | -1;};}
     | { type: "SET_ACTIVE_FLOOR_MATERIAL"; payload: string | null; }
     | { type: "SET_ACTIVE_WALL_MATERIAL"; payload: string | null; }
     | { type: "SET_FLOOR_FINISH"; payload: { regionId: string; materialId: string; }; }
     | { type: "SET_FLOOR_FINISH_ALL"; payload: string; }
-    | { type: "SET_WALL_FINISH"; payload: { regionId: string; wallId: string; materialId: string; }; }
+    |{ type: "SET_WALL_FINISH"; payload: {regionId: string | null; wallId: string; materialId: string; side?: 1 | -1;};}
     | { type: "CONFIRM_LAYOUT"; }
     | { type: "LOAD_PROJECT"; payload: SavedProjectData; }
     | { type: "ADD_DOOR"; payload: Door; }

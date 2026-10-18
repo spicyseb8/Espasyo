@@ -1,14 +1,18 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Bell,
   CalendarDays,
-  Clock,
+  ChevronLeft,
+  ChevronRight,
   FolderPlus,
   Plus,
-  PlusCircle,
-  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import {
+  getAdminProjects,
+  type AdminProject,
+} from "@/services/assets/projectService";
 
 import { useAuth } from "@/context/AuthContext";
 
@@ -32,7 +36,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 
 /* ------------------------------------------------------------------ */
 /* Shared line styles (same as UserTable)                              */
@@ -52,12 +55,6 @@ const CONTROL = "border border-border/60 bg-background";
 /* Types + sample data (replace with Firestore data later)             */
 /* ------------------------------------------------------------------ */
 
-interface Note {
-  id: string;
-  text: string;
-  createdAt: Date;
-}
-
 interface AppNotification {
   id: string;
   message: string;
@@ -75,12 +72,6 @@ const stats = [
 
 const trend = [40, 62, 55, 78, 70, 92, 85, 104, 96, 118];
 
-const initialNotes: Note[] = [
-  { id: "n1", text: "Review pending project requests", createdAt: new Date(2026, 9, 8) },
-  { id: "n2", text: "Staff meeting at 2 PM", createdAt: new Date(2026, 9, 1) },
-  { id: "n3", text: "Inventory check", createdAt: new Date(2026, 8, 16) },
-];
-
 const initialNotifications: AppNotification[] = [
   {
     id: "x1",
@@ -94,13 +85,6 @@ const initialNotifications: AppNotification[] = [
   },
 ];
 
-const formatDate = (date: Date) =>
-  date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-
 const timeAgo = (date: Date) => {
   const minutes = Math.floor((Date.now() - date.getTime()) / 60000);
   if (minutes < 1) return "Just now";
@@ -110,16 +94,99 @@ const timeAgo = (date: Date) => {
   return `${Math.floor(hours / 24)}d ago`;
 };
 
+// Use local calendar dates instead of UTC to prevent a deadline from
+// shifting to the previous or next day because of timezone conversion.
+function localDateKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatCalendarDate(dateKey: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateKey);
+  if (!match) return "Unknown date";
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(year, month - 1, day);
+
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return "Unknown date";
+  }
+
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 /* ------------------------------------------------------------------ */
 /* Page                                                                */
 /* ------------------------------------------------------------------ */
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const userName = user?.displayName || user?.email?.split("@")[0] || "Admin";
 
   const [notifications, setNotifications] =
     useState<AppNotification[]>(initialNotifications);
+
+  const [deadlineProjects, setDeadlineProjects] =
+    useState<AdminProject[]>([]);
+  const [deadlinesLoading, setDeadlinesLoading] = useState(true);
+  const [deadlinesError, setDeadlinesError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!user) {
+      setDeadlineProjects([]);
+      setDeadlinesLoading(false);
+      setDeadlinesError("");
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setDeadlinesLoading(true);
+    setDeadlinesError("");
+
+    getAdminProjects()
+      .then((projects) => {
+        if (cancelled) return;
+
+        setDeadlineProjects(
+          projects.filter(
+            (project) =>
+              typeof project.deadline === "string" &&
+              /^\d{4}-\d{2}-\d{2}$/.test(project.deadline),
+          ),
+        );
+      })
+      .catch((error: unknown) => {
+        console.error("Failed to load project deadlines:", error);
+
+        if (!cancelled) {
+          setDeadlineProjects([]);
+          setDeadlinesError("Unable to load project deadlines.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setDeadlinesLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   const handleProjectCreated = (name: string) => {
     setNotifications((prev) => [
@@ -166,7 +233,7 @@ export default function Dashboard() {
       </div>
 
       {/* Row 1 */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid items-start gap-4 md:grid-cols-2 lg:grid-cols-3">
         <HelloCard
           userName={userName}
           onProjectCreated={handleProjectCreated}
@@ -176,8 +243,17 @@ export default function Dashboard() {
       </div>
 
       {/* Row 2 */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        <NotesCard />
+      <div className="grid items-start gap-4 lg:grid-cols-3">
+        <div className="lg:-mt-12">
+          <DeadlineCalendarCard
+            projects={deadlineProjects}
+            loading={deadlinesLoading}
+            error={deadlinesError}
+            onOpenProject={(projectId) =>
+              navigate(`/projects/view/${projectId}`)
+            }
+          />
+        </div>
         <AnalyticsCard />
       </div>
     </div>
@@ -224,7 +300,7 @@ function HelloCard({
           <CardDescription className="text-xs">{today}</CardDescription>
         </CardHeader>
 
-        <CardContent className="flex flex-1 flex-col justify-between gap-4 px-4">
+        <CardContent className="flex flex-col gap-3 px-4 pb-4">
           <div>
             <h2 className="truncate text-2xl font-semibold tracking-tight">
               Hello, {userName}!
@@ -383,105 +459,256 @@ function NotificationsCard({
 }
 
 /* ------------------------------------------------------------------ */
-/* Notes                                                               */
+/* ------------------------------------------------------------------ */
+/* Project deadline calendar                                           */
 /* ------------------------------------------------------------------ */
 
-function NotesCard() {
-  const [notes, setNotes] = useState<Note[]>(initialNotes);
-  const [draft, setDraft] = useState("");
+function DeadlineCalendarCard({
+  projects,
+  loading,
+  error,
+  onOpenProject,
+}: {
+  projects: AdminProject[];
+  loading: boolean;
+  error: string;
+  onOpenProject: (projectId: string) => void;
+}) {
+  const todayKey = localDateKey(new Date());
+  const [viewMonth, setViewMonth] = useState(() => {
+    const today = new Date();
+    return new Date(today.getFullYear(), today.getMonth(), 1);
+  });
+  const [selectedDate, setSelectedDate] = useState(todayKey);
 
-  const addNote = () => {
-    const text = draft.trim();
-    if (!text) return;
+  const deadlinesByDate = useMemo(() => {
+    const groups = new Map<string, AdminProject[]>();
 
-    setNotes((prev) => [
-      { id: crypto.randomUUID(), text, createdAt: new Date() },
-      ...prev,
-    ]);
-    setDraft("");
+    for (const project of projects) {
+      const deadline = project.deadline;
+
+      if (
+        typeof deadline !== "string" ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(deadline)
+      ) {
+        continue;
+      }
+
+      const existing = groups.get(deadline) ?? [];
+      existing.push(project);
+      groups.set(deadline, existing);
+    }
+
+    for (const [date, items] of groups) {
+      groups.set(
+        date,
+        [...items].sort((a, b) =>
+          a.projectName.localeCompare(b.projectName),
+        ),
+      );
+    }
+
+    return groups;
+  }, [projects]);
+
+  const calendarDates = useMemo(() => {
+    const year = viewMonth.getFullYear();
+    const month = viewMonth.getMonth();
+    const firstWeekday = new Date(year, month, 1).getDay();
+    // Keep the calendar at its original full six-week size.
+    const totalCells = 42;
+
+    return Array.from(
+      { length: totalCells },
+      (_, index) => new Date(year, month, index - firstWeekday + 1),
+    );
+  }, [viewMonth]);
+
+  const selectedProjects = deadlinesByDate.get(selectedDate) ?? [];
+  const monthLabel = viewMonth.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+
+  const goToMonth = (offset: number) => {
+    setViewMonth(
+      (current) =>
+        new Date(
+          current.getFullYear(),
+          current.getMonth() + offset,
+          1,
+        ),
+    );
   };
 
-  const removeNote = (id: string) =>
-    setNotes((prev) => prev.filter((note) => note.id !== id));
+  const selectDate = (date: Date) => {
+    setSelectedDate(localDateKey(date));
+
+    if (
+      date.getMonth() !== viewMonth.getMonth() ||
+      date.getFullYear() !== viewMonth.getFullYear()
+    ) {
+      setViewMonth(new Date(date.getFullYear(), date.getMonth(), 1));
+    }
+  };
 
   return (
-    <Card className={CARD}>
-      <CardHeader className="px-4">
-        <CardTitle className="text-sm">Notes</CardTitle>
+    <Card className={`${CARD} min-w-0`}>
+      <CardHeader className="flex flex-row items-center justify-between gap-2 px-4 pb-0">
+        <div className="min-w-0">
+          <CardTitle className="text-sm">Project deadlines</CardTitle>
+          <CardDescription className="text-xs">
+            Select a highlighted date to view due projects.
+          </CardDescription>
+        </div>
+        <Badge variant="secondary" className="shrink-0 text-[10px]">
+          {deadlinesByDate.size}
+        </Badge>
       </CardHeader>
 
-      <CardContent className="flex flex-1 flex-col gap-3 px-4">
-        <ScrollArea className={`h-44 ${INNER} bg-background`}>
-          {notes.length === 0 ? (
-            <p className="p-6 text-center text-xs text-muted-foreground">
-              No notes yet.
-            </p>
-          ) : (
-            <ul className="px-3">
-              {notes.map((note, index) => (
-                <li key={note.id}>
-                  <div className="group flex items-center justify-between gap-2 py-2">
-                    <span className="truncate text-xs font-medium">
-                      {note.text}
-                    </span>
+      <CardContent className="space-y-3 px-4 pb-4">
+        <div className="flex items-center justify-between gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            aria-label="Previous month"
+            onClick={() => goToMonth(-1)}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
 
-                    <div className="flex shrink-0 items-center gap-1.5">
-                      <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                        <Clock className="h-2.5 w-2.5" />
-                        {formatDate(note.createdAt)}
-                      </span>
-
-                      <button
-                        type="button"
-                        onClick={() => removeNote(note.id)}
-                        aria-label="Delete note"
-                        className="rounded p-0.5 text-muted-foreground opacity-0 transition hover:text-destructive group-hover:opacity-100 focus-visible:opacity-100"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {index < notes.length - 1 && (
-                    <Separator className="bg-border" />
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </ScrollArea>
-
-        <div
-          className={`flex items-center gap-1 rounded-lg pl-3 pr-1 ${CONTROL}`}
-        >
-          <Input
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") addNote();
-            }}
-            placeholder="Add a new note"
-            className="h-8 border-0 bg-transparent px-0 text-xs shadow-none focus-visible:ring-0"
-          />
+          <p className="text-sm font-semibold">{monthLabel}</p>
 
           <Button
             type="button"
             variant="ghost"
-            size="sm"
-            className="h-7 text-xs"
-            onClick={addNote}
-            disabled={!draft.trim()}
+            size="icon"
+            className="h-8 w-8"
+            aria-label="Next month"
+            onClick={() => goToMonth(1)}
           >
-            <PlusCircle className="mr-1 h-3.5 w-3.5" />
-            Add
+            <ChevronRight className="h-4 w-4" />
           </Button>
+        </div>
+
+        <div className="grid grid-cols-7 gap-1">
+          {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
+            <div
+              key={day}
+              className="py-1 text-center text-[10px] font-medium text-muted-foreground"
+            >
+              {day}
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-7 gap-1">
+          {calendarDates.map((date) => {
+            const dateKey = localDateKey(date);
+            const isCurrentMonth =
+              date.getMonth() === viewMonth.getMonth();
+            const hasDeadline = deadlinesByDate.has(dateKey);
+            const isSelected = dateKey === selectedDate;
+            const isToday = dateKey === todayKey;
+
+            return (
+              <button
+                key={dateKey}
+                type="button"
+                onClick={() => selectDate(date)}
+                aria-label={`${formatCalendarDate(dateKey)}${
+                  hasDeadline
+                    ? `, ${deadlinesByDate.get(dateKey)?.length} project deadline(s)`
+                    : ""
+                }`}
+                aria-pressed={isSelected}
+                className={[
+                  "relative flex h-8 w-full items-center justify-center rounded-md text-xs transition-colors",
+                  isSelected
+                    ? "bg-primary font-semibold text-primary-foreground"
+                    : hasDeadline
+                      ? "bg-primary/10 font-semibold text-primary hover:bg-primary/20"
+                      : "hover:bg-muted",
+                  !isCurrentMonth && !isSelected
+                    ? "text-muted-foreground/40"
+                    : "",
+                  isToday && !isSelected
+                    ? "ring-1 ring-primary/50"
+                    : "",
+                ].join(" ")}
+              >
+                {date.getDate()}
+                {hasDeadline && (
+                  <span
+                    className="absolute bottom-0.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-current"
+                    aria-hidden="true"
+                  />
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="border-t border-border pt-2">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <p className="text-xs font-semibold">
+              {selectedDate === todayKey
+                ? "Due today"
+                : formatCalendarDate(selectedDate)}
+            </p>
+            {selectedProjects.length > 0 && (
+              <Badge variant="outline" className="text-[10px]">
+                {selectedProjects.length}
+              </Badge>
+            )}
+          </div>
+
+          {loading ? (
+            <p className="py-3 text-center text-xs text-muted-foreground">
+              Loading deadlines...
+            </p>
+          ) : error ? (
+            <p className="py-3 text-xs text-destructive" role="alert">
+              {error}
+            </p>
+          ) : selectedProjects.length === 0 ? (
+            <p className="py-3 text-xs text-muted-foreground">
+              No project deadlines on this date.
+            </p>
+          ) : (
+            <ScrollArea className="h-[88px] w-full">
+              <ul className="space-y-1 pr-2">
+                {selectedProjects.map((project) => (
+                  <li key={project.projectId}>
+                    <button
+                      type="button"
+                      onClick={() => onOpenProject(project.projectId)}
+                      className="flex h-[40px] w-full items-center gap-2 overflow-hidden rounded-md px-2 py-1 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      title={`Open ${project.projectName}`}
+                    >
+                      <CalendarDays className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                      <span className="line-clamp-2 text-xs leading-snug">
+                        <span className="font-medium">
+                          {project.projectName}
+                        </span>{" "}
+                        {selectedDate === todayKey
+                          ? "is due today."
+                          : `is due on ${formatCalendarDate(selectedDate)}.`}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </ScrollArea>
+          )}
         </div>
       </CardContent>
     </Card>
   );
 }
 
-/* ------------------------------------------------------------------ */
 /* Website analytics (stats + line chart)                              */
 /* ------------------------------------------------------------------ */
 
