@@ -1,20 +1,8 @@
-import {
-    useEffect,
-    useMemo,
-    useState
-} from "react";
+import { useEffect, useMemo, useState } from "react";
+import { onAuthStateChanged } from "firebase/auth";
+import { useNavigate } from "react-router-dom";
 
-import {
-    onAuthStateChanged
-} from "firebase/auth";
-
-import {
-    useNavigate
-} from "react-router-dom";
-
-import {
-    auth
-} from "@/firebase/firebase";
+import { auth } from "@/firebase/firebase";
 
 import {
     Card,
@@ -23,15 +11,8 @@ import {
     CardHeader,
     CardTitle
 } from "@/components/ui/card";
-
-import {
-    Input
-} from "@/components/ui/input";
-
-import {
-    Badge
-} from "@/components/ui/badge";
-
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
     Select,
     SelectContent,
@@ -39,7 +20,6 @@ import {
     SelectTrigger,
     SelectValue
 } from "@/components/ui/select";
-
 import {
     Table,
     TableBody,
@@ -53,7 +33,10 @@ import {
     Search,
     FolderOpen,
     User,
-    ArrowUpDown
+    ArrowDownAZ,
+    ArrowUpAZ,
+    LayoutGrid,
+    List
 } from "lucide-react";
 
 import {
@@ -61,214 +44,104 @@ import {
     type AdminProject
 } from "../../../services/assets/projectService";
 
-import ProjectDetailsModal
-    from "./ProjectDetailsModal";
+import ProjectDetailsModal from "./ProjectDetailsModal";
 
-type SortOption =
-    | "updated-desc"
-    | "updated-asc"
-    | "created-desc"
-    | "created-asc"
-    | "name-asc"
-    | "name-desc"
-    | "owner-asc"
-    | "owner-desc";
 
-const SORT_OPTIONS: {
-    value:
-        SortOption;
-    label:
-        string;
+//==================================================
+// SORT
+//==================================================
+
+type SortField =
+    | "Project Name"
+    | "Date Modified"
+    | "Date Created"
+    | "User";
+
+type SortDirection = "asc" | "desc";
+
+type ProjectView = "list" | "tiles";
+
+const SORT_FIELDS: {
+    value: SortField;
+    label: string;
 }[] = [
-    {
-        value:
-            "updated-desc",
-        label:
-            "Last updated (newest)"
-    },
-    {
-        value:
-            "updated-asc",
-        label:
-            "Last updated (oldest)"
-    },
-    {
-        value:
-            "created-desc",
-        label:
-            "Date created (newest)"
-    },
-    {
-        value:
-            "created-asc",
-        label:
-            "Date created (oldest)"
-    },
-    {
-        value:
-            "name-asc",
-        label:
-            "Project name (A–Z)"
-    },
-    {
-        value:
-            "name-desc",
-        label:
-            "Project name (Z–A)"
-    },
-    {
-        value:
-            "owner-asc",
-        label:
-            "Owner (A–Z)"
-    },
-    {
-        value:
-            "owner-desc",
-        label:
-            "Owner (Z–A)"
-    }
+    { value: "Project Name", label: "Project Name" },
+    { value: "Date Modified", label: "Date modified" },
+    { value: "Date Created", label: "Date created" },
+    { value: "User", label: "User" }
 ];
 
-export function formatProjectDate(
-    value:
-        unknown
-): string {
-    if (
-        !value
-    ) {
+
+//==================================================
+// DATE
+//==================================================
+
+const DATE_FORMAT: Intl.DateTimeFormatOptions = {
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+};
+
+export function formatProjectDate(value: unknown): string {
+
+    if (!value) {
         return "Unknown";
     }
 
     if (
-        typeof value ===
-            "object" &&
+        typeof value === "object" &&
         value !== null &&
         "toDate" in value &&
-        typeof (
-            value as {
-                toDate:
-                    unknown;
-            }
-        ).toDate ===
-            "function"
+        typeof (value as { toDate: unknown }).toDate === "function"
     ) {
-        return (
-            value as {
-                toDate:
-                    () => Date;
-            }
-        ).toDate().toLocaleDateString(
-            undefined,
-            {
-                year:
-                    "numeric",
-                month:
-                    "long",
-                day:
-                    "numeric"
-            }
-        );
+        return (value as { toDate: () => Date })
+            .toDate()
+            .toLocaleDateString(undefined, DATE_FORMAT);
     }
 
-    if (
-        value instanceof Date
-    ) {
-        return value.toLocaleDateString(
-            undefined,
-            {
-                year:
-                    "numeric",
-                month:
-                    "long",
-                day:
-                    "numeric"
-            }
-        );
+    if (value instanceof Date) {
+        return value.toLocaleDateString(undefined, DATE_FORMAT);
     }
 
-    if (
-        typeof value ===
-        "string"
-    ) {
-        const date =
-            new Date(
-                value
-            );
+    if (typeof value === "string") {
+        const date = new Date(value);
 
-        if (
-            !Number.isNaN(
-                date.getTime()
-            )
-        ) {
-            return date.toLocaleDateString(
-                undefined,
-                {
-                    year:
-                        "numeric",
-                    month:
-                        "long",
-                    day:
-                        "numeric"
-                }
-            );
+        if (!Number.isNaN(date.getTime())) {
+            return date.toLocaleDateString(undefined, DATE_FORMAT);
         }
     }
 
     return "Unknown";
 }
 
-function getProjectTime(
-    value:
-        unknown
-): number {
-    if (
-        !value
-    ) {
+
+//==================================================
+// PROJECT TIME
+//==================================================
+
+function getProjectTime(value: unknown): number {
+
+    if (!value) {
         return 0;
     }
 
     if (
-        typeof value ===
-            "object" &&
+        typeof value === "object" &&
         value !== null &&
         "toMillis" in value &&
-        typeof (
-            value as {
-                toMillis:
-                    unknown;
-            }
-        ).toMillis ===
-            "function"
+        typeof (value as { toMillis: unknown }).toMillis === "function"
     ) {
-        return (
-            value as {
-                toMillis:
-                    () => number;
-            }
-        ).toMillis();
+        return (value as { toMillis: () => number }).toMillis();
     }
 
-    if (
-        value instanceof Date
-    ) {
+    if (value instanceof Date) {
         return value.getTime();
     }
 
-    if (
-        typeof value ===
-        "string"
-    ) {
-        const date =
-            new Date(
-                value
-            );
+    if (typeof value === "string") {
+        const date = new Date(value);
 
-        if (
-            !Number.isNaN(
-                date.getTime()
-            )
-        ) {
+        if (!Number.isNaN(date.getTime())) {
             return date.getTime();
         }
     }
@@ -276,372 +149,226 @@ function getProjectTime(
     return 0;
 }
 
-export function formatCost(
-    project:
-        AdminProject
-): string {
-    const cost =
-        project.totalCost ??
-        project.estimatedCost;
 
-    if (
-        typeof cost !==
-            "number" ||
-        !Number.isFinite(
-            cost
-        )
-    ) {
+//==================================================
+// COST
+//==================================================
+
+export function formatCost(project: AdminProject): string {
+
+    const cost = project.totalCost ?? project.estimatedCost;
+
+    if (typeof cost !== "number" || !Number.isFinite(cost)) {
         return "Not available";
     }
 
-    return new Intl.NumberFormat(
-        "en-PH",
-        {
-            style:
-                "currency",
-            currency:
-                "PHP",
-            maximumFractionDigits:
-                2
-        }
-    ).format(
-        cost
+    return new Intl.NumberFormat("en-PH", {
+        style: "currency",
+        currency: "PHP",
+        maximumFractionDigits: 2
+    }).format(cost);
+}
+
+
+//==================================================
+// PREVIEW
+//==================================================
+//
+// Shows project.thumbnailUrl when available,
+// otherwise falls back to the folder icon.
+//
+//==================================================
+
+function ProjectPreview({
+    project,
+    className,
+    iconSize
+}: {
+    project: AdminProject;
+    className: string;
+    iconSize: number;
+}) {
+
+    return (
+        <div
+            className={`flex shrink-0 items-center justify-center overflow-hidden border border-border/60 bg-muted/40 ${className}`}
+        >
+            {project.thumbnailUrl ? (
+                <img
+                    src={project.thumbnailUrl}
+                    alt={`${project.projectName} preview`}
+                    loading="lazy"
+                    className="h-full w-full object-cover"
+                />
+            ) : (
+                <FolderOpen
+                    size={iconSize}
+                    className="text-muted-foreground"
+                />
+            )}
+        </div>
     );
 }
 
+
+//==================================================
+// PROJECT MANAGEMENT
+//==================================================
+
 export default function ProjectManagement() {
-    const navigate =
-        useNavigate();
 
-    const [
-        projects,
-        setProjects
-    ] = useState<
-        AdminProject[]
-    >([]);
+    const navigate = useNavigate();
 
-    const [
-        loading,
-        setLoading
-    ] = useState(
-        true
-    );
+    const [projects, setProjects] = useState<AdminProject[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+    const [search, setSearch] = useState("");
 
-    const [
-        error,
-        setError
-    ] = useState(
-        ""
-    );
+    const [sortField, setSortField] = useState<SortField>("Date Modified");
+    const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+    const [projectView, setProjectView] = useState<ProjectView>("tiles");
 
-    const [
-        search,
-        setSearch
-    ] = useState(
-        ""
-    );
+    const [selectedProject, setSelectedProject] =
+        useState<AdminProject | null>(null);
 
-    const [
-        sortOption,
-        setSortOption
-    ] = useState<
-        SortOption
-    >(
-        "updated-desc"
-    );
 
-    const [
-        selectedProject,
-        setSelectedProject
-    ] = useState<
-        AdminProject | null
-    >(
-        null
-    );
+    //==================================================
+    // LOAD ALL PROJECTS
+    //==================================================
 
     useEffect(() => {
-        let cancelled =
-            false;
 
-        const unsubscribe =
-            onAuthStateChanged(
-                auth,
-                async user => {
-                    if (
-                        !user
-                    ) {
-                        if (
-                            !cancelled
-                        ) {
-                            setProjects(
-                                []
-                            );
+        let cancelled = false;
 
-                            setError(
-                                "Please log in to view projects."
-                            );
+        const unsubscribe = onAuthStateChanged(auth, async user => {
 
-                            setLoading(
-                                false
-                            );
-                        }
-
-                        return;
-                    }
-
-                    try {
-                        if (
-                            !cancelled
-                        ) {
-                            setLoading(
-                                true
-                            );
-
-                            setError(
-                                ""
-                            );
-                        }
-
-                        const loadedProjects =
-                            await getAdminProjects();
-
-                        if (
-                            !cancelled
-                        ) {
-                            setProjects(
-                                loadedProjects
-                            );
-                        }
-                    } catch (
-                        loadError
-                    ) {
-                        console.error(
-                            "Failed to load projects:",
-                            loadError
-                        );
-
-                        if (
-                            !cancelled
-                        ) {
-                            const firebaseError =
-                                loadError as {
-                                    code?:
-                                        string;
-                                };
-
-                            setError(
-                                firebaseError.code
-                                    ? `Failed to load projects: ${firebaseError.code}`
-                                    : "Failed to load projects."
-                            );
-                        }
-                    } finally {
-                        if (
-                            !cancelled
-                        ) {
-                            setLoading(
-                                false
-                            );
-                        }
-                    }
+            if (!user) {
+                if (!cancelled) {
+                    setProjects([]);
+                    setError("Please log in to view projects.");
+                    setLoading(false);
                 }
-            );
-
-        return () => {
-            cancelled =
-                true;
-
-            unsubscribe();
-        };
-    }, []);
-
-    const filteredProjects =
-        useMemo(() => {
-            const value =
-                search
-                    .trim()
-                    .toLowerCase();
-
-            const base =
-                !value
-                    ? projects
-                    : projects.filter(
-                        project =>
-                            project.projectName
-                                .toLowerCase()
-                                .includes(
-                                    value
-                                ) ||
-                            (
-                                project.ownerName ??
-                                ""
-                            )
-                                .toLowerCase()
-                                .includes(
-                                    value
-                                ) ||
-                            project.ownerId
-                                .toLowerCase()
-                                .includes(
-                                    value
-                                ) ||
-                            project.projectId
-                                .toLowerCase()
-                                .includes(
-                                    value
-                                )
-                    );
-
-            const sorted =
-                [
-                    ...base
-                ];
-
-            switch (
-                sortOption
-            ) {
-                case "updated-desc":
-                    sorted.sort(
-                        (
-                            a,
-                            b
-                        ) =>
-                            getProjectTime(
-                                b.updatedAt
-                            ) -
-                            getProjectTime(
-                                a.updatedAt
-                            )
-                    );
-                    break;
-
-                case "updated-asc":
-                    sorted.sort(
-                        (
-                            a,
-                            b
-                        ) =>
-                            getProjectTime(
-                                a.updatedAt
-                            ) -
-                            getProjectTime(
-                                b.updatedAt
-                            )
-                    );
-                    break;
-
-                case "created-desc":
-                    sorted.sort(
-                        (
-                            a,
-                            b
-                        ) =>
-                            getProjectTime(
-                                b.createdAt
-                            ) -
-                            getProjectTime(
-                                a.createdAt
-                            )
-                    );
-                    break;
-
-                case "created-asc":
-                    sorted.sort(
-                        (
-                            a,
-                            b
-                        ) =>
-                            getProjectTime(
-                                a.createdAt
-                            ) -
-                            getProjectTime(
-                                b.createdAt
-                            )
-                    );
-                    break;
-
-                case "name-asc":
-                    sorted.sort(
-                        (
-                            a,
-                            b
-                        ) =>
-                            a.projectName.localeCompare(
-                                b.projectName
-                            )
-                    );
-                    break;
-
-                case "name-desc":
-                    sorted.sort(
-                        (
-                            a,
-                            b
-                        ) =>
-                            b.projectName.localeCompare(
-                                a.projectName
-                            )
-                    );
-                    break;
-
-                case "owner-asc":
-                    sorted.sort(
-                        (
-                            a,
-                            b
-                        ) =>
-                            (
-                                a.ownerName ??
-                                ""
-                            ).localeCompare(
-                                b.ownerName ??
-                                ""
-                            )
-                    );
-                    break;
-
-                case "owner-desc":
-                    sorted.sort(
-                        (
-                            a,
-                            b
-                        ) =>
-                            (
-                                b.ownerName ??
-                                ""
-                            ).localeCompare(
-                                a.ownerName ??
-                                ""
-                            )
-                    );
-                    break;
+                return;
             }
 
-            return sorted;
-        }, [
-            projects,
-            search,
-            sortOption
-        ]);
+            try {
+                if (!cancelled) {
+                    setLoading(true);
+                    setError("");
+                }
 
-    function handleOpenProject(
-        project:
-            AdminProject
-    ) {
-        setSelectedProject(
-            null
-        );
+                // Admin project list: returns ALL projects.
+                const loadedProjects = await getAdminProjects();
 
-        navigate(
-            `/projects/view/${project.projectId}`
-        );
+                if (!cancelled) {
+                    setProjects(loadedProjects);
+                }
+
+            } catch (loadError) {
+
+                console.error("Failed to load projects:", loadError);
+
+                if (!cancelled) {
+                    const firebaseError = loadError as { code?: string };
+
+                    setError(
+                        firebaseError.code
+                            ? `Failed to load projects: ${firebaseError.code}`
+                            : "Failed to load projects."
+                    );
+                }
+
+            } finally {
+                if (!cancelled) {
+                    setLoading(false);
+                }
+            }
+        });
+
+        return () => {
+            cancelled = true;
+            unsubscribe();
+        };
+
+    }, []);
+
+
+    //==================================================
+    // FILTER + SORT
+    //==================================================
+
+    const filteredProjects = useMemo(() => {
+
+        const value = search.trim().toLowerCase();
+
+        const base = !value
+            ? projects
+            : projects.filter(
+                project =>
+                    project.projectName.toLowerCase().includes(value) ||
+                    (project.ownerName ?? "").toLowerCase().includes(value) ||
+                    project.ownerId.toLowerCase().includes(value) ||
+                    project.projectId.toLowerCase().includes(value)
+            );
+
+        const sorted = [...base];
+
+        sorted.sort((a, b) => {
+            let comparison: number;
+
+            if (sortField === "Project Name") {
+                comparison = a.projectName.localeCompare(b.projectName);
+            } else if (sortField === "Date Modified") {
+                comparison = getProjectTime(a.updatedAt) - getProjectTime(b.updatedAt);
+            } else if (sortField === "Date Created") {
+                comparison = getProjectTime(a.createdAt) - getProjectTime(b.createdAt);
+            } else {
+                comparison = (a.ownerName ?? "Unknown User").localeCompare(
+                    b.ownerName ?? "Unknown User"
+                );
+            }
+
+            if (comparison === 0) {
+                comparison = a.projectId.localeCompare(b.projectId);
+            }
+
+            return sortDirection === "asc" ? comparison : -comparison;
+        });
+
+        return sorted;
+
+    }, [projects, search, sortField, sortDirection]);
+
+
+    //==================================================
+    // OPEN PROJECT
+    //==================================================
+    //
+    // Opens the ADMIN view-only loader,
+    // NOT /studio/load/:projectId
+    //
+    //==================================================
+
+    function handleOpenProject(project: AdminProject) {
+        setSelectedProject(null);
+        navigate(`/projects/view/${project.projectId}`);
     }
 
+
+    //==================================================
+    // RENDER
+    //==================================================
+
     return (
+
         <div className="w-full">
+
             <Card className="border-border/60 shadow-none">
+
                 <CardHeader className="border-b border-border/60">
+
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+
                         <div>
                             <CardTitle className="text-base">
                                 User Projects
@@ -653,326 +380,349 @@ export default function ProjectManagement() {
                         </div>
 
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+
                             <div className="relative w-full sm:w-64">
                                 <Search
-                                    size={
-                                        16
-                                    }
+                                    size={16}
                                     className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
                                 />
 
                                 <Input
-                                    value={
-                                        search
-                                    }
-                                    onChange={
-                                        event =>
-                                            setSearch(
-                                                event.target.value
-                                            )
-                                    }
+                                    value={search}
+                                    onChange={event => setSearch(event.target.value)}
                                     placeholder="Search projects..."
                                     className="border-border/60 pl-9"
                                 />
                             </div>
 
-                            <Select
-                                value={
-                                    sortOption
-                                }
-                                onValueChange={
-                                    value =>
-                                        setSortOption(
-                                            value as SortOption
-                                        )
-                                }
-                            >
-                                <SelectTrigger className="w-full border-border/60 sm:w-56">
-                                    <div className="flex items-center gap-2">
-                                        <ArrowUpDown
-                                            size={
-                                                14
-                                            }
-                                            className="text-muted-foreground"
-                                        />
+                            <div className="flex items-center gap-2">
 
-                                        <SelectValue
-                                            placeholder="Sort by"
-                                        />
-                                    </div>
-                                </SelectTrigger>
+                                <Select
+                                    value={sortField}
+                                    onValueChange={value => setSortField(value as SortField)}
+                                >
+                                    <SelectTrigger className="w-full border-border/60 sm:w-56">
+                                        <SelectValue placeholder="Sort by" />
+                                    </SelectTrigger>
 
-                                <SelectContent>
-                                    {
-                                        SORT_OPTIONS.map(
-                                            option => (
-                                                <SelectItem
-                                                    key={
-                                                        option.value
-                                                    }
-                                                    value={
-                                                        option.value
-                                                    }
-                                                >
-                                                    {
-                                                        option.label
-                                                    }
-                                                </SelectItem>
-                                            )
+                                    <SelectContent>
+                                        {SORT_FIELDS.map(option => (
+                                            <SelectItem
+                                                key={option.value}
+                                                value={option.value}
+                                            >
+                                                {option.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setSortDirection(current =>
+                                            current === "asc" ? "desc" : "asc"
                                         )
                                     }
-                                </SelectContent>
-                            </Select>
+                                    className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border/60 bg-background text-muted-foreground hover:bg-muted"
+                                    title={sortDirection === "asc" ? "Ascending" : "Descending"}
+                                    aria-label={`Sort ${sortDirection === "asc" ? "ascending" : "descending"}`}
+                                >
+                                    {sortDirection === "asc"
+                                        ? <ArrowUpAZ size={16} />
+                                        : <ArrowDownAZ size={16} />}
+                                </button>
+
+                                <div
+                                    className="flex items-center rounded-md border border-border/60 bg-background p-0.5"
+                                    role="group"
+                                    aria-label="Project view"
+                                >
+                                    <button
+                                        type="button"
+                                        onClick={() => setProjectView("list")}
+                                        className={`inline-flex h-8 w-8 items-center justify-center rounded-sm ${projectView === "list" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/60"}`}
+                                        title="List view"
+                                        aria-label="List view"
+                                        aria-pressed={projectView === "list"}
+                                    >
+                                        <List size={16} />
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setProjectView("tiles")}
+                                        className={`inline-flex h-8 w-8 items-center justify-center rounded-sm ${projectView === "tiles" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/60"}`}
+                                        title="Tiles view"
+                                        aria-label="Tiles view"
+                                        aria-pressed={projectView === "tiles"}
+                                    >
+                                        <LayoutGrid size={16} />
+                                    </button>
+                                </div>
+
+                            </div>
+
                         </div>
+
                     </div>
+
                 </CardHeader>
 
+
                 <CardContent className="p-0">
-                    {
-                        loading && (
-                            <div className="flex min-h-64 items-center justify-center">
-                                <p className="text-sm text-muted-foreground">
-                                    Loading projects...
+
+                    {/* LOADING */}
+                    {loading && (
+                        <div className="flex min-h-64 items-center justify-center">
+                            <p className="text-sm text-muted-foreground">
+                                Loading projects...
+                            </p>
+                        </div>
+                    )}
+
+
+                    {/* ERROR */}
+                    {!loading && error && (
+                        <div className="flex min-h-64 items-center justify-center p-6">
+                            <div className="text-center">
+                                <p className="text-sm font-medium">
+                                    Unable to load projects
+                                </p>
+
+                                <p className="mt-1 text-xs text-muted-foreground">
+                                    {error}
                                 </p>
                             </div>
-                        )
-                    }
+                        </div>
+                    )}
 
-                    {
-                        !loading &&
-                        error && (
-                            <div className="flex min-h-64 items-center justify-center p-6">
-                                <div className="text-center">
-                                    <p className="text-sm font-medium">
-                                        Unable to load projects
-                                    </p>
 
-                                    <p className="mt-1 text-xs text-muted-foreground">
-                                        {
-                                            error
-                                        }
-                                    </p>
-                                </div>
+                    {/* EMPTY */}
+                    {!loading && !error && filteredProjects.length === 0 && (
+                        <div className="flex min-h-64 flex-col items-center justify-center gap-3">
+                            <div className="rounded-full bg-muted p-3">
+                                <FolderOpen
+                                    size={24}
+                                    className="text-muted-foreground"
+                                />
                             </div>
-                        )
-                    }
 
-                    {
-                        !loading &&
-                        !error &&
-                        filteredProjects.length ===
-                        0 && (
-                            <div className="flex min-h-64 flex-col items-center justify-center gap-3">
-                                <div className="rounded-full bg-muted p-3">
-                                    <FolderOpen
-                                        size={
-                                            24
-                                        }
-                                        className="text-muted-foreground"
-                                    />
-                                </div>
+                            <div className="text-center">
+                                <p className="text-sm font-medium">
+                                    No projects found
+                                </p>
 
-                                <div className="text-center">
-                                    <p className="text-sm font-medium">
-                                        No projects found
-                                    </p>
-
-                                    <p className="mt-1 text-xs text-muted-foreground">
-                                        {
-                                            search
-                                                ? "Try a different search."
-                                                : "There are no saved projects yet."
-                                        }
-                                    </p>
-                                </div>
+                                <p className="mt-1 text-xs text-muted-foreground">
+                                    {search
+                                        ? "Try a different search."
+                                        : "There are no saved projects yet."}
+                                </p>
                             </div>
-                        )
-                    }
+                        </div>
+                    )}
 
-                    {
-                        !loading &&
+
+                    {/* LIST */}
+                    {!loading &&
                         !error &&
-                        filteredProjects.length >
-                        0 && (
-                            <div className="overflow-x-auto">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow className="border-border/60 hover:bg-transparent">
-                                            <TableHead>
-                                                Project
-                                            </TableHead>
+                        filteredProjects.length > 0 &&
+                        projectView === "list" && (
 
-                                            <TableHead>
-                                                Owner
-                                            </TableHead>
+                        <div className="overflow-x-auto">
 
-                                            <TableHead>
-                                                Created
-                                            </TableHead>
+                            <Table>
 
-                                            <TableHead>
-                                                Last Updated
-                                            </TableHead>
+                                <TableHeader>
+                                    <TableRow className="border-border/60 hover:bg-transparent">
+                                        <TableHead>Project</TableHead>
+                                        <TableHead>Owner</TableHead>
+                                        <TableHead>Created</TableHead>
+                                        <TableHead>Last Updated</TableHead>
+                                        <TableHead>Estimated Cost</TableHead>
+                                        <TableHead>Status</TableHead>
+                                    </TableRow>
+                                </TableHeader>
 
-                                            <TableHead>
-                                                Estimated Cost
-                                            </TableHead>
+                                <TableBody>
+                                    {filteredProjects.map(project => (
 
-                                            <TableHead>
-                                                Status
-                                            </TableHead>
+                                        <TableRow
+                                            key={project.projectId}
+                                            className="cursor-pointer border-border/60 hover:bg-muted/30"
+                                            onClick={() => setSelectedProject(project)}
+                                        >
+
+                                            <TableCell>
+                                                <div className="flex items-center gap-3">
+
+                                                    <ProjectPreview
+                                                        project={project}
+                                                        iconSize={19}
+                                                        className="h-14 w-20 rounded-md"
+                                                    />
+
+                                                    <div className="min-w-0">
+                                                        <p className="truncate font-medium">
+                                                            {project.projectName}
+                                                        </p>
+
+                                                        <p className="truncate text-xs text-muted-foreground">
+                                                            ID: {project.projectId}
+                                                        </p>
+                                                    </div>
+
+                                                </div>
+                                            </TableCell>
+
+                                            <TableCell>
+                                                <div className="flex items-center gap-2">
+                                                    <User
+                                                        size={14}
+                                                        className="text-muted-foreground"
+                                                    />
+
+                                                    <span className="max-w-40 truncate text-sm">
+                                                        {project.ownerName || "Unknown User"}
+                                                    </span>
+                                                </div>
+                                            </TableCell>
+
+                                            <TableCell>
+                                                <span className="text-sm text-muted-foreground">
+                                                    {formatProjectDate(project.createdAt)}
+                                                </span>
+                                            </TableCell>
+
+                                            <TableCell>
+                                                <span className="text-sm text-muted-foreground">
+                                                    {formatProjectDate(project.updatedAt)}
+                                                </span>
+                                            </TableCell>
+
+                                            <TableCell>
+                                                <span className="text-sm font-medium">
+                                                    {formatCost(project)}
+                                                </span>
+                                            </TableCell>
+
+                                            <TableCell>
+                                                <Badge variant="outline">
+                                                    Saved
+                                                </Badge>
+                                            </TableCell>
+
                                         </TableRow>
-                                    </TableHeader>
 
-                                    <TableBody>
-                                        {
-                                            filteredProjects.map(
-                                                project => (
-                                                    <TableRow
-                                                        key={
-                                                            project.projectId
-                                                        }
-                                                        className="cursor-pointer border-border/60 hover:bg-muted/30"
-                                                        onClick={() =>
-                                                            setSelectedProject(
-                                                                project
-                                                            )
-                                                        }
-                                                    >
-                                                        <TableCell>
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="flex h-14 w-20 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border/60 bg-muted/40">
-                                                                    {
-                                                                        project.thumbnailUrl ? (
-                                                                            <img
-                                                                                src={
-                                                                                    project.thumbnailUrl
-                                                                                }
-                                                                                alt={
-                                                                                    `${project.projectName} preview`
-                                                                                }
-                                                                                className="h-full w-full object-cover"
-                                                                            />
-                                                                        ) : (
-                                                                            <FolderOpen
-                                                                                size={
-                                                                                    19
-                                                                                }
-                                                                                className="text-muted-foreground"
-                                                                            />
-                                                                        )
-                                                                    }
-                                                                </div>
+                                    ))}
+                                </TableBody>
 
-                                                                <div className="min-w-0">
-                                                                    <p className="truncate font-medium">
-                                                                        {
-                                                                            project.projectName
-                                                                        }
-                                                                    </p>
+                            </Table>
 
-                                                                    <p className="truncate text-xs text-muted-foreground">
-                                                                        ID:
-                                                                        {" "}
-                                                                        {
-                                                                            project.projectId
-                                                                        }
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-                                                        </TableCell>
+                        </div>
+                    )}
 
-                                                        <TableCell>
-                                                            <div className="flex items-center gap-2">
-                                                                <User
-                                                                    size={
-                                                                        14
-                                                                    }
-                                                                    className="text-muted-foreground"
-                                                                />
 
-                                                                <span className="max-w-40 truncate text-sm">
-                                                                    {
-                                                                        project.ownerName ||
-                                                                        "Unknown User"
-                                                                    }
-                                                                </span>
-                                                            </div>
-                                                        </TableCell>
+                    {/* TILES */}
+                    {!loading &&
+                        !error &&
+                        filteredProjects.length > 0 &&
+                        projectView === "tiles" && (
 
-                                                        <TableCell>
-                                                            <span className="text-sm text-muted-foreground">
-                                                                {
-                                                                    formatProjectDate(
-                                                                        project.createdAt
-                                                                    )
-                                                                }
-                                                            </span>
-                                                        </TableCell>
+                        <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 xl:grid-cols-3">
+                            {filteredProjects.map(project => (
+                                <button
+                                    key={project.projectId}
+                                    type="button"
+                                    onClick={() => setSelectedProject(project)}
+                                    className="w-full text-left"
+                                >
+                                    <Card className="h-full overflow-hidden border-border/60 shadow-none transition-colors hover:bg-muted/20">
 
-                                                        <TableCell>
-                                                            <span className="text-sm text-muted-foreground">
-                                                                {
-                                                                    formatProjectDate(
-                                                                        project.updatedAt
-                                                                    )
-                                                                }
-                                                            </span>
-                                                        </TableCell>
+                                        <ProjectPreview
+                                            project={project}
+                                            iconSize={28}
+                                            className="aspect-video w-full rounded-none border-0 border-b"
+                                        />
 
-                                                        <TableCell>
-                                                            <span className="text-sm font-medium">
-                                                                {
-                                                                    formatCost(
-                                                                        project
-                                                                    )
-                                                                }
-                                                            </span>
-                                                        </TableCell>
+                                        <CardHeader className="pb-3">
+                                            <div className="min-w-0">
+                                                <CardTitle className="truncate text-sm">
+                                                    {project.projectName}
+                                                </CardTitle>
 
-                                                        <TableCell>
-                                                            <Badge
-                                                                variant="outline"
-                                                            >
-                                                                Saved
-                                                            </Badge>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                )
-                                            )
-                                        }
-                                    </TableBody>
-                                </Table>
-                            </div>
-                        )
-                    }
+                                                <CardDescription className="mt-1 truncate text-xs">
+                                                    {project.projectId}
+                                                </CardDescription>
+                                            </div>
+                                        </CardHeader>
+
+                                        <CardContent className="space-y-3 pt-0">
+                                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                <User size={14} />
+                                                <span className="truncate">
+                                                    {project.ownerName || "Unknown User"}
+                                                </span>
+                                            </div>
+
+                                            <div className="flex items-center justify-between gap-3 text-xs">
+                                                <span className="text-muted-foreground">
+                                                    Date modified
+                                                </span>
+                                                <span className="truncate text-right">
+                                                    {formatProjectDate(project.updatedAt)}
+                                                </span>
+                                            </div>
+
+                                            <div className="flex items-center justify-between gap-3 border-t border-border/60 pt-3">
+                                                <span className="text-xs text-muted-foreground">
+                                                    {formatCost(project)}
+                                                </span>
+                                                <Badge variant="outline">
+                                                    Saved
+                                                </Badge>
+                                            </div>
+                                        </CardContent>
+
+                                    </Card>
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
                 </CardContent>
+
             </Card>
 
-            <ProjectDetailsModal
-    project={selectedProject}
-    onOpenChange={open => {
-        if (!open) {
-            setSelectedProject(null);
-        }
-    }}
-    onOpenProject={handleOpenProject}
-    onDeadlineSaved={(projectId, deadline) => {
-        setProjects(current =>
-            current.map(project =>
-                project.projectId === projectId
-                    ? { ...project, deadline }
-                    : project
-            )
-        );
 
-        setSelectedProject(current =>
-            current?.projectId === projectId
-                ? { ...current, deadline }
-                : current
-        );
-    }}
-/>
+            {/* PROJECT DETAILS MODAL */}
+            <ProjectDetailsModal
+                project={selectedProject}
+                onOpenChange={open => {
+                    if (!open) {
+                        setSelectedProject(null);
+                    }
+                }}
+                onOpenProject={handleOpenProject}
+                onDeadlineSaved={(projectId, deadline) => {
+                    setProjects(current =>
+                        current.map(project =>
+                            project.projectId === projectId
+                                ? { ...project, deadline }
+                                : project
+                        )
+                    );
+
+                    setSelectedProject(current =>
+                        current?.projectId === projectId
+                            ? { ...current, deadline }
+                            : current
+                    );
+                }}
+            />
+
         </div>
+
     );
+
 }
