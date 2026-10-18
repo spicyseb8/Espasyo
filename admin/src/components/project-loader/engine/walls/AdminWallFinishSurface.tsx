@@ -140,9 +140,12 @@ function useWallTexture(
             error => {
 
                 console.error(
-                    "Failed to load admin wall finish texture:",
-                    url,
-                    error
+                    "Failed to load admin wall finish texture.",
+                    {
+                        error: error instanceof Error
+                            ? error.name
+                            : "TextureLoadError"
+                    }
                 );
 
 

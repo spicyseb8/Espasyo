@@ -11,6 +11,7 @@ const FILE_CACHE_PATH = "/__espasyo_asset_cache__/";
 const MAP_CACHE_PATH = "/__espasyo_asset_map__";
 const DOWNLOAD_CONCURRENCY = 2;
 const METADATA_CONCURRENCY = 4;
+let storagePersistenceRequest: Promise<void> | undefined;
 
 export interface AssetSyncProgress {
   phase: "starting" | "downloading" | "complete" | "error";
@@ -47,6 +48,27 @@ async function stableHash(value: string): Promise<string> {
   return [...new Uint8Array(digest)]
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");
+}
+
+function requestStoragePersistenceOnce(): Promise<void> {
+  if (!storagePersistenceRequest) {
+    storagePersistenceRequest = (async () => {
+      if (!navigator.storage?.persist) {
+        return;
+      }
+
+      try {
+        const persistent = await navigator.storage.persist();
+        if (!persistent) {
+          console.info("Persistent storage unavailable; cached assets may be evicted.");
+        }
+      } catch {
+        console.debug("Unable to request persistent storage.");
+      }
+    })();
+  }
+
+  return storagePersistenceRequest;
 }
 
 function safeSourceLabel(value: string): string {
@@ -545,21 +567,7 @@ export async function syncLibraryAssets(
     throw new Error("This browser does not support persistent asset caching.");
   }
 
-  if (navigator.storage?.persist) {
-    try {
-      const persistent = await navigator.storage.persist();
-      if (!persistent) {
-        console.warn(
-          "Browser storage persistence was not granted; cached assets may be evicted.",
-        );
-      }
-    } catch (error) {
-      console.warn(
-        "Browser storage persistence could not be requested; cached assets may be evicted.",
-        error,
-      );
-    }
-  }
+  await requestStoragePersistenceOnce();
 
   onProgress({
     phase: "starting",

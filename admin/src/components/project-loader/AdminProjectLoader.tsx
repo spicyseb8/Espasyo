@@ -72,8 +72,6 @@ export default function AdminProjectLoader() {
                 //==================================================
                 const metadata = await getAdminProject(projectId);
 
-                console.log("AdminProjectLoader metadata:", metadata);
-
                 //==================================================
                 // JSON URL
                 //==================================================
@@ -86,8 +84,6 @@ export default function AdminProjectLoader() {
                 }
 
                 const jsonUrl = metadata.jsonUrl.trim();
-
-                console.log("AdminProjectLoader downloading JSON from jsonUrl:", jsonUrl);
 
                 //==================================================
                 // DOWNLOAD JSON

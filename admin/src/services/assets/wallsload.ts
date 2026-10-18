@@ -360,10 +360,11 @@ async function loadWallMaterials():
                     };
 
 
-                    console.log(
-                        "Loaded wall material:",
-                        material
-                    );
+                    console.debug("Loaded admin wall material.", {
+                        id: material.id,
+                        hasTexture: Boolean(material.texture),
+                        hasColor: Boolean(material.color),
+                    });
 
 
                     return material;
@@ -466,10 +467,9 @@ async function loadWallMaterials():
         true;
 
 
-    console.log(
-        "Final wall materials:",
-        cachedWallMaterials
-    );
+    console.info("Admin wall materials loaded.", {
+        count: cachedWallMaterials.length,
+    });
 
 
     return cachedWallMaterials;

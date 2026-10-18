@@ -27,8 +27,35 @@ function requestLabel(request) {
   }
 }
 
+function requestDetails(request) {
+  return {
+    request: requestLabel(request),
+    method: request.method,
+    destination: request.destination || "unknown",
+    mode: request.mode,
+  };
+}
+
 function errorName(error) {
   return error instanceof Error ? error.name : "UnknownError";
+}
+
+function safeErrorMessage(error) {
+  if (!(error instanceof Error)) {
+    return "Unknown error";
+  }
+
+  return error.message
+    .replace(/https?:\/\/[^\s"'`<>]+/gi, (value) => {
+      try {
+        const url = new URL(value);
+        return `${url.origin}${url.pathname}`;
+      } catch {
+        return "[redacted URL]";
+      }
+    })
+    .replace(/([?&](?:token|auth|key|signature)=)[^&\s]+/gi, "$1[redacted]")
+    .slice(0, 200);
 }
 
 function isValidMapping(mapping) {
@@ -164,8 +191,9 @@ self.addEventListener("fetch", (event) => {
       response = await fetch(request);
     } catch (error) {
       console.error("Asset network request failed.", {
-        request: label,
+        ...requestDetails(request),
         error: errorName(error),
+        message: safeErrorMessage(error),
       });
       return new Response("Asset network request failed.", {
         status: 503,
@@ -176,10 +204,37 @@ self.addEventListener("fetch", (event) => {
       });
     }
 
+    if (response.type === "opaque") {
+      if (
+        mapping ||
+        new URL(request.url).hostname === "firebasestorage.googleapis.com"
+      ) {
+        console.debug("Asset request returned an opaque response; HTTP status is unavailable.", {
+          ...requestDetails(request),
+        });
+      }
+      return response;
+    }
+
+    if (response.type === "error") {
+      if (
+        mapping ||
+        new URL(request.url).hostname === "firebasestorage.googleapis.com"
+      ) {
+        console.error("Asset request returned a network error response.", {
+          ...requestDetails(request),
+        });
+      }
+      return response;
+    }
+
     if (response.status !== 200) {
-      if (mapping || new URL(request.url).hostname === "firebasestorage.googleapis.com") {
+      if (
+        response.status >= 400 &&
+        (mapping || new URL(request.url).hostname === "firebasestorage.googleapis.com")
+      ) {
         console.warn("Asset network returned an HTTP error.", {
-          request: label,
+          ...requestDetails(request),
           status: response.status,
         });
       }
