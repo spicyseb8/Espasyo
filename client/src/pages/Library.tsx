@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronLeft, ChevronRight, Info, Search } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Search } from "lucide-react";
 
 import { getFurnitureAssets } from "../engine/furniture/FirebaseFurnitureLibrary";
 import { getFloorMaterials } from "../engine/materials/floors";
@@ -43,7 +43,7 @@ const ITEMS_PER_PAGE = COLUMNS * ROWS; // 12
 
 // Put the hero image in /public (e.g. /public/library-hero.jpg) and point this at it.
 const LIBRARY_HERO_IMAGE = "/public/background/library-bg.jpg";
-const HERO_SURFACE = "#f4f4f2"; // should match the image's light background
+const HERO_SURFACE = "#faf7f2"; // should match the image's light background
 
 const DIVISIONS: { key: Division; label: string }[] = [
   { key: "furniture", label: "Furniture" },
@@ -211,7 +211,7 @@ function LibraryHero({ stats }: { stats: HeroStat[] }) {
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 hidden md:block"
         style={{
-          background: `linear-gradient(to right, ${HERO_SURFACE} 0%, rgba(244,244,242,0) 48%)`,
+          background: `linear-gradient(to right, ${HERO_SURFACE} 0%, rgba(250,247,242,0) 48%)`,
         }}
       />
 
@@ -284,7 +284,7 @@ function FilterSelect({
         value={value}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
-        className="h-[38px] w-full cursor-pointer appearance-none rounded-md border border-black/15 bg-white px-3 pb-0 pt-3.5 text-[11px] font-medium text-[#1b1b1b] outline-none transition hover:border-black/35 focus:border-black/60 disabled:cursor-not-allowed [&>option]:bg-white [&>option]:text-[#1b1b1b]"
+        className="h-[38px] w-full cursor-pointer appearance-none rounded-md border border-black/15 bg-[#faf7f2] px-3 pb-0 pt-3.5 text-[11px] font-medium text-[#1b1b1b] outline-none transition hover:border-black/35 focus:border-black/60 disabled:cursor-not-allowed [&>option]:bg-[#faf7f2] [&>option]:text-[#1b1b1b]"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -310,21 +310,13 @@ function CollectionCard({ item }: { item: LibraryItem }) {
 
   return (
     <article className="flex aspect-[4/5] flex-col rounded-xl bg-black/[0.05] p-3.5 transition-colors duration-200 hover:bg-black/[0.08]">
-      {/* top row */}
+      {/* top row: name + price */}
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h3 className="truncate text-[12px] font-medium leading-tight text-[#1b1b1b]">
-            {item.name}
-          </h3>
-          <p className="mt-0.5 truncate text-[9px] uppercase tracking-wide text-black/45">
-            {item.price}
-          </p>
-        </div>
-        <span
-          className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-black/5 text-black/60"
-          aria-hidden
-        >
-          <Info className="h-2.5 w-2.5" strokeWidth={2} />
+        <h3 className="min-w-0 truncate text-[12px] font-medium leading-tight text-[#1b1b1b]">
+          {item.name}
+        </h3>
+        <span className="shrink-0 whitespace-nowrap rounded-full bg-emerald-600/10 px-2 py-0.5 text-[10px] font-semibold tabular-nums text-emerald-700">
+          {item.price}
         </span>
       </div>
 
@@ -569,7 +561,7 @@ export default function LibraryPage() {
   ];
 
   return (
-    <div className="min-h-screen w-full bg-white font-sans text-[#1b1b1b] antialiased">
+    <div className="min-h-screen w-full bg-[#faf7f2] font-sans text-[#1b1b1b] antialiased">
       <NavBar />
 
       {/* Division 1: full-width hero (image + intro text) */}
@@ -618,7 +610,7 @@ export default function LibraryPage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={`Search ${title.toLowerCase()}`}
-              className="h-[38px] w-full rounded-md border border-black/15 bg-white px-3 pb-0 pr-9 pt-3.5 text-[11px] font-medium text-[#1b1b1b] outline-none transition placeholder:text-black/30 hover:border-black/35 focus:border-black/60"
+              className="h-[38px] w-full rounded-md border border-black/15 bg-[#faf7f2] px-3 pb-0 pr-9 pt-3.5 text-[11px] font-medium text-[#1b1b1b] outline-none transition placeholder:text-black/30 hover:border-black/35 focus:border-black/60"
             />
             <Search
               className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-black/60"

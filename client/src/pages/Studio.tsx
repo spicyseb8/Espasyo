@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowUpRight, FolderOpen, Plus, Search } from "lucide-react";
+import { ArrowUpRight, FolderOpen, Layers3, Plus, Search, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { clearProjectSession } from "../services/projectEditSessionService";
 import { collection, getDocs, query, where } from "firebase/firestore";
@@ -43,7 +43,10 @@ interface StudioItem {
 // ---------------------------------------------------------------------------
 // Put the hero image in /public (e.g. /public/studio-hero.jpg) and point this at it.
 const STUDIO_HERO_IMAGE = "public/background/studio-bg.jpg";
-const HERO_SURFACE = "#f4f4f2"; // should match the image's light background
+// Save your PNG as public/background/create-blank.png (or change this path).
+const CREATE_BLANK_IMAGE = "public/modal/create-blank.png";
+const HERO_SURFACE = "#faf7f2"; // should match the image's light background
+const DEFAULT_PROJECT_NAME = "Untitled project";
 
 // ---------------------------------------------------------------------------
 // Date helpers
@@ -154,7 +157,7 @@ function StudioHero({
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 hidden md:block"
         style={{
-          background: `linear-gradient(to right, ${HERO_SURFACE} 0%, rgba(244,244,242,0) 48%)`,
+          background: `linear-gradient(to right, ${HERO_SURFACE} 0%, rgba(250,247,242,0) 48%)`,
         }}
       />
 
@@ -231,7 +234,7 @@ function ProjectCard({ item }: { item: StudioItem }) {
         )}
 
         {item.kind === "draft" && (
-          <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-[#1b1b1b] shadow-sm backdrop-blur">
+          <span className="absolute left-3 top-3 rounded-full bg-[#faf7f2]/90 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-[#1b1b1b] shadow-sm backdrop-blur">
             Draft
           </span>
         )}
@@ -315,6 +318,132 @@ function Tab({
   );
 }
 
+function NewProjectModal({
+  projectName,
+  onProjectNameChange,
+  onClose,
+  onCreateBlank,
+}: {
+  projectName: string;
+  onProjectNameChange: (value: string) => void;
+  onClose: () => void;
+  onCreateBlank: () => void;
+}) {
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[10000] flex items-center justify-center overflow-y-auto bg-black/45 px-4 py-8 backdrop-blur-[2px]"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="new-project-title"
+        className="w-full max-w-[520px] rounded-2xl bg-[#faf7f2] p-6 shadow-2xl sm:p-8"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 id="new-project-title" className="text-xl font-semibold tracking-tight">
+              Create a new project
+            </h2>
+            <p className="mt-1.5 text-[13px] text-black/55">
+              Give your project a name and choose how to get started.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close new project dialog"
+            className="rounded-full p-2 text-black/50 transition hover:bg-black/[0.06] hover:text-black"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <label htmlFor="new-project-name" className="mt-6 block text-[11px] font-medium text-black/65">
+          Project title
+        </label>
+        <input
+          id="new-project-name"
+          autoFocus
+          value={projectName}
+          onChange={(event) => onProjectNameChange(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") onCreateBlank();
+          }}
+          maxLength={100}
+          className="mt-2 h-11 w-full rounded-lg border border-black/15 bg-white px-3 text-[13px] text-[#1b1b1b] outline-none transition placeholder:text-black/35 focus:border-black/50"
+          placeholder={DEFAULT_PROJECT_NAME}
+        />
+
+        <p className="mb-3 mt-7 text-[11px] font-medium uppercase tracking-[0.12em] text-black/45">
+          Choose a starting point
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {/* Selected starting point. Nothing happens until Confirm is pressed. */}
+          <button
+            type="button"
+            aria-pressed="true"
+            className="rounded-xl border border-[#1b1b1b] bg-white p-4 text-left ring-1 ring-[#1b1b1b] focus-visible:outline-none"
+          >
+            <div className="overflow-hidden rounded-lg bg-[#f1efea]">
+              <img
+                src={CREATE_BLANK_IMAGE}
+                alt="create from blank"
+                draggable={false}
+                className="aspect-[4/3] w-full object-contain"
+              />
+            </div>
+            <span className="mt-4 block text-[13px] font-semibold">Create from blank</span>
+            <span className="mt-1 block text-[11px] leading-relaxed text-black/50">
+              Start with an empty room and build it your way.
+            </span>
+          </button>
+          <button
+            type="button"
+            disabled
+            aria-describedby="template-unavailable"
+            className="cursor-not-allowed rounded-xl border border-black/10 bg-black/[0.025] p-4 text-left opacity-65"
+          >
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-black/[0.07] text-black/50">
+              <Layers3 className="h-4 w-4" />
+            </span>
+            <span className="mt-4 flex items-center gap-2 text-[13px] font-semibold text-black/60">
+              Create with template
+              <span className="rounded-full bg-black/[0.07] px-2 py-0.5 text-[9px] font-medium uppercase tracking-wide text-black/50">
+                Soon
+              </span>
+            </span>
+            <span id="template-unavailable" className="mt-1 block text-[11px] leading-relaxed text-black/45">
+              Templates aren’t available yet.
+            </span>
+          </button>
+        </div>
+
+        <div className="mt-6 flex justify-end">
+          <button
+            type="button"
+            onClick={onCreateBlank}
+            className="rounded-full border border-[#1b1b1b] bg-[#1b1b1b] px-6 py-2.5 text-[12px] font-medium text-white transition hover:bg-black active:translate-y-px"
+          >
+            Confirm
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
@@ -330,6 +459,8 @@ export default function Studio() {
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<SortKey>("recent");
   const [search, setSearch] = useState("");
+  const [newProjectOpen, setNewProjectOpen] = useState(false);
+  const [newProjectName, setNewProjectName] = useState(DEFAULT_PROJECT_NAME);
 
   useEffect(() => {
     let cancelled = false;
@@ -406,9 +537,18 @@ export default function Studio() {
     };
   }, []);
 
-  function handleCreateProject() {
+  function handleOpenNewProject() {
+    setNewProjectName(DEFAULT_PROJECT_NAME);
+    setNewProjectOpen(true);
+  }
+
+  function handleCreateBlankProject() {
     clearProjectSession();
-    localStorage.removeItem("espasyo_project_name");
+    localStorage.setItem(
+      "espasyo_project_name",
+      newProjectName.trim() || DEFAULT_PROJECT_NAME,
+    );
+    setNewProjectOpen(false);
     navigate("/studio/editor");
   }
 
@@ -470,15 +610,23 @@ export default function Studio() {
   ];
 
   return (
-    <div className="min-h-screen w-full bg-white font-sans text-[#1b1b1b] antialiased">
+    <div className="min-h-screen w-full bg-[#faf7f2] font-sans text-[#1b1b1b] antialiased">
       <NavBar />
+      {newProjectOpen && (
+        <NewProjectModal
+          projectName={newProjectName}
+          onProjectNameChange={setNewProjectName}
+          onClose={() => setNewProjectOpen(false)}
+          onCreateBlank={handleCreateBlankProject}
+        />
+      )}
 
       {/* Division 1: full-width hero (image + welcome text) */}
       <StudioHero
         firstName={firstName}
         stats={heroStats}
         loading={loading}
-        onCreate={handleCreateProject}
+        onCreate={handleOpenNewProject}
       />
 
       {/* Division 2: your projects */}
@@ -517,7 +665,7 @@ export default function Studio() {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search projects"
-                  className="h-[36px] w-full rounded-md border border-black/15 bg-white pl-9 pr-3 text-[11px] font-medium text-[#1b1b1b] outline-none transition placeholder:text-black/30 hover:border-black/35 focus:border-black/60"
+                  className="h-[36px] w-full rounded-md border border-black/15 bg-[#faf7f2] pl-9 pr-3 text-[11px] font-medium text-[#1b1b1b] outline-none transition placeholder:text-black/30 hover:border-black/35 focus:border-black/60"
                 />
               </label>
 
@@ -525,7 +673,7 @@ export default function Studio() {
                 value={sort}
                 onChange={(e) => setSort(e.target.value as SortKey)}
                 aria-label="Sort by"
-                className="h-[36px] cursor-pointer rounded-md border border-black/15 bg-white px-3 text-[11px] font-medium text-[#1b1b1b] outline-none transition hover:border-black/35 focus:border-black/60"
+                className="h-[36px] cursor-pointer rounded-md border border-black/15 bg-[#faf7f2] px-3 text-[11px] font-medium text-[#1b1b1b] outline-none transition hover:border-black/35 focus:border-black/60"
               >
                 <option value="recent">Most recent</option>
                 <option value="name">Name (A–Z)</option>
@@ -563,7 +711,7 @@ export default function Studio() {
                 cost update as you go.
               </p>
             </div>
-            <button type="button" className={PRIMARY_BUTTON} onClick={handleCreateProject}>
+            <button type="button" className={PRIMARY_BUTTON} onClick={handleOpenNewProject}>
               <Plus className="h-3.5 w-3.5" strokeWidth={2} />
               Create your first project
             </button>
@@ -583,7 +731,7 @@ export default function Studio() {
               </div>
             ) : (
               <div className={GRID}>
-                {showNewTile && <NewProjectCard onClick={handleCreateProject} />}
+                {showNewTile && <NewProjectCard onClick={handleOpenNewProject} />}
                 {visible.map((item) => (
                   <ProjectCard key={item.key} item={item} />
                 ))}

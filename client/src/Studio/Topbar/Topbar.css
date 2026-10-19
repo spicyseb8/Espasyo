@@ -46,7 +46,7 @@
     z-index: 1000;
 
     display: grid;
-    grid-template-columns: 1fr minmax(0, 320px) 1fr;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     gap: 16px;
 
@@ -63,16 +63,12 @@
     -webkit-font-smoothing: antialiased;
 }
 
+/* Back button + project title + save */
 .topbar-left {
     display: flex;
     align-items: center;
     justify-self: start;
-}
-
-.topbar-center {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    gap: 8px;
     min-width: 0;
 }
 
@@ -92,6 +88,7 @@
     display: inline-flex;
     align-items: center;
     gap: 7px;
+    flex-shrink: 0;
 
     height: 34px;
     padding: 0 14px 0 10px;
@@ -126,30 +123,31 @@
 
 
 /* ==================================================
-   PROJECT NAME
+   PROJECT NAME — rounded pill, white fill
    ================================================== */
 
 .project-title-input {
-    width: 100%;
-    height: 36px;
-    padding: 0 14px;
+    width: clamp(140px, 22vw, 260px);
+    min-width: 0;
+    height: 34px;
+    padding: 0 16px;
     box-sizing: border-box;
 
-    border: 1px solid var(--tb-line);
-    border-radius: 10px;
+    border: 1px solid var(--tb-line-strong);
+    border-radius: 999px;
 
-    background: var(--tb-surface-sunken);
+    background: #ffffff;
     color: var(--tb-ink);
 
     font-family: inherit;
-    font-size: var(--tb-t-body);
+    font-size: var(--tb-t-label);
     font-weight: 500;
-    text-align: center;
+    text-align: left;
     text-overflow: ellipsis;
 
     outline: none;
 
-    transition: background 0.15s ease, border-color 0.15s ease;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .project-title-input::placeholder {
@@ -158,13 +156,103 @@
 }
 
 .project-title-input:hover {
-    background: var(--tb-surface);
-    border-color: var(--tb-line-strong);
+    border-color: var(--tb-ink-muted);
 }
 
 .project-title-input:focus {
-    background: var(--tb-surface);
     border-color: var(--tb-ink);
+    box-shadow: var(--tb-ring);
+}
+
+.project-title-input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+
+/* ==================================================
+   SAVE — dark filled pill beside the project name
+   ================================================== */
+
+.topbar-save {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.topbar-save-button {
+    height: 34px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+
+    padding: 0 16px 0 12px;
+
+    border: 1px solid var(--tb-ink);
+    border-radius: 999px;
+
+    background: var(--tb-ink);
+    color: #fff;
+
+    font-family: inherit;
+    font-size: var(--tb-t-label);
+    font-weight: 500;
+    white-space: nowrap;
+
+    cursor: pointer;
+    box-sizing: border-box;
+
+    transition: background 0.15s ease, transform 0.1s ease, opacity 0.15s ease;
+}
+
+.topbar-save-button:hover:not(:disabled) {
+    background: #000;
+}
+
+.topbar-save-button:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+.topbar-save-button:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--tb-ink);
+}
+
+.topbar-save-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.topbar-save-spinner {
+    animation: tb-spin 0.8s linear infinite;
+}
+
+@keyframes tb-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Status / error message under the save button */
+.topbar-save-message {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 0;
+    z-index: 1001;
+
+    width: max-content;
+    max-width: 320px;
+    padding: 10px 14px;
+    box-sizing: border-box;
+
+    background: var(--tb-surface);
+    border: 1px solid var(--tb-line);
+    border-radius: 12px;
+    box-shadow: var(--tb-shadow-dropdown);
+
+    font-size: var(--tb-t-label);
+    line-height: 1.45;
+    color: var(--tb-ink);
+    overflow-wrap: anywhere;
 }
 
 
@@ -759,12 +847,17 @@
 
 @media (max-width: 700px) {
     .topbar {
-        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-columns: minmax(0, 1fr) auto;
         gap: 8px;
     }
 
     .topbar-back span { display: none; }
     .topbar-back { padding: 0 10px; }
+
+    .project-title-input { width: clamp(100px, 28vw, 180px); }
+
+    .topbar-save-button span { display: none; }
+    .topbar-save-button { padding: 0 10px; }
 
     .cost-estimator-dropdown,
     .admin-comments-dropdown {
@@ -774,4 +867,5 @@
 
 @media (prefers-reduced-motion: reduce) {
     .cost-estimator-dropdown { animation: none; }
+    .topbar-save-spinner { animation: none; }
 }
