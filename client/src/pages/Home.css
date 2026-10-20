@@ -4,6 +4,8 @@
   --ink-60: rgba(0, 0, 0, 0.6);
   --ink-45: rgba(0, 0, 0, 0.45);
   --cream: 250, 247, 242;
+  --text: #3a2a20; /* warm walnut, picked from the rooms' wood and wall tones */
+  --text-70: rgba(58, 42, 32, 0.72);
   --gutter: clamp(24px, 5vw, 56px);
 
   background: #0b0b0b; /* matches the outro, so the very end of the page is never white */
@@ -48,19 +50,20 @@
   display: block;
 }
 
-/* Cream wash on the left so hero type stays legible on any room */
+/* Soft cream wash on the left, only behind the intro text. Kept light so the
+   room stays visible; --hero-fade (set from scroll) removes it as you leave
+   the opening section. */
 .home__scrim {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background:
-    linear-gradient(
-      90deg,
-      rgba(var(--cream), 0.92) 0%,
-      rgba(var(--cream), 0.7) 38%,
-      rgba(var(--cream), 0) 72%
-    ),
-    linear-gradient(0deg, rgba(var(--cream), 0.6) 0%, rgba(var(--cream), 0) 40%);
+  opacity: var(--hero-fade, 1);
+  background: linear-gradient(
+    90deg,
+    rgba(var(--cream), 0.6) 0%,
+    rgba(var(--cream), 0.32) 30%,
+    rgba(var(--cream), 0) 58%
+  );
 }
 
 .home__vignette {
@@ -105,9 +108,12 @@
   height: 100svh;
   padding-bottom: clamp(32px, 7vh, 72px);
 }
+
+/* Opening section: text sits high on the left, over the wall, so the
+   furniture below it stays clear. */
 .home__panel--hero {
-  align-items: center;
-  padding-top: 88px;
+  align-items: flex-start;
+  padding-top: clamp(112px, 17vh, 168px);
   padding-bottom: 0;
 }
 
@@ -156,26 +162,32 @@
   color: var(--ink-45);
 }
 
-/* ───────── Hero ───────── */
+/* ───────── Opening section ───────── */
 .home__hero {
-  max-width: 720px;
+  max-width: 640px;
+  opacity: var(--hero-fade, 1);
+  pointer-events: auto;
 }
 
+/* Sized so the headline sets in two lines over the wall and stays clear of
+   the chandelier and the lamp. */
 .home__large-title {
   margin: 0;
-  font-size: clamp(40px, 6.4vw, 88px);
+  font-size: clamp(32px, 4.2vw, 58px);
   font-weight: 600;
-  line-height: 1.02;
+  line-height: 1.05;
   letter-spacing: -0.045em;
-  color: var(--ink);
+  color: var(--text);
+  text-wrap: balance;
 }
 
 .home__hero-subhead {
-  max-width: 480px;
-  margin: 24px 0 0;
-  font-size: clamp(14px, 1.3vw, 17px);
+  max-width: 420px;
+  margin: 20px 0 0;
+  font-size: clamp(14px, 1.2vw, 16px);
   line-height: 1.55;
-  color: var(--ink-60);
+  color: var(--text-70);
+  text-wrap: pretty;
 }
 
 .home__cta-row {
@@ -183,7 +195,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 12px;
-  margin-top: 32px;
+  margin-top: 28px;
 }
 
 .home__cta {
@@ -209,6 +221,11 @@
 .home__cta:active {
   transform: translateY(1px);
 }
+.home__cta:focus-visible,
+.home__cta-ghost:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
 .home__cta-icon {
   width: 15px;
   height: 15px;
@@ -228,40 +245,18 @@
   height: 44px;
   padding: 0 20px;
   border-radius: 999px;
-  border: 1px solid rgba(0, 0, 0, 0.2);
-  background: rgba(255, 255, 255, 0.4);
-  backdrop-filter: blur(8px);
+  border: 1px solid rgba(0, 0, 0, 0.28);
+  background: transparent;
   color: var(--ink);
+  font-family: inherit;
   font-size: 13px;
   font-weight: 500;
-  text-decoration: none;
+  cursor: pointer;
   transition: border-color 0.2s, background 0.2s;
 }
 .home__cta-ghost:hover {
   border-color: var(--ink);
-  background: rgba(255, 255, 255, 0.8);
-}
-
-.home__feature-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 32px;
-  margin: clamp(40px, 8vh, 80px) 0 0;
-  padding: 24px 0 0;
-  border-top: 1px solid rgba(0, 0, 0, 0.14);
-  list-style: none;
-}
-.home__feature-title {
-  margin: 0 0 6px;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-.home__feature-body {
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--ink-60);
+  background: rgba(var(--cream), 0.7);
 }
 
 .home__scroll-cue {
@@ -278,6 +273,7 @@
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--ink-45);
+  opacity: var(--hero-fade, 1);
 }
 .home__scroll-cue i {
   position: relative;
@@ -299,58 +295,63 @@
   60%, 100% { transform: translateY(100%); }
 }
 
-/* ───────── Room captions (frosted card) ───────── */
-.home__caption {
-  width: min(380px, 100%);
-  padding: 24px 26px 22px;
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(22px) saturate(1.4);
-  -webkit-backdrop-filter: blur(22px) saturate(1.4);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
-  will-change: transform, opacity;
+/* ───────── Room notes ─────────
+   Plain text set directly on the scene, no card. Every note uses the same
+   type style as the opening section; only the position changes, so each sits
+   on an empty part of its view (percentages of the viewport). Tune --left /
+   --top / --width here if the camera framing changes. */
+.home__note {
+  position: absolute;
+  left: var(--left);
+  top: var(--top);
+  width: var(--width);
+  color: var(--text);
+  pointer-events: none;
+  isolation: isolate;
 }
-.home__room-index {
-  margin: 0 0 14px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  font-variant-numeric: tabular-nums;
-  color: var(--ink);
-}
-.home__room-index span {
-  color: var(--ink-45);
-  font-weight: 500;
-}
-.home__heading-2 {
+.home__note-title {
   margin: 0;
-  font-size: clamp(24px, 2.4vw, 32px);
+  font-size: clamp(26px, 3vw, 40px);
   font-weight: 600;
-  line-height: 1.1;
-  letter-spacing: -0.03em;
+  line-height: 1.06;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
 }
-.home__caption-body {
-  margin: 10px 0 0;
-  font-size: 13px;
+.home__note-body {
+  max-width: 440px;
+  margin: 14px 0 0;
+  font-size: clamp(14px, 1.2vw, 16px);
   line-height: 1.55;
-  color: var(--ink-60);
-}
-.home__caption-track {
-  height: 2px;
-  margin-top: 20px;
-  overflow: hidden;
-  border-radius: 2px;
-  background: rgba(0, 0, 0, 0.1);
-}
-.home__caption-fill {
-  height: 100%;
-  background: var(--ink);
-  transform-origin: left;
-  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+  color: var(--text-70);
+  text-wrap: pretty;
 }
 
-/* ───────── Room dots ───────── */
+/* Living room: on the panelled wall, left of the lamp */
+.home__note--wall {
+  --left: 9%;
+  --top: 17%;
+  --width: min(440px, 33%);
+}
+
+/* Bedroom: on the blank wall above the headboard */
+.home__note--above {
+  --left: 25%;
+  --top: 16%;
+  --width: min(620px, 50%);
+}
+
+/* Kitchen: on the plain front of the island, above the stools */
+.home__note--band {
+  --left: 21%;
+  --top: 79.5%;
+  --width: 50%;
+}
+.home__note--band .home__note-body {
+  margin-top: 8px;
+  max-width: none;
+}
+
+/* ───────── Camera dots ───────── */
 .home__dots {
   position: fixed;
   top: 50%;
@@ -361,9 +362,7 @@
   gap: 2px;
   padding: 8px 4px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  background: rgba(var(--cream), 0.88);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   transform: translateY(-50%);
   transition: opacity 0.3s, transform 0.3s;
@@ -479,21 +478,49 @@
 
 /* ───────── Small screens ───────── */
 @media (max-width: 720px) {
+  /* Text sits at the top; the wash fades out before the lower half of the room */
   .home__scrim {
     background: linear-gradient(
       180deg,
-      rgba(var(--cream), 0.9) 0%,
-      rgba(var(--cream), 0.75) 55%,
-      rgba(var(--cream), 0.35) 100%
+      rgba(var(--cream), 0.85) 0%,
+      rgba(var(--cream), 0.55) 38%,
+      rgba(var(--cream), 0) 62%
     );
   }
-  .home__feature-grid {
-    grid-template-columns: 1fr;
-    gap: 14px;
-    margin-top: 32px;
+  .home__panel--hero {
+    padding-top: 104px;
   }
-  .home__feature-body {
+  /* Let the headline wrap naturally on narrow screens */
+  .home__br {
     display: none;
+  }
+
+  /* Notes move to the top on phones, over a soft cream fade so they read on
+     every room */
+  .home__note,
+  .home__note--wall,
+  .home__note--above,
+  .home__note--band {
+    --left: var(--gutter);
+    --top: 92px;
+    --width: calc(100% - 2 * var(--gutter));
+    display: block;
+  }
+  .home__note::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: -92px calc(-1 * var(--gutter)) -36px;
+    background: linear-gradient(
+      180deg,
+      rgba(var(--cream), 0.92) 0%,
+      rgba(var(--cream), 0.78) 65%,
+      rgba(var(--cream), 0) 100%
+    );
+  }
+  .home__note--band .home__note-body {
+    margin-top: 14px;
+    max-width: 440px;
   }
   .home__dots {
     right: 8px;
@@ -511,7 +538,6 @@
     animation: none;
   }
   .home__cta-icon,
-  .home__caption-fill,
   .home__dots,
   .home__dot::before {
     transition: none;
