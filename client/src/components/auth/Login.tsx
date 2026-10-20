@@ -25,6 +25,7 @@ import {
 import { Input } from "@/components/ui/input";
 
 import { auth } from "@/firebase/firebase";
+import { validateLoginForm } from "@/utils/validators";
 
 interface LoginFormProps {
   onSignup: () => void;
@@ -48,13 +49,12 @@ export function LoginForm({
 
     setError("");
 
-    if (!email.trim()) {
-      setError("Please enter your email.");
-      return;
-    }
-
-    if (!password) {
-      setError("Please enter your password.");
+    const validationError = validateLoginForm({
+      email,
+      password,
+    });
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
@@ -204,9 +204,10 @@ export function LoginForm({
                   type="email"
                   placeholder="m@example.com"
                   value={email}
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setEmail(e.target.value)
-                  }
+                    setError("");
+                  }}
                   autoComplete="email"
                   required
                 />
@@ -232,9 +233,10 @@ export function LoginForm({
                   id="password"
                   type="password"
                   value={password}
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setPassword(e.target.value)
-                  }
+                    setError("");
+                  }}
                   autoComplete="current-password"
                   required
                 />

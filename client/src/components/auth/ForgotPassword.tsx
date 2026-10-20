@@ -20,6 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 
 import { auth } from "@/firebase/firebase";
+import { validateEmail } from "@/utils/validators";
 
 interface ForgotPasswordFormProps {
   onLogin: () => void;
@@ -44,20 +45,13 @@ export function ForgotPasswordForm({
     setError("");
     setSuccess(false);
 
-    const trimmedEmail =
-      email.trim().toLowerCase();
-
-    if (!trimmedEmail) {
-      setError("Please enter your email.");
+    const validationError = validateEmail(email);
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
-    if (!trimmedEmail.includes("@")) {
-      setError(
-        "Please enter a valid email address."
-      );
-      return;
-    }
+    const trimmedEmail = email.trim().toLowerCase();
 
     setLoading(true);
 
@@ -159,9 +153,10 @@ export function ForgotPasswordForm({
                     type="email"
                     placeholder="m@example.com"
                     value={email}
-                    onChange={(e) =>
+                    onChange={(e) => {
                       setEmail(e.target.value)
-                    }
+                      setError("");
+                    }}
                     autoComplete="email"
                     required
                   />

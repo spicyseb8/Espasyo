@@ -40,6 +40,7 @@ import { Input } from "@/components/ui/input";
 
 import { isAdminRole } from "@/lib/adminRole";
 import { auth, db } from "@/firebase/firebase";
+import { validateAdminLoginForm } from "@/utils/validators";
 
 // Served from admin/public/images/white-brackground.jpg
 const BACKGROUND_IMAGE = "/images/white-brackground.jpg";
@@ -61,13 +62,12 @@ function LoginForm({ className, ...props }: LoginFormProps) {
 
     setError("");
 
-    if (!email.trim()) {
-      setError("Please enter your email address.");
-      return;
-    }
-
-    if (!password) {
-      setError("Please enter your password.");
+    const validationError = validateAdminLoginForm({
+      email,
+      password,
+    });
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
@@ -231,9 +231,10 @@ function LoginForm({ className, ...props }: LoginFormProps) {
                     type="email"
                     placeholder="admin@example.com"
                     value={email}
-                    onChange={(event) =>
+                    onChange={(event) => {
                       setEmail(event.target.value)
-                    }
+                      setError("");
+                    }}
                     disabled={loading}
                     autoComplete="email"
                     className={glassInput}
@@ -250,9 +251,10 @@ function LoginForm({ className, ...props }: LoginFormProps) {
                     type="password"
                     placeholder="Enter your password"
                     value={password}
-                    onChange={(event) =>
+                    onChange={(event) => {
                       setPassword(event.target.value)
-                    }
+                      setError("");
+                    }}
                     disabled={loading}
                     autoComplete="current-password"
                     className={glassInput}

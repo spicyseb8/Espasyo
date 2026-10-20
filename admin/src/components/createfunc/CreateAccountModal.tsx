@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { auth } from "@/firebase/firebase";
+import { validateAccountCreationForm } from "@/utils/validators";
 
 export type CreateAccountType =
   | "user"
@@ -116,42 +117,6 @@ export default function CreateAccountModal({
     if (success) setSuccess("");
   };
 
-  const validateForm = () => {
-    if (!form.name.trim()) {
-      return "Please enter the person's name.";
-    }
-
-    if (!form.email.trim()) {
-      return "Please enter an email address.";
-    }
-
-    if (!form.email.includes("@")) {
-      return "Please enter a valid email address.";
-    }
-
-    if (!form.password) {
-      return "Please enter a password.";
-    }
-
-    if (form.password.length < 6) {
-      return "Password must be at least 6 characters.";
-    }
-
-    if (!form.phoneNumber.trim()) {
-      return "Please enter a phone number.";
-    }
-
-    if (accountType === "user" && !form.address.trim()) {
-      return "Please enter an address.";
-    }
-
-    if (isEmployee && !form.role.trim()) {
-      return "Please select an employee role.";
-    }
-
-    return null;
-  };
-
   const handleSubmit = async (
     event: React.FormEvent<HTMLFormElement>
   ) => {
@@ -165,7 +130,10 @@ export default function CreateAccountModal({
     setError("");
     setSuccess("");
 
-    const validationError = validateForm();
+    const validationError = validateAccountCreationForm(
+      form,
+      accountType
+    );
 
     if (validationError) {
       setError(validationError);

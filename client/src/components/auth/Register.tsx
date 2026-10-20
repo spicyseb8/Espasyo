@@ -23,6 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 
 import { auth } from "@/firebase/firebase";
+import { validateSignupForm } from "@/utils/validators";
 
 interface SignupFormProps {
   onLogin: () => void;
@@ -50,30 +51,15 @@ export function SignupForm({
 
     setError("");
 
-    if (!name.trim()) {
-      setError("Please enter your full name.");
-      return;
-    }
-
-    if (!email.trim()) {
-      setError("Please enter your email.");
-      return;
-    }
-
-    if (!contact.trim()) {
-      setError("Please enter your contact number.");
-      return;
-    }
-
-    if (password.length < 8) {
-      setError(
-        "Password must be at least 8 characters long."
-      );
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+    const validationError = validateSignupForm({
+      fullName: name,
+      email,
+      contact,
+      password,
+      confirmPassword,
+    });
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
@@ -185,9 +171,10 @@ export function SignupForm({
                   type="text"
                   placeholder="John Doe"
                   value={name}
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setName(e.target.value)
-                  }
+                    setError("");
+                  }}
                   autoComplete="name"
                   required
                 />
@@ -204,9 +191,10 @@ export function SignupForm({
                   type="email"
                   placeholder="m@example.com"
                   value={email}
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setEmail(e.target.value)
-                  }
+                    setError("");
+                  }}
                   autoComplete="email"
                   required
                 />
@@ -221,11 +209,12 @@ export function SignupForm({
                 <Input
                   id="contact"
                   type="tel"
-                  placeholder="09XXXXXXXXX"
+                  placeholder="09171234567 or +639171234567"
                   value={contact}
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setContact(e.target.value)
-                  }
+                    setError("");
+                  }}
                   autoComplete="tel"
                   required
                 />
@@ -243,9 +232,10 @@ export function SignupForm({
                       id="signup-password"
                       type="password"
                       value={password}
-                      onChange={(e) =>
+                      onChange={(e) => {
                         setPassword(e.target.value)
-                      }
+                        setError("");
+                      }}
                       autoComplete="new-password"
                       required
                     />
@@ -260,11 +250,12 @@ export function SignupForm({
                       id="confirm-password"
                       type="password"
                       value={confirmPassword}
-                      onChange={(e) =>
+                      onChange={(e) => {
                         setConfirmPassword(
                           e.target.value
                         )
-                      }
+                        setError("");
+                      }}
                       autoComplete="new-password"
                       required
                     />
