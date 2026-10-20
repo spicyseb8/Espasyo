@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { Armchair, Loader2, LogOut } from "lucide-react";
+import { Armchair, Bell, Loader2, LogOut, Settings } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 
 import { useAuth } from "@/context/AuthContext";
@@ -56,6 +56,9 @@ export default function NavBar() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
+
+  // Hook this up to your real notification source. A dot shows when > 0.
+  const unreadCount = 0;
 
   useEffect(() => {
     introPlayed = true;
@@ -159,7 +162,30 @@ export default function NavBar() {
                   {...fade}
                 />
               ) : user ? (
-                <motion.div key="user" {...fade}>
+                <motion.div
+                  key="user"
+                  className="flex items-center gap-2"
+                  {...fade}
+                >
+                  {/* Notifications */}
+                  <button
+                    type="button"
+                    aria-label={
+                      unreadCount > 0
+                        ? `Notifications (${unreadCount} unread)`
+                        : "Notifications"
+                    }
+                    className="navbar__circle relative flex size-9 items-center justify-center rounded-full text-neutral-700 transition hover:text-neutral-900 hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/30"
+                  >
+                    <Bell className="size-[18px]" strokeWidth={1.75} />
+                    {unreadCount > 0 && (
+                      <span
+                        aria-hidden="true"
+                        className="absolute right-2 top-2 size-2 rounded-full bg-red-500 ring-2 ring-[#faf7f2]"
+                      />
+                    )}
+                  </button>
+
                   <DropdownMenu>
                     <DropdownMenuTrigger
                       render={
@@ -176,7 +202,7 @@ export default function NavBar() {
                           alt=""
                           referrerPolicy="no-referrer"
                         />
-                        <AvatarFallback className="bg-neutral-900 text-xs font-semibold text-white">
+                        <AvatarFallback className="navbar__circle text-xs font-semibold text-neutral-800">
                           {getInitials(displayName)}
                         </AvatarFallback>
                       </Avatar>
@@ -196,7 +222,7 @@ export default function NavBar() {
                                 alt=""
                                 referrerPolicy="no-referrer"
                               />
-                              <AvatarFallback className="bg-neutral-900 text-xs font-semibold text-white">
+                              <AvatarFallback className="bg-black/[0.06] text-xs font-semibold text-neutral-800">
                                 {getInitials(displayName)}
                               </AvatarFallback>
                             </Avatar>
@@ -216,6 +242,14 @@ export default function NavBar() {
                       </DropdownMenuGroup>
 
                       <DropdownMenuSeparator />
+
+                      <DropdownMenuItem
+                        onClick={() => navigate("/settings")}
+                        className="cursor-pointer gap-2.5 rounded-lg px-2.5 py-2"
+                      >
+                        <Settings className="size-4" />
+                        Settings
+                      </DropdownMenuItem>
 
                       <DropdownMenuItem
                         onClick={() => {

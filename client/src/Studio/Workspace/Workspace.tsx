@@ -33,22 +33,19 @@ export default function Workspace() {
 
     return (
         <aside className="workspace">
-            <WorkspaceTabs
-                activeTab={state.activeTab}
-                layoutConfirmed={state.layoutConfirmed}
-                walkthroughMode={state.walkthroughMode}
-                panelOpen={panelOpen}
-                onTabChange={handleTabChange}
-            />
-
+            {/* One surface: tab bar on top, content below. */}
             <div
-                className={`workspace-floating-panel ${
-                    panelOpen
-                        ? "workspace-panel-open"
-                        : "workspace-panel-closed"
+                className={`workspace-shell ${
+                    panelOpen ? "is-open" : "is-closed"
                 }`}
             >
-                
+                <WorkspaceTabs
+                    activeTab={state.activeTab}
+                    layoutConfirmed={state.layoutConfirmed}
+                    walkthroughMode={state.walkthroughMode}
+                    panelOpen={panelOpen}
+                    onTabChange={handleTabChange}
+                />
 
                 <div className="workspace-content">
                     <WorkspaceContent activeTab={state.activeTab} />

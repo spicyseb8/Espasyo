@@ -42,7 +42,7 @@ interface StudioItem {
 // Constants
 // ---------------------------------------------------------------------------
 // Put the hero image in /public (e.g. /public/studio-hero.jpg) and point this at it.
-const STUDIO_HERO_IMAGE = "public/background/studio-bg.jpg";
+const STUDIO_HERO_IMAGE = `${import.meta.env.BASE_URL}background/studio-bg.jpg`;
 const HERO_SURFACE = "#f4f4f2"; // should match the image's light background
 
 // ---------------------------------------------------------------------------

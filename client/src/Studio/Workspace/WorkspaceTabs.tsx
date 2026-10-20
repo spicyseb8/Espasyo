@@ -1,5 +1,3 @@
-import "./WorkspaceTabs.css";
-
 import {
     DraftingCompass,
     Hammer,
@@ -7,6 +5,7 @@ import {
     Paintbrush,
     FolderOpen,
 } from "lucide-react";
+import { motion, useReducedMotion } from "motion/react";
 
 interface Props {
     activeTab: string;
@@ -20,39 +19,41 @@ interface Props {
     onTabChange: (tab: string) => void;
 }
 
+const TABS = [
+    {
+        id: "floorplan",
+        label: "Floor Plan",
+        icon: DraftingCompass,
+    },
+    {
+        id: "build",
+        label: "Build",
+        icon: Hammer,
+    },
+    {
+        id: "furniture",
+        label: "Furniture",
+        icon: Sofa,
+    },
+    {
+        id: "design",
+        label: "Design",
+        icon: Paintbrush,
+    },
+    {
+        id: "project",
+        label: "Project",
+        icon: FolderOpen,
+    },
+] as const;
+
 export default function WorkspaceTabs({
     activeTab,
     walkthroughMode,
     panelOpen,
     onTabChange,
 }: Props) {
-    const tabs = [
-        {
-            id: "floorplan",
-            label: "Floor Plan",
-            icon: DraftingCompass,
-        },
-        {
-            id: "build",
-            label: "Build",
-            icon: Hammer,
-        },
-        {
-            id: "furniture",
-            label: "Furniture",
-            icon: Sofa,
-        },
-        {
-            id: "design",
-            label: "Design",
-            icon: Paintbrush,
-        },
-        {
-            id: "project",
-            label: "Project",
-            icon: FolderOpen,
-        },
-    ];
+    const reduce = useReducedMotion();
 
     return (
         <div
@@ -61,8 +62,10 @@ export default function WorkspaceTabs({
                     ? "workspace-tabs walkthrough-locked"
                     : "workspace-tabs"
             }
+            role="toolbar"
+            aria-label="Workspace tabs"
         >
-            {tabs.map((tab) => {
+            {TABS.map((tab) => {
                 const Icon = tab.icon;
 
                 const isActive = activeTab === tab.id && panelOpen;
@@ -72,15 +75,33 @@ export default function WorkspaceTabs({
                         key={tab.id}
                         type="button"
                         aria-label={tab.label}
+                        aria-pressed={isActive}
+                        title={tab.label}
                         disabled={walkthroughMode}
                         className={isActive ? "tab active" : "tab"}
                         onClick={() => onTabChange(tab.id)}
                     >
-                        <Icon size={20} />
+                        {isActive && (
+                            <motion.span
+                                layoutId="workspaceTabPill"
+                                className="tab-pill"
+                                transition={
+                                    reduce
+                                        ? { duration: 0 }
+                                        : {
+                                              type: "spring",
+                                              bounce: 0,
+                                              duration: 0.35,
+                                          }
+                                }
+                            />
+                        )}
 
-                        <span className="tab-tooltip">
-                            {tab.label}
-                        </span>
+                        <Icon size={18} className="tab-icon" />
+
+                        {isActive && (
+                            <span className="tab-label">{tab.label}</span>
+                        )}
                     </button>
                 );
             })}
