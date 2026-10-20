@@ -1,8 +1,8 @@
-/* Floating glass bar. Fixed, so pages need ~88px top offset (AppLayout adds it).
+/* Floating glass bar that scrolls away with the page.
    z-index sits below shadcn's overlays (z-50) so the menu and the logout
    dialog always render above the bar. */
 .navbar {
-  position: fixed;
+  position: absolute;
   top: 12px;
   left: 0;
   right: 0;
@@ -71,6 +71,16 @@
   padding: 3px;
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.045);
+}
+
+/* Notification bell + avatar circle: same tinted track as the links above.
+   Change --navbar-track once and all three stay in sync. */
+.navbar__circle {
+  background: rgba(0, 0, 0, 0.045);
+}
+/* Beats the Avatar component's default fallback background */
+.navbar__avatar-btn .navbar__circle {
+  background: rgba(0, 0, 0, 0.045) !important;
 }
 .navbar__link {
   position: relative;

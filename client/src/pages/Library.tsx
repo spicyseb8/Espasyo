@@ -44,7 +44,7 @@ const ROWS = 3;
 const ITEMS_PER_PAGE = COLUMNS * ROWS; // 12
 
 // Put the hero image in /public (e.g. /public/library-hero.jpg) and point this at it.
-const LIBRARY_HERO_IMAGE = "/public/background/library-bg.jpg";
+const LIBRARY_HERO_IMAGE = `${import.meta.env.BASE_URL}background/library-bg.jpg`;
 const HERO_SURFACE = "#f4f4f2"; // should match the image's light background
 
 const DIVISIONS: { key: Division; label: string }[] = [

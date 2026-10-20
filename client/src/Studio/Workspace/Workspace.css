@@ -1,757 +1,1313 @@
 /* ==================================================
-   WORKSPACE DESIGN TOKENS
-================================================== */
+   WORKSPACE — one floating surface
+
+   Tabs, content and sections all live inside a single
+   rounded panel. Only real "things" (asset / material /
+   blueprint cards) are boxed; everything else is flat and
+   separated by hairlines. Same ink palette as the NavBar,
+   Topbar, Library and Studio.
+
+   To bring the old orange back, set:
+     --ws-accent: #FA8112;
+   ================================================== */
 
 .workspace {
+    --ws-ink: #1b1b1b;
+    --ws-accent: var(--ws-ink);
+    --ws-accent-ink: #ffffff;
 
-    --ws-bg:
-        rgba(
-            255,
-            255,
-            255,
-            0.42
-        );
+    --ws-text: #1b1b1b;
+    --ws-muted: rgba(0, 0, 0, 0.5);
+    --ws-faint: rgba(0, 0, 0, 0.32);
 
-    --ws-surface:
-        rgba(
-            255,
-            255,
-            255,
-            0.72
-        );
+    /* same tint as the NavBar link track */
+    --ws-tint: rgba(0, 0, 0, 0.045);
+    --ws-tint-hover: rgba(0, 0, 0, 0.075);
+    --ws-line: rgba(0, 0, 0, 0.08);
 
-    --ws-surface-hover:
-        rgba(
-            255,
-            255,
-            255,
-            0.95
-        );
+    --ws-green: #14663a;
+    --ws-danger: #e5484d;
 
-    --ws-surface-active:
-        linear-gradient(
-            135deg,
-            #FFA555 0%,
-            #FA8112 100%
-        );
+    --ws-pill-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05);
 
-    --ws-accent:
-        #FA8112;
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 50;
 
-    --ws-accent-soft:
-        rgba(
-            250,
-            129,
-            18,
-            0.12
-        );
+    width: min(340px, 100vw);
+    padding: 12px;
+    box-sizing: border-box;
 
-    --ws-accent-ink:
-        #FFFFFF;
+    display: flex;
+    flex-direction: column;
 
-    --ws-text:
-        #1C1C1E;
+    font-family: inherit;
+    color: var(--ws-text);
+    -webkit-font-smoothing: antialiased;
 
-    --ws-text-muted:
-        #6E6E73;
-
-    --ws-border:
-        rgba(
-            0,
-            0,
-            0,
-            0.07
-        );
-
-    --ws-hairline:
-        rgba(
-            255,
-            255,
-            255,
-            0.7
-        );
-
-    --ws-input-bg:
-        rgba(
-            255,
-            255,
-            255,
-            0.85
-        );
-
-    --ws-shadow-sm:
-        0 1px 3px
-        rgba(
-            28,
-            28,
-            30,
-            0.06
-        );
-
-    --ws-shadow-md:
-        0 10px 28px
-        rgba(
-            28,
-            28,
-            30,
-            0.10
-        );
-
-    --ws-shadow-accent:
-        0 6px 18px
-        rgba(
-            250,
-            129,
-            18,
-            0.32
-        );
-
-
-    /* ==================================================
-       FLOAT ABOVE THE SCENE
-    ================================================== */
-
-    position:
-        absolute;
-
-    top:
-        0;
-
-    left:
-        0;
-
-    width:
-        300px;
-
-    height:
-        100%;
-
-    z-index:
-        50;
-
-    box-sizing:
-        border-box;
-
-    color:
-        var(--ws-text);
-
-    display:
-        flex;
-
-    flex-direction:
-        column;
-
-    min-height:
-        0;
-
-    pointer-events:
-        none;
+    /* the empty space around the panel never blocks the 3D scene */
+    pointer-events: none;
 }
 
 
 /* ==================================================
-   TAB BUTTONS
-   These remain fully visible and are NOT affected by
-   panel open/closed state.
-================================================== */
+   SHELL — the single surface
+   ================================================== */
 
-.workspace > * {
+.workspace-shell {
+    pointer-events: auto;
 
-    pointer-events:
-        auto;
-}
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    max-height: 100%;
 
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
 
-/* ==================================================
-   FLOATING OUTER PANEL
-================================================== */
-
-.workspace-floating-panel {
-
-    position:
-        relative;
-
-    width:
-        280px;
-
-    max-width:
-        280px;
-
-    margin-left:
-        10px;
-
-    margin-top:
-        8px;
-
-    box-sizing:
-        border-box;
-
-    display:
-        flex;
-
-    flex-direction:
-        column;
-
-    /*
-       The panel gets all remaining vertical space
-       below the tab buttons.
-    */
-
-    flex:
-        1 1 auto;
-
-    min-height:
-        0;
-
-
-    /* ==================================================
-       FROSTED GLASS
-    ================================================== */
-
-    background:
-        var(--ws-bg);
-
-    backdrop-filter:
-        blur(34px)
-        saturate(200%);
-
-    -webkit-backdrop-filter:
-        blur(34px)
-        saturate(200%);
-
-
-    /* ==================================================
-       BORDER
-    ================================================== */
-
-    border:
-        1px solid
-        rgba(
-            255,
-            255,
-            255,
-            0.55
-        );
-
-    border-radius:
-        16px;
-
-
-    /* ==================================================
-       SHADOW
-    ================================================== */
-
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: 20px;
     box-shadow:
-        var(--ws-shadow-md);
+        0 18px 48px rgba(0, 0, 0, 0.12),
+        0 2px 8px rgba(0, 0, 0, 0.05);
 
+    overflow: hidden;
+}
 
-    /* ==================================================
-       IMPORTANT
-    ================================================== */
-
-    overflow:
-        hidden;
-
-    transform-origin:
-        top left;
-
-    transition:
-        opacity
-        0.18s ease,
-
-        transform
-        0.18s ease;
+.workspace button:focus-visible {
+    outline: 2px solid var(--ws-ink);
+    outline-offset: 2px;
 }
 
 
 /* ==================================================
-   PANEL OPEN
-================================================== */
+   TABS — segmented track, sliding white pill
+   (the active tab expands to show its name)
+   ================================================== */
 
-.workspace-floating-panel.workspace-panel-open {
+.workspace-tabs {
+    flex-shrink: 0;
+    display: flex;
+    gap: 2px;
+    margin: 8px;
+    padding: 3px;
+    border-radius: 999px;
+    background: var(--ws-tint);
+}
 
-    opacity:
-        1;
+.workspace .tab {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+    height: 36px;
 
-    transform:
-        translateY(0)
-        scale(1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
 
-    pointer-events:
-        auto;
+    padding: 0 8px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ws-muted);
+
+    font: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+
+    cursor: pointer;
+    transition: color 0.2s ease, background 0.15s ease;
+}
+
+.workspace .tab:not(.active):hover {
+    background: rgba(0, 0, 0, 0.04);
+    color: var(--ws-ink);
+}
+
+.workspace .tab.active {
+    flex: 2.6 1 0;
+    color: var(--ws-ink);
+}
+
+.tab-pill {
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    background: #fff;
+    box-shadow: var(--ws-pill-shadow);
+}
+
+.tab-icon,
+.tab-label {
+    position: relative;
+    z-index: 1;
+}
+
+.tab-icon {
+    flex-shrink: 0;
+}
+
+.workspace-tabs.walkthrough-locked {
+    pointer-events: none;
+    opacity: 0.55;
 }
 
 
 /* ==================================================
-   PANEL CLOSED
-================================================== */
-
-.workspace-floating-panel.workspace-panel-closed {
-
-    /*
-       Collapse ONLY the floating panel.
-       The tabs above remain completely unaffected.
-    */
-
-    flex:
-        0 0 0;
-
-    height:
-        0;
-
-    min-height:
-        0;
-
-    margin-top:
-        0;
-
-    opacity:
-        0;
-
-    transform:
-        translateY(-8px)
-        scale(0.98);
-
-    pointer-events:
-        none;
-
-    border:
-        0;
-
-    box-shadow:
-        none;
-
-    overflow:
-        hidden;
-}
-
-
-/* ==================================================
-   SCROLLABLE CONTENT
-================================================== */
+   CONTENT — flat, scrolls inside the shell
+   ================================================== */
 
 .workspace-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 0 18px 18px;
+    box-sizing: border-box;
 
-    width:
-        100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
 
-    max-width:
-        100%;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.18) transparent;
 
-    /*
-       This is the actual scroll container.
-    */
+    animation: ws-open 0.18s ease;
+}
 
-    flex:
-        1 1 auto;
+.workspace-content::-webkit-scrollbar { width: 6px; }
+.workspace-content::-webkit-scrollbar-track { background: transparent; }
+.workspace-content::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.16);
+    border-radius: 999px;
+}
 
-    min-height:
-        0;
+/* Collapsing the panel leaves just the tab bar */
+.workspace-shell.is-closed .workspace-content {
+    display: none;
+}
 
-    height:
-        auto;
+.workspace .workspace-content-inner {
+    min-height: max-content;
+    padding-top: 4px;
+}
 
-    box-sizing:
-        border-box;
+@keyframes ws-open {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: none; }
+}
 
-    overflow-y:
-        auto;
-
-    overflow-x:
-        hidden;
-
-    /*
-       Prevent the child content from expanding the
-       parent instead of scrolling.
-    */
-
-    overscroll-behavior:
-        contain;
+/* Panel roots: no card of their own */
+.workspace .panel,
+.workspace .build-panel,
+.workspace .furniture-panel,
+.workspace .design-panel,
+.workspace .design-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    background: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
 }
 
 
 /* ==================================================
-   IMPORTANT:
-   The animated inner wrapper must be allowed to grow.
-================================================== */
+   SECTIONS — no boxes, just hairlines
+   ================================================== */
 
-.workspace-content-inner {
+.workspace .panel-group,
+.workspace .asset-section,
+.workspace .material-section,
+.workspace .panel-card {
+    width: 100%;
+    margin: 0;
+    padding: 16px 0;
+    box-sizing: border-box;
+    background: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+}
 
-    min-height:
-        max-content;
+.workspace .panel-group + .panel-group,
+.workspace .asset-section + .asset-section,
+.workspace .material-section + .material-section {
+    border-top: 1px solid var(--ws-line);
+}
 
-    width:
-        100%;
+.workspace .panel-group-locked {
+    opacity: 0.5;
+    pointer-events: none;
+}
 
-    box-sizing:
-        border-box;
+/* One label style for every section title */
+.workspace .panel-group > h3,
+.workspace .section-title,
+.workspace .asset-section-title,
+.workspace .material-section-title,
+.workspace .blueprint-section-header > span:first-child {
+    margin: 0;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ws-muted);
+}
+
+.workspace .section-title {
+    margin-bottom: 12px;
+}
+
+/* Collapsible headers */
+.workspace .blueprint-section-header,
+.workspace .asset-section-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--ws-muted);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.workspace .blueprint-section-header:hover,
+.workspace .asset-section-header:hover {
+    color: var(--ws-ink);
+}
+
+.workspace .asset-section-title,
+.workspace .material-section-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.workspace .material-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.workspace .asset-count,
+.workspace .material-section-count {
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: var(--ws-tint);
+    color: var(--ws-muted);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+.workspace .asset-chevron,
+.workspace .blueprint-chevron {
+    flex-shrink: 0;
+    color: var(--ws-muted);
+    transition: transform 0.2s ease;
+}
+
+.workspace .asset-chevron.open,
+.workspace .blueprint-chevron.open {
+    transform: rotate(180deg);
 }
 
 
 /* ==================================================
-   REMOVE SECOND OUTER CARD FROM DESIGN
-================================================== */
+   BUTTONS
+   ================================================== */
 
-.workspace-content
-.design-panel {
+/* primary — ink pill */
+.workspace .asset-apply-button,
+.workspace .material-apply-button,
+.workspace .confirm-layout-button,
+.workspace .start-button {
+    height: 38px;
+    padding: 0 20px;
 
-    width:
-        100% !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
 
-    max-width:
-        100% !important;
+    border: 0;
+    border-radius: 999px;
+    background: var(--ws-accent);
+    color: var(--ws-accent-ink);
 
-    margin:
-        0 !important;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
 
-    background:
-        transparent !important;
+    cursor: pointer;
+    transition: filter 0.15s ease, transform 0.1s ease, opacity 0.15s ease;
+}
 
-    border:
-        0 !important;
+.workspace .asset-apply-button:hover:not(:disabled),
+.workspace .material-apply-button:hover:not(:disabled),
+.workspace .confirm-layout-button:hover:not(:disabled),
+.workspace .start-button:hover:not(:disabled) {
+    filter: brightness(0.85);
+}
 
-    border-radius:
-        0 !important;
+.workspace .asset-apply-button:active:not(:disabled),
+.workspace .material-apply-button:active:not(:disabled),
+.workspace .confirm-layout-button:active:not(:disabled),
+.workspace .start-button:active:not(:disabled) {
+    transform: translateY(1px);
+}
 
-    box-shadow:
-        none !important;
+.workspace .asset-apply-button:disabled,
+.workspace .material-apply-button:disabled,
+.workspace .confirm-layout-button:disabled,
+.workspace .start-button:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
 
-    padding:
-        20px !important;
+/* secondary — tinted pill */
+.workspace .material-apply-room-button,
+.workspace .material-apply-all-button,
+.workspace .blueprint-scene-button {
+    height: 36px;
+    padding: 0 16px;
 
-    box-sizing:
-        border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 0;
+    border-radius: 999px;
+    background: var(--ws-tint);
+    color: var(--ws-ink);
+
+    font: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+
+    cursor: pointer;
+    transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.workspace .material-apply-room-button:hover:not(:disabled),
+.workspace .material-apply-all-button:hover:not(:disabled),
+.workspace .blueprint-scene-button:hover:not(:disabled) {
+    background: var(--ws-tint-hover);
+}
+
+.workspace .material-apply-room-button:disabled,
+.workspace .material-apply-all-button:disabled,
+.workspace .blueprint-scene-button:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.workspace .blueprint-scene-button {
+    width: 100%;
+}
+
+/* main call-to-action stays reachable while the panel scrolls */
+.workspace .start-button,
+.workspace .confirm-layout-button {
+    width: 100%;
+    height: 42px;
+}
+
+.workspace .start-button {
+    position: sticky;
+    bottom: 12px;
+    z-index: 2;
+    margin-top: 8px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
 }
 
 
 /* ==================================================
-   REMOVE SECOND OUTER CARD FROM FURNITURE
-================================================== */
+   FIELDS
+   ================================================== */
 
-.workspace-content
-.furniture-panel {
-
-    width:
-        100% !important;
-
-    max-width:
-        100% !important;
-
-    margin:
-        0 !important;
-
-    background:
-        transparent !important;
-
-    border:
-        0 !important;
-
-    border-radius:
-        0 !important;
-
-    box-shadow:
-        none !important;
-
-    padding:
-        20px !important;
-
-    box-sizing:
-        border-box;
+.workspace .field-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 12px;
 }
 
+.workspace .field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
 
-/* ==================================================
-   BUILD
-================================================== */
+.workspace .field label,
+.workspace .setting-label {
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--ws-muted);
+}
 
-.workspace-content
-.build-panel {
+.workspace .field-input {
+    position: relative;
+}
 
-    width:
-        100%;
+.workspace .field-input input,
+.workspace .setting-input {
+    width: 100%;
+    height: 38px;
+    padding: 0 28px 0 12px;
+    box-sizing: border-box;
 
-    max-width:
-        100%;
+    border: 0;
+    border-radius: 10px;
+    background: var(--ws-tint);
+    color: inherit;
 
-    box-sizing:
-        border-box;
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
 
-    background:
-        transparent;
+    outline: none;
+    appearance: textfield;
+    -moz-appearance: textfield;
 
-    padding:
-        20px;
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+}
 
-    display:
-        flex;
+.workspace .setting-input {
+    padding-right: 12px;
+}
 
-    flex-direction:
-        column;
+.workspace .field-input input::-webkit-outer-spin-button,
+.workspace .field-input input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
 
-    gap:
-        12px;
+.workspace .field-input input:hover:not(:disabled),
+.workspace .setting-input:hover:not(:disabled) {
+    background: var(--ws-tint-hover);
+}
+
+.workspace .field-input input:focus,
+.workspace .setting-input:focus {
+    background: #fff;
+    box-shadow: inset 0 0 0 1px var(--ws-ink);
+}
+
+.workspace .field-input input:disabled,
+.workspace .setting-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.workspace .field-unit {
+    position: absolute;
+    right: 11px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 11px;
+    color: var(--ws-muted);
+    pointer-events: none;
+}
+
+.workspace .setting-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* search — pill, like the rest of the site */
+.workspace .build-panel-search,
+.workspace .furniture-panel-search {
+    position: relative;
+    margin: 8px 0 4px;
+}
+
+.workspace .build-panel-search input,
+.workspace .furniture-panel-search input {
+    width: 100%;
+    height: 38px;
+    padding: 0 14px 0 36px;
+    box-sizing: border-box;
+
+    border: 0;
+    border-radius: 999px;
+    background: var(--ws-tint);
+    color: inherit;
+
+    font: inherit;
+    font-size: 12px;
+    outline: none;
+
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.workspace .build-panel-search input::placeholder,
+.workspace .furniture-panel-search input::placeholder {
+    color: var(--ws-faint);
+}
+
+.workspace .build-panel-search input:hover,
+.workspace .furniture-panel-search input:hover {
+    background: var(--ws-tint-hover);
+}
+
+.workspace .build-panel-search input:focus,
+.workspace .furniture-panel-search input:focus {
+    background: #fff;
+    box-shadow: inset 0 0 0 1px var(--ws-ink);
+}
+
+.workspace .build-panel-search-icon,
+.workspace .furniture-panel-search-icon {
+    position: absolute;
+    left: 13px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--ws-muted);
+    pointer-events: none;
+}
+
+.workspace .build-panel-sections {
+    display: flex;
+    flex-direction: column;
 }
 
 
 /* ==================================================
    FLOOR PLAN
-================================================== */
+   ================================================== */
 
-.workspace-content
-.panel {
+/* tools — same segmented control as the tabs */
+.workspace .tool-switcher {
+    display: flex;
+    gap: 2px;
+    margin-top: 12px;
+    padding: 3px;
+    border-radius: 999px;
+    background: var(--ws-tint);
+}
 
-    width:
-        100%;
+.workspace .tool-switch-button {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 34px;
 
-    max-width:
-        100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
 
-    box-sizing:
-        border-box;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ws-muted);
 
-    padding:
-        20px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 500;
 
-    display:
-        flex;
+    cursor: pointer;
+    transition: color 0.2s ease, background 0.15s ease;
+}
 
-    flex-direction:
-        column;
+.workspace .tool-switch-button svg {
+    width: 16px;
+    height: 16px;
+}
 
-    gap:
-        12px;
+.workspace .tool-switch-button:hover:not(:disabled):not(.active) {
+    color: var(--ws-ink);
+}
+
+.workspace .tool-switch-button.active {
+    background: #fff;
+    color: var(--ws-ink);
+    box-shadow: var(--ws-pill-shadow);
+}
+
+.workspace .tool-switch-button:disabled {
+    cursor: not-allowed;
+}
+
+/* toggle */
+.workspace .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 14px;
+}
+
+.workspace .toggle-row-label {
+    font-size: 12px;
+    color: var(--ws-ink);
+}
+
+.workspace .toggle-switch {
+    position: relative;
+    flex-shrink: 0;
+    width: 36px;
+    height: 20px;
+    padding: 0;
+
+    border: 0;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.16);
+
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.workspace .toggle-switch::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    transition: transform 0.2s ease;
+}
+
+.workspace .toggle-switch.on {
+    background: var(--ws-accent);
+}
+
+.workspace .toggle-switch.on::after {
+    transform: translateX(16px);
+}
+
+.workspace .toggle-switch:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+/* measurement */
+.workspace .measurement-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.workspace .measurement-caption {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: var(--ws-muted);
+}
+
+.workspace .live-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--ws-danger);
+    animation: ws-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes ws-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+}
+
+.workspace .measurement-value {
+    font-size: 14px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.workspace .measurement-empty {
+    margin-top: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--ws-muted);
+}
+
+/* blueprint */
+.workspace .blueprint-section-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.workspace .blueprint-upload-button {
+    height: 44px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    border: 1px dashed rgba(0, 0, 0, 0.22);
+    border-radius: 12px;
+    color: var(--ws-ink);
+
+    font-size: 12px;
+    font-weight: 500;
+
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.workspace .blueprint-upload-button:hover {
+    border-color: var(--ws-ink);
+    background: var(--ws-tint);
+}
+
+.workspace .blueprint-file {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px;
+
+    border-radius: 12px;
+    background: var(--ws-tint);
+
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.workspace .blueprint-file.selected {
+    background: #fff;
+    box-shadow: inset 0 0 0 2px var(--ws-accent);
+}
+
+.workspace .blueprint-file-main {
+    flex: 1;
+    min-width: 0;
+
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.workspace .blueprint-file-thumbnail {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.workspace .blueprint-file-thumbnail img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.workspace .blueprint-file-info {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.workspace .blueprint-file-info strong {
+    overflow: hidden;
+    font-size: 12px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.workspace .blueprint-file-info span {
+    font-size: 10.5px;
+    color: var(--ws-muted);
+}
+
+.workspace .blueprint-remove-icon {
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--ws-muted);
+
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.workspace .blueprint-remove-icon:hover {
+    background: rgba(229, 72, 77, 0.1);
+    color: #c93338;
+}
+
+/* The old inline styles boxed this in; flatten it */
+.workspace .blueprint-calibration-control {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+}
+
+.workspace .blueprint-control-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--ws-muted);
+}
+
+.workspace .blueprint-control-row strong {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--ws-ink);
+}
+
+.workspace .blueprint-opacity-control {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.workspace .blueprint-opacity-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--ws-muted);
+}
+
+.workspace .blueprint-opacity-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.workspace .blueprint-opacity-right strong {
+    font-weight: 600;
+    color: var(--ws-ink);
+    font-variant-numeric: tabular-nums;
+}
+
+.workspace .blueprint-lock-toggle {
+    width: 26px;
+    height: 26px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 0;
+    border-radius: 50%;
+    background: var(--ws-tint);
+    color: var(--ws-muted);
+
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.workspace .blueprint-lock-toggle:hover {
+    background: var(--ws-tint-hover);
+    color: var(--ws-ink);
+}
+
+.workspace .blueprint-lock-toggle.locked {
+    background: var(--ws-accent);
+    color: var(--ws-accent-ink);
+}
+
+.workspace input[type="range"] {
+    width: 100%;
+    margin: 0;
+    accent-color: var(--ws-accent);
 }
 
 
 /* ==================================================
-   INNER ASSET SECTIONS
-================================================== */
+   ASSETS (build + furniture)
+   ================================================== */
 
-.workspace-content
-.asset-section {
+/* smooth accordion with no padding tricks */
+.workspace .asset-collapse,
+.workspace .asset-settings-collapse {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.22s ease;
+}
 
-    width:
-        100%;
+.workspace .asset-collapse.open,
+.workspace .asset-settings-collapse.open {
+    grid-template-rows: 1fr;
+}
 
-    box-sizing:
-        border-box;
+.workspace .asset-collapse-inner,
+.workspace .asset-settings-collapse-inner {
+    min-height: 0;
+    overflow: hidden;
+    visibility: hidden;
+    transition: visibility 0s linear 0.22s;
+}
 
-    background:
-        var(--ws-surface);
+.workspace .asset-collapse.open > .asset-collapse-inner,
+.workspace .asset-settings-collapse.open > .asset-settings-collapse-inner {
+    visibility: visible;
+    transition-delay: 0s;
+}
 
-    border:
-        1px solid
-        var(--ws-border);
+.workspace .asset-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+}
 
-    border-radius:
-        12px;
+.workspace .asset-empty {
+    margin: 12px 0 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--ws-muted);
+    text-align: center;
+}
 
-    box-shadow:
-        var(--ws-shadow-sm);
+.workspace .asset-divider {
+    height: 1px;
+    margin-top: 14px;
+    background: var(--ws-line);
+}
 
-    overflow:
-        hidden;
+.workspace .asset-settings-toggle {
+    width: 100%;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    margin-top: 12px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--ws-muted);
+
+    font: inherit;
+    font-size: 11.5px;
+    font-weight: 500;
+    text-align: left;
+
+    cursor: pointer;
+}
+
+.workspace .asset-settings-toggle:hover {
+    color: var(--ws-ink);
+}
+
+.workspace .asset-apply-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 12px;
+}
+
+/* card */
+.workspace .asset-card {
+    position: relative;
+
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    padding: 8px;
+    border: 0;
+    border-radius: 12px;
+    background: var(--ws-tint);
+    color: inherit;
+
+    font: inherit;
+    text-align: left;
+
+    cursor: pointer;
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.workspace .asset-card:hover {
+    background: var(--ws-tint-hover);
+}
+
+.workspace .asset-card.selected {
+    background: #fff;
+    box-shadow: inset 0 0 0 2px var(--ws-accent);
+}
+
+.workspace .asset-thumb {
+    position: relative;
+
+    aspect-ratio: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.7);
+    overflow: hidden;
+}
+
+.workspace .asset-thumb img {
+    width: 100%;
+    height: 100%;
+    padding: 6px;
+    box-sizing: border-box;
+    object-fit: contain;
+}
+
+.workspace .asset-thumb-empty {
+    padding: 6px;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    text-align: center;
+    text-transform: uppercase;
+    color: var(--ws-faint);
+}
+
+.workspace .selected-badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+
+    width: 18px;
+    height: 18px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 999px;
+    background: var(--ws-accent);
+    color: var(--ws-accent-ink);
+}
+
+.workspace .asset-card > div:last-child {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 0 2px 2px;
+}
+
+.workspace .asset-card > div:last-child span {
+    overflow: hidden;
+    font-size: 11.5px;
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.workspace .asset-card > div:last-child small {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--ws-green);
+    font-variant-numeric: tabular-nums;
 }
 
 
 /* ==================================================
-   INNER MATERIAL SECTIONS
-================================================== */
+   MATERIALS (design)
+   ================================================== */
 
-.workspace-content
-.material-section {
+.workspace .material-scroll {
+    max-height: 300px;
+    margin: 12px -6px 0 0;
+    padding-right: 6px;
 
-    width:
-        100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.18) transparent;
+}
 
-    box-sizing:
-        border-box;
+.workspace .material-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
 
-    background:
-        var(--ws-surface);
+.workspace .material-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 
-    border:
-        1px solid
-        var(--ws-border);
+    padding: 6px 6px 8px;
+    border: 0;
+    border-radius: 12px;
+    background: var(--ws-tint);
+    color: inherit;
 
-    border-radius:
-        12px;
+    font: inherit;
+    text-align: left;
 
-    box-shadow:
-        var(--ws-shadow-sm);
+    cursor: pointer;
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+}
 
-    overflow:
-        hidden;
+.workspace .material-card:hover {
+    background: var(--ws-tint-hover);
+}
+
+.workspace .material-card.selected {
+    background: #fff;
+    box-shadow: inset 0 0 0 2px var(--ws-accent);
+}
+
+.workspace .material-card-thumbnail {
+    aspect-ratio: 1 / 1;
+    border-radius: 8px;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.workspace .material-card-thumbnail img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.workspace .material-card-color,
+.workspace .material-card-placeholder {
+    width: 100%;
+    height: 100%;
+}
+
+.workspace .material-card-name {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+
+    padding: 0 2px;
+    font-size: 10.5px;
+    font-weight: 500;
+    line-height: 1.25;
+}
+
+.workspace .material-card-price {
+    padding: 0 2px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--ws-green);
+    font-variant-numeric: tabular-nums;
+}
+
+.workspace .material-card-price span {
+    margin-left: 1px;
+    font-weight: 400;
+    color: var(--ws-muted);
+}
+
+.workspace .material-empty {
+    margin: 12px 0 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--ws-muted);
+    text-align: center;
+}
+
+.workspace .material-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.workspace .material-apply-button {
+    flex: 1 1 100%;
+}
+
+.workspace .material-apply-room-button,
+.workspace .material-apply-all-button {
+    flex: 1 1 0;
+    min-width: 0;
 }
 
 
 /* ==================================================
-   FLOOR PLAN INNER GROUPS
-================================================== */
+   PROJECT
+   ================================================== */
 
-.workspace-content
-.panel-group {
+.workspace .project-id-display {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 12px;
+    font-size: 11.5px;
+    color: var(--ws-muted);
+}
 
-    width:
-        100%;
+.workspace .project-id-display span:last-child {
+    font-weight: 500;
+    color: var(--ws-ink);
+    font-variant-numeric: tabular-nums;
+}
 
-    box-sizing:
-        border-box;
+.workspace .confirm-layout-button {
+    margin-top: 14px;
+}
 
-    background:
-        #ffffff;
-
-    border:
-        1px solid
-        var(--ws-border);
-
-    border-radius:
-        12px;
-
-    box-shadow:
-        var(--ws-shadow-sm);
+.workspace .save-message {
+    margin-top: 12px;
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: var(--ws-muted);
 }
 
 
 /* ==================================================
-   SPACING BETWEEN FURNITURE SECTIONS
-================================================== */
+   MOTION
+   ================================================== */
 
-.workspace-content
-.furniture-panel
-.asset-section + .asset-section {
-
-    margin-top:
-        12px;
-}
-
-
-/* ==================================================
-   SPACING BETWEEN DESIGN SECTIONS
-================================================== */
-
-.workspace-content
-.design-panel
-.material-section + .material-section {
-
-    margin-top:
-        12px;
-}
-
-
-/* ==================================================
-   SCROLLBAR
-================================================== */
-
-.workspace-content::-webkit-scrollbar {
-
-    width:
-        7px;
-}
-
-.workspace-content::-webkit-scrollbar-track {
-
-    background:
-        transparent;
-}
-
-.workspace-content::-webkit-scrollbar-thumb {
-
-    background:
-        rgba(
-            0,
-            0,
-            0,
-            0.12
-        );
-
-    border-radius:
-        999px;
-}
-
-.workspace-content::-webkit-scrollbar-thumb:hover {
-
-    background:
-        rgba(
-            0,
-            0,
-            0,
-            0.20
-        );
-}
-
-
-/* ==================================================
-   WORKSPACE BUTTONS
-================================================== */
-
-.workspace-button {
-
-    padding:
-        12px 16px;
-
-    border:
-        1px solid
-        var(--ws-border);
-
-    border-radius:
-        12px;
-
-    background:
-        var(--ws-surface);
-
-    color:
-        var(--ws-text);
-
-    cursor:
-        pointer;
-
-    text-align:
-        left;
-
-    box-shadow:
-        var(--ws-shadow-sm);
-
-    transition:
-        background
-        0.2s ease,
-
-        transform
-        0.12s ease;
-}
-
-.workspace-button:hover {
-
-    background:
-        var(--ws-surface-hover);
-
-    transform:
-        translateY(-1px);
-}
-
-
-/* ==================================================
-   SMALL SCREEN
-================================================== */
-
-@media (
-    max-width: 700px
-) {
-
-    .workspace {
-
-        width:
-            300px;
+@media (prefers-reduced-motion: reduce) {
+    .workspace-content,
+    .workspace .live-dot {
+        animation: none;
     }
 
-    .workspace-floating-panel {
-
-        width:
-            280px;
-
-        max-width:
-            calc(
-                100vw - 20px
-            );
+    .workspace *,
+    .workspace *::after {
+        transition-duration: 0s !important;
     }
 }
