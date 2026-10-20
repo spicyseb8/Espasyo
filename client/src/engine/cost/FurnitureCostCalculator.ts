@@ -63,6 +63,13 @@ export function calculateFurnitureCosts(
 
         }
 
+        if (
+            asset.price == null ||
+            !Number.isFinite(asset.price)
+        ) {
+            continue;
+        }
+
 
         //--------------------------------------------------
         // Existing item

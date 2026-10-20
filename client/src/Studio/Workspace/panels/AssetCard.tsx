@@ -159,7 +159,9 @@ export default function AssetCard({
                     ₱
 
                     {
-                        asset.price.toLocaleString()
+                        asset.price == null
+                            ? "Price unavailable"
+                            : asset.price.toLocaleString()
                     }
 
                 </small>

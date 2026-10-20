@@ -8,7 +8,9 @@ import NavBar from "./NavBar";
 
 import type { Asset } from "../assets/Asset";
 import type { Material } from "../engine/materials/MaterialTypes";
-import type { FurnitureCategory } from "../engine/furniture/FurnitureCategory";
+import {
+  FURNITURE_CATEGORY_SECTIONS,
+} from "../engine/furniture/FurnitureCategory";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -51,23 +53,14 @@ const DIVISIONS: { key: Division; label: string }[] = [
   { key: "walls", label: "Walls" },
 ];
 
-const FURNITURE_CATEGORY_LABELS: Record<FurnitureCategory, string> = {
-  livingRoom: "Living Room",
-  bedroom: "Bedroom",
-  diningRoom: "Dining Room",
-  kitchen: "Kitchen",
-  bathroom: "Bathroom",
-  office: "Office",
-};
-
 const CATEGORY_OPTIONS: Record<
   Division,
   { value: string; label: string }[]
 > = {
   furniture: [
     { value: "all", label: "All" },
-    ...(Object.keys(FURNITURE_CATEGORY_LABELS) as FurnitureCategory[]).map(
-      (k) => ({ value: k, label: FURNITURE_CATEGORY_LABELS[k] }),
+    ...FURNITURE_CATEGORY_SECTIONS.map(
+      ({ category: value, title: label }) => ({ value, label }),
     ),
   ],
   floors: [
@@ -116,17 +109,18 @@ function normalizeFloorCategory(raw?: string): FloorCategory | undefined {
 }
 
 function mapFurnitureAsset(asset: Asset): LibraryItem {
-  const price = asset.price ?? 0;
+  const price = asset.price;
   return {
     id: asset.id,
     type: "furniture",
     name: asset.name,
-    price: peso(price),
-    priceValue: Number.isFinite(price) ? price : 0,
+    price: price == null ? "Price unavailable" : peso(price),
+    priceValue: price != null && Number.isFinite(price) ? price : Number.POSITIVE_INFINITY,
     category: asset.furnitureCategory,
-    label: asset.furnitureCategory
-      ? FURNITURE_CATEGORY_LABELS[asset.furnitureCategory]
-      : "Furniture",
+    label:
+      FURNITURE_CATEGORY_SECTIONS.find(
+        ({ category }) => category === asset.furnitureCategory,
+      )?.title ?? "Furniture",
     image: asset.thumbnail ?? "",
   };
 }

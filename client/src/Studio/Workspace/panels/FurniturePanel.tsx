@@ -5,37 +5,7 @@ import useEditor from "../../../context/editor/useEditor";
 import AssetSection from "./AssetSection";
 import type { Asset } from "../../../assets/Asset";
 import { getFurnitureAssets } from "../../../engine/furniture/FirebaseFurnitureLibrary";
-import type { FurnitureCategory } from "../../../engine/furniture/FurnitureCategory";
-
-const furnitureSections: {
-    title: string;
-    category: FurnitureCategory;
-}[] = [
-    {
-        title: "Living Room",
-        category: "livingRoom"
-    },
-    {
-        title: "Bedroom",
-        category: "bedroom"
-    },
-    {
-        title: "Dining Room",
-        category: "diningRoom"
-    },
-    {
-        title: "Kitchen",
-        category: "kitchen"
-    },
-    {
-        title: "Bathroom",
-        category: "bathroom"
-    },
-    {
-        title: "Office",
-        category: "office"
-    }
-];
+import { FURNITURE_CATEGORY_SECTIONS } from "../../../engine/furniture/FurnitureCategory";
 
 function filterFurniture(
     assets: Asset[],
@@ -93,7 +63,7 @@ export default function FurniturePanel() {
 
     const sections = useMemo(
         () =>
-            furnitureSections.map(section => ({
+            FURNITURE_CATEGORY_SECTIONS.map(section => ({
                 ...section,
                 assets: filterFurniture(
                     furnitureAssets.filter(
@@ -171,9 +141,7 @@ export default function FurniturePanel() {
                             key={section.category}
                             title={section.title}
                             assets={section.assets}
-                            defaultOpen={
-                                section.category === "livingRoom"
-                            }
+                            defaultOpen={section.category === "livingRoom"}
                             forceOpen={
                                 isSearching
                                     ? true

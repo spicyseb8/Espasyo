@@ -4,6 +4,7 @@ import type {
   AssetStatus,
   AssetType,
 } from "./asset-types";
+import { isOptionalFurniturePrice } from "./furnitureCategories";
 
 export interface CreateAssetInput {
   asset_type: AssetType;
@@ -74,9 +75,14 @@ export async function createAsset(
       );
     }
   } else if (
-    input.price == null ||
-    !Number.isFinite(input.price) ||
-    input.price < 0
+    !(
+      input.asset_type === "furniture" &&
+      isOptionalFurniturePrice(input.category) &&
+      input.price == null
+    ) &&
+    (input.price == null ||
+      !Number.isFinite(input.price) ||
+      input.price < 0)
   ) {
     throw new Error(
       "Asset price must be a valid number of 0 or more."
@@ -93,7 +99,7 @@ export async function createAsset(
       "pricePerPiece",
       String(input.pricePerPiece)
     );
-  } else {
+  } else if (input.price != null) {
     formData.append("price", String(input.price));
   }
   formData.append("asset_status", input.asset_status);

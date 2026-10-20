@@ -59,7 +59,7 @@ export interface Asset {
 
     type: ViewAssetType;
 
-    price: number;
+    price?: number;
 
 
     //--------------------------------------------------

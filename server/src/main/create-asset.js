@@ -14,6 +14,17 @@ const router = express.Router();
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
 
 const ALLOWED_FURNITURE_CATEGORIES = new Set([
+  "tables",
+  "beds",
+  "decorations",
+  "toilets",
+  "vanity",
+  "cabinets",
+  "appliances",
+  "chairs",
+  "sofas",
+  "lavatory",
+  "shelves",
   "livingroom",
   "bedroom",
   "diningroom",
@@ -292,11 +303,12 @@ router.post(
           ? req.body.category.trim()
           : "";
 
-      const price = Number(
+      const rawPrice =
         assetType === "floor"
           ? req.body.pricePerPiece
-          : req.body.price
-      );
+          : req.body.price;
+      const hasPrice = rawPrice !== undefined && rawPrice !== "";
+      const price = hasPrice ? Number(rawPrice) : undefined;
       const assetStatus = req.body.asset_status || "available";
 
       const modelFile = getUploadedFile(uploadedFiles, "modelFile");
@@ -349,7 +361,17 @@ router.post(
         throw new Error("Asset category is required.");
       }
 
-      if (!Number.isFinite(price) || price < 0) {
+      const normalizedCategory = category
+        .toLowerCase()
+        .replace(/[\s_-]+/g, "");
+      const priceIsOptional =
+        assetType === "furniture" &&
+        ["decorations", "appliances"].includes(normalizedCategory);
+
+      if (
+        (!priceIsOptional && !hasPrice) ||
+        (hasPrice && (!Number.isFinite(price) || price < 0))
+      ) {
         throw new Error("Price must be a number of 0 or more.");
       }
 
@@ -358,11 +380,19 @@ router.post(
       }
 
       if (assetType === "furniture") {
-        const normalizedCategory = category
-          .toLowerCase()
-          .replace(/[\s_-]+/g, "");
+        const categoryAllowed =
+          ALLOWED_FURNITURE_CATEGORIES.has(normalizedCategory);
 
-        if (!ALLOWED_FURNITURE_CATEGORIES.has(normalizedCategory)) {
+        if (process.env.NODE_ENV !== "production") {
+          console.debug("Furniture category validation:", {
+            assetType,
+            submittedCategory: category,
+            normalizedCategory,
+            allowed: categoryAllowed,
+          });
+        }
+
+        if (!categoryAllowed) {
           throw new Error(
             "Furniture category is not supported by the client library."
           );
@@ -495,7 +525,9 @@ router.post(
         asset.length = floorLength;
         asset.width = floorWidth;
       } else {
-        asset.price = price;
+        if (price !== undefined) {
+          asset.price = price;
+        }
       }
 
       if (modelPath) {

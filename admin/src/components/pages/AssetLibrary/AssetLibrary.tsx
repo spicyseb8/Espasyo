@@ -40,6 +40,12 @@ import { getWallAssets } from "@/services/assets/walls";
 import { getFloorAssets } from "@/services/assets/floors";
 import { updateAsset } from "@/services/assets/update";
 import {
+  FURNITURE_CATEGORY_OPTIONS,
+  FURNITURE_LEGACY_CATEGORIES,
+  FURNITURE_SPECIAL_CATEGORIES,
+  isOptionalFurniturePrice,
+} from "@/services/assets/furnitureCategories";
+import {
   metersToCentimeters,
   resolveMeterDimension,
 } from "@/services/assets/flooringDimensions";
@@ -108,6 +114,7 @@ export default function AssetLibrary({
   const [detailPage, setDetailPage] = useState<1 | 2>(1);
 
   const [editName, setEditName] = useState("");
+  const [editCategory, setEditCategory] = useState("");
   const [editPrice, setEditPrice] = useState("");
 
   // Flooring dimensions are entered in centimeters.
@@ -273,6 +280,7 @@ export default function AssetLibrary({
     setSaveError(null);
 
     setEditName(asset.name);
+    setEditCategory(asset.category);
     setEditPrice(getPriceInputValue(asset));
 
     setEditLength(
@@ -292,6 +300,7 @@ export default function AssetLibrary({
 
     setSaveError(null);
     setEditName(selectedAsset.name);
+    setEditCategory(selectedAsset.category);
     setEditPrice(getPriceInputValue(selectedAsset));
 
     setEditLength(metersToCentimetersInput(selectedAsset.length));
@@ -310,6 +319,7 @@ export default function AssetLibrary({
 
     setSaveError(null);
     setEditName(selectedAsset.name);
+    setEditCategory(selectedAsset.category);
     setEditPrice(getPriceInputValue(selectedAsset));
 
     setEditLength(metersToCentimetersInput(selectedAsset.length));
@@ -332,6 +342,10 @@ export default function AssetLibrary({
 
     const trimmedName = editName.trim();
     const numericPrice = Number(editPrice);
+    const hasPrice = editPrice.trim() !== "";
+    const optionalPrice =
+      selectedAsset.asset_type === "furniture" &&
+      isOptionalFurniturePrice(editCategory);
 
     setSaveError(null);
 
@@ -341,9 +355,9 @@ export default function AssetLibrary({
     }
 
     if (
-      (selectedAsset.asset_type === "floor" && !editPrice.trim()) ||
-      !Number.isFinite(numericPrice) ||
-      numericPrice < 0
+      (!optionalPrice && !hasPrice) ||
+      (hasPrice &&
+        (!Number.isFinite(numericPrice) || numericPrice < 0))
     ) {
       setSaveError(
         selectedAsset.asset_type === "floor"
@@ -403,10 +417,17 @@ export default function AssetLibrary({
       setSaving(true);
 
       await updateAsset(selectedAsset.id, {
+        asset_type: selectedAsset.asset_type,
         name: trimmedName,
+        category: editCategory,
         ...(selectedAsset.asset_type === "floor"
           ? { pricePerPiece: numericPrice }
-          : { price: numericPrice }),
+          : {
+              price:
+                optionalPrice && !hasPrice
+                  ? undefined
+                  : numericPrice,
+            }),
         asset_status: editStatus,
         ...(floorDimensions ?? {}),
       });
@@ -427,10 +448,16 @@ export default function AssetLibrary({
       const updatedAsset: Asset = {
         ...selectedAsset,
         name: trimmedName,
+        category: editCategory,
         asset_status: editStatus,
         ...(selectedAsset.asset_type === "floor"
           ? { pricePerPiece: numericPrice }
-          : { price: numericPrice }),
+          : {
+              price:
+                optionalPrice && !hasPrice
+                  ? undefined
+                  : numericPrice,
+            }),
         ...(floorDimensions ?? {}),
       };
 
@@ -623,7 +650,9 @@ export default function AssetLibrary({
                         : selectedAsset.price != null
                           ? `₱${selectedAsset.price}/m²`
                           : "Not set"
-                      : `$${selectedAsset.price ?? 0}`}
+                      : selectedAsset.price == null
+                        ? "Price unavailable"
+                        : `$${selectedAsset.price}`}
                   </p>
                 </div>
 
@@ -767,7 +796,19 @@ export default function AssetLibrary({
                         setEditPrice(event.target.value)
                       }
                       disabled={saving}
+                      required={
+                        !(
+                          selectedAsset.asset_type === "furniture" &&
+                          isOptionalFurniturePrice(editCategory)
+                        )
+                      }
                     />
+                    {selectedAsset.asset_type === "furniture" &&
+                      isOptionalFurniturePrice(editCategory) && (
+                        <p className="text-xs text-muted-foreground">
+                          Optional for Decorations and Appliances.
+                        </p>
+                      )}
                     {selectedAsset.asset_type === "floor" &&
                       selectedAsset.pricePerPiece == null && (
                         <p className="text-xs text-muted-foreground">
@@ -878,10 +919,46 @@ export default function AssetLibrary({
                       Category
                     </label>
 
+                  {selectedAsset.asset_type === "furniture" ? (
+                    <Select
+                      value={editCategory}
+                      onValueChange={(value) => {
+                        if (value !== null) setEditCategory(value);
+                      }}
+                      disabled={saving}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {![
+                          ...FURNITURE_CATEGORY_OPTIONS,
+                          ...FURNITURE_SPECIAL_CATEGORIES,
+                        ].some(([value]) => value === editCategory) && (
+                          <SelectItem value={editCategory} disabled>
+                            {FURNITURE_LEGACY_CATEGORIES.find(
+                              ([value]) => value === editCategory
+                            )?.[1] ?? editCategory}
+                          </SelectItem>
+                        )}
+                        {FURNITURE_CATEGORY_OPTIONS.map(([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                        {FURNITURE_SPECIAL_CATEGORIES.map(([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
                     <div className="rounded-md border border-border bg-muted px-3 py-2 text-sm text-muted-foreground">
                       {selectedAsset.category}
                     </div>
-                  </div>
+                  )}
+                </div>
 
                   <div className="space-y-2">
                     <label className="text-xs font-medium">

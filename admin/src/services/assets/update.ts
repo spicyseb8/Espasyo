@@ -1,13 +1,17 @@
 import {
   doc,
+  deleteField,
   updateDoc,
   serverTimestamp,
 } from "firebase/firestore";
 
 import { db } from "../../firebase/firebase";
+import { isOptionalFurniturePrice } from "./furnitureCategories";
 
 export interface UpdateAssetData {
+  asset_type: "floor" | "wall" | "furniture";
   name: string;
+  category: string;
   price?: number;
   pricePerPiece?: number;
   asset_status:
@@ -81,9 +85,15 @@ export async function updateAsset(
       );
     }
   } else if (
-    data.price === undefined ||
-    !Number.isFinite(data.price) ||
-    data.price < 0
+    !(
+      data.asset_type === "furniture" &&
+      data.category !== "" &&
+      isOptionalFurniturePrice(data.category) &&
+      data.price === undefined
+    ) &&
+    (data.price === undefined ||
+      !Number.isFinite(data.price) ||
+      data.price < 0)
   ) {
     throw new Error(
       "Asset price must be a valid number of 0 or more."
@@ -92,9 +102,14 @@ export async function updateAsset(
 
   await updateDoc(assetRef, {
     name: data.name,
+    category: data.category,
     ...(data.price !== undefined
       ? { price: data.price }
-      : {}),
+      : data.pricePerPiece === undefined &&
+          data.asset_type === "furniture" &&
+          isOptionalFurniturePrice(data.category)
+        ? { price: deleteField() }
+        : {}),
     ...(data.pricePerPiece !== undefined
       ? { pricePerPiece: data.pricePerPiece }
       : {}),

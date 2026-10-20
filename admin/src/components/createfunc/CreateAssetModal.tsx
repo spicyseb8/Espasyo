@@ -33,6 +33,11 @@ import type {
 } from "@/services/assets/asset-types";
 import { createAsset } from "@/services/assets/createAsset";
 import { centimetersToMeters } from "@/services/assets/flooringDimensions";
+import {
+  FURNITURE_CATEGORY_OPTIONS,
+  FURNITURE_SPECIAL_CATEGORIES,
+  isOptionalFurniturePrice,
+} from "@/services/assets/furnitureCategories";
 import { useAuth } from "@/context/AuthContext";
 
 interface CreateAssetModalProps {
@@ -41,22 +46,14 @@ interface CreateAssetModalProps {
   onCreated: (asset: Asset) => void;
 }
 
-const FURNITURE_CATEGORIES = [
-  ["livingroom", "Living room"],
-  ["bedroom", "Bedroom"],
-  ["diningroom", "Dining room"],
-  ["kitchen", "Kitchen"],
-  ["bathroom", "Bathroom"],
-  ["office", "Office"],
-  ["doors", "Doors"],
-  ["windows", "Windows"],
-] as const;
-
 const CATEGORY_OPTIONS: Record<
   AssetType,
   readonly (readonly [string, string])[]
 > = {
-  furniture: FURNITURE_CATEGORIES,
+  furniture: [
+    ...FURNITURE_CATEGORY_OPTIONS,
+    ...FURNITURE_SPECIAL_CATEGORIES,
+  ],
   floor: [
     ["wood", "Wood"],
     ["tile", "Tiles"],
@@ -249,13 +246,16 @@ export default function CreateAssetModal({
 
   const resolvedCategory =
     category === "other" ? customCategory.trim() : category;
+  const priceIsOptional =
+    assetType === "furniture" &&
+    isOptionalFurniturePrice(category);
 
   const previewAsset: Asset = {
     id: "new-asset-preview",
     name: name.trim() || "Asset preview",
     asset_type: assetType || "furniture",
     category: resolvedCategory,
-    price: Number(price) || 0,
+    price: price.trim() ? Number(price) : undefined,
     model_url: modelPreviewURL,
     model_path: modelPreviewURL,
     storage_path: modelPreviewURL,
@@ -388,6 +388,7 @@ export default function CreateAssetModal({
     }
 
     const numericPrice = Number(price);
+    const hasPrice = price.trim() !== "";
 
     if (!assetType) {
       return setError("Choose an asset type.");
@@ -402,8 +403,9 @@ export default function CreateAssetModal({
     }
 
     if (
-      !Number.isFinite(numericPrice) ||
-      numericPrice < 0
+      (!priceIsOptional && !hasPrice) ||
+      (hasPrice &&
+        (!Number.isFinite(numericPrice) || numericPrice < 0))
     ) {
       return setError("Enter a valid price of 0 or more.");
     }
@@ -457,7 +459,12 @@ export default function CreateAssetModal({
         category: resolvedCategory,
         ...(assetType === "floor"
           ? { pricePerPiece: numericPrice }
-          : { price: numericPrice }),
+          : {
+              price:
+                priceIsOptional && !hasPrice
+                  ? undefined
+                  : numericPrice,
+            }),
         asset_status: status,
 
         modelFile: files.modelFile ?? undefined,
@@ -625,7 +632,9 @@ export default function CreateAssetModal({
                       >
                         {assetType === "floor"
                           ? "Price per tile (₱) *"
-                          : "Price *"}
+                          : priceIsOptional
+                            ? "Price (₱, optional)"
+                            : "Price *"}
                       </label>
 
                       <Input
@@ -637,7 +646,7 @@ export default function CreateAssetModal({
                         onChange={(event) =>
                           setPrice(event.target.value)
                         }
-                        required
+                        required={!priceIsOptional}
                         disabled={saving}
                       />
                     </div>

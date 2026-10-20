@@ -32,7 +32,7 @@ export interface Asset {
 
     type: BuildTool;
 
-    price: number;
+    price?: number;
 
 
     //--------------------------------------------------

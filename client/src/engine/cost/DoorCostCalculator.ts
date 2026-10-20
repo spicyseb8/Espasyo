@@ -85,10 +85,10 @@ export function calculateDoorCosts(
                         "item",
 
                     rate:
-                        asset.price,
+                        asset.price ?? 0,
 
                     subtotal:
-                        asset.price
+                        asset.price ?? 0
                 }
             );
 

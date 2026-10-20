@@ -183,6 +183,39 @@ function normalizeFurnitureCategory(
         case "study":
             return "office";
 
+        case "tables":
+            return "tables";
+
+        case "beds":
+            return "beds";
+
+        case "decorations":
+            return "decorations";
+
+        case "toilets":
+            return "toilets";
+
+        case "vanity":
+            return "vanity";
+
+        case "cabinets":
+            return "cabinets";
+
+        case "appliances":
+            return "appliances";
+
+        case "chairs":
+            return "chairs";
+
+        case "sofas":
+            return "sofas";
+
+        case "lavatory":
+            return "lavatory";
+
+        case "shelves":
+            return "shelves";
+
         case "door":
         case "doors":
         case "window":
@@ -348,11 +381,16 @@ async function buildFurnitureAsset(
             ? data.name.trim()
             : assetId;
 
-    const parsedPrice = Number(data.price ?? 0);
-
-    const price = Number.isFinite(parsedPrice)
-        ? parsedPrice
-        : 0;
+    const parsedPrice = Number(data.price);
+    const optionalPriceCategory =
+        furnitureCategory === "decorations" ||
+        furnitureCategory === "appliances";
+    const price =
+        data.price == null && optionalPriceCategory
+            ? undefined
+            : Number.isFinite(parsedPrice)
+                ? parsedPrice
+                : 0;
 
     const parsedRotationOffsetY = Number(
         data.rotation_offset_y ?? 0

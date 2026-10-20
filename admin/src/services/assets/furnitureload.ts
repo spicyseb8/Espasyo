@@ -228,6 +228,19 @@ function normalizeFurnitureCategory(
         case "study":
             return "office";
 
+        case "tables":
+        case "beds":
+        case "decorations":
+        case "toilets":
+        case "vanity":
+        case "cabinets":
+        case "appliances":
+        case "chairs":
+        case "sofas":
+        case "lavatory":
+        case "shelves":
+            return category;
+
         default:
             return undefined;
 
@@ -501,9 +514,10 @@ async function buildFurnitureAsset(
     //--------------------------------------------------
 
     const parsedPrice =
-        Number(
-            data.price ?? 0
-        );
+        Number(data.price);
+    const hasOptionalCategoryPrice =
+        furnitureCategory === "decorations" ||
+        furnitureCategory === "appliances";
 
     //--------------------------------------------------
     // Rotation
@@ -576,11 +590,11 @@ async function buildFurnitureAsset(
             "furniture",
 
         price:
-            Number.isFinite(
-                parsedPrice
-            )
-                ? parsedPrice
-                : 0,
+            data.price == null && hasOptionalCategoryPrice
+                ? undefined
+                : Number.isFinite(parsedPrice)
+                    ? parsedPrice
+                    : 0,
 
         furnitureCategory,
 
