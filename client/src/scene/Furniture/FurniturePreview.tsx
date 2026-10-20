@@ -48,6 +48,7 @@ import type {
     Furniture
 } from "../../engine/furniture/FurnitureTypes";
 import type { Asset } from "../../assets/Asset";
+import { isSupportedFurnitureCategory } from "../../engine/furniture/FurnitureSupport";
 
 //======================================================
 // FIND FURNITURE ASSET
@@ -214,7 +215,8 @@ function getFurnitureSupport(
     raycaster: Raycaster,
     scene: Object3D,
     furniture: Furniture[],
-    ignoreFurnitureId: string | null
+    ignoreFurnitureId: string | null,
+    getAsset: (assetId: string) => Asset | null
 ): { furniture: Furniture; point: Vector3 } | null {
     const hits = raycaster.intersectObjects(scene.children, true);
 
@@ -235,12 +237,21 @@ function getFurnitureSupport(
             continue;
         }
 
+        const supportingAsset = getAsset(supportingFurniture.assetId);
+
+        if (
+            !supportingAsset ||
+            !isSupportedFurnitureCategory(supportingAsset.furnitureCategory)
+        ) {
+            return null;
+        }
+
         const topY =
             supportingFurniture.position.y +
             supportingFurniture.height;
 
         if (Math.abs(hit.point.y - topY) > 0.08) {
-            continue;
+            return null;
         }
 
         return {
@@ -483,6 +494,10 @@ function FurniturePreviewModel({
             furnitureInteraction.pointer,
             camera
         );
+        supportRaycaster.setFromCamera(
+            furnitureInteraction.pointer,
+            camera
+        );
 
         const placementSurfaces = asset.placementSurfaces ?? ["floor"];
         const snapTargets = asset.snapTargets ?? ["wall", "furniture"];
@@ -504,15 +519,13 @@ function FurniturePreviewModel({
                 supportRaycaster,
                 scene,
                 state.furniture,
-                movingFurnitureId
+                movingFurnitureId,
+                findFurnitureAsset
             );
         }
 
-        let finalTransform: ReturnType<typeof buildFurniturePlacement> | null = null;
-        let previewCollision: FurnitureCollisionResult = {
-            valid: false,
-            reason: "wall"
-        };
+        let finalTransform: ReturnType<typeof buildFurniturePlacement> | null;
+        let previewCollision: FurnitureCollisionResult;
         let previewIsWall = false;
 
         //==================================================
@@ -549,13 +562,15 @@ function FurniturePreviewModel({
                 bounds.depth,
                 finalTransform.rotationY,
                 state.walls,
-                state.furniture,
+                state.furniture.filter(
+                    furniture =>
+                        furniture.id !== support.furniture.id &&
+                        furniture.id !== movingFurnitureId
+                ),
                 state.wallThickness,
                 0.01,
                 {
-                    height: bounds.height,
-                    ignoreFurnitureId:
-                        movingFurnitureId ?? support.furniture.id
+                    height: bounds.height
                 }
             );
         }
