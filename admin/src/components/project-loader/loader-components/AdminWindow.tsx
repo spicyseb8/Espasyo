@@ -1,9 +1,11 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useGLTF } from "@react-three/drei";
 import { Box3, Group, Mesh, Vector3 } from "three";
 import type { Asset } from "../engine/assets/Asset";
 import type { SavedWindow } from "../ProjectTypes";
 import { emitAdminCommentTarget } from "../../../services/assets/adminCommentEvents";
+import AdminModelErrorBoundary from "./AdminModelErrorBoundary";
+import { disposeClonedMaterials } from "@/lib/disposeClonedMaterials";
 
 interface AdminWindowProps {
     window: SavedWindow;
@@ -227,11 +229,13 @@ export default function AdminWindow({
     }
 
     return (
-        <AdminWindowModel
-            window={window}
-            asset={asset}
-            wallThickness={wallThickness}
-        />
+        <AdminModelErrorBoundary assetId={asset.id}>
+            <AdminWindowModel
+                window={window}
+                asset={asset}
+                wallThickness={wallThickness}
+            />
+        </AdminModelErrorBoundary>
     );
 }
 
@@ -294,6 +298,10 @@ function AdminWindowModel({
         asset,
         window.id
     ]);
+
+    useEffect(() => {
+        return () => disposeClonedMaterials(model);
+    }, [model]);
 
     const finalRotationY =
         window.rotationY +

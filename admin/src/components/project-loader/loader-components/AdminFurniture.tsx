@@ -4,6 +4,9 @@ import { Mesh } from "three";
 import type { Asset } from "../engine/assets/Asset";
 import type { SavedFurniture } from "../ProjectTypes";
 import { emitAdminCommentTarget } from "../../../services/assets/adminCommentEvents";
+import AdminModelErrorBoundary from "./AdminModelErrorBoundary";
+import { useEffect } from "react";
+import { disposeClonedMaterials } from "@/lib/disposeClonedMaterials";
 
 interface AdminFurnitureProps {
     furniture: SavedFurniture;
@@ -30,10 +33,12 @@ export default function AdminFurniture({
     }
 
     return (
-        <AdminFurnitureModel
-            furniture={furniture}
-            asset={asset}
-        />
+        <AdminModelErrorBoundary assetId={asset.id}>
+            <AdminFurnitureModel
+                furniture={furniture}
+                asset={asset}
+            />
+        </AdminModelErrorBoundary>
     );
 }
 
@@ -71,6 +76,10 @@ function AdminFurnitureModel({
         scene,
         furniture.id
     ]);
+
+    useEffect(() => {
+        return () => disposeClonedMaterials(model);
+    }, [model]);
 
     const modelOffset = furniture.modelOffset;
 

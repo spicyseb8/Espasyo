@@ -46,6 +46,8 @@ import {
     Mesh,
     MeshBasicMaterial
 } from "three";
+import { disposeClonedMaterials } from "../disposeClonedMaterials";
+import ModelErrorBoundary from "../ModelErrorBoundary";
 
 
 //======================================================
@@ -725,6 +727,15 @@ function FurnitureModel({
 
         );
 
+    useEffect(() => {
+        return () => {
+            disposeClonedMaterials(model);
+            disposeClonedMaterials(outlineModel);
+            disposeClonedMaterials(highlightModel);
+            disposeClonedMaterials(rotationBlockedModel);
+        };
+    }, [model, outlineModel, highlightModel, rotationBlockedModel]);
+
 
     //==================================================
     // SELECTED
@@ -1197,33 +1208,18 @@ function FurnitureScene() {
 
                     furniture => (
 
-                        <FurnitureItem
-
-                            key={
-                                furniture.id
-                            }
-
-                            id={
-                                furniture.id
-                            }
-
-                            assetId={
-                                furniture.assetId
-                            }
-
-                            position={
-                                furniture.position
-                            }
-
-                            rotationY={
-                                furniture.rotationY
-                            }
-
-                            modelOffset={
-                                furniture.modelOffset
-                            }
-
-                        />
+                        <ModelErrorBoundary
+                            key={furniture.id}
+                            assetId={furniture.assetId}
+                        >
+                            <FurnitureItem
+                                id={furniture.id}
+                                assetId={furniture.assetId}
+                                position={furniture.position}
+                                rotationY={furniture.rotationY}
+                                modelOffset={furniture.modelOffset}
+                            />
+                        </ModelErrorBoundary>
 
                     )
 

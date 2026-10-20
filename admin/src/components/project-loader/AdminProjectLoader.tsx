@@ -6,15 +6,12 @@ import { auth } from "@/firebase/firebase";
 import { getAdminProject } from "@/services/assets/projectService";
 import type { AdminProject } from "@/services/assets/projectService";
 import { filterUnavailableProjectAssets } from "@/services/assets/filterUnavailableProjectAssets";
+import { preloadAdminProjectAssets } from "@/services/assets/projectAssetPreloader";
 
 import type { SavedProjectData } from "./ProjectTypes";
 import AdminProjectViewer from "./AdminProjectViewer";
 
-// NOTE: adjust this import path to wherever your 3D LoadingScreen file lives.
 import LoadingScreen from "@/components/LoadingScreen";
-
-/** Minimum time the loading animation stays on screen (ms). */
-const MIN_LOADING_MS = 5500;
 
 interface LoadedProject {
     metadata: AdminProject;
@@ -28,23 +25,15 @@ export default function AdminProjectLoader() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [loadedProject, setLoadedProject] = useState<LoadedProject | null>(null);
-    const [minTimeElapsed, setMinTimeElapsed] = useState(false);
-
-    //==================================================
-    // MINIMUM LOADER DURATION
-    //==================================================
-    useEffect(() => {
-        setMinTimeElapsed(false);
-
-        const timer = setTimeout(() => setMinTimeElapsed(true), MIN_LOADING_MS);
-
-        return () => clearTimeout(timer);
-    }, [projectId]);
 
     useEffect(() => {
         let cancelled = false;
+        let activeController: AbortController | null = null;
 
         const unsubscribe = onAuthStateChanged(auth, async user => {
+            activeController?.abort();
+            activeController = null;
+
             if (!projectId) {
                 if (!cancelled) {
                     setError("No project was selected.");
@@ -61,6 +50,9 @@ export default function AdminProjectLoader() {
                 return;
             }
 
+            const controller = new AbortController();
+            activeController = controller;
+
             try {
                 if (!cancelled) {
                     setLoading(true);
@@ -71,6 +63,7 @@ export default function AdminProjectLoader() {
                 // GET PROJECT METADATA
                 //==================================================
                 const metadata = await getAdminProject(projectId);
+                if (cancelled || controller.signal.aborted) return;
 
                 //==================================================
                 // JSON URL
@@ -90,19 +83,13 @@ export default function AdminProjectLoader() {
                 //==================================================
                 const response = await fetch(jsonUrl, {
                     method: "GET",
-                    cache: "no-store"
+                    cache: "no-store",
+                    signal: controller.signal
                 });
 
                 if (!response.ok) {
                     throw new Error(`Project JSON request failed with HTTP ${response.status}.`);
                 }
-
-                const contentType = response.headers.get("content-type");
-
-                console.log("AdminProjectLoader JSON response:", {
-                    status: response.status,
-                    contentType
-                });
 
                 const data = await response.json();
 
@@ -111,13 +98,20 @@ export default function AdminProjectLoader() {
                 //==================================================
                 validateProjectData(data);
 
-                if (cancelled) return;
+                if (cancelled || controller.signal.aborted) return;
 
                 const projectData = await filterUnavailableProjectAssets(
                     data as SavedProjectData
                 );
 
-                if (cancelled) return;
+                if (cancelled || controller.signal.aborted) return;
+
+                //==================================================
+                // PRELOAD THIS PROJECT'S ASSETS
+                //==================================================
+                await preloadAdminProjectAssets(projectData);
+
+                if (cancelled || controller.signal.aborted) return;
 
                 //==================================================
                 // STORE
@@ -129,9 +123,9 @@ export default function AdminProjectLoader() {
 
                 setLoading(false);
             } catch (loadError) {
-                console.error("Failed to load admin project:", loadError);
+                if (cancelled || controller.signal.aborted) return;
 
-                if (cancelled) return;
+                console.error("Failed to load admin project:", loadError);
 
                 setError(
                     loadError instanceof Error
@@ -145,16 +139,15 @@ export default function AdminProjectLoader() {
 
         return () => {
             cancelled = true;
+            activeController?.abort();
             unsubscribe();
         };
     }, [projectId]);
 
     //==================================================
-    // LOADING  (new 3D falling-models design)
+    // LOADING
     //==================================================
-    // Stays up until the data is ready AND the minimum time has passed.
-    // Errors skip the wait so the user isn't left staring at the animation.
-    if (!error && (loading || !minTimeElapsed)) {
+    if (!error && loading) {
         return <LoadingScreen />;
     }
 

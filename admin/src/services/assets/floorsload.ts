@@ -1039,3 +1039,7 @@ export async function refreshFloorMaterials():
 
     return getFloorMaterials();
 }
+
+export function getCachedFloorMaterials(): Material[] {
+    return cachedFloorMaterials;
+}

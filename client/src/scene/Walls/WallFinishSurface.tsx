@@ -1,8 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { ExtrudeGeometry, MeshStandardMaterial, RepeatWrapping, Shape, Texture, TextureLoader, Vector3 } from "three";
+import { ExtrudeGeometry, MeshStandardMaterial, RepeatWrapping, Shape, Texture, Vector3 } from "three";
 import type { WallPiece } from "../../engine/walls/WallPiece";
 import type { Material } from "../../engine/materials/MaterialTypes";
-import { findCachedWallMaterial, getWallMaterials } from "../../engine/materials/walls";
+import {
+    findCachedWallMaterial,
+    getCachedWallTexture,
+    getWallMaterials,
+    preloadWallTexture
+} from "../../engine/materials/walls";
 import type { WallFinishSide } from "./WallFinishUtils";
 
 interface Props {
@@ -15,7 +20,10 @@ const FINISH_GAP = 0.002;
 
 export default function WallFinishSurface({ piece, finish }: Props) {
     const [material, setMaterial] = useState<Material | null>(() => findCachedWallMaterial(finish.materialId) ?? null);
-    const [texture, setTexture] = useState<Texture | null>(null);
+    const [loadedTexture, setLoadedTexture] = useState<{
+        url: string;
+        texture: Texture;
+    } | null>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -40,44 +48,73 @@ export default function WallFinishSurface({ piece, finish }: Props) {
         };
     }, [finish.materialId]);
 
-    useEffect(() => {
-        setTexture(null);
-        if (!material?.texture) {
-            return;
+    const textureUrl = material?.texture;
+    const cachedTexture = textureUrl
+        ? getCachedWallTexture(textureUrl)
+        : undefined;
+
+    const cachedSurfaceTexture = useMemo(() => {
+        if (!cachedTexture) {
+            return null;
         }
-        let cancelled = false;
-        const loader = new TextureLoader();
-        loader.load(
-            material.texture,
-            loadedTexture => {
-                if (cancelled) {
-                    loadedTexture.dispose();
-                    return;
-                }
-                loadedTexture.wrapS = RepeatWrapping;
-                loadedTexture.wrapT = RepeatWrapping;
-                loadedTexture.repeat.set(Math.max(1, piece.width), Math.max(1, piece.height));
-                loadedTexture.needsUpdate = true;
-                setTexture(loadedTexture);
-            },
-            undefined,
-            error => {
-                console.error("Failed to load wall texture:", material.texture, error);
-                if (!cancelled) {
-                    setTexture(null);
-                }
-            }
+
+        const texture = cachedTexture.clone();
+        texture.wrapS = RepeatWrapping;
+        texture.wrapT = RepeatWrapping;
+        texture.repeat.set(
+            Math.max(1, piece.width),
+            Math.max(1, piece.height)
         );
-        return () => {
-            cancelled = true;
-        };
-    }, [material?.texture, piece.width, piece.height]);
+        texture.needsUpdate = true;
+        return texture;
+    }, [cachedTexture, piece.width, piece.height]);
 
     useEffect(() => {
+        return () => cachedSurfaceTexture?.dispose();
+    }, [cachedSurfaceTexture]);
+
+    useEffect(() => {
+        if (!textureUrl || cachedTexture) {
+            return;
+        }
+
+        let cancelled = false;
+        let surfaceTexture: Texture | null = null;
+
+        void preloadWallTexture(textureUrl)
+            .then(sourceTexture => {
+                if (cancelled) {
+                    return;
+                }
+
+                surfaceTexture = sourceTexture.clone();
+                surfaceTexture.wrapS = RepeatWrapping;
+                surfaceTexture.wrapT = RepeatWrapping;
+                surfaceTexture.repeat.set(
+                    Math.max(1, piece.width),
+                    Math.max(1, piece.height)
+                );
+                surfaceTexture.needsUpdate = true;
+                setLoadedTexture({
+                    url: textureUrl,
+                    texture: surfaceTexture
+                });
+            })
+            .catch(error => {
+                console.error("Failed to load wall texture:", textureUrl, error);
+            });
+
         return () => {
-            texture?.dispose();
+            cancelled = true;
+            surfaceTexture?.dispose();
         };
-    }, [texture]);
+    }, [textureUrl, cachedTexture, piece.width, piece.height]);
+
+    const texture = cachedSurfaceTexture ?? (
+        loadedTexture && loadedTexture.url === textureUrl
+            ? loadedTexture.texture
+            : null
+    );
 
     const normal = useMemo(() => {
         return new Vector3(-Math.sin(piece.rotationY), 0, Math.cos(piece.rotationY)).normalize();
@@ -118,7 +155,7 @@ export default function WallFinishSurface({ piece, finish }: Props) {
 
     const finishMaterial = useMemo(() => {
         return new MeshStandardMaterial({
-            map: texture ?? undefined,
+            ...(texture ? { map: texture } : {}),
             color: material?.color ?? "#FFFFFF",
             roughness: material?.roughness ?? 0.92,
             metalness: material?.metalness ?? 0,

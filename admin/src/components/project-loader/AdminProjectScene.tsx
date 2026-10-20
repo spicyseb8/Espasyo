@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Canvas } from "@react-three/fiber";
+import { Suspense } from "react";
 import { Vector3 } from "three";
 
 import AdminLights from "./loader-components/AdminLights";
@@ -47,13 +48,15 @@ interface AdminProjectSceneProps {
     comments: AdminComment[];
     activeTarget: AdminCommentTargetDetail | null;
     visibleCommentId: string | null;
+    onReady: () => void;
 }
 
 export default function AdminProjectScene({
     projectData,
     comments,
     activeTarget,
-    visibleCommentId
+    visibleCommentId,
+    onReady
 }: AdminProjectSceneProps) {
     const [focusedCommentId, setFocusedCommentId] =
         useState<string | null>(null);
@@ -160,7 +163,7 @@ export default function AdminProjectScene({
 
     return (
         <Canvas
-            shadows
+            shadows="percentage"
             camera={{
                 position: [8, 8, 8],
                 fov: 50
@@ -175,52 +178,64 @@ export default function AdminProjectScene({
                 args={["#ffffff"]}
             />
 
-            <AdminLights
-                corners={corners}
-            />
+            <Suspense fallback={null}>
+                <AdminLights
+                    corners={corners}
+                />
 
-            <AdminCamera />
+                <AdminCamera />
 
-            <AdminFloors
-                corners={corners}
-                walls={walls}
-                floorFinishes={projectData.floorFinishes}
-            />
+                <AdminFloors
+                    corners={corners}
+                    walls={walls}
+                    floorFinishes={projectData.floorFinishes}
+                />
 
-            <AdminWalls
-                corners={corners}
-                walls={walls}
-                doors={doors}
-                windows={windows}
-                openings={openings}
-                wallHeight={projectData.wallHeight}
-                wallThickness={projectData.wallThickness}
-                wallFinishes={projectData.wallFinishes}
-            />
+                <AdminWalls
+                    corners={corners}
+                    walls={walls}
+                    doors={doors}
+                    windows={windows}
+                    openings={openings}
+                    wallHeight={projectData.wallHeight}
+                    wallThickness={projectData.wallThickness}
+                    wallFinishes={projectData.wallFinishes}
+                />
 
-            <AdminDoors
-                doors={projectData.doors}
-                wallThickness={projectData.wallThickness}
-            />
+                <AdminDoors
+                    doors={projectData.doors}
+                    wallThickness={projectData.wallThickness}
+                />
 
-            <AdminWindows
-                windows={projectData.windows}
-                wallThickness={projectData.wallThickness}
-            />
+                <AdminWindows
+                    windows={projectData.windows}
+                    wallThickness={projectData.wallThickness}
+                />
 
-            <AdminFurnitures
-                furniture={projectData.furniture}
-            />
+                <AdminFurnitures
+                    furniture={projectData.furniture}
+                />
 
-            <AdminCommentMarkers
-                projectData={projectData}
-                comments={comments}
-                focusedCommentId={focusedCommentId}
-                visibleCommentId={visibleCommentId}
-                activeTarget={activeTarget}
-            />
+                <AdminCommentMarkers
+                    projectData={projectData}
+                    comments={comments}
+                    focusedCommentId={focusedCommentId}
+                    visibleCommentId={visibleCommentId}
+                    activeTarget={activeTarget}
+                />
+
+                <SceneReadySignal onReady={onReady} />
+            </Suspense>
         </Canvas>
     );
+}
+
+function SceneReadySignal({ onReady }: { onReady: () => void }) {
+    useEffect(() => {
+        onReady();
+    }, [onReady]);
+
+    return null;
 }
 
 function toVector3(

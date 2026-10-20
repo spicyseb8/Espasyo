@@ -17,6 +17,8 @@ import {
 
 import Window
     from "./Window";
+import ModelErrorBoundary
+    from "../ModelErrorBoundary";
 
 
 export default function Windows() {
@@ -92,14 +94,12 @@ export default function Windows() {
                 state.windows.map(
                     window => (
 
-                        <Window
-                            key={
-                                window.id
-                            }
-                            window={
-                                window
-                            }
-                        />
+                        <ModelErrorBoundary
+                            key={window.id}
+                            assetId={window.assetId}
+                        >
+                            <Window window={window} />
+                        </ModelErrorBoundary>
 
                     )
                 ),

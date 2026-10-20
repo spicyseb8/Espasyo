@@ -342,6 +342,12 @@ export default function Roof() {
     );
 }
 
+export function RoofAssetGate() {
+    useGLTF(CEILING_LIGHT_MODEL_URL);
+    useLoader(TextureLoader, CEILING_TEXTURE_URLS);
+    return null;
+}
+
 //==================================================
 // PRELOAD
 //

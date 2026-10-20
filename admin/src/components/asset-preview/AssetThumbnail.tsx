@@ -5,6 +5,7 @@ import * as THREE from "three";
 
 import type { Asset } from "@/services/assets/asset-types";
 import { resolveStoragePath } from "./preview-textures";
+import { disposeClonedMaterials } from "@/lib/disposeClonedMaterials";
 
 function Model({ url }: { url: string }) {
   const { scene } = useGLTF(url);
@@ -23,6 +24,10 @@ function Model({ url }: { url: string }) {
     });
     return clone;
   }, [scene]);
+
+  useEffect(() => {
+    return () => disposeClonedMaterials(clonedScene);
+  }, [clonedScene]);
 
   return (
     <Bounds fit clip margin={1.15}>

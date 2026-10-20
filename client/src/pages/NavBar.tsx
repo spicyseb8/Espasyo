@@ -27,11 +27,8 @@ import {
 } from "../components/ui/dropdown-menu";
 import "./NavBar.css";
 
-// Critically damped — this is chrome, not a flick.
 const SPRING = { type: "spring", bounce: 0, duration: 0.35 } as const;
 
-// Module-level, so it survives route changes (the navbar remounts on every
-// page) and only resets on a full page reload.
 let introPlayed = false;
 
 const LINKS = [
@@ -42,12 +39,10 @@ const LINKS = [
 
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) {
-    return "?";
-  }
-  if (parts.length === 1) {
-    return parts[0].slice(0, 2).toUpperCase();
-  }
+
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
@@ -56,9 +51,7 @@ export default function NavBar() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
 
-  // The slide-down intro only plays the first time the navbar ever mounts.
   const [playIntro] = useState(() => !introPlayed);
-
   const [scrolled, setScrolled] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -70,8 +63,10 @@ export default function NavBar() {
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
+
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
+
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
@@ -80,18 +75,26 @@ export default function NavBar() {
   const photoURL = user?.photoURL ?? undefined;
 
   const handleLogout = async (event: React.MouseEvent) => {
-    // Keep the dialog open until sign-out finishes.
     event.preventDefault();
+
+    console.log("[Espasyo] Logout confirmation clicked");
+
     setLoggingOut(true);
     setLogoutError(null);
 
     try {
       await logout();
+
+      console.log("[Espasyo] Firebase logout successful");
+
       setConfirmOpen(false);
-      navigate("/");
+      navigate("/auth", { replace: true });
     } catch (error) {
-      console.error("Unable to log out:", error);
-      setLogoutError("Something went wrong while logging out. Please try again.");
+      console.error("[Espasyo] Logout failed:", error);
+
+      setLogoutError(
+        "Something went wrong while logging out. Please try again."
+      );
     } finally {
       setLoggingOut(false);
     }
@@ -113,7 +116,6 @@ export default function NavBar() {
         transition={reduce ? { duration: 0 } : SPRING}
       >
         <div className={`navbar__inner${scrolled ? " is-scrolled" : ""}`}>
-          {/* Logo */}
           <Link to="/" className="navbar__logo" aria-label="Espasyo home">
             <span className="navbar__logo-badge">
               <Armchair className="navbar__logo-icon" strokeWidth={1.75} />
@@ -121,10 +123,14 @@ export default function NavBar() {
             <span className="navbar__logo-text">Espasyo</span>
           </Link>
 
-          {/* Links */}
           <nav className="navbar__links" aria-label="Primary">
             {LINKS.map((link) => (
-              <NavLink key={link.to} to={link.to} end={link.end} className="navbar__link">
+              <NavLink
+                key={link.to}
+                to={link.to}
+                end={link.end}
+                className="navbar__link"
+              >
                 {({ isActive }) => (
                   <>
                     {isActive && (
@@ -134,14 +140,15 @@ export default function NavBar() {
                         transition={reduce ? { duration: 0 } : SPRING}
                       />
                     )}
-                    <span className="navbar__link-text">{link.label}</span>
+                    <span className="navbar__link-text">
+                      {link.label}
+                    </span>
                   </>
                 )}
               </NavLink>
             ))}
           </nav>
 
-          {/* Action: sign in, or the account menu once signed in */}
           <div className="navbar__action">
             <AnimatePresence mode="wait" initial={false}>
               {loading ? (
@@ -153,8 +160,7 @@ export default function NavBar() {
                 />
               ) : user ? (
                 <motion.div key="user" {...fade}>
-                  {/* modal={false} lets the confirmation dialog open cleanly from a menu item */}
-                  <DropdownMenu modal={false}>
+                  <DropdownMenu>
                     <DropdownMenuTrigger
                       render={
                         <button
@@ -165,7 +171,11 @@ export default function NavBar() {
                       }
                     >
                       <Avatar className="size-9">
-                        <AvatarImage src={photoURL} alt="" referrerPolicy="no-referrer" />
+                        <AvatarImage
+                          src={photoURL}
+                          alt=""
+                          referrerPolicy="no-referrer"
+                        />
                         <AvatarFallback className="bg-neutral-900 text-xs font-semibold text-white">
                           {getInitials(displayName)}
                         </AvatarFallback>
@@ -181,11 +191,16 @@ export default function NavBar() {
                         <DropdownMenuLabel className="p-2.5 font-normal">
                           <div className="flex items-center gap-3">
                             <Avatar className="size-10">
-                              <AvatarImage src={photoURL} alt="" referrerPolicy="no-referrer" />
+                              <AvatarImage
+                                src={photoURL}
+                                alt=""
+                                referrerPolicy="no-referrer"
+                              />
                               <AvatarFallback className="bg-neutral-900 text-xs font-semibold text-white">
                                 {getInitials(displayName)}
                               </AvatarFallback>
                             </Avatar>
+
                             <div className="min-w-0">
                               <p className="truncate text-sm font-semibold leading-tight">
                                 {displayName}
@@ -203,7 +218,8 @@ export default function NavBar() {
                       <DropdownMenuSeparator />
 
                       <DropdownMenuItem
-                        onSelect={() => {
+                        onClick={() => {
+                          console.log("[Espasyo] Logout menu item clicked");
                           setLogoutError(null);
                           setConfirmOpen(true);
                         }}
@@ -216,7 +232,11 @@ export default function NavBar() {
                   </DropdownMenu>
                 </motion.div>
               ) : (
-                <motion.div key="guest" whileTap={reduce ? undefined : { scale: 0.97 }} {...fade}>
+                <motion.div
+                  key="guest"
+                  whileTap={reduce ? undefined : { scale: 0.97 }}
+                  {...fade}
+                >
                   <Link to="/auth" className="navbar__signin">
                     Sign in
                   </Link>
@@ -227,7 +247,6 @@ export default function NavBar() {
         </div>
       </motion.header>
 
-      {/* Logout confirmation (kept outside the menu so it stays mounted) */}
       <AlertDialog
         open={confirmOpen}
         onOpenChange={(open) => {
@@ -251,9 +270,17 @@ export default function NavBar() {
           )}
 
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={loggingOut}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleLogout} disabled={loggingOut}>
-              {loggingOut && <Loader2 className="size-4 animate-spin" />}
+            <AlertDialogCancel disabled={loggingOut}>
+              Cancel
+            </AlertDialogCancel>
+
+            <AlertDialogAction
+              onClick={handleLogout}
+              disabled={loggingOut}
+            >
+              {loggingOut && (
+                <Loader2 className="size-4 animate-spin" />
+              )}
               {loggingOut ? "Logging out…" : "Log out"}
             </AlertDialogAction>
           </AlertDialogFooter>

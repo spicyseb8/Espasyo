@@ -40,6 +40,7 @@ import Floors
 
 import Roof
     from "./Roof/Roof";
+import { RoofAssetGate } from "./Roof/Roof";
 
 import AssetPreview
     from "./Build/AssetPreview";
@@ -73,6 +74,8 @@ import BlueprintScene
 
 import FurnitureInteractionEvents
     from "./Furniture/FurnitureInteractionEvents";
+import ModelErrorBoundary
+    from "./ModelErrorBoundary";
 
 import useEditor
     from "../context/editor/useEditor";
@@ -299,7 +302,7 @@ export default function Scene({
             }}
         >
             <Canvas
-                shadows
+                shadows="percentage"
                 gl={{
                     preserveDrawingBuffer: true
                 }}
@@ -326,6 +329,10 @@ export default function Scene({
 
                 {/* Camera and room rendering */}
 
+                <Suspense fallback={null}>
+                <ModelErrorBoundary assetId="walkthrough-roof-assets">
+                    <RoofAssetGate />
+                </ModelErrorBoundary>
                 <Lights />
 
                 <Grid />
@@ -417,6 +424,7 @@ export default function Scene({
                         onSceneReady
                     }
                 />
+                </Suspense>
             </Canvas>
 
             {/*==================================================

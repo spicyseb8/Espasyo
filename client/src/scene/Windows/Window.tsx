@@ -37,6 +37,7 @@ import {
 import {
     normalizeWindowModel
 } from "../../engine/windows/normalizeWindowModel";
+import { disposeClonedMaterials } from "../disposeClonedMaterials";
 
 import {
     buildInteraction
@@ -1126,6 +1127,14 @@ function WindowModel({
         ]
 
     );
+
+    useEffect(() => {
+        if (!normalized?.model) {
+            return;
+        }
+
+        return () => disposeClonedMaterials(normalized.model);
+    }, [normalized]);
 
 
     //==================================================

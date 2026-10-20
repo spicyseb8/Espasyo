@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useMemo,
 } from "react";
 
@@ -7,6 +8,7 @@ import {
 } from "@react-three/drei";
 
 import * as THREE from "three";
+import { disposeClonedMaterials } from "@/lib/disposeClonedMaterials";
 
 const CURTAIN_MODEL =
   "/models/curtainsV4.glb";
@@ -231,6 +233,14 @@ function GLBModel({
       scene,
       transparent,
     ]);
+
+  useEffect(() => {
+    if (!transparent) {
+      return;
+    }
+
+    return () => disposeClonedMaterials(clonedScene);
+  }, [clonedScene, transparent]);
 
   return (
     <primitive

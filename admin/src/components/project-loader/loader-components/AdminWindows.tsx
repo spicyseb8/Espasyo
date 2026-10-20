@@ -1,14 +1,5 @@
 import {
-    useEffect,
-    useState
-} from "react";
-
-import type {
-    Asset
-} from "../engine/assets/Asset";
-
-import {
-    getDoorWindowAssets
+    getCachedDoorWindowAsset
 } from "../../../services/assets/FirebaseDoorWindowLibrary";
 
 import type {
@@ -35,85 +26,6 @@ export default function AdminWindows({
     wallThickness
 }: AdminWindowsProps) {
 
-    const [
-        assets,
-        setAssets
-    ] = useState<Asset[]>([]);
-
-
-    const [
-        loading,
-        setLoading
-    ] = useState(true);
-
-
-    useEffect(() => {
-
-        let cancelled =
-            false;
-
-
-        async function loadAssets() {
-
-            try {
-
-                const loaded =
-                    await getDoorWindowAssets();
-
-
-                if (cancelled) {
-
-                    return;
-
-                }
-
-
-                setAssets(
-                    loaded
-                );
-
-            } catch (error) {
-
-                console.error(
-                    "Failed to load admin door/window assets:",
-                    error
-                );
-
-            } finally {
-
-                if (!cancelled) {
-
-                    setLoading(
-                        false
-                    );
-
-                }
-
-            }
-
-        }
-
-
-        void loadAssets();
-
-
-        return () => {
-
-            cancelled =
-                true;
-
-        };
-
-    }, []);
-
-
-    if (loading) {
-
-        return null;
-
-    }
-
-
     return (
 
         <group>
@@ -122,12 +34,7 @@ export default function AdminWindows({
                 windows.map(
                     window => {
 
-                        const asset =
-                            assets.find(
-                                item =>
-                                    item.id ===
-                                    window.assetId
-                            );
+                        const asset = getCachedDoorWindowAsset(window.assetId);
 
 
                         if (!asset) {

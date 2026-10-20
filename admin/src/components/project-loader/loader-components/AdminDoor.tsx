@@ -1,9 +1,11 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useGLTF } from "@react-three/drei";
 import { Mesh } from "three";
 import type { Asset } from "../engine/assets/Asset";
 import type { SavedDoor } from "../ProjectTypes";
 import { emitAdminCommentTarget } from "../../../services/assets/adminCommentEvents";
+import AdminModelErrorBoundary from "./AdminModelErrorBoundary";
+import { disposeClonedMaterials } from "@/lib/disposeClonedMaterials";
 
 interface AdminDoorProps {
     door: SavedDoor;
@@ -162,11 +164,13 @@ export default function AdminDoor({
     }
 
     return (
-        <AdminDoorModel
-            door={door}
-            asset={asset}
-            wallThickness={wallThickness}
-        />
+        <AdminModelErrorBoundary assetId={asset.id}>
+            <AdminDoorModel
+                door={door}
+                asset={asset}
+                wallThickness={wallThickness}
+            />
+        </AdminModelErrorBoundary>
     );
 }
 
@@ -216,6 +220,10 @@ function AdminDoorModel({
         asset.scale,
         door.id
     ]);
+
+    useEffect(() => {
+        return () => disposeClonedMaterials(model);
+    }, [model]);
 
     const rotationOffsetY =
         asset.rotationOffsetY ??

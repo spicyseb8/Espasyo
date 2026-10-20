@@ -39,6 +39,7 @@ import {
 
 import useEditor
     from "../../context/editor/useEditor";
+import { disposeClonedMaterials } from "../disposeClonedMaterials";
 
 
 //======================================================
@@ -875,6 +876,10 @@ function DoorModel({
             ]
 
         );
+
+    useEffect(() => {
+        return () => disposeClonedMaterials(model);
+    }, [model]);
 
 
     //==================================================

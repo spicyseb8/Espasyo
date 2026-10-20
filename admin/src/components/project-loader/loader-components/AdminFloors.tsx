@@ -9,6 +9,7 @@ import type {
 } from "../engine/materials/MaterialTypes";
 
 import {
+    getCachedFloorMaterials,
     getDefaultFloorMaterial,
     getFloorMaterials,
     preloadFloorTexture
@@ -53,7 +54,7 @@ export default function AdminFloors({
     const [
         floorMaterials,
         setFloorMaterials
-    ] = useState<Material[]>([]);
+    ] = useState<Material[]>(() => getCachedFloorMaterials());
 
 
     //==================================================

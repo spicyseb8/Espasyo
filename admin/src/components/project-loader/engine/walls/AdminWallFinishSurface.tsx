@@ -10,7 +10,6 @@ import {
     RepeatWrapping,
     Shape,
     Texture,
-    TextureLoader,
     Vector3
 } from "three";
 
@@ -20,7 +19,9 @@ import type {
 
 import {
     findCachedWallMaterial,
-    getWallMaterials
+    getCachedWallTexture,
+    getWallMaterials,
+    preloadWallTexture
 } from "../../../../services/assets/wallsload";
 
 import type {
@@ -64,81 +65,69 @@ function useWallTexture(
 ): Texture | null {
 
     const [
-        texture,
+        loadedTexture,
         setTexture
-    ] = useState<Texture | null>(
+    ] = useState<{
+        url: string;
+        texture: Texture;
+    } | null>(
         null
     );
+
+    const cachedTexture = getCachedWallTexture(url ?? "");
+    const readyTexture = useMemo(() => {
+        if (!cachedTexture) {
+            return null;
+        }
+
+        const texture = cachedTexture.clone();
+        texture.wrapS = RepeatWrapping;
+        texture.wrapT = RepeatWrapping;
+        texture.repeat.set(
+            Math.max(1, width),
+            Math.max(1, height)
+        );
+        texture.needsUpdate = true;
+        return texture;
+    }, [cachedTexture, width, height]);
+
+    useEffect(() => {
+        return () => readyTexture?.dispose();
+    }, [readyTexture]);
 
 
     useEffect(() => {
 
-        if (!url) {
-
-            setTexture(null);
-
+        if (!url || cachedTexture) {
             return;
-
         }
 
 
         let cancelled =
             false;
+        let createdTexture: Texture | null = null;
 
 
-        const loader =
-            new TextureLoader();
-
-
-        loader.load(
-
-            url,
-
-            loadedTexture => {
-
+        void preloadWallTexture(url)
+            .then(sourceTexture => {
                 if (cancelled) {
-
                     return;
-
                 }
 
-
-                loadedTexture.wrapS =
-                    RepeatWrapping;
-
-                loadedTexture.wrapT =
-                    RepeatWrapping;
-
-
-                loadedTexture.repeat.set(
-
-                    Math.max(
-                        1,
-                        width
-                    ),
-
-                    Math.max(
-                        1,
-                        height
-                    )
-
+                createdTexture = sourceTexture.clone();
+                createdTexture.wrapS = RepeatWrapping;
+                createdTexture.wrapT = RepeatWrapping;
+                createdTexture.repeat.set(
+                    Math.max(1, width),
+                    Math.max(1, height)
                 );
-
-
-                loadedTexture.needsUpdate =
-                    true;
-
-
-                setTexture(
-                    loadedTexture
-                );
-
-            },
-
-            undefined,
-
-            error => {
-
+                createdTexture.needsUpdate = true;
+                setTexture({
+                    url,
+                    texture: createdTexture
+                });
+            })
+            .catch(error => {
                 console.error(
                     "Failed to load admin wall finish texture.",
                     {
@@ -148,33 +137,33 @@ function useWallTexture(
                     }
                 );
 
-
                 if (!cancelled) {
-
                     setTexture(null);
-
                 }
-
-            }
-
-        );
+            });
 
 
         return () => {
 
             cancelled =
                 true;
+            createdTexture?.dispose();
 
         };
 
     }, [
         url,
         width,
-        height
+        height,
+        cachedTexture
     ]);
 
 
-    return texture;
+    return readyTexture ?? (
+        loadedTexture && loadedTexture.url === url
+            ? loadedTexture.texture
+            : null
+    );
 
 }
 
@@ -474,9 +463,7 @@ export default function AdminWallFinishSurface({
 
             return new MeshStandardMaterial({
 
-                map:
-                    texture ??
-                    undefined,
+                ...(texture ? { map: texture } : {}),
 
                 color:
                     material?.color ??

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowUpRight, MessageCircle, Send } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AdminProjectScene from "../project-loader/AdminProjectScene";
@@ -19,6 +19,7 @@ import {
 } from "@/services/assets/adminCommentService";
 import { requestAdminCommentFocus } from "@/services/assets/adminCommentEvents";
 import { useAuth } from "@/context/AuthContext";
+import LoadingScreen from "@/components/LoadingScreen";
 
 interface AdminProjectViewerProps {
     metadata: AdminProject;
@@ -121,6 +122,10 @@ export default function AdminProjectViewer({
     const navigate = useNavigate();
     const { role } = useAuth();
     const canComment = role === "admin";
+    const [sceneReady, setSceneReady] = useState(false);
+    const handleSceneReady = useCallback(() => {
+        setSceneReady(true);
+    }, []);
 
     const [
         comments,
@@ -564,6 +569,9 @@ export default function AdminProjectViewer({
                 projectData={
                     projectData
                 }
+                onReady={
+                    handleSceneReady
+                }
                 comments={
                     comments
                 }
@@ -574,6 +582,12 @@ export default function AdminProjectViewer({
                     visibleCommentId
                 }
             />
+
+            {!sceneReady && (
+                <div className="fixed inset-0 z-[100000]">
+                    <LoadingScreen label="Preparing 3D Scene" />
+                </div>
+            )}
           
             <div className="pointer-events-none absolute left-4 top-4 z-30">
                 <div className="pointer-events-auto w-[220px] rounded-xl border border-[#e4e4e1] bg-white/95 px-3 py-2.5 shadow-lg backdrop-blur">

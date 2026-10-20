@@ -27,6 +27,25 @@ function requestLabel(request) {
   }
 }
 
+function safeRequestURL(value) {
+  const url = new URL(value);
+  for (const key of new Set(url.searchParams.keys())) {
+    if (/(?:token|auth|key|signature)/i.test(key)) {
+      url.searchParams.set(key, "[redacted]");
+    }
+  }
+  return url.href;
+}
+
+function requestDetails(request) {
+  return {
+    request: safeRequestURL(request.url),
+    method: request.method,
+    destination: request.destination || "unknown",
+    mode: request.mode,
+  };
+}
+
 function errorName(error) {
   return error instanceof Error ? error.name : "UnknownError";
 }
@@ -105,6 +124,21 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  const requestURL = new URL(request.url);
+  if (
+    request.mode === "navigate" ||
+    request.destination === "document" ||
+    (requestURL.origin === self.location.origin &&
+      (
+        requestURL.pathname === "/" ||
+        /^\/(?:@vite\/|@react-refresh(?:\/|$)|@id\/|@fs\/|src\/|node_modules\/\.vite\/)/.test(
+          requestURL.pathname,
+        )
+      ))
+  ) {
+    return;
+  }
+
   event.respondWith((async () => {
     const label = requestLabel(request);
     let cache;
@@ -156,7 +190,11 @@ self.addEventListener("fetch", (event) => {
         });
       }
     } else if (mapping) {
-      console.info("Asset cache miss; using the network.", { request: label });
+      console.debug(
+        `Asset cache miss; using the network: ${request.method} ${safeRequestURL(request.url)} ` +
+        `(destination: ${request.destination || "unknown"}, mode: ${request.mode}, ` +
+        `cache key: ${mapping.cacheKey})`,
+      );
     }
 
     let response;
@@ -164,16 +202,10 @@ self.addEventListener("fetch", (event) => {
       response = await fetch(request);
     } catch (error) {
       console.error("Asset network request failed.", {
-        request: label,
+        ...requestDetails(request),
         error: errorName(error),
       });
-      return new Response("Asset network request failed.", {
-        status: 503,
-        headers: {
-          "Cache-Control": "no-store",
-          "Content-Type": "text/plain; charset=utf-8",
-        },
-      });
+      throw error;
     }
 
     if (response.status !== 200) {

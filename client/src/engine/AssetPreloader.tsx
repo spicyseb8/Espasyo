@@ -6,8 +6,7 @@ import {
 } from "three";
 
 import {
-    useGLTF,
-    useTexture
+    useGLTF
 } from "@react-three/drei";
 
 import {
@@ -29,7 +28,8 @@ import {
 } from "./materials/floors";
 
 import {
-    getWallMaterials
+    getWallMaterials,
+    preloadWallTexture
 } from "./materials/walls";
 
 import type {
@@ -623,18 +623,19 @@ async function preloadWallTextures(
         const batch =
             batches[i];
 
-        await loadTrackedBatch(
-            batch,
-
-            () => {
-
-                for (const url of batch) {
-                    useTexture.preload(url);
-                }
-            },
-
-            `wall texture batch ${i + 1}`
+        const results = await Promise.allSettled(
+            batch.map(url => preloadWallTexture(url))
         );
+
+        results.forEach((result, index) => {
+            if (result.status === "rejected") {
+                console.error(
+                    "Failed to preload wall texture:",
+                    batch[index],
+                    result.reason
+                );
+            }
+        });
 
         if (i < batches.length - 1) {
             await yieldToBrowser();

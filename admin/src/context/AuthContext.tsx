@@ -45,9 +45,12 @@ export function AuthProvider({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let authStateVersion = 0;
+
     const unsubscribe = onAuthStateChanged(
       auth,
       async (firebaseUser) => {
+        const currentVersion = ++authStateVersion;
         setLoading(true);
 
         try {
@@ -59,6 +62,13 @@ export function AuthProvider({
 
           await reload(firebaseUser);
 
+          if (
+            currentVersion !== authStateVersion ||
+            auth.currentUser?.uid !== firebaseUser.uid
+          ) {
+            return;
+          }
+
           const currentUser = auth.currentUser;
 
           if (!currentUser) {
@@ -69,8 +79,6 @@ export function AuthProvider({
 
           if (!currentUser.emailVerified) {
             await signOut(auth);
-            setUser(null);
-            setRole(null);
             return;
           }
 
@@ -82,6 +90,13 @@ export function AuthProvider({
           const employeeSnapshot =
             await getDocs(employeeQuery);
 
+          if (
+            currentVersion !== authStateVersion ||
+            auth.currentUser?.uid !== currentUser.uid
+          ) {
+            return;
+          }
+
           const employee = employeeSnapshot.docs.find(
             (document) => isAdminRole(document.data().role)
           );
@@ -89,28 +104,37 @@ export function AuthProvider({
 
           if (!isAdminRole(employeeRole)) {
             await signOut(auth);
-            setUser(null);
-            setRole(null);
             return;
           }
 
           setUser(currentUser);
           setRole(employeeRole);
         } catch (error) {
+          if (currentVersion !== authStateVersion) {
+            return;
+          }
+
           console.error("Authentication error:", error);
           setUser(null);
           setRole(null);
 
-          try {
-            await signOut(auth);
-          } catch (signOutError) {
-            console.error(
-              "Unable to sign out after authentication failed:",
-              signOutError
-            );
+          if (
+            firebaseUser &&
+            auth.currentUser?.uid === firebaseUser.uid
+          ) {
+            try {
+              await signOut(auth);
+            } catch (signOutError) {
+              console.error(
+                "Unable to sign out after authentication failed:",
+                signOutError
+              );
+            }
           }
         } finally {
-          setLoading(false);
+          if (currentVersion === authStateVersion) {
+            setLoading(false);
+          }
         }
       }
     );

@@ -17,6 +17,8 @@ import {
 
 import Door
     from "./Door";
+import ModelErrorBoundary
+    from "../ModelErrorBoundary";
 
 
 export default function Doors() {
@@ -92,14 +94,12 @@ export default function Doors() {
                 state.doors.map(
                     door => (
 
-                        <Door
-                            key={
-                                door.id
-                            }
-                            door={
-                                door
-                            }
-                        />
+                        <ModelErrorBoundary
+                            key={door.id}
+                            assetId={door.assetId}
+                        >
+                            <Door door={door} />
+                        </ModelErrorBoundary>
 
                     )
                 ),

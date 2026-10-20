@@ -1,14 +1,5 @@
 import {
-    useEffect,
-    useState
-} from "react";
-
-import type {
-    Asset
-} from "../engine/assets/Asset";
-
-import {
-    getDoorWindowAssets
+    getCachedDoorWindowAsset
 } from "../../../services/assets/FirebaseDoorWindowLibrary";
 
 
@@ -35,90 +26,6 @@ export default function AdminDoors({
     doors,
     wallThickness
 }: AdminDoorsProps) {
-
-    const [
-        assets,
-        setAssets
-    ] = useState<Asset[]>([]);
-
-
-    const [
-        loading,
-        setLoading
-    ] = useState(true);
-
-
-    //==================================================
-    // LOAD DOOR / WINDOW CATALOG
-    //==================================================
-
-    useEffect(() => {
-
-        let cancelled =
-            false;
-
-
-        async function loadAssets() {
-
-            try {
-
-                const loaded =
-                    await getDoorWindowAssets();
-
-
-                if (cancelled) {
-
-                    return;
-
-                }
-
-
-                setAssets(
-                    loaded
-                );
-
-            } catch (error) {
-
-                console.error(
-                    "Failed to load admin door/window assets:",
-                    error
-                );
-
-            } finally {
-
-                if (!cancelled) {
-
-                    setLoading(
-                        false
-                    );
-
-                }
-
-            }
-
-        }
-
-
-        void loadAssets();
-
-
-        return () => {
-
-            cancelled =
-                true;
-
-        };
-
-    }, []);
-
-
-    if (loading) {
-
-        return null;
-
-    }
-
-
     return (
 
         <group>
@@ -127,12 +34,7 @@ export default function AdminDoors({
                 doors.map(
                     door => {
 
-                        const asset =
-                            assets.find(
-                                item =>
-                                    item.id ===
-                                    door.assetId
-                            );
+                        const asset = getCachedDoorWindowAsset(door.assetId);
 
 
                         if (!asset) {

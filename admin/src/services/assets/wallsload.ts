@@ -4,6 +4,10 @@ import {
     query,
     where
 } from "firebase/firestore";
+import {
+    Texture,
+    TextureLoader
+} from "three";
 
 import {
     db
@@ -89,6 +93,15 @@ interface FirebaseWallAsset {
 
 let cachedWallMaterials:
     Material[] = [];
+
+const wallTextureLoader =
+    new TextureLoader();
+
+const wallTextureCache =
+    new Map<string, Texture>();
+
+const wallTexturePromises =
+    new Map<string, Promise<Texture>>();
 
 let wallMaterialsLoaded =
     false;
@@ -547,6 +560,41 @@ export function findCachedWallMaterial(
 
 
 //==================================================
+// WALL TEXTURE CACHE
+//==================================================
+
+export function preloadWallTexture(
+    url: string
+): Promise<Texture> {
+    const normalizedUrl = url.trim();
+    const cachedTexture = wallTextureCache.get(normalizedUrl);
+
+    if (cachedTexture) {
+        return Promise.resolve(cachedTexture);
+    }
+
+    const existingPromise = wallTexturePromises.get(normalizedUrl);
+
+    if (existingPromise) {
+        return existingPromise;
+    }
+
+    const promise = wallTextureLoader
+        .loadAsync(normalizedUrl)
+        .then(texture => {
+            wallTextureCache.set(normalizedUrl, texture);
+            return texture;
+        })
+        .finally(() => {
+            wallTexturePromises.delete(normalizedUrl);
+        });
+
+    wallTexturePromises.set(normalizedUrl, promise);
+    return promise;
+}
+
+
+//==================================================
 // FORCE REFRESH
 //==================================================
 
@@ -564,4 +612,8 @@ export async function refreshWallMaterials():
 
 
     return getWallMaterials();
+}
+
+export function getCachedWallTexture(url: string): Texture | undefined {
+    return wallTextureCache.get(url.trim());
 }

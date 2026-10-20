@@ -1,15 +1,6 @@
 import {
-    useEffect,
-    useState
-} from "react";
-
-import type {
-    Asset
-} from "../engine/assets/Asset";
-
-import {
     getCachedFurnitureAsset,
-    getFurnitureAssets
+    getCachedFurnitureAssets
 } from "../../../services/assets/furnitureload";
 
 import type {
@@ -39,103 +30,7 @@ interface AdminFurnituresProps {
 export default function AdminFurnitures({
     furniture
 }: AdminFurnituresProps) {
-
-    const [
-        assets,
-        setAssets
-    ] = useState<Asset[]>([]);
-
-
-    const [
-        loading,
-        setLoading
-    ] = useState(true);
-
-
-    //--------------------------------------------------
-    // LOAD FIREBASE CATALOG
-    //--------------------------------------------------
-
-    useEffect(() => {
-
-        let cancelled =
-            false;
-
-
-        async function loadAssets() {
-
-            try {
-
-                const loaded =
-                    await getFurnitureAssets();
-
-
-                if (
-                    cancelled
-                ) {
-
-                    return;
-
-                }
-
-
-                setAssets(
-                    loaded
-                );
-
-            } catch (error) {
-
-                console.error(
-                    "Failed to load admin furniture assets:",
-                    error
-                );
-
-            } finally {
-
-                if (
-                    !cancelled
-                ) {
-
-                    setLoading(
-                        false
-                    );
-
-                }
-
-            }
-
-        }
-
-
-        void loadAssets();
-
-
-        return () => {
-
-            cancelled =
-                true;
-
-        };
-
-    }, []);
-
-
-    //--------------------------------------------------
-    // WAIT FOR CATALOG
-    //--------------------------------------------------
-
-    if (
-        loading
-    ) {
-
-        return null;
-
-    }
-
-
-    //--------------------------------------------------
-    // RENDER
-    //--------------------------------------------------
+    const assets = getCachedFurnitureAssets();
 
     return (
 

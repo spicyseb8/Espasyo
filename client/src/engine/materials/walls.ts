@@ -4,6 +4,11 @@ import {
     query,
     where
 } from "firebase/firestore";
+import {
+    RepeatWrapping,
+    Texture,
+    TextureLoader
+} from "three";
 
 import {
     db
@@ -41,6 +46,9 @@ let cachedWallMaterials: Material[] = [];
 let cachedWallStorageSources: string[] = [];
 let wallMaterialsLoaded = false;
 let wallMaterialsPromise: Promise<Material[]> | null = null;
+const wallTextureLoader = new TextureLoader();
+const wallTextureCache = new Map<string, Texture>();
+const wallTexturePromises = new Map<string, Promise<Texture>>();
 
 async function resolveStorageUrl(
     value?: string
@@ -229,6 +237,44 @@ export function findCachedWallMaterial(
     );
 }
 
+export function getCachedWallTexture(url: string): Texture | undefined {
+    return wallTextureCache.get(url.trim());
+}
+
+export function preloadWallTexture(url: string): Promise<Texture> {
+    const normalizedUrl = url.trim();
+
+    if (!normalizedUrl) {
+        return Promise.reject(new Error("Wall texture URL is empty."));
+    }
+
+    const cachedTexture = wallTextureCache.get(normalizedUrl);
+    if (cachedTexture) {
+        return Promise.resolve(cachedTexture);
+    }
+
+    const existingPromise = wallTexturePromises.get(normalizedUrl);
+    if (existingPromise) {
+        return existingPromise;
+    }
+
+    const promise = wallTextureLoader
+        .loadAsync(normalizedUrl)
+        .then(texture => {
+            texture.wrapS = RepeatWrapping;
+            texture.wrapT = RepeatWrapping;
+            texture.needsUpdate = true;
+            wallTextureCache.set(normalizedUrl, texture);
+            return texture;
+        })
+        .finally(() => {
+            wallTexturePromises.delete(normalizedUrl);
+        });
+
+    wallTexturePromises.set(normalizedUrl, promise);
+    return promise;
+}
+
 export function getWallStorageSources(): string[] {
     return cachedWallStorageSources;
 }
@@ -238,6 +284,12 @@ export async function refreshWallMaterials(): Promise<Material[]> {
     cachedWallStorageSources = [];
     wallMaterialsLoaded = false;
     wallMaterialsPromise = null;
+
+    for (const texture of wallTextureCache.values()) {
+        texture.dispose();
+    }
+    wallTextureCache.clear();
+    wallTexturePromises.clear();
 
     return getWallMaterials();
 }

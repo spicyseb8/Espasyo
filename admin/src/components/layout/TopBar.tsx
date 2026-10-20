@@ -71,6 +71,8 @@ export default function TopBar() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [profile, setProfile] =
     useState<EmployeeProfile | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
 
   const { user, role } = useAuth();
   const navigate = useNavigate();
@@ -135,12 +137,18 @@ export default function TopBar() {
   const initials = getInitials(displayName) || "A";
 
   const handleLogout = async () => {
+    setLoggingOut(true);
+    setLogoutError("");
+
     try {
       await signOut(auth);
       setSheetOpen(false);
-      window.location.href = "/login";
+      navigate("/login", { replace: true });
     } catch (error) {
       console.error("Failed to log out:", error);
+      setLogoutError("Unable to log out. Please try again.");
+    } finally {
+      setLoggingOut(false);
     }
   };
 
@@ -243,12 +251,22 @@ export default function TopBar() {
                 Manage your workspace
               </p>
 
+              {logoutError && (
+                <p
+                  role="alert"
+                  className="text-center text-sm text-destructive"
+                >
+                  {logoutError}
+                </p>
+              )}
+
               <Button
                 variant="outline"
                 className="w-full"
                 onClick={handleLogout}
+                disabled={loggingOut}
               >
-                Log out
+                {loggingOut ? "Logging out…" : "Log out"}
               </Button>
             </div>
           </SheetContent>

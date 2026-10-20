@@ -48,9 +48,6 @@ import {
     subscribeToProjectDeadline
 } from "../services/projectDeadlineService";
 
-// Avoid a brief flash, without imposing a 5.5-second delay.
-const MIN_LOADING_MS = 300;
-
 function LoadProjectContent() {
     const {
         projectId
@@ -75,11 +72,6 @@ function LoadProjectContent() {
     ] = useState("");
 
     const [
-        minTimeElapsed,
-        setMinTimeElapsed
-    ] = useState(false);
-
-    const [
         deadline,
         setDeadline
     ] = useState<string | null>(null);
@@ -88,27 +80,6 @@ function LoadProjectContent() {
         deadlinePassed,
         setDeadlinePassed
     ] = useState(false);
-
-    //==================================================
-    // MINIMUM LOADING SCREEN TIME
-    //==================================================
-
-    useEffect(() => {
-        setMinTimeElapsed(false);
-
-        const timer = window.setTimeout(
-            () => {
-                setMinTimeElapsed(true);
-            },
-            MIN_LOADING_MS
-        );
-
-        return () => {
-            window.clearTimeout(timer);
-        };
-    }, [
-        projectId
-    ]);
 
     //==================================================
     // UPDATE DEADLINE STATUS
@@ -149,6 +120,7 @@ function LoadProjectContent() {
 
     useEffect(() => {
         let cancelled = false;
+        const controller = new AbortController();
 
         async function loadProject() {
             if (!projectId) {
@@ -266,7 +238,8 @@ function LoadProjectContent() {
                     jsonUrl.trim(),
                     {
                         method: "GET",
-                        cache: "no-store"
+                        cache: "no-store",
+                        signal: controller.signal
                     }
                 );
 
@@ -358,6 +331,7 @@ function LoadProjectContent() {
 
         return () => {
             cancelled = true;
+            controller.abort();
 
             clearActiveProjectDeadline(
                 projectId
@@ -374,10 +348,7 @@ function LoadProjectContent() {
 
     if (
         !error &&
-        (
-            loading ||
-            !minTimeElapsed
-        )
+        loading
     ) {
         return <LoadingScreen />;
     }

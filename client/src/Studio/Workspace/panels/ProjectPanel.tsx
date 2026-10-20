@@ -110,7 +110,7 @@ async function generateNextProjectId(): Promise<string> {
     const counterRef = doc(
         db,
         "idCounters",
-        "projects-${year}"
+        `projects-${year}`
     );
 
     return runTransaction(
@@ -708,8 +708,7 @@ export default function ProjectPanel() {
                 estimatedCost:
                     estimatedCost,
 
-                wallFinishes:
-                    state.wallFinishes,
+
 
                 updatedAt:
                     serverTimestamp()
