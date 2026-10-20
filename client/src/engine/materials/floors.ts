@@ -63,6 +63,7 @@ interface FirebaseFloorAsset {
     asset_type: "floor";
     category?: string;
     price?: number;
+    pricePerPiece?: number;
     name: string;
     length?: number;
     width?: number;
@@ -126,6 +127,8 @@ function createLocalDefaultFloorMaterial(
         category: firebaseMaterial?.category ?? "flooring",
         pricePerSquareMeter:
             firebaseMaterial?.pricePerSquareMeter ?? 0,
+        pricePerPiece:
+            firebaseMaterial?.pricePerPiece,
         thumbnail:
             firebaseMaterial?.thumbnail ??
             LOCAL_DEFAULT_FLOOR_TEXTURE,
@@ -241,6 +244,25 @@ async function buildFloorMaterial(
             ? data.width
             : undefined;
 
+    const hasPiecePrice =
+        data.pricePerPiece !== undefined;
+    const pricePerPiece =
+        typeof data.pricePerPiece === "number" &&
+        Number.isFinite(data.pricePerPiece) &&
+        data.pricePerPiece >= 0
+            ? data.pricePerPiece
+            : undefined;
+
+    if (hasPiecePrice && pricePerPiece === undefined) {
+        console.warn(
+            "Skipping floor with an invalid per-tile price:",
+            materialId,
+            data.pricePerPiece
+        );
+
+        return null;
+    }
+
     return {
     id: materialId,
     name: data.name,
@@ -251,7 +273,11 @@ async function buildFloorMaterial(
             ? data.category
             : undefined,
 
-    pricePerSquareMeter: Number(data.price ?? 0),
+    pricePerSquareMeter:
+        hasPiecePrice
+            ? 0
+            : Number(data.price ?? 0),
+    pricePerPiece,
 
     // Use the validated variables declared above.
     length,

@@ -16,7 +16,9 @@ export interface Asset {
 
   category: string;
 
-  price: number;
+  price?: number;
+
+  pricePerPiece?: number;
 
   length?: number | null;
 

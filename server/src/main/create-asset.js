@@ -292,7 +292,11 @@ router.post(
           ? req.body.category.trim()
           : "";
 
-      const price = Number(req.body.price);
+      const price = Number(
+        assetType === "floor"
+          ? req.body.pricePerPiece
+          : req.body.price
+      );
       const assetStatus = req.body.asset_status || "available";
 
       const modelFile = getUploadedFile(uploadedFiles, "modelFile");
@@ -481,16 +485,17 @@ router.post(
         name,
         asset_type: assetType,
         category,
-        price,
         asset_status: assetStatus,
         created_at: now,
         updated_at: now,
       };
 
-      // Save the required dimensions in the flooring document.
       if (assetType === "floor") {
+        asset.pricePerPiece = price;
         asset.length = floorLength;
         asset.width = floorWidth;
+      } else {
+        asset.price = price;
       }
 
       if (modelPath) {

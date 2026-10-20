@@ -26,6 +26,10 @@ import type {
     CostItem
 } from "./CostTypes";
 
+import {
+    calculateFlooringPieceCost
+} from "./FlooringPieceCalculation";
+
 export interface FlooringCostOptions {
     corners: Corner[];
     walls: Wall[];
@@ -152,19 +156,6 @@ export function calculateFlooringCosts(
             continue;
         }
 
-        const rate =
-            Number(material.pricePerSquareMeter);
-
-        if (!Number.isFinite(rate) || rate < 0) {
-            console.warn(
-                "Skipping flooring cost because the material price is invalid:",
-                materialId,
-                material.pricePerSquareMeter
-            );
-
-            continue;
-        }
-
         //--------------------------------------------------
         // FLOORING DIMENSIONS
         //--------------------------------------------------
@@ -183,8 +174,80 @@ export function calculateFlooringCosts(
             Number.isFinite(width) &&
             width > 0;
 
+        const pricePerPiece =
+            firebaseMaterial?.pricePerPiece ??
+            material.pricePerPiece;
+
+        if (pricePerPiece !== undefined) {
+            if (
+                !Number.isFinite(pricePerPiece) ||
+                pricePerPiece < 0
+            ) {
+                console.warn(
+                    "Skipping flooring cost because the per-tile price is invalid:",
+                    materialId,
+                    pricePerPiece
+                );
+
+                continue;
+            }
+
+            if (!hasDimensions) {
+                console.warn(
+                    "Skipping flooring cost because the tile dimensions are missing or invalid:",
+                    materialId,
+                    length,
+                    width
+                );
+
+                continue;
+            }
+
+            const pieceCost = calculateFlooringPieceCost(
+                area,
+                length,
+                width,
+                pricePerPiece
+            );
+
+            if (!pieceCost) {
+                console.warn(
+                    "Skipping flooring cost because the per-tile inputs are invalid:",
+                    materialId
+                );
+
+                continue;
+            }
+
+            items.push({
+                category: "flooring",
+                name: material.name,
+                quantity: pieceCost.piecesNeeded,
+                unit: "pieces",
+                rate: pieceCost.rate,
+                subtotal: pieceCost.subtotal,
+                length,
+                width
+            });
+
+            continue;
+        }
+
+        const rate =
+            Number(material.pricePerSquareMeter);
+
+        if (!Number.isFinite(rate) || rate < 0) {
+            console.warn(
+                "Skipping flooring cost because the legacy price per square meter is invalid:",
+                materialId,
+                material.pricePerSquareMeter
+            );
+
+            continue;
+        }
+
         //--------------------------------------------------
-        // DIMENSION-BASED PIECE CALCULATION
+        // LEGACY DIMENSION-BASED PIECE CALCULATION
         //--------------------------------------------------
 
         if (hasDimensions) {
@@ -196,19 +259,19 @@ export function calculateFlooringCosts(
             const piecesNeeded =
                 Math.ceil(area / pieceArea);
 
-            // The asset price remains per square meter.
-            const pricePerPiece =
+            // Legacy Firebase assets store price per square meter.
+            const legacyPricePerPiece =
                 pieceArea * rate;
 
             const subtotal =
-                piecesNeeded * pricePerPiece;
+                piecesNeeded * legacyPricePerPiece;
 
             items.push({
                 category: "flooring",
                 name: material.name,
                 quantity: piecesNeeded,
                 unit: "pieces",
-                rate: pricePerPiece,
+                rate: legacyPricePerPiece,
                 subtotal,
                 length,
                 width
@@ -218,7 +281,7 @@ export function calculateFlooringCosts(
         }
 
         //--------------------------------------------------
-        // LEGACY SQUARE-METER CALCULATION
+        // LEGACY SQUARE-METER CALCULATION FOR ASSETS WITHOUT DIMENSIONS
         //--------------------------------------------------
 
         const subtotal =

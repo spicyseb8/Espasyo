@@ -238,10 +238,11 @@ export function downloadCostBreakdownPdf(
             : isFlooringSection
                 ? [[
                     "Item / Material",
-                    "No. of Pieces",
+                    "Quantity",
+                    "Unit",
                     "Length (m)",
                     "Width (m)",
-                    "Rate",
+                    "Rate (₱/unit)",
                     "Amount"
                 ]]
                 : [[
@@ -279,27 +280,12 @@ export function downloadCostBreakdownPdf(
                 // Flooring rows now include piece count,
                 // length, and width.
                 if (isFlooringSection) {
-                    const hasDimensions =
-                        typeof item.length === "number" &&
-                        Number.isFinite(item.length) &&
-                        item.length > 0 &&
-                        typeof item.width === "number" &&
-                        Number.isFinite(item.width) &&
-                        item.width > 0;
-
-                    const isPieceQuantity =
-                        item.unit === "pieces";
-
                     return [
                         item.name,
-
-                        hasDimensions && isPieceQuantity
-                            ? formatQuantity(item)
-                            : "—",
-
+                        formatQuantity(item),
+                        item.unit,
                         formatDimension(item.length),
                         formatDimension(item.width),
-
                         formatMoney(item.rate),
                         formatMoney(item.subtotal)
                     ];
@@ -326,6 +312,7 @@ export function downloadCostBreakdownPdf(
                     : isFlooringSection
                         ? [
                             "No flooring assigned.",
+                            "",
                             "",
                             "",
                             "",

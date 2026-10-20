@@ -124,12 +124,15 @@ export default function MaterialCard({
                 ₱
                 {
                     Number(
+                        material.pricePerPiece ??
                         material.pricePerSquareMeter
                     ).toLocaleString()
                 }
 
                 <span>
-                    /m²
+                    {material.pricePerPiece !== undefined
+                        ? "/tile"
+                        : "/m²"}
                 </span>
 
             </div>

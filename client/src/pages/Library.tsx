@@ -135,14 +135,19 @@ function mapFloorMaterial(material: Material): LibraryItem | null {
   const image = material.thumbnail?.trim() || material.texture?.trim() || "";
   if (!image) return null;
 
-  const price = material.pricePerSquareMeter ?? 0;
+  const price =
+    material.pricePerPiece ??
+    material.pricePerSquareMeter ??
+    0;
   const category = normalizeFloorCategory(material.sourceCategory);
 
   return {
     id: material.id,
     type: "floors",
     name: material.name,
-    price: `${peso(price)} / sqm`,
+    price: `${peso(price)} / ${
+      material.pricePerPiece !== undefined ? "tile" : "sqm"
+    }`,
     priceValue: Number.isFinite(price) ? price : 0,
     category,
     label: category ?? "Floor",

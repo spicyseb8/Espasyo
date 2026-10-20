@@ -39,6 +39,10 @@ import { getFurnitureAssets } from "@/services/assets/furniture";
 import { getWallAssets } from "@/services/assets/walls";
 import { getFloorAssets } from "@/services/assets/floors";
 import { updateAsset } from "@/services/assets/update";
+import {
+  metersToCentimeters,
+  resolveMeterDimension,
+} from "@/services/assets/flooringDimensions";
 import { invalidateAssetCacheSources } from "@/lib/assetLibraryCache";
 
 import type {
@@ -71,6 +75,18 @@ const ASSET_TYPES: {
 const getTitle = (type: AssetType) =>
   ASSET_TYPES.find((option) => option.value === type)?.label ?? "";
 
+const getPriceInputValue = (asset: Asset) =>
+  asset.asset_type === "floor"
+    ? asset.pricePerPiece == null
+      ? ""
+      : String(asset.pricePerPiece)
+    : String(asset.price ?? 0);
+
+const metersToCentimetersInput = (value?: number | null) =>
+  typeof value === "number" && Number.isFinite(value)
+    ? String(metersToCentimeters(value))
+    : "";
+
 export default function AssetLibrary({
   type,
   onTypeChange,
@@ -94,7 +110,7 @@ export default function AssetLibrary({
   const [editName, setEditName] = useState("");
   const [editPrice, setEditPrice] = useState("");
 
-  // Flooring dimensions are measured in meters.
+  // Flooring dimensions are entered in centimeters.
   // Existing assets without dimensions start with blank fields.
   const [editLength, setEditLength] = useState("");
   const [editWidth, setEditWidth] = useState("");
@@ -257,14 +273,14 @@ export default function AssetLibrary({
     setSaveError(null);
 
     setEditName(asset.name);
-    setEditPrice(String(asset.price));
+    setEditPrice(getPriceInputValue(asset));
 
     setEditLength(
-      asset.length == null ? "" : String(asset.length)
+      metersToCentimetersInput(asset.length)
     );
 
     setEditWidth(
-      asset.width == null ? "" : String(asset.width)
+      metersToCentimetersInput(asset.width)
     );
 
     setEditStatus(asset.asset_status ?? "available");
@@ -276,19 +292,11 @@ export default function AssetLibrary({
 
     setSaveError(null);
     setEditName(selectedAsset.name);
-    setEditPrice(String(selectedAsset.price));
+    setEditPrice(getPriceInputValue(selectedAsset));
 
-    setEditLength(
-      selectedAsset.length == null
-        ? ""
-        : String(selectedAsset.length)
-    );
+    setEditLength(metersToCentimetersInput(selectedAsset.length));
 
-    setEditWidth(
-      selectedAsset.width == null
-        ? ""
-        : String(selectedAsset.width)
-    );
+    setEditWidth(metersToCentimetersInput(selectedAsset.width));
 
     setEditStatus(
       selectedAsset.asset_status ?? "available"
@@ -302,19 +310,11 @@ export default function AssetLibrary({
 
     setSaveError(null);
     setEditName(selectedAsset.name);
-    setEditPrice(String(selectedAsset.price));
+    setEditPrice(getPriceInputValue(selectedAsset));
 
-    setEditLength(
-      selectedAsset.length == null
-        ? ""
-        : String(selectedAsset.length)
-    );
+    setEditLength(metersToCentimetersInput(selectedAsset.length));
 
-    setEditWidth(
-      selectedAsset.width == null
-        ? ""
-        : String(selectedAsset.width)
-    );
+    setEditWidth(metersToCentimetersInput(selectedAsset.width));
 
     setEditStatus(
       selectedAsset.asset_status ?? "available"
@@ -341,11 +341,14 @@ export default function AssetLibrary({
     }
 
     if (
+      (selectedAsset.asset_type === "floor" && !editPrice.trim()) ||
       !Number.isFinite(numericPrice) ||
       numericPrice < 0
     ) {
       setSaveError(
-        "Price must be a valid number that is 0 or greater."
+        selectedAsset.asset_type === "floor"
+          ? "Enter a valid price per tile that is 0 or greater."
+          : "Price must be a valid number that is 0 or greater."
       );
       return;
     }
@@ -368,7 +371,7 @@ export default function AssetLibrary({
         numericLength <= 0
       ) {
         setSaveError(
-          "Floor length must be greater than 0 meters."
+          "Floor length must be greater than 0 centimeters."
         );
         return;
       }
@@ -379,14 +382,20 @@ export default function AssetLibrary({
         numericWidth <= 0
       ) {
         setSaveError(
-          "Floor width must be greater than 0 meters."
+          "Floor width must be greater than 0 centimeters."
         );
         return;
       }
 
       floorDimensions = {
-        length: numericLength,
-        width: numericWidth,
+        length: resolveMeterDimension(
+          numericLength,
+          selectedAsset.length
+        ),
+        width: resolveMeterDimension(
+          numericWidth,
+          selectedAsset.width
+        ),
       };
     }
 
@@ -395,7 +404,9 @@ export default function AssetLibrary({
 
       await updateAsset(selectedAsset.id, {
         name: trimmedName,
-        price: numericPrice,
+        ...(selectedAsset.asset_type === "floor"
+          ? { pricePerPiece: numericPrice }
+          : { price: numericPrice }),
         asset_status: editStatus,
         ...(floorDimensions ?? {}),
       });
@@ -416,8 +427,10 @@ export default function AssetLibrary({
       const updatedAsset: Asset = {
         ...selectedAsset,
         name: trimmedName,
-        price: numericPrice,
         asset_status: editStatus,
+        ...(selectedAsset.asset_type === "floor"
+          ? { pricePerPiece: numericPrice }
+          : { price: numericPrice }),
         ...(floorDimensions ?? {}),
       };
 
@@ -597,10 +610,20 @@ export default function AssetLibrary({
               <div className="mt-4 grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs text-muted-foreground">
-                    Price
+                    {selectedAsset.asset_type === "floor"
+                      ? selectedAsset.pricePerPiece != null
+                        ? "Price per tile"
+                        : "Legacy price (per m²)"
+                      : "Price"}
                   </p>
                   <p className="mt-1 text-sm font-semibold">
-                    ${selectedAsset.price}
+                    {selectedAsset.asset_type === "floor"
+                      ? selectedAsset.pricePerPiece != null
+                        ? `₱${selectedAsset.pricePerPiece}/tile`
+                        : selectedAsset.price != null
+                          ? `₱${selectedAsset.price}/m²`
+                          : "Not set"
+                      : `$${selectedAsset.price ?? 0}`}
                   </p>
                 </div>
 
@@ -637,7 +660,7 @@ export default function AssetLibrary({
                     </p>
                     <p className="mt-1 text-sm">
                       {selectedAsset.length != null
-                        ? `${selectedAsset.length} m`
+                        ? `${metersToCentimeters(selectedAsset.length)} cm`
                         : "Not set"}
                     </p>
                   </div>
@@ -648,7 +671,7 @@ export default function AssetLibrary({
                     </p>
                     <p className="mt-1 text-sm">
                       {selectedAsset.width != null
-                        ? `${selectedAsset.width} m`
+                        ? `${metersToCentimeters(selectedAsset.width)} cm`
                         : "Not set"}
                     </p>
                   </div>
@@ -730,7 +753,9 @@ export default function AssetLibrary({
                 <div className="mt-4 grid grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <label className="text-xs font-medium">
-                      Price
+                      {selectedAsset.asset_type === "floor"
+                        ? "Price per tile (₱)"
+                        : "Price"}
                     </label>
 
                     <Input
@@ -743,6 +768,12 @@ export default function AssetLibrary({
                       }
                       disabled={saving}
                     />
+                    {selectedAsset.asset_type === "floor" &&
+                      selectedAsset.pricePerPiece == null && (
+                        <p className="text-xs text-muted-foreground">
+                          The legacy price field is treated as ₱/m². Enter the intended tile price; the legacy value will remain unchanged.
+                        </p>
+                      )}
                   </div>
 
                   <div className="space-y-2">
@@ -782,7 +813,7 @@ export default function AssetLibrary({
                     </p>
 
                     <p className="mb-3 text-xs text-muted-foreground">
-                      Enter the flooring piece length and width in meters.
+                      Enter the flooring piece length and width in centimeters.
                     </p>
 
                     <div className="grid grid-cols-2 gap-3">
@@ -791,22 +822,25 @@ export default function AssetLibrary({
                           htmlFor="edit-floor-length"
                           className="text-xs font-medium"
                         >
-                          Length (m) *
+                          Length *
                         </label>
 
-                        <Input
-                          id="edit-floor-length"
-                          type="number"
-                          min="0.01"
-                          step="any"
-                          value={editLength}
-                          onChange={(event) =>
-                            setEditLength(event.target.value)
-                          }
-                          placeholder="Enter length"
-                          disabled={saving}
-                          required
-                        />
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id="edit-floor-length"
+                            type="number"
+                            min="0"
+                            step="any"
+                            value={editLength}
+                            onChange={(event) =>
+                              setEditLength(event.target.value)
+                            }
+                            placeholder="Enter length"
+                            disabled={saving}
+                            required
+                          />
+                          <span className="text-sm text-muted-foreground">cm</span>
+                        </div>
                       </div>
 
                       <div className="space-y-2">
@@ -814,22 +848,25 @@ export default function AssetLibrary({
                           htmlFor="edit-floor-width"
                           className="text-xs font-medium"
                         >
-                          Width (m) *
+                          Width *
                         </label>
 
-                        <Input
-                          id="edit-floor-width"
-                          type="number"
-                          min="0.01"
-                          step="any"
-                          value={editWidth}
-                          onChange={(event) =>
-                            setEditWidth(event.target.value)
-                          }
-                          placeholder="Enter width"
-                          disabled={saving}
-                          required
-                        />
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id="edit-floor-width"
+                            type="number"
+                            min="0"
+                            step="any"
+                            value={editWidth}
+                            onChange={(event) =>
+                              setEditWidth(event.target.value)
+                            }
+                            placeholder="Enter width"
+                            disabled={saving}
+                            required
+                          />
+                          <span className="text-sm text-muted-foreground">cm</span>
+                        </div>
                       </div>
                     </div>
                   </div>

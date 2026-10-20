@@ -9,10 +9,12 @@ export interface CreateAssetInput {
   asset_type: AssetType;
   name: string;
   category: string;
-  price: number;
+  price?: number;
+  pricePerPiece?: number;
   asset_status: AssetStatus;
 
   // Required by validation when asset_type is "floor".
+  // Values are converted to meters before this service is called.
   length?: number;
   width?: number;
 
@@ -43,6 +45,16 @@ export async function createAsset(
   // Validate again before sending the request.
   if (input.asset_type === "floor") {
     if (
+      input.pricePerPiece == null ||
+      !Number.isFinite(input.pricePerPiece) ||
+      input.pricePerPiece < 0
+    ) {
+      throw new Error(
+        "Floor price per tile must be a valid number of 0 or more."
+      );
+    }
+
+    if (
       input.length == null ||
       !Number.isFinite(input.length) ||
       input.length <= 0
@@ -61,6 +73,14 @@ export async function createAsset(
         "Floor width must be greater than 0."
       );
     }
+  } else if (
+    input.price == null ||
+    !Number.isFinite(input.price) ||
+    input.price < 0
+  ) {
+    throw new Error(
+      "Asset price must be a valid number of 0 or more."
+    );
   }
 
   const formData = new FormData();
@@ -68,7 +88,14 @@ export async function createAsset(
   formData.append("asset_type", input.asset_type);
   formData.append("name", input.name.trim());
   formData.append("category", input.category.trim());
-  formData.append("price", String(input.price));
+  if (input.asset_type === "floor") {
+    formData.append(
+      "pricePerPiece",
+      String(input.pricePerPiece)
+    );
+  } else {
+    formData.append("price", String(input.price));
+  }
   formData.append("asset_status", input.asset_status);
 
   // Send the dimensions only for floor assets.

@@ -13,6 +13,9 @@ export interface Material {
     // Cost per square meter
     pricePerSquareMeter: number;
 
+    // Flooring price for one individual tile.
+    pricePerPiece?: number;
+
     // Image shown in the material selection UI
     thumbnail?: string;
 

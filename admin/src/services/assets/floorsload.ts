@@ -87,6 +87,9 @@ interface FirebaseFloorAsset {
     price?:
         number;
 
+    pricePerPiece?:
+        number;
+
     name:
         string;
 
@@ -224,6 +227,9 @@ function createLocalDefaultFloorMaterial(
         pricePerSquareMeter:
             firebaseMaterial?.pricePerSquareMeter ??
             0,
+
+        pricePerPiece:
+            firebaseMaterial?.pricePerPiece,
 
         thumbnail:
             firebaseMaterial?.thumbnail ??
@@ -455,9 +461,16 @@ async function buildFloorMaterial(
             "flooring",
 
         pricePerSquareMeter:
-            Number(
-                data.price ?? 0
-            ),
+            data.pricePerPiece === undefined
+                ? Number(data.price ?? 0)
+                : 0,
+
+        pricePerPiece:
+            typeof data.pricePerPiece === "number" &&
+            Number.isFinite(data.pricePerPiece) &&
+            data.pricePerPiece >= 0
+                ? data.pricePerPiece
+                : undefined,
 
         thumbnail,
 

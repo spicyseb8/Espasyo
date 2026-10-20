@@ -32,6 +32,7 @@ import type {
   AssetType,
 } from "@/services/assets/asset-types";
 import { createAsset } from "@/services/assets/createAsset";
+import { centimetersToMeters } from "@/services/assets/flooringDimensions";
 import { useAuth } from "@/context/AuthContext";
 
 interface CreateAssetModalProps {
@@ -225,7 +226,7 @@ export default function CreateAssetModal({
   const [roughness, setRoughness] = useState("0.8");
   const [metalness, setMetalness] = useState("0");
 
-  // Required dimensions for floor assets, measured in meters.
+  // Flooring dimensions are entered in centimeters.
   const [floorLength, setFloorLength] = useState("");
   const [floorWidth, setFloorWidth] = useState("");
 
@@ -432,7 +433,7 @@ export default function CreateAssetModal({
         numericLength <= 0
       ) {
         return setError(
-          "Enter a floor length greater than 0."
+          "Enter a floor length greater than 0 centimeters."
         );
       }
 
@@ -442,7 +443,7 @@ export default function CreateAssetModal({
         numericWidth <= 0
       ) {
         return setError(
-          "Enter a floor width greater than 0."
+          "Enter a floor width greater than 0 centimeters."
         );
       }
     }
@@ -454,7 +455,9 @@ export default function CreateAssetModal({
         asset_type: assetType,
         name,
         category: resolvedCategory,
-        price: numericPrice,
+        ...(assetType === "floor"
+          ? { pricePerPiece: numericPrice }
+          : { price: numericPrice }),
         asset_status: status,
 
         modelFile: files.modelFile ?? undefined,
@@ -486,12 +489,12 @@ export default function CreateAssetModal({
         // Include the dimensions only for floors.
         length:
           assetType === "floor"
-            ? Number(floorLength)
+            ? centimetersToMeters(Number(floorLength))
             : undefined,
 
         width:
           assetType === "floor"
-            ? Number(floorWidth)
+            ? centimetersToMeters(Number(floorWidth))
             : undefined,
       });
 
@@ -620,7 +623,9 @@ export default function CreateAssetModal({
                         htmlFor="new-asset-price"
                         className="text-sm font-medium"
                       >
-                        Price *
+                        {assetType === "floor"
+                          ? "Price per tile (₱) *"
+                          : "Price *"}
                       </label>
 
                       <Input
@@ -727,7 +732,7 @@ export default function CreateAssetModal({
                               Flooring dimensions *
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              Enter the length and width in meters.
+                              Enter the length and width of one tile in centimeters.
                             </p>
                           </div>
 
@@ -737,22 +742,25 @@ export default function CreateAssetModal({
                                 htmlFor="floor-length"
                                 className="text-sm font-medium"
                               >
-                                Length (meters) *
+                                Length *
                               </label>
 
-                              <Input
-                                id="floor-length"
-                                type="number"
-                                min="0.01"
-                                step="any"
-                                value={floorLength}
-                                onChange={(event) =>
-                                  setFloorLength(event.target.value)
-                                }
-                                placeholder="Enter length"
-                                required
-                                disabled={saving}
-                              />
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  id="floor-length"
+                                  type="number"
+                                  min="0"
+                                  step="any"
+                                  value={floorLength}
+                                  onChange={(event) =>
+                                    setFloorLength(event.target.value)
+                                  }
+                                  placeholder="Enter length"
+                                  required
+                                  disabled={saving}
+                                />
+                                <span className="text-sm text-muted-foreground">cm</span>
+                              </div>
                             </div>
 
                             <div className="space-y-2">
@@ -760,22 +768,25 @@ export default function CreateAssetModal({
                                 htmlFor="floor-width"
                                 className="text-sm font-medium"
                               >
-                                Width (meters) *
+                                Width *
                               </label>
 
-                              <Input
-                                id="floor-width"
-                                type="number"
-                                min="0.01"
-                                step="any"
-                                value={floorWidth}
-                                onChange={(event) =>
-                                  setFloorWidth(event.target.value)
-                                }
-                                placeholder="Enter width"
-                                required
-                                disabled={saving}
-                              />
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  id="floor-width"
+                                  type="number"
+                                  min="0"
+                                  step="any"
+                                  value={floorWidth}
+                                  onChange={(event) =>
+                                    setFloorWidth(event.target.value)
+                                  }
+                                  placeholder="Enter width"
+                                  required
+                                  disabled={saving}
+                                />
+                                <span className="text-sm text-muted-foreground">cm</span>
+                              </div>
                             </div>
                           </div>
                         </div>

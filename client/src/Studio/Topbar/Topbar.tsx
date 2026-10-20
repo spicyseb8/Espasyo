@@ -240,7 +240,10 @@ export default function Topbar() {
                                                                     item.unit === "m²" ? 2 : 0
                                                                 )}{" "}
                                                                 {item.unit} × {formatCurrency(item.rate)}/
-                                                                {item.unit}
+                                                                {item.category === "flooring" &&
+                                                                item.unit === "pieces"
+                                                                    ? "tile"
+                                                                    : item.unit}
                                                             </span>
                                                         </div>
 
