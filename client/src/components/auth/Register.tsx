@@ -81,23 +81,10 @@ export function SignupForm({
     }
 
     setLoading(true);
+    let accountCreated = false;
 
     try {
       await ensureSessionAuthPersistence();
-      const userCredential =
-        await createUserWithEmailAndPassword(
-          auth,
-          email.trim().toLowerCase(),
-          password
-        );
-
-      const user = userCredential.user;
-
-      /*
-       * Temporarily store signup information.
-       * The Firestore profile will only be created
-       * after email verification.
-       */
       localStorage.setItem(
         "pendingEspasyoProfile",
         JSON.stringify({
@@ -107,6 +94,16 @@ export function SignupForm({
         })
       );
 
+      const userCredential =
+        await createUserWithEmailAndPassword(
+          auth,
+          email.trim().toLowerCase(),
+          password
+        );
+
+      accountCreated = true;
+      const user = userCredential.user;
+
       await sendEmailVerification(user);
 
       /*
@@ -114,6 +111,10 @@ export function SignupForm({
        */
       onVerify();
     } catch (error: any) {
+      if (!accountCreated) {
+        localStorage.removeItem("pendingEspasyoProfile");
+      }
+
       console.error("Signup error:", error);
 
       switch (error.code) {

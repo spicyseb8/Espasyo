@@ -1,10 +1,16 @@
 import {
   doc,
+  getDoc,
   setDoc,
   serverTimestamp,
 } from "firebase/firestore";
 
 import { db } from "./firebase";
+
+export async function hasCustomerProfile(userId: string) {
+  const customerSnapshot = await getDoc(doc(db, "users", userId));
+  return customerSnapshot.exists();
+}
 
 interface UserProfile {
   full_name: string;

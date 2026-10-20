@@ -28,6 +28,7 @@ import {
   auth,
   ensureSessionAuthPersistence,
 } from "@/firebase/firebase";
+import { hasCustomerProfile } from "@/firebase/user";
 
 interface LoginFormProps {
   onSignup: () => void;
@@ -72,6 +73,22 @@ export function LoginForm({
       );
 
       const user = userCredential.user;
+
+      let isCustomer: boolean;
+      try {
+        isCustomer = await hasCustomerProfile(user.uid);
+      } catch (error) {
+        console.error("Unable to verify customer account:", error);
+        await signOut(auth);
+        setError("Unable to verify your account. Please try again.");
+        return;
+      }
+
+      if (!isCustomer) {
+        await signOut(auth);
+        setError("No account was found with this email.");
+        return;
+      }
 
       /*
        * Refresh the user's Auth information.
