@@ -23,7 +23,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div className="min-h-screen w-full bg-background text-foreground">
-      <div className="sticky top-0 z-50 bg-background">
+      <div className="bg-background">
         <TopBar />
         <Separator />
         <Navigation selectedPage={selectedPage} onPageChange={handlePageChange} />

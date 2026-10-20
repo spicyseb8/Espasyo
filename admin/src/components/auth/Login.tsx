@@ -39,7 +39,11 @@ import {
 import { Input } from "@/components/ui/input";
 
 import { isAdminRole } from "@/lib/adminRole";
-import { auth, db } from "@/firebase/firebase";
+import {
+  auth,
+  db,
+  ensureSessionAuthPersistence,
+} from "@/firebase/firebase";
 
 // Served from admin/public/images/white-brackground.jpg
 const BACKGROUND_IMAGE = "/images/white-brackground.jpg";
@@ -74,6 +78,7 @@ function LoginForm({ className, ...props }: LoginFormProps) {
     setLoading(true);
 
     try {
+      await ensureSessionAuthPersistence();
       const userCredential = await signInWithEmailAndPassword(
         auth,
         email.trim().toLowerCase(),

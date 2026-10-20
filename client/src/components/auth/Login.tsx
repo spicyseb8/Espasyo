@@ -24,7 +24,10 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
-import { auth } from "@/firebase/firebase";
+import {
+  auth,
+  ensureSessionAuthPersistence,
+} from "@/firebase/firebase";
 
 interface LoginFormProps {
   onSignup: () => void;
@@ -61,6 +64,7 @@ export function LoginForm({
     setLoading(true);
 
     try {
+      await ensureSessionAuthPersistence();
       const userCredential = await signInWithEmailAndPassword(
         auth,
         email.trim().toLowerCase(),

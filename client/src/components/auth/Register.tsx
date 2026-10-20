@@ -22,7 +22,10 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
-import { auth } from "@/firebase/firebase";
+import {
+  auth,
+  ensureSessionAuthPersistence,
+} from "@/firebase/firebase";
 
 interface SignupFormProps {
   onLogin: () => void;
@@ -80,6 +83,7 @@ export function SignupForm({
     setLoading(true);
 
     try {
+      await ensureSessionAuthPersistence();
       const userCredential =
         await createUserWithEmailAndPassword(
           auth,
