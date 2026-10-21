@@ -13,6 +13,9 @@ export interface Material {
     // Cost per square meter
     pricePerSquareMeter: number;
 
+    // Wall paint price per liter.
+    pricePerLiter?: number;
+
     // Flooring price for one individual tile.
     pricePerPiece?: number;
 

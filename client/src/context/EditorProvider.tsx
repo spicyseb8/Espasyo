@@ -107,6 +107,8 @@ function isGlobalEditorAction(
 
         case "SET_WALL_FINISH":
 
+        case "SET_WALL_FINISHES":
+
             return true;
 
         default:
@@ -135,6 +137,7 @@ function isMaterialAction(
 
         case "SET_FLOOR_FINISH":
         case "SET_WALL_FINISH":
+        case "SET_WALL_FINISHES":
 
             return true;
 

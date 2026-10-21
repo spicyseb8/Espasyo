@@ -5,14 +5,10 @@ import {
     getDoc,
     getDocs,
     query,
-    where,
-    updateDoc,
-    serverTimestamp
+    where
 } from "firebase/firestore";
 
-import {
-    db
-} from "@/firebase/firebase";
+import { auth, db } from "@/firebase/firebase";
 
 export interface AdminProject {
     projectId: string;
@@ -38,16 +34,16 @@ export interface AdminProject {
 //==================================================
 
 export function getTodayLocalDate(): string {
-    const today = new Date();
+    const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: "Asia/Manila",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+    }).formatToParts(new Date());
 
-    const year = today.getFullYear();
-    const month = String(
-        today.getMonth() + 1
-    ).padStart(2, "0");
-
-    const day = String(
-        today.getDate()
-    ).padStart(2, "0");
+    const year = parts.find(part => part.type === "year")?.value;
+    const month = parts.find(part => part.type === "month")?.value;
+    const day = parts.find(part => part.type === "day")?.value;
 
     return `${year}-${month}-${day}`;
 }
@@ -63,15 +59,30 @@ export function isValidProjectDeadline(
         return false;
     }
 
-    const parsed = new Date(
-        `${deadline}T00:00:00`
-    );
+    const [year, month, day] = deadline.split("-").map(Number);
+    const isLeapYear =
+        year % 4 === 0 &&
+        (year % 100 !== 0 || year % 400 === 0);
+    const daysInMonth = [
+        31,
+        isLeapYear ? 29 : 28,
+        31,
+        30,
+        31,
+        30,
+        31,
+        31,
+        30,
+        31,
+        30,
+        31
+    ];
 
     if (
-        Number.isNaN(parsed.getTime()) ||
-        parsed.getFullYear() !== Number(deadline.slice(0, 4)) ||
-        parsed.getMonth() + 1 !== Number(deadline.slice(5, 7)) ||
-        parsed.getDate() !== Number(deadline.slice(8, 10))
+        month < 1 ||
+        month > 12 ||
+        day < 1 ||
+        day > daysInMonth[month - 1]
     ) {
         return false;
     }
@@ -103,23 +114,33 @@ export async function updateProjectDeadline(
         );
     }
 
-    const projectReference = doc(
-        db,
-        "projects",
-        normalizedProjectId
-    );
+    const currentUser = auth.currentUser;
 
-    // Verify the document exists before updating it.
-    const snapshot = await getDoc(projectReference);
-
-    if (!snapshot.exists()) {
-        throw new Error("Project does not exist.");
+    if (!currentUser) {
+        throw new Error("Sign in with an admin account to update deadlines.");
     }
 
-    await updateDoc(projectReference, {
-        deadline,
-        updatedAt: serverTimestamp()
-    });
+    const token = await currentUser.getIdToken();
+    const response = await fetch(
+        `http://localhost:5000/api/projects/${encodeURIComponent(normalizedProjectId)}/deadline`,
+        {
+            method: "PATCH",
+            headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ deadline })
+        }
+    );
+
+    const result = await response.json() as {
+        success?: boolean;
+        message?: string;
+    };
+
+    if (!response.ok || !result.success) {
+        throw new Error(result.message || "Failed to update project deadline.");
+    }
 }
 
 //==================================================

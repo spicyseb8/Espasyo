@@ -237,7 +237,8 @@ export default function Topbar() {
                                                             </span>
                                                             <span className="cost-item-quantity">
                                                                 {item.quantity.toFixed(
-                                                                    item.unit === "m²" ? 2 : 0
+                                                                    item.unit === "m²" ||
+                                                                    item.unit === "L" ? 2 : 0
                                                                 )}{" "}
                                                                 {item.unit} × {formatCurrency(item.rate)}/
                                                                 {item.category === "flooring" &&

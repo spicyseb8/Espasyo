@@ -36,6 +36,7 @@ interface WallCutout {
 }
 
 const STANDARD_COVERAGE_AREA_M2 = 10;
+const STANDARD_LITERS_PER_COAT = 1.25;
 const PRIMER_COATS = 1;
 const PRIMER_PRICE_PER_LITER = 160;
 const TOPCOAT_COATS = 2;
@@ -376,40 +377,47 @@ export function calculateWallFinishCosts(
                 continue;
             }
 
-            const paintPricePerSquareMeter = Number(
+            const paintPricePerLiter = Number(
+                material.pricePerLiter ??
                 material.pricePerSquareMeter
             );
 
             if (
-                !Number.isFinite(paintPricePerSquareMeter) ||
-                paintPricePerSquareMeter < 0
+                !Number.isFinite(paintPricePerLiter) ||
+                paintPricePerLiter < 0
             ) {
                 console.warn(
-                    "Wall material has an invalid price per square meter:",
+                    "Wall material has an invalid price per liter:",
                     finish.materialId,
+                    material.pricePerLiter ??
                     material.pricePerSquareMeter
                 );
                 continue;
             }
 
             totalPaintArea += finishArea;
+            const requiredPaintLiters =
+                finishArea /
+                STANDARD_COVERAGE_AREA_M2 *
+                STANDARD_LITERS_PER_COAT *
+                TOPCOAT_COATS;
 
             const existingPaint = groupedPaints.get(
                 material.id
             );
 
             if (existingPaint) {
-                existingPaint.quantity += finishArea;
+                existingPaint.quantity += requiredPaintLiters;
                 existingPaint.subtotal =
                     existingPaint.quantity * existingPaint.rate;
             } else {
                 groupedPaints.set(material.id, {
                     category: "wallFinish",
                     name: material.name,
-                    quantity: finishArea,
-                    unit: "m²",
-                    rate: paintPricePerSquareMeter,
-                    subtotal: finishArea * paintPricePerSquareMeter,
+                    quantity: requiredPaintLiters,
+                    unit: "L",
+                    rate: paintPricePerLiter,
+                    subtotal: requiredPaintLiters * paintPricePerLiter,
                     coats: TOPCOAT_COATS
                 });
             }

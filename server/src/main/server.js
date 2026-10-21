@@ -5,6 +5,7 @@ import accountRoutes from "./create-account.js";
 import accountActionRoutes from "./account-actions.js";
 import assetRoutes from "./create-asset.js";
 import projectCommentRoutes from "./project-comments.js";
+import projectDeadlineRoutes from "./project-deadlines.js";
 
 const app = express();
 
@@ -66,6 +67,11 @@ app.use(
 app.use(
   "/api",
   projectCommentRoutes
+);
+
+app.use(
+  "/api",
+  projectDeadlineRoutes
 );
 
 // --------------------------------------------------

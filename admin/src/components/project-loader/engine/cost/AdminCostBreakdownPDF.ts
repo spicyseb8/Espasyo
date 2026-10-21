@@ -276,17 +276,18 @@ function prepareCostItem(
         item.unit.trim().toLowerCase() === "l";
 
     if (isWallItem && isLiterItem) {
-        const roundedLiters = roundLitersUp(item.quantity);
-
         const inferredCoats = /primer/i.test(item.name)
             ? 1
             : 2;
 
         return {
             ...item,
-            displayQuantity: `${roundedLiters} L`,
+            displayQuantity: `${item.quantity.toLocaleString("en-PH", {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2
+            })} L`,
             displayCoats: String(item.coats ?? inferredCoats),
-            displayAmount: roundedLiters * item.rate
+            displayAmount: item.subtotal
         };
     }
 

@@ -36,7 +36,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 const CARD =
   "gap-3 rounded-lg border border-border bg-background py-4 shadow-none ring-0";
 const INNER = "rounded-lg border border-border bg-muted/40";
-const CONTROL = "border border-border/60 bg-background";
 
 /* ------------------------------------------------------------------ */
 /* Types + sample data (replace with Firestore data later)             */
@@ -176,12 +175,6 @@ export default function Dashboard() {
   const end = new Date();
   const start = new Date();
   start.setDate(end.getDate() - 27);
-  const fmt = (d: Date) =>
-    d.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
 
   return (
     <div className="space-y-4">

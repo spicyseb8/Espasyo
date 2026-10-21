@@ -79,13 +79,13 @@ const materials = new Map([
         id: "paint-a",
         name: "Warm white",
         category: "wallFinish",
-        pricePerSquareMeter: 50
+        pricePerLiter: 50
     }],
     ["paint-b", {
         id: "paint-b",
         name: "Soft gray",
         category: "wallFinish",
-        pricePerSquareMeter: 80
+        pricePerLiter: 80
     }]
 ]);
 
@@ -145,10 +145,10 @@ test("costs include both painted sides of a shared wall exactly once", () => {
     }, materialLookup);
     const paint = items.find(item => item.name === "Warm white");
 
-    assert.equal(paint?.quantity, 84);
-    assert.equal(paint?.unit, "m²");
+    assert.equal(paint?.quantity, 21);
+    assert.equal(paint?.unit, "L");
     assert.equal(paint?.rate, 50);
-    assert.equal(paint?.subtotal, 4200);
+    assert.equal(paint?.subtotal, 1050);
 });
 
 test("a finish on only one shared-wall face is charged once and openings reduce area", () => {
@@ -175,8 +175,9 @@ test("a finish on only one shared-wall face is charged once and openings reduce 
     }, materialLookup);
     const paint = items.find(item => item.name === "Warm white");
 
-    assert.equal(paint?.quantity, 7);
-    assert.equal(paint?.subtotal, 350);
+    assert.equal(paint?.quantity, 1.75);
+    assert.equal(paint?.unit, "L");
+    assert.equal(paint?.subtotal, 87.5);
 });
 
 test("openings are deducted from each painted side of a shared wall", () => {
@@ -205,8 +206,9 @@ test("openings are deducted from each painted side of a shared wall", () => {
     }, materialLookup);
     const paint = items.find(item => item.name === "Warm white");
 
-    assert.equal(paint?.quantity, 14);
-    assert.equal(paint?.subtotal, 700);
+    assert.equal(paint?.quantity, 3.5);
+    assert.equal(paint?.unit, "L");
+    assert.equal(paint?.subtotal, 175);
 });
 
 test("replacing room finishes updates both shared-face material totals", () => {
@@ -239,7 +241,8 @@ test("replacing room finishes updates both shared-face material totals", () => {
     }, materialLookup);
     const paint = items.find(item => item.name === "Soft gray");
 
-    assert.equal(paint?.quantity, 18);
-    assert.equal(paint?.subtotal, 1440);
+    assert.equal(paint?.quantity, 4.5);
+    assert.equal(paint?.unit, "L");
+    assert.equal(paint?.subtotal, 360);
     assert.equal(items.some(item => item.name === "Warm white"), false);
 });

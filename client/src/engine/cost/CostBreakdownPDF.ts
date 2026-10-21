@@ -390,26 +390,30 @@ export function downloadCostBreakdownPdf(
                 : isFlooringSection
                     ? {
                         0: {
-                            cellWidth: 54
+                            cellWidth: 47
                         },
                         1: {
-                            cellWidth: 25,
+                            cellWidth: 20,
                             halign: "center"
                         },
                         2: {
-                            cellWidth: 23,
+                            cellWidth: 13,
                             halign: "center"
                         },
                         3: {
-                            cellWidth: 23,
+                            cellWidth: 21,
                             halign: "center"
                         },
                         4: {
-                            cellWidth: 30,
-                            halign: "right"
+                            cellWidth: 21,
+                            halign: "center"
                         },
                         5: {
-                            cellWidth: 31,
+                            cellWidth: 32,
+                            halign: "right"
+                        },
+                        6: {
+                            cellWidth: 32,
                             halign: "right"
                         }
                     }

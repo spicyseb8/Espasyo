@@ -132,7 +132,9 @@ export default function MaterialCard({
                 <span>
                     {material.pricePerPiece !== undefined
                         ? "/tile"
-                        : "/m²"}
+                        : material.sourceCategory?.toLowerCase() === "paint"
+                            ? "/L"
+                            : "/m²"}
                 </span>
 
             </div>
