@@ -60,6 +60,9 @@ interface AccountTabProps {
   onSuspend?:
     () => void | Promise<void>;
 
+  onReactivate?:
+    () => void | Promise<void>;
+
 }
 
 
@@ -74,6 +77,8 @@ export default function AccountTab({
   error,
 
   onSuspend,
+
+  onReactivate,
 
 }: AccountTabProps) {
 
@@ -98,6 +103,18 @@ export default function AccountTab({
   const [
     suspendError,
     setSuspendError,
+  ] =
+    useState("");
+
+  const [
+    reactivating,
+    setReactivating,
+  ] =
+    useState(false);
+
+  const [
+    reactivateError,
+    setReactivateError,
   ] =
     useState("");
 
@@ -233,7 +250,6 @@ export default function AccountTab({
 
     }
 
-
     try {
 
       setSuspending(true);
@@ -271,6 +287,27 @@ export default function AccountTab({
 
     }
 
+  }
+
+  async function handleReactivate() {
+    if (!onReactivate) {
+      return;
+    }
+
+    try {
+      setReactivating(true);
+      setReactivateError("");
+      await onReactivate();
+    } catch (error) {
+      console.error("Failed to reactivate account:", error);
+      setReactivateError(
+        error instanceof Error
+          ? error.message
+          : "Failed to reactivate account. Please try again."
+      );
+    } finally {
+      setReactivating(false);
+    }
   }
 
 
@@ -608,7 +645,7 @@ export default function AccountTab({
               ACCOUNT ACTION
           ================================================== */}
 
-          {isUser && onSuspend && (
+          {isUser && (onSuspend || onReactivate) && (
 
             <div
               className="
@@ -650,7 +687,7 @@ export default function AccountTab({
 
                     {
                       isSuspended
-                        ? "This account is currently suspended."
+                        ? "This account is suspended. Reactivate it to restore access."
                         : "Suspend this user's access to Espasyo."
                     }
 
@@ -689,33 +726,28 @@ export default function AccountTab({
 
                 ) : (
 
-                  <div
-                    className="
-                      flex
-                      items-center
-                      gap-2
-                      rounded-md
-                      border
-                      border-red-200
-                      bg-red-50
-                      px-3
-                      py-2
-                      text-sm
-                      text-red-600
-                    "
-                  >
-
-                    <ShieldAlert
-                      className="h-4 w-4"
-                    />
-
-                    Account Suspended
-
-                  </div>
+                  onReactivate && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={reactivating}
+                      onClick={handleReactivate}
+                    >
+                      {reactivating
+                        ? "Reactivating..."
+                        : "Reactivate Account"}
+                    </Button>
+                  )
 
                 )}
 
               </div>
+
+              {reactivateError && (
+                <p role="alert" className="mt-2 text-sm text-red-600">
+                  {reactivateError}
+                </p>
+              )}
 
             </div>
 

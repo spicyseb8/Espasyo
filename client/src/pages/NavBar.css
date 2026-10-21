@@ -38,23 +38,15 @@
   text-decoration: none;
   color: #1b1b1b;
 }
-.navbar__logo-badge {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.navbar__logo-image {
+  display: block;
   width: 34px;
   height: 34px;
-  border-radius: 999px;
-  background: #1b1b1b;
-  color: #fff;
+  object-fit: contain;
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.navbar__logo:hover .navbar__logo-badge {
-  transform: rotate(-8deg) scale(1.05);
-}
-.navbar__logo-icon {
-  width: 16px;
-  height: 16px;
+.navbar__logo:hover .navbar__logo-image {
+  transform: scale(1.05);
 }
 .navbar__logo-text {
   font-size: 12px;
@@ -188,7 +180,7 @@
   .navbar__avatar-skeleton {
     animation: none;
   }
-  .navbar__logo-badge {
+  .navbar__logo-image {
     transition: none;
   }
 }

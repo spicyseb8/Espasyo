@@ -1,4 +1,3 @@
-import { GalleryVerticalEnd } from "lucide-react";
 import { useState } from "react";
 
 import { LoginForm } from "../../components/auth/Login";
@@ -23,9 +22,7 @@ export default function AuthPage() {
         {/* Logo */}
         <header className="flex justify-center p-6 md:p-10">
           <div className="flex items-center gap-2 font-medium">
-            <div className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <GalleryVerticalEnd className="size-4" />
-            </div>
+            <img src="/logo.png" alt="" aria-hidden="true" className="size-8 object-contain" />
             Espasyo
           </div>
         </header>

@@ -156,11 +156,12 @@ export default function TopBar() {
     <div className="h-16 flex items-center justify-between px-6">
       {/* Logo */}
       <div className="flex items-center gap-2">
-        <div className="h-8 w-8 rounded-md bg-foreground flex items-center justify-center">
-          <span className="text-background font-semibold text-sm">
-            E
-          </span>
-        </div>
+        <img
+          src="/logo.png"
+          alt=""
+          aria-hidden="true"
+          className="h-8 w-8 object-contain"
+        />
 
         <div className="leading-tight">
           <p className="text-sm font-semibold">Espasyo</p>

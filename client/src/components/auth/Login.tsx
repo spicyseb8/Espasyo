@@ -23,6 +23,15 @@ import {
   FieldSeparator,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import { auth } from "@/firebase/firebase";
 import { validateLoginForm } from "@/utils/validators";
@@ -43,6 +52,7 @@ export function LoginForm({
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showSuspendedDialog, setShowSuspendedDialog] = useState(false);
 
   const handleSubmit = async (e: React.SubmitEvent) => {
     e.preventDefault();
@@ -117,6 +127,10 @@ export function LoginForm({
           setError(
             "Too many failed attempts. Please try again later."
           );
+          break;
+
+        case "auth/user-disabled":
+          setShowSuspendedDialog(true);
           break;
 
         default:
@@ -296,6 +310,24 @@ export function LoginForm({
         </a>
         .
       </FieldDescription>
+
+      <AlertDialog
+        open={showSuspendedDialog}
+        onOpenChange={setShowSuspendedDialog}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Account suspended</AlertDialogTitle>
+            <AlertDialogDescription>
+              This account has been suspended by an administrator. Contact
+              support if you believe this is a mistake.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction>OK</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
