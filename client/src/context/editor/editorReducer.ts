@@ -8,7 +8,10 @@ import type { Door } from "../../engine/doors/DoorTypes";
 import type { Furniture } from "../../engine/furniture/FurnitureTypes";
 import type { Window } from "../../engine/windows/WindowTypes";
 import type { Opening } from "../../engine/openings/OpeningTypes";
-const WALL_SIDE_FINISH_BUCKET = "__wall_side_finishes__";
+import {
+    getWallFinishSideKey,
+    WALL_SIDE_FINISH_BUCKET
+} from "../../engine/walls/WallFinishUtils";
 export function editorReducer(
     state: EditorState,
     action: EditorAction
@@ -60,45 +63,65 @@ export function editorReducer(
                 wallThickness: action.payload
             };
         case "SET_WALL_FINISH": {
-    if (state.walkthroughMode) return state;
+            if (state.walkthroughMode) return state;
 
-    const {
-        regionId,
-        wallId,
-        materialId,
-        side
-    } = action.payload;
+            const {
+                regionId,
+                wallId,
+                materialId,
+                side
+            } = action.payload;
 
-    // Save a finish for one specific side of the wall.
-    if (side !== undefined) {
-        const sideKey = `${wallId}::side:${side}`;
+            if (side !== undefined) {
+                const sideKey = getWallFinishSideKey(wallId, side);
 
-        return {
-            ...state,
-            wallFinishes: {
-                ...state.wallFinishes,
-                [WALL_SIDE_FINISH_BUCKET]: {
-                    ...(state.wallFinishes[WALL_SIDE_FINISH_BUCKET] ?? {}),
-                    [sideKey]: materialId
+                return {
+                    ...state,
+                    wallFinishes: {
+                        ...state.wallFinishes,
+                        [WALL_SIDE_FINISH_BUCKET]: {
+                            ...(state.wallFinishes[WALL_SIDE_FINISH_BUCKET] ?? {}),
+                            [sideKey]: materialId
+                        }
+                    }
+                };
+            }
+
+            if (!regionId) return state;
+
+            return {
+                ...state,
+                wallFinishes: {
+                    ...state.wallFinishes,
+                    [regionId]: {
+                        ...(state.wallFinishes[regionId] ?? {}),
+                        [wallId]: materialId
+                    }
                 }
-            }
-        };
-    }
-
-    // Preserve compatibility with existing room-based finishes.
-    if (!regionId) return state;
-
-    return {
-        ...state,
-        wallFinishes: {
-            ...state.wallFinishes,
-            [regionId]: {
-                ...(state.wallFinishes[regionId] ?? {}),
-                [wallId]: materialId
-            }
+            };
         }
-    };
-}
+        case "SET_WALL_FINISHES": {
+            if (state.walkthroughMode) return state;
+            if (action.payload.length === 0) return state;
+
+            const sideFinishes = {
+                ...(state.wallFinishes[WALL_SIDE_FINISH_BUCKET] ?? {})
+            };
+
+            for (const finish of action.payload) {
+                sideFinishes[
+                    getWallFinishSideKey(finish.wallId, finish.side)
+                ] = finish.materialId;
+            }
+
+            return {
+                ...state,
+                wallFinishes: {
+                    ...state.wallFinishes,
+                    [WALL_SIDE_FINISH_BUCKET]: sideFinishes
+                }
+            };
+        }
         case "REMOVE_WALL":
             if (state.walkthroughMode) return state;
             return {

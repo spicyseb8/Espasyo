@@ -20,7 +20,7 @@ import {
 } from "../../engine/regions/RegionSolver";
 import {
     getWallFinishSides
-} from "./WallFinishUtils";
+} from "../../engine/walls/WallFinishUtils";
 interface WallOutlineProps {
     start: Vector3;
     end: Vector3;

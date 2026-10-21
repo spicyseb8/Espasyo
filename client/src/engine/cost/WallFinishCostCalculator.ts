@@ -6,6 +6,8 @@ import type { Window } from "../windows/WindowTypes";
 import type { Opening } from "../openings/OpeningTypes";
 import { solveRegions } from "../regions/RegionSolver";
 import { findCachedWallMaterial } from "../materials/walls";
+import type { Material } from "../materials/MaterialTypes";
+import { getWallFinishSides } from "../walls/WallFinishUtils";
 import type { CostItem } from "./CostTypes";
 
 export interface WallFinishCostOptions {
@@ -36,7 +38,6 @@ interface WallCutout {
 const STANDARD_COVERAGE_AREA_M2 = 10;
 const PRIMER_COATS = 1;
 const PRIMER_PRICE_PER_LITER = 160;
-const TOPCOAT_LITERS_PER_10_SQM_PER_COAT = 1.25;
 const TOPCOAT_COATS = 2;
 
 function roundLitersUp(liters: number): number {
@@ -169,7 +170,9 @@ function calculateArchArea(
 }
 
 export function calculateWallFinishCosts(
-    options: WallFinishCostOptions
+    options: WallFinishCostOptions,
+    findMaterial: (materialId: string) => Material | undefined =
+        findCachedWallMaterial
 ): CostItem[] {
     const {
         corners,
@@ -185,221 +188,233 @@ export function calculateWallFinishCosts(
     const groupedPaints = new Map<string, CostItem>();
     let totalPaintArea = 0;
 
-    for (const region of regions) {
-        for (const wall of region.walls) {
-            const materialId = wallFinishes[region.id]?.[wall.id];
+    for (const wall of walls) {
+        const finishes = getWallFinishSides(
+            wall,
+            regions,
+            wallFinishes
+        );
 
-            if (!materialId) {
+        if (finishes.length === 0) {
+            continue;
+        }
+
+        const direction = getWallDirection(wall);
+        const wallLength = direction.length;
+
+        if (wallLength <= 0.001) {
+            continue;
+        }
+
+        const totalWallArea = wallLength * wallHeight;
+        const rectangularCutouts: CutoutRect[] = [];
+
+        for (const door of doors) {
+            if (door.wallId !== wall.id) {
                 continue;
             }
 
-            const material = findCachedWallMaterial(materialId);
+            const distance = distanceAlongWall(
+                door.position.x,
+                door.position.z,
+                wall
+            );
+            const halfWidth = door.width * 0.5;
+            const startX = distance - halfWidth;
+            const endX = distance + halfWidth;
+            const topY = Math.min(
+                door.height,
+                wallHeight
+            );
+            const bottomY = 0;
+
+            if (endX > 0 && startX < wallLength) {
+                rectangularCutouts.push({
+                    startX: Math.max(0, startX),
+                    endX: Math.min(wallLength, endX),
+                    bottomY,
+                    topY
+                });
+            }
+        }
+
+        for (const window of windows) {
+            if (window.wallId !== wall.id) {
+                continue;
+            }
+
+            const distance = distanceAlongWall(
+                window.position.x,
+                window.position.z,
+                wall
+            );
+            const relativeRotation =
+                window.rotationY -
+                Math.atan2(direction.z, direction.x);
+            const cos = Math.abs(
+                Math.cos(relativeRotation)
+            );
+            const sin = Math.abs(
+                Math.sin(relativeRotation)
+            );
+            const widthAlongWall =
+                window.width * cos +
+                window.depth * sin;
+            const halfWidth = widthAlongWall * 0.5;
+            const startX = distance - halfWidth;
+            const endX = distance + halfWidth;
+            const bottomY = Math.max(
+                0,
+                window.position.y -
+                window.height * 0.5
+            );
+            const topY = Math.min(
+                wallHeight,
+                window.position.y +
+                window.height * 0.5
+            );
+
+            if (
+                endX > 0 &&
+                startX < wallLength &&
+                topY > bottomY
+            ) {
+                rectangularCutouts.push({
+                    startX: Math.max(0, startX),
+                    endX: Math.min(wallLength, endX),
+                    bottomY,
+                    topY
+                });
+            }
+        }
+
+        const archCutouts: WallCutout[] = [];
+
+        for (const opening of openings) {
+            if (opening.wallId !== wall.id) {
+                continue;
+            }
+
+            const distance = distanceAlongWall(
+                opening.position.x,
+                opening.position.z,
+                wall
+            );
+            const halfWidth = opening.width * 0.5;
+            const startX = distance - halfWidth;
+            const endX = distance + halfWidth;
+            const bottomY = 0;
+            const topY = Math.min(
+                opening.height,
+                wallHeight
+            );
+
+            if (opening.shape === "arch") {
+                archCutouts.push({
+                    startX: Math.max(0, startX),
+                    endX: Math.min(wallLength, endX),
+                    bottomY,
+                    topY,
+                    shape: "arch"
+                });
+            } else if (
+                endX > 0 &&
+                startX < wallLength &&
+                topY > bottomY
+            ) {
+                rectangularCutouts.push({
+                    startX: Math.max(0, startX),
+                    endX: Math.min(wallLength, endX),
+                    bottomY,
+                    topY
+                });
+            }
+        }
+
+        const rectangularCutoutArea =
+            calculateRectangleUnionArea(
+                rectangularCutouts
+            );
+        let archCutoutArea = 0;
+
+        for (const arch of archCutouts) {
+            const width = arch.endX - arch.startX;
+
+            if (width <= 0) {
+                continue;
+            }
+
+            archCutoutArea += calculateArchArea(
+                width,
+                arch.topY - arch.bottomY,
+                arch.bottomY,
+                wallHeight
+            );
+        }
+
+        const cutoutArea =
+            rectangularCutoutArea + archCutoutArea;
+        const finishArea = Math.max(
+            0,
+            totalWallArea - cutoutArea
+        );
+
+        if (finishArea <= 0.0001) {
+            continue;
+        }
+
+        for (const finish of finishes) {
+            const material = findMaterial(
+                finish.materialId
+            );
 
             if (!material) {
                 console.warn(
                     "Wall material was not found in the Firebase material cache:",
-                    materialId
+                    finish.materialId
                 );
                 continue;
             }
 
-            const direction = getWallDirection(wall);
-            const wallLength = direction.length;
-
-            if (wallLength <= 0.001) {
-                continue;
-            }
-
-            const totalWallArea = wallLength * wallHeight;
-            const rectangularCutouts: CutoutRect[] = [];
-
-            for (const door of doors) {
-                if (door.wallId !== wall.id) {
-                    continue;
-                }
-
-                const distance = distanceAlongWall(
-                    door.position.x,
-                    door.position.z,
-                    wall
-                );
-                const halfWidth = door.width * 0.5;
-                const startX = distance - halfWidth;
-                const endX = distance + halfWidth;
-                const topY = Math.min(
-                    door.height,
-                    wallHeight
-                );
-                const bottomY = 0;
-
-                if (endX > 0 && startX < wallLength) {
-                    rectangularCutouts.push({
-                        startX: Math.max(0, startX),
-                        endX: Math.min(wallLength, endX),
-                        bottomY,
-                        topY
-                    });
-                }
-            }
-
-            for (const window of windows) {
-                if (window.wallId !== wall.id) {
-                    continue;
-                }
-
-                const distance = distanceAlongWall(
-                    window.position.x,
-                    window.position.z,
-                    wall
-                );
-                const relativeRotation =
-                    window.rotationY -
-                    Math.atan2(direction.z, direction.x);
-                const cos = Math.abs(
-                    Math.cos(relativeRotation)
-                );
-                const sin = Math.abs(
-                    Math.sin(relativeRotation)
-                );
-                const widthAlongWall =
-                    window.width * cos +
-                    window.depth * sin;
-                const halfWidth = widthAlongWall * 0.5;
-                const startX = distance - halfWidth;
-                const endX = distance + halfWidth;
-                const bottomY = Math.max(
-                    0,
-                    window.position.y -
-                    window.height * 0.5
-                );
-                const topY = Math.min(
-                    wallHeight,
-                    window.position.y +
-                    window.height * 0.5
-                );
-
-                if (
-                    endX > 0 &&
-                    startX < wallLength &&
-                    topY > bottomY
-                ) {
-                    rectangularCutouts.push({
-                        startX: Math.max(0, startX),
-                        endX: Math.min(wallLength, endX),
-                        bottomY,
-                        topY
-                    });
-                }
-            }
-
-            const archCutouts: WallCutout[] = [];
-
-            for (const opening of openings) {
-                if (opening.wallId !== wall.id) {
-                    continue;
-                }
-
-                const distance = distanceAlongWall(
-                    opening.position.x,
-                    opening.position.z,
-                    wall
-                );
-                const halfWidth = opening.width * 0.5;
-                const startX = distance - halfWidth;
-                const endX = distance + halfWidth;
-                const bottomY = 0;
-                const topY = Math.min(
-                    opening.height,
-                    wallHeight
-                );
-
-                if (opening.shape === "arch") {
-                    archCutouts.push({
-                        startX: Math.max(0, startX),
-                        endX: Math.min(wallLength, endX),
-                        bottomY,
-                        topY,
-                        shape: "arch"
-                    });
-                } else if (
-                    endX > 0 &&
-                    startX < wallLength &&
-                    topY > bottomY
-                ) {
-                    rectangularCutouts.push({
-                        startX: Math.max(0, startX),
-                        endX: Math.min(wallLength, endX),
-                        bottomY,
-                        topY
-                    });
-                }
-            }
-
-            const rectangularCutoutArea =
-                calculateRectangleUnionArea(
-                    rectangularCutouts
-                );
-            let archCutoutArea = 0;
-
-            for (const arch of archCutouts) {
-                const width = arch.endX - arch.startX;
-
-                if (width <= 0) {
-                    continue;
-                }
-
-                archCutoutArea += calculateArchArea(
-                    width,
-                    arch.topY - arch.bottomY,
-                    arch.bottomY,
-                    wallHeight
-                );
-            }
-
-            const cutoutArea =
-                rectangularCutoutArea + archCutoutArea;
-            const finishArea = Math.max(
-                0,
-                totalWallArea - cutoutArea
+            const paintPricePerSquareMeter = Number(
+                material.pricePerSquareMeter
             );
 
-            if (finishArea <= 0.0001) {
+            if (
+                !Number.isFinite(paintPricePerSquareMeter) ||
+                paintPricePerSquareMeter < 0
+            ) {
+                console.warn(
+                    "Wall material has an invalid price per square meter:",
+                    finish.materialId,
+                    material.pricePerSquareMeter
+                );
                 continue;
             }
 
             totalPaintArea += finishArea;
-
-            const topcoatLiters =
-                finishArea /
-                STANDARD_COVERAGE_AREA_M2 *
-                TOPCOAT_LITERS_PER_10_SQM_PER_COAT *
-                TOPCOAT_COATS;
-
-            const paintPricePerLiter = Number.isFinite(
-                material.pricePerSquareMeter
-            )
-                ? material.pricePerSquareMeter
-                : 0;
 
             const existingPaint = groupedPaints.get(
                 material.id
             );
 
             if (existingPaint) {
-                existingPaint.quantity += topcoatLiters;
+                existingPaint.quantity += finishArea;
+                existingPaint.subtotal =
+                    existingPaint.quantity * existingPaint.rate;
             } else {
                 groupedPaints.set(material.id, {
                     category: "wallFinish",
                     name: material.name,
-                    quantity: topcoatLiters,
-                    unit: "L",
-                    rate: paintPricePerLiter,
-                    subtotal: topcoatLiters * paintPricePerLiter,
+                    quantity: finishArea,
+                    unit: "m²",
+                    rate: paintPricePerSquareMeter,
+                    subtotal: finishArea * paintPricePerSquareMeter,
                     coats: TOPCOAT_COATS
                 });
             }
         }
-    }
+}
 
     const costs: CostItem[] = [];
 
@@ -423,22 +438,8 @@ export function calculateWallFinishCosts(
         });
     }
 
-    const roundedPaints = Array.from(
-        groupedPaints.values()
-    ).map(item => {
-        const roundedQuantity = roundLitersUp(
-            item.quantity
-        );
-
-        return {
-            ...item,
-            quantity: roundedQuantity,
-            subtotal: roundedQuantity * item.rate
-        };
-    });
-
     return [
         ...costs,
-        ...roundedPaints
+        ...groupedPaints.values()
     ];
 }

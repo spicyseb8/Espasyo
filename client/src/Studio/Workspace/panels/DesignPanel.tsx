@@ -24,11 +24,13 @@ import {
     solveRegions
 } from "../../../engine/regions/RegionSolver";
 
+import {
+    getRegionWallFinishAssignments,
+    WALL_SIDE_FINISH_BUCKET
+} from "../../../engine/walls/WallFinishUtils";
+
 import MaterialSection
     from "./MaterialSection";
-
-const WALL_SIDE_FINISH_BUCKET =
-    "__wall_side_finishes__";
 
 export default function DesignPanel() {
     const {
@@ -383,22 +385,13 @@ export default function DesignPanel() {
             return;
         }
 
-        const wallIds = new Set(
-            selectedWallRegionForEdit.walls.map(
-                wall => wall.id
+        dispatch({
+            type: "SET_WALL_FINISHES",
+            payload: getRegionWallFinishAssignments(
+                [selectedWallRegionForEdit],
+                selectedWallMaterialId
             )
-        );
-
-        for (const wallId of wallIds) {
-            dispatch({
-                type: "SET_WALL_FINISH",
-                payload: {
-                    regionId: selectedWallRegionForEdit.id,
-                    wallId,
-                    materialId: selectedWallMaterialId
-                }
-            });
-        }
+        });
     };
 
     const handleApplyWallToAll = () => {
@@ -409,22 +402,13 @@ export default function DesignPanel() {
             return;
         }
 
-        for (const region of regions) {
-            const wallIds = new Set(
-                region.walls.map(wall => wall.id)
-            );
-
-            for (const wallId of wallIds) {
-                dispatch({
-                    type: "SET_WALL_FINISH",
-                    payload: {
-                        regionId: region.id,
-                        wallId,
-                        materialId: selectedWallMaterialId
-                    }
-                });
-            }
-        }
+        dispatch({
+            type: "SET_WALL_FINISHES",
+            payload: getRegionWallFinishAssignments(
+                regions,
+                selectedWallMaterialId
+            )
+        });
     };
 
     const layoutConfirmed =

@@ -28,7 +28,7 @@ import WallFinishSurface
 
 import type {
     WallFinishSide
-} from "./WallFinishUtils";
+} from "../../engine/walls/WallFinishUtils";
 
 import {
     solveRegions
@@ -36,7 +36,7 @@ import {
 
 import {
     getRegionWallSide
-} from "./WallFinishUtils";
+} from "../../engine/walls/WallFinishUtils";
 
 interface Props {
     wallId: string;
