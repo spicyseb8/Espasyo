@@ -355,11 +355,11 @@ export default function Scene({
 
                 <FurnitureScene />
 
-                <AdminCommentMarkers
-                    comments={
-                        comments
-                    }
-                />
+                {!state.walkthroughMode && (
+    <AdminCommentMarkers
+        comments={comments}
+    />
+)}
 
                 {/* Walkthrough roof.
                     Wrapped in its own Suspense so loading the

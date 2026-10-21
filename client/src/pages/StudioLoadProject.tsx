@@ -395,7 +395,7 @@ function LoadProjectContent() {
                     role="alert"
                     style={{
                         position: "fixed",
-                        top: 16,
+                        top: 70,
                         left: "50%",
                         transform: "translateX(-50%)",
                         zIndex: 99999,

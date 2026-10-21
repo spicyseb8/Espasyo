@@ -496,6 +496,7 @@ export default function EditorProvider({
 
             if (
                 action.type !== "LOAD_PROJECT" &&
+                action.type !== "TOGGLE_WALKTHROUGH" &&
                 isProjectReadOnlyByDeadline()
             ) {
                 return;
