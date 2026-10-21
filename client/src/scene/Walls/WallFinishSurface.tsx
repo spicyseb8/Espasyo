@@ -8,7 +8,7 @@ import {
     getWallMaterials,
     preloadWallTexture
 } from "../../engine/materials/walls";
-import type { WallFinishSide } from "./WallFinishUtils";
+import type { WallFinishSide } from "../../engine/walls/WallFinishUtils";
 
 interface Props {
     piece: WallPiece;

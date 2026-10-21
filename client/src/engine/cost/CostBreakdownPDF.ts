@@ -49,18 +49,29 @@ function roundLitersUp(quantity: number): number {
     return Math.ceil(quantity);
 }
 
-function formatQuantity(item: CostItem): string {
+function formatQuantity(
+    item: CostItem,
+    preserveFractionalQuantity = false
+): string {
     const quantity = Number.isFinite(item.quantity)
         ? item.quantity
         : 0;
 
-    if (item.unit === "L" || item.unit === "pieces") {
+    if (
+        !preserveFractionalQuantity &&
+        (item.unit === "L" || item.unit === "pieces")
+    ) {
         return String(roundLitersUp(quantity));
     }
 
     return quantity.toLocaleString("en-PH", {
         minimumFractionDigits: 0,
-        maximumFractionDigits: item.unit === "m²" ? 2 : 4
+        maximumFractionDigits:
+            item.unit === "m²" && preserveFractionalQuantity
+                ? 4
+                : item.unit === "m²"
+                    ? 2
+                    : 4
     });
 }
 
@@ -231,9 +242,11 @@ export function downloadCostBreakdownPdf(
         const head = isWallSection
             ? [[
                 "Product",
-                "No. of Coats",
-                "Quantity (in Liters)",
-                "Price"
+                "Coats",
+                "Quantity",
+                "Unit",
+                "Unit Rate",
+                "Amount"
             ]]
             : isFlooringSection
                 ? [[
@@ -261,19 +274,15 @@ export function downloadCostBreakdownPdf(
             ? sectionItems.map(item => {
                 // Wall material rows
                 if (isWallSection) {
-                    const liters =
-                        roundLitersUp(item.quantity);
-
-                    const rate =
-                        Number.isFinite(item.rate)
-                            ? item.rate
-                            : 0;
-
                     return [
                         item.name,
-                        String(item.coats ?? 0),
-                        `${liters} L`,
-                        formatMoney(liters * rate)
+                        item.coats === undefined
+                            ? "—"
+                            : String(item.coats),
+                        formatQuantity(item, true),
+                        item.unit,
+                        formatMoney(item.rate),
+                        formatMoney(item.subtotal)
                     ];
                 }
 
@@ -305,6 +314,8 @@ export function downloadCostBreakdownPdf(
                 isWallSection
                     ? [
                         "No wall paint or primer assigned.",
+                        "",
+                        "",
                         "",
                         "",
                         ""
@@ -369,21 +380,12 @@ export function downloadCostBreakdownPdf(
 
             columnStyles: isWallSection
                 ? {
-                    0: {
-                        cellWidth: 69
-                    },
-                    1: {
-                        cellWidth: 27,
-                        halign: "center"
-                    },
-                    2: {
-                        cellWidth: 41,
-                        halign: "right"
-                    },
-                    3: {
-                        cellWidth: 49,
-                        halign: "right"
-                    }
+                    0: { cellWidth: 48 },
+                    1: { cellWidth: 18, halign: "center" },
+                    2: { cellWidth: 25, halign: "right" },
+                    3: { cellWidth: 15, halign: "center" },
+                    4: { cellWidth: 39, halign: "right" },
+                    5: { cellWidth: 41, halign: "right" }
                 }
                 : isFlooringSection
                     ? {

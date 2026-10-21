@@ -19,7 +19,7 @@ import {
 
 import {
     getWallFinishSides
-} from "./WallFinishUtils";
+} from "../../engine/walls/WallFinishUtils";
 
 function Walls() {
 

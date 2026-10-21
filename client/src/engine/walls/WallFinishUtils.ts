@@ -1,12 +1,12 @@
 
 import { Vector3 } from "three";
 
-import type { Wall } from "../../engine/walls/WallTypes";
-import type { Region } from "../../engine/regions/Polygon";
+import type { Wall } from "./WallTypes";
+import type { Region } from "../regions/Polygon";
 
-import { pointInPolygon } from "../../engine/regions/Polygon";
+import { pointInPolygon } from "../regions/Polygon";
 
-const WALL_SIDE_FINISH_BUCKET = "__wall_side_finishes__";
+export const WALL_SIDE_FINISH_BUCKET = "__wall_side_finishes__";
 
 export interface WallFinishSide {
     regionId: string;
@@ -16,6 +16,12 @@ export interface WallFinishSide {
 }
 
 export type WallSide = 1 | -1;
+
+export interface WallFinishAssignment {
+    wallId: string;
+    materialId: string;
+    side: WallSide;
+}
 
 /**
  * Separate storage keys allow the two faces of one wall to
@@ -172,6 +178,38 @@ export function getRegionWallSide(
     }
 
     return null;
+}
+
+/**
+ * Builds one assignment per room-facing wall face, including both
+ * sides of a wall shared by two regions.
+ */
+export function getRegionWallFinishAssignments(
+    regions: Region[],
+    materialId: string
+): WallFinishAssignment[] {
+    const assignments = new Map<string, WallFinishAssignment>();
+
+    for (const region of regions) {
+        for (const wall of region.walls) {
+            const side = getRegionWallSide(wall, region);
+
+            if (side === null) {
+                continue;
+            }
+
+            assignments.set(
+                getWallFinishSideKey(wall.id, side),
+                {
+                    wallId: wall.id,
+                    materialId,
+                    side
+                }
+            );
+        }
+    }
+
+    return Array.from(assignments.values());
 }
 
 /**

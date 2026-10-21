@@ -41,6 +41,14 @@ export type EditorAction =
     | { type: "SET_FLOOR_FINISH"; payload: { regionId: string; materialId: string; }; }
     | { type: "SET_FLOOR_FINISH_ALL"; payload: string; }
     |{ type: "SET_WALL_FINISH"; payload: {regionId: string | null; wallId: string; materialId: string; side?: 1 | -1;};}
+    | {
+        type: "SET_WALL_FINISHES";
+        payload: Array<{
+            wallId: string;
+            materialId: string;
+            side: 1 | -1;
+        }>;
+    }
     | { type: "CONFIRM_LAYOUT"; }
     | { type: "LOAD_PROJECT"; payload: SavedProjectData; }
     | { type: "ADD_DOOR"; payload: Door; }

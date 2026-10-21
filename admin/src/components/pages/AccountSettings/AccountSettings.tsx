@@ -220,6 +220,50 @@ export default function AccountSettings({
 
   }
 
+  async function handleReactivate() {
+    if (role !== "superadmin") {
+      throw new Error(
+        "Only superadmins can reactivate customer accounts."
+      );
+    }
+
+    if (!id) {
+      throw new Error("No account ID was found.");
+    }
+
+    if (type !== "user") {
+      throw new Error(
+        "Only customer accounts can be reactivated."
+      );
+    }
+
+    const currentUser = auth.currentUser;
+
+    if (!currentUser) {
+      throw new Error(
+        "Sign in with a superadmin account to reactivate customer accounts."
+      );
+    }
+
+    const token = await currentUser.getIdToken();
+    const response = await fetch(
+      `http://localhost:5000/api/accounts/${encodeURIComponent(id)}/reactivate`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      throw new Error(
+        result.message || "Failed to reactivate customer account."
+      );
+    }
+  }
+
 
   //==================================================
   // RENDER
@@ -420,6 +464,12 @@ export default function AccountSettings({
               onSuspend={
                 role === "superadmin"
                   ? handleSuspend
+                  : undefined
+              }
+
+              onReactivate={
+                role === "superadmin"
+                  ? handleReactivate
                   : undefined
               }
 

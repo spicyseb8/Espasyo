@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { Armchair, Bell, Loader2, LogOut, Settings } from "lucide-react";
+import { Bell, Loader2, LogOut, Settings } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 
 import { useAuth } from "@/context/AuthContext";
@@ -120,9 +120,12 @@ export default function NavBar() {
       >
         <div className={`navbar__inner${scrolled ? " is-scrolled" : ""}`}>
           <Link to="/" className="navbar__logo" aria-label="Espasyo home">
-            <span className="navbar__logo-badge">
-              <Armchair className="navbar__logo-icon" strokeWidth={1.75} />
-            </span>
+            <img
+              src="/logo.png"
+              alt=""
+              aria-hidden="true"
+              className="navbar__logo-image"
+            />
             <span className="navbar__logo-text">Espasyo</span>
           </Link>
 
