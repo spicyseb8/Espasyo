@@ -74,6 +74,8 @@ export interface SavedDoor {
 
     height: number;
 
+    wallWidth?: number;
+
     depth: number;
 
 }
@@ -98,6 +100,8 @@ export interface SavedWindow {
     width: number;
 
     height: number;
+
+    wallWidth?: number;
 
     depth: number;
 
@@ -187,6 +191,12 @@ export interface SavedProjectData {
     projectName: string;
 
     ownerId: string;
+
+    workflowType?: "legacy" | "admin-managed";
+    structuralOwner?: "admin";
+    structuralStatus?: "draft" | "published";
+    structuralRevision?: number;
+    publishedStructuralRevision?: number;
 
     schemaVersion: number;
 

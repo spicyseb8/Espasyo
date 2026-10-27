@@ -84,6 +84,14 @@ export default function BuildInteractionEvents() {
                     return;
                 }
 
+                if (
+                    state.workflowType === "admin-managed" &&
+                    buildInteraction.isMoving()
+                ) {
+                    buildInteraction.cancelMove();
+                    return;
+                }
+
 
                 //==================================================
                 // EXISTING DOOR / WINDOW MOVE
@@ -351,6 +359,16 @@ export default function BuildInteractionEvents() {
                         BuildTool.Opening
                 ) {
 
+                    return;
+                }
+
+                if (
+                    state.workflowType === "admin-managed" &&
+                    (
+                        state.buildTool === BuildTool.Door ||
+                        state.buildTool === BuildTool.Window
+                    )
+                ) {
                     return;
                 }
 
@@ -847,6 +865,8 @@ export default function BuildInteractionEvents() {
             gl,
 
             state.buildTool,
+
+            state.workflowType,
 
             state.selectedAsset,
 

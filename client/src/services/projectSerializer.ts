@@ -1,16 +1,29 @@
 import type { EditorState } from "../context/editor/types";
 import { calculateCostEstimate } from "../engine/cost/CostEstimator";
 
+export interface ProjectStructureMetadata {
+    workflowType?: "legacy" | "admin-managed";
+    structuralOwner?: "admin";
+    structuralStatus?: "draft" | "published";
+    structuralRevision?: number;
+    publishedStructuralRevision?: number;
+}
+
 export function createProjectData(
     state: EditorState,
     projectId: string,
     projectName: string,
-    ownerId: string
+    ownerId: string,
+    structureMetadata: ProjectStructureMetadata = {}
 ) {
+    const managedStructure =
+        structureMetadata.workflowType === "admin-managed";
+
     return {
         projectId,
         projectName,
         ownerId,
+        ...structureMetadata,
         schemaVersion: 1,
         savedAt: new Date().toISOString(),
         wallHeight: state.wallHeight,
@@ -71,6 +84,7 @@ export function createProjectData(
             rotationY: window.rotationY,
             width: window.width,
             height: window.height,
+            wallWidth: window.wallWidth,
             depth: window.depth
         })),
         furniture: state.furniture.map(item => ({
@@ -121,11 +135,31 @@ export function createProjectData(
         archRise: state.archRise,
         openingWidth: state.openingWidth,
         openingHeight: state.openingHeight,
-        blueprint: state.blueprint
-            ? {
-                ...state.blueprint
-            }
-            : null,
+        blueprint: managedStructure
+            ? null
+            : state.blueprint
+                ? {
+                    ...state.blueprint
+                }
+                : null,
+        costEstimate: calculateCostEstimate(state)
+    };
+}
+
+export function createManagedInteriorData(state: EditorState) {
+    return {
+        furniture: state.furniture.map(item => ({
+            id: item.id,
+            assetId: item.assetId,
+            position: { x: item.position.x, y: item.position.y, z: item.position.z },
+            rotationY: item.rotationY,
+            modelOffset: { x: item.modelOffset.x, y: item.modelOffset.y, z: item.modelOffset.z },
+            width: item.width,
+            depth: item.depth,
+            height: item.height
+        })),
+        floorFinishes: { ...state.floorFinishes },
+        wallFinishes: Object.fromEntries(Object.entries(state.wallFinishes).map(([regionId, walls]) => [regionId, { ...walls }])),
         costEstimate: calculateCostEstimate(state)
     };
 }

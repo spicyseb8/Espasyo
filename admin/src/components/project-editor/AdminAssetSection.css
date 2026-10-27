@@ -1,0 +1,222 @@
+.admin-asset-section {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    overflow: hidden;
+    border: 0;
+    border-top: 1px solid rgba(0, 0, 0, .08);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.admin-asset-section-header {
+    display: flex;
+    width: 100%;
+    min-height: 46px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: rgba(0, 0, 0, .55);
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .12em;
+    text-align: left;
+    text-transform: uppercase;
+}
+
+.admin-asset-section-header:hover {
+    background: transparent;
+    color: #1b1b1b;
+}
+
+.admin-asset-section-header > svg {
+    flex: 0 0 auto;
+    color: #71717a;
+    transition: transform .2s ease;
+}
+
+.admin-asset-section-header > svg.open,
+.admin-asset-settings-toggle svg.open {
+    transform: rotate(180deg);
+}
+
+.admin-asset-section-title {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.admin-asset-section-title > svg {
+    color: #1b1b1b;
+}
+
+.admin-asset-count {
+    display: inline-flex;
+    min-width: 20px;
+    height: 18px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, .05);
+    color: rgba(0, 0, 0, .52);
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.admin-asset-collapse,
+.admin-asset-settings-collapse {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows .22s ease;
+}
+
+.admin-asset-collapse.open,
+.admin-asset-settings-collapse.open {
+    grid-template-rows: 1fr;
+}
+
+.admin-asset-collapse-inner,
+.admin-asset-fields {
+    min-height: 0;
+    overflow: hidden;
+}
+
+.admin-asset-grid {
+    display: grid;
+    max-height: 390px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    overflow-y: auto;
+    padding: 4px 0 14px;
+    scrollbar-width: thin;
+}
+
+.admin-asset-empty {
+    margin: 0;
+    padding: 8px 14px 14px;
+    color: #71717a;
+    font-size: 11px;
+    text-align: center;
+}
+
+.admin-asset-divider {
+    height: 1px;
+    margin: 0 14px;
+    background: #e5e7eb;
+}
+
+.admin-asset-settings-toggle {
+    display: flex;
+    width: 100%;
+    min-height: 38px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+    border: 0;
+    background: transparent;
+    color: #71717a;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.admin-asset-settings-toggle svg {
+    transition: transform .2s ease;
+}
+
+.admin-asset-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding: 0 14px 12px;
+}
+
+.admin-asset-field {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 5px;
+    color: #52525b;
+    font-size: 11px;
+}
+
+.admin-asset-field-input {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.admin-asset-field-input input {
+    width: 100%;
+    min-width: 0;
+    height: 34px;
+    padding: 0 7px;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #18181b;
+}
+
+.admin-asset-field-input small {
+    padding-right: 8px;
+    color: #71717a;
+}
+
+.admin-asset-metadata {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: #71717a;
+    font-size: 10px;
+}
+
+.admin-asset-apply {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding: 0 14px 14px;
+}
+
+.admin-asset-apply p {
+    margin: 0;
+    color: #71717a;
+    font-size: 10px;
+    line-height: 1.4;
+}
+
+.admin-asset-apply button {
+    min-height: 36px;
+    border: 1px solid #18181b;
+    border-radius: 8px;
+    background: #18181b;
+    color: #fff;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.admin-asset-apply button.active {
+    background: #fff;
+    color: #18181b;
+}
+
+.admin-asset-apply button:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .admin-asset-section-header > svg,
+    .admin-asset-settings-toggle svg,
+    .admin-asset-collapse,
+    .admin-asset-settings-collapse {
+        transition: none;
+    }
+}

@@ -19,12 +19,17 @@ interface AdminDoorsProps {
     wallThickness:
         number;
 
+    onDoorSelect?: (doorId: string) => void;
+    hiddenDoorId?: string | null;
+
 }
 
 
 export default function AdminDoors({
     doors,
-    wallThickness
+    wallThickness,
+    onDoorSelect,
+    hiddenDoorId
 }: AdminDoorsProps) {
     return (
 
@@ -33,6 +38,8 @@ export default function AdminDoors({
             {
                 doors.map(
                     door => {
+
+                        if (door.id === hiddenDoorId) return null;
 
                         const asset = getCachedDoorWindowAsset(door.assetId);
 
@@ -68,6 +75,8 @@ export default function AdminDoors({
                                 wallThickness={
                                     wallThickness
                                 }
+
+                                onSelect={onDoorSelect}
 
                             />
 

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Html } from "@react-three/drei";
 import {
     CanvasTexture,
     DoubleSide,
@@ -8,6 +9,7 @@ import {
     Texture,
     Vector3
 } from "three";
+import type { ThreeEvent } from "@react-three/fiber";
 import type { Region } from "../engine/regions/Polygon";
 import type { Material } from "../engine/materials/MaterialTypes";
 import {
@@ -22,6 +24,10 @@ interface AdminFloorProps {
     region: Region;
     materials: Material[];
     floorFinishes: Record<string, string>;
+    selected: boolean;
+    onSelect?: (regionId: string) => void;
+    allowInteractionPropagation?: boolean;
+    showAreaLabel?: boolean;
 }
 
 function useFloorTexture(
@@ -55,218 +61,93 @@ function useFloorTexture(
     return getCachedFloorTexture(url) ?? loadedTexture;
 }
 
-function distanceToSegment(
-    point: Vector3,
-    start: Vector3,
-    end: Vector3
-): number {
+function distanceToSegment(point: Vector3, start: Vector3, end: Vector3): number {
     const dx = end.x - start.x;
     const dz = end.z - start.z;
     const lengthSquared = dx * dx + dz * dz;
-
     if (lengthSquared <= 0.000001) {
-        return Math.sqrt(
-            (point.x - start.x) ** 2 +
-            (point.z - start.z) ** 2
-        );
+        return Math.hypot(point.x - start.x, point.z - start.z);
     }
 
-    let t =
-        (
-            (point.x - start.x) * dx +
-            (point.z - start.z) * dz
-        ) /
-        lengthSquared;
-
-    t = Math.max(
-        0,
-        Math.min(1, t)
-    );
-
-    const closestX = start.x + t * dx;
-    const closestZ = start.z + t * dz;
-
-    return Math.sqrt(
-        (point.x - closestX) ** 2 +
-        (point.z - closestZ) ** 2
+    const t = Math.max(0, Math.min(1,
+        ((point.x - start.x) * dx + (point.z - start.z) * dz) / lengthSquared
+    ));
+    return Math.hypot(
+        point.x - (start.x + t * dx),
+        point.z - (start.z + t * dz)
     );
 }
 
-function distanceToPolygonBoundary(
-    point: Vector3,
-    polygon: Vector3[]
-): number {
+function distanceToPolygonBoundary(point: Vector3, polygon: Vector3[]): number {
     let minimum = Infinity;
-
-    for (
-        let i = 0;
-        i < polygon.length;
-        i++
-    ) {
-        const start = polygon[i];
-        const end = polygon[(i + 1) % polygon.length];
-
+    for (let i = 0; i < polygon.length; i++) {
         minimum = Math.min(
             minimum,
-            distanceToSegment(
-                point,
-                start,
-                end
-            )
+            distanceToSegment(point, polygon[i], polygon[(i + 1) % polygon.length])
         );
     }
-
     return minimum;
 }
 
-function pointInPolygon(
-    point: Vector3,
-    polygon: Vector3[]
-): boolean {
-    if (polygon.length < 3) {
-        return false;
-    }
-
+function pointInPolygon(point: Vector3, polygon: Vector3[]): boolean {
+    if (polygon.length < 3) return false;
     let inside = false;
-
-    for (
-        let i = 0,
-        j = polygon.length - 1;
-        i < polygon.length;
-        j = i++
-    ) {
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
         const a = polygon[i];
         const b = polygon[j];
-
         const intersects =
             (a.z > point.z) !== (b.z > point.z) &&
-            point.x <
-                ((b.x - a.x) * (point.z - a.z)) /
-                    (b.z - a.z) +
-                    a.x;
-
-        if (intersects) {
-            inside = !inside;
-        }
+            point.x < ((b.x - a.x) * (point.z - a.z)) / (b.z - a.z) + a.x;
+        if (intersects) inside = !inside;
     }
-
     return inside;
 }
 
-function computeLabelAnchor(
-    region: Region
-): {
-    point: Vector3;
-    clearance: number;
-} {
+function computeLabelAnchor(region: Region): { point: Vector3; clearance: number } {
     const outer = (region.corners ?? []).filter(Boolean);
-
     if (outer.length < 3) {
-        return {
-            point: new Vector3(),
-            clearance: 0.5
-        };
+        return { point: new Vector3(), clearance: 0.5 };
     }
 
     const holes = (region.boundaryLoops ?? [])
         .slice(1)
-        .map(loop =>
-            loop.corners.filter(Boolean)
-        )
+        .map(loop => loop.corners.filter(Boolean))
         .filter(hole => hole.length >= 3);
-
-    const minX = Math.min(
-        ...outer.map(point => point.x)
-    );
-    const maxX = Math.max(
-        ...outer.map(point => point.x)
-    );
-    const minZ = Math.min(
-        ...outer.map(point => point.z)
-    );
-    const maxZ = Math.max(
-        ...outer.map(point => point.z)
-    );
-
-    const fallback = new Vector3(
-        (minX + maxX) * 0.5,
-        0,
-        (minZ + maxZ) * 0.5
-    );
-
+    const minX = Math.min(...outer.map(point => point.x));
+    const maxX = Math.max(...outer.map(point => point.x));
+    const minZ = Math.min(...outer.map(point => point.z));
+    const maxZ = Math.max(...outer.map(point => point.z));
+    const fallback = new Vector3((minX + maxX) * 0.5, 0, (minZ + maxZ) * 0.5);
     const resolution = 20;
     const stepX = (maxX - minX) / resolution;
     const stepZ = (maxZ - minZ) / resolution;
+    let best: { point: Vector3; clearance: number } | null = null;
 
-    let best:
-        | {
-            point: Vector3;
-            clearance: number;
-        }
-        | null = null;
-
-    for (
-        let i = 0;
-        i <= resolution;
-        i++
-    ) {
-        for (
-            let j = 0;
-            j <= resolution;
-            j++
-        ) {
-            const point = new Vector3(
-                minX + i * stepX,
-                0,
-                minZ + j * stepZ
-            );
-
-            if (!pointInPolygon(point, outer)) {
+    for (let i = 0; i <= resolution; i++) {
+        for (let j = 0; j <= resolution; j++) {
+            const point = new Vector3(minX + i * stepX, 0, minZ + j * stepZ);
+            if (!pointInPolygon(point, outer) || holes.some(hole => pointInPolygon(point, hole))) {
                 continue;
             }
-
-            if (
-                holes.some(hole =>
-                    pointInPolygon(point, hole)
-                )
-            ) {
-                continue;
-            }
-
             const clearance = Math.min(
-                distanceToPolygonBoundary(
-                    point,
-                    outer
-                ),
-                ...holes.map(hole =>
-                    distanceToPolygonBoundary(
-                        point,
-                        hole
-                    )
-                )
+                distanceToPolygonBoundary(point, outer),
+                ...holes.map(hole => distanceToPolygonBoundary(point, hole))
             );
-
-            if (!best || clearance > best.clearance) {
-                best = {
-                    point,
-                    clearance
-                };
-            }
+            if (!best || clearance > best.clearance) best = { point, clearance };
         }
     }
 
-    return (
-        best ?? {
-            point: fallback,
-            clearance: 0.5
-        }
-    );
+    return best ?? { point: fallback, clearance: 0.5 };
 }
 
 export default function AdminFloor({
     region,
     materials,
-    floorFinishes
+    floorFinishes,
+    selected,
+    onSelect,
+    allowInteractionPropagation = false,
+    showAreaLabel = true
 }: AdminFloorProps) {
     const selectedMaterialId = floorFinishes[region.id];
 
@@ -380,74 +261,68 @@ export default function AdminFloor({
         return new ShapeGeometry(shape);
     }, [region.boundaryLoops]);
 
-    const floorArea = Math.abs(region.area || 0);
-
-    const labelAnchor = useMemo(
-        () => computeLabelAnchor(region),
-        [region.corners, region.boundaryLoops]
+    const highlightGeometry = useMemo(
+        () => selected ? geometry?.clone() ?? null : null,
+        [geometry, selected]
     );
 
+    const floorArea = Math.abs(region.area || 0);
+    const labelAnchor = useMemo(
+        () => showAreaLabel ? computeLabelAnchor(region) : null,
+        [region, showAreaLabel]
+    );
     const labelTexture = useMemo(() => {
+        if (!showAreaLabel) return null;
         const canvas = document.createElement("canvas");
-
         canvas.width = 1024;
         canvas.height = 512;
-
         const context = canvas.getContext("2d");
-
-        if (!context) {
-            return null;
-        }
+        if (!context) return null;
 
         const label = `${floorArea.toFixed(2)} m²`;
-
-        context.clearRect(
-            0,
-            0,
-            1024,
-            512
-        );
-
+        context.clearRect(0, 0, canvas.width, canvas.height);
         context.textAlign = "center";
         context.textBaseline = "middle";
         context.lineJoin = "round";
         context.font = "800 140px Arial";
         context.lineWidth = 14;
         context.strokeStyle = "rgba(0,0,0,0.45)";
-        context.strokeText(label, 512, 256);
+        context.strokeText(label, canvas.width / 2, canvas.height / 2);
         context.fillStyle = "rgba(255,255,255,0.96)";
-        context.fillText(label, 512, 256);
+        context.fillText(label, canvas.width / 2, canvas.height / 2);
 
         const texture = new CanvasTexture(canvas);
-
         texture.needsUpdate = true;
-
         return texture;
-    }, [floorArea]);
+    }, [floorArea, showAreaLabel]);
 
-    useEffect(() => {
-        return () => {
-            labelTexture?.dispose();
-        };
-    }, [labelTexture]);
+    useEffect(() => () => labelTexture?.dispose(), [labelTexture]);
 
     const floorY = region.parentRegionId
         ? 0.02
         : 0;
+    const selectedAreaAnchor = useMemo(
+        () => selected ? computeLabelAnchor(region) : null,
+        [region, selected]
+    );
 
     if (!geometry) {
         return null;
     }
 
-    const handleClick = (event: any) => {
-        event.stopPropagation();
-
+    const handleClick = (event: ThreeEvent<MouseEvent>) => {
         emitAdminCommentTarget({
             targetType: "floor",
             targetId: region.id,
             targetLabel: `Floor`,
             regionId: region.id
         });
+        if (onSelect) {
+            event.stopPropagation();
+            onSelect(region.id);
+        } else if (!allowInteractionPropagation) {
+            event.stopPropagation();
+        }
     };
 
     return (
@@ -477,8 +352,7 @@ export default function AdminFloor({
                     side={DoubleSide}
                 />
             </mesh>
-
-            {labelTexture && (
+            {showAreaLabel && labelTexture && labelAnchor && (
                 <mesh
                     position={[
                         labelAnchor.point.x,
@@ -489,14 +363,8 @@ export default function AdminFloor({
                 >
                     <planeGeometry
                         args={[
-                            Math.min(
-                                0.9,
-                                labelAnchor.clearance * 1.7
-                            ),
-                            Math.min(
-                                0.45,
-                                labelAnchor.clearance * 0.85
-                            )
+                            Math.min(0.9, labelAnchor.clearance * 1.7),
+                            Math.min(0.45, labelAnchor.clearance * 0.85)
                         ]}
                     />
                     <meshBasicMaterial
@@ -504,6 +372,39 @@ export default function AdminFloor({
                         transparent
                         depthWrite={false}
                         alphaTest={0.05}
+                        side={DoubleSide}
+                    />
+                </mesh>
+            )}
+            {selected && selectedAreaAnchor && (
+                <Html
+                    position={[
+                        selectedAreaAnchor.point.x,
+                        floorY + 0.06,
+                        selectedAreaAnchor.point.z
+                    ]}
+                    center
+                    zIndexRange={[1000, 0]}
+                    style={{ pointerEvents: "none", whiteSpace: "nowrap" }}
+                >
+                    <span className="admin-structure-area-label">
+                        {`${Math.abs(region.area).toFixed(2)} m²`}
+                    </span>
+                </Html>
+            )}
+            {highlightGeometry && (
+                <mesh
+                    geometry={highlightGeometry}
+                    position={[0, floorY + 0.008, 0]}
+                    rotation={[-Math.PI / 2, 0, 0]}
+                    raycast={() => null}
+                    renderOrder={2}
+                >
+                    <meshBasicMaterial
+                        color="#3b82f6"
+                        transparent
+                        opacity={0.18}
+                        depthWrite={false}
                         side={DoubleSide}
                     />
                 </mesh>

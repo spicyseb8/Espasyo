@@ -1,0 +1,510 @@
+.admin-floor-plan-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    box-sizing: border-box;
+}
+
+.admin-floor-group {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 14px;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .06);
+}
+
+.admin-floor-group h3 {
+    margin: 0 0 12px;
+    color: #71717a;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+}
+
+.admin-floor-tools {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.admin-floor-tools button {
+    min-height: 62px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 0;
+    border-radius: 10px;
+    background: #f4f4f5;
+    color: #27272a;
+    cursor: pointer;
+    font-size: 11px;
+}
+
+.admin-floor-tools button.active {
+    background: #18181b;
+    color: #fff;
+}
+
+.admin-floor-tools button:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+.admin-floor-history,
+.admin-floor-blueprint-actions {
+    display: flex;
+    gap: 7px;
+    margin-top: 10px;
+}
+
+.admin-floor-group button,
+.admin-floor-upload {
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 0 10px;
+    border: 1px solid #e4e4e7;
+    border-radius: 8px;
+    background: #fff;
+    color: #27272a;
+    cursor: pointer;
+    font: inherit;
+    font-size: 12px;
+}
+
+.admin-floor-group button:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+.admin-floor-history button {
+    flex: 1;
+}
+
+.admin-floor-history .admin-floor-delete,
+.admin-floor-group .admin-floor-remove-blueprint {
+    color: #b42318;
+}
+
+.admin-floor-group .admin-floor-section-toggle {
+    width: 100%;
+    justify-content: space-between;
+    min-height: 32px;
+    padding: 0;
+    border: 0;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.admin-floor-section-toggle svg {
+    transition: transform .2s ease;
+}
+
+.admin-floor-section-toggle svg.open {
+    transform: rotate(180deg);
+}
+
+.admin-floor-blueprint {
+    padding: 8px 14px 14px;
+}
+
+.admin-floor-blueprint-content {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 10px;
+}
+
+.admin-floor-upload {
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.admin-floor-upload input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+}
+
+.admin-floor-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: #52525b;
+    font-size: 11px;
+}
+
+.admin-floor-field input[type="number"] {
+    width: 100%;
+    min-height: 36px;
+    box-sizing: border-box;
+    padding: 0 9px;
+    border: 1px solid #e4e4e7;
+    border-radius: 8px;
+    color: #18181b;
+}
+
+.admin-floor-field input[type="range"] {
+    width: 100%;
+}
+
+.admin-floor-calibration {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+    border-radius: 8px;
+    background: #f4f4f5;
+}
+
+.admin-floor-note,
+.admin-floor-confirm p,
+.admin-floor-measurements p,
+.admin-floor-calibration p,
+.admin-floor-status {
+    margin: 0;
+    color: #71717a;
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.admin-floor-group .secondary {
+    background: #f4f4f5;
+}
+
+.admin-floor-measurements {
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    padding-top: 10px;
+}
+
+.admin-floor-measurements > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 10px;
+    border-radius: 8px;
+    background: #f4f4f5;
+    font-size: 12px;
+}
+
+.admin-floor-measurements strong {
+    color: #18181b;
+}
+
+.admin-floor-confirm {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.admin-floor-confirm h3 {
+    margin-bottom: 0;
+}
+
+.admin-floor-confirm button {
+    width: 100%;
+    background: #18181b;
+    color: #fff;
+}
+
+.admin-floor-confirm > p:not(:first-of-type) {
+    margin: 0;
+}
+
+.admin-floor-confirm p {
+    margin: 0;
+    color: #52525b;
+    font-size: 12px;
+}
+
+.admin-floor-status {
+    color: #2563eb;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .admin-floor-section-toggle svg {
+        transition: none;
+    }
+}
+
+.admin-floor-plan-panel {
+    gap: 0;
+    padding: 2px 16px 16px;
+}
+
+.admin-floor-group {
+    padding: 15px 0;
+    border: 0;
+    border-bottom: 1px solid rgba(0, 0, 0, .08);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.admin-floor-group:first-child {
+    padding-top: 10px;
+}
+
+.admin-floor-group h3 {
+    margin: 0 0 12px;
+    color: rgba(0, 0, 0, .5);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .14em;
+}
+
+.admin-floor-tools {
+    gap: 7px;
+}
+
+.admin-floor-tools button {
+    min-height: 60px;
+    border-radius: 9px;
+    background: rgba(0, 0, 0, .045);
+    color: #1b1b1b;
+    transition: background .15s ease, color .15s ease;
+}
+
+.admin-floor-tools button:hover:not(:disabled) {
+    background: rgba(0, 0, 0, .075);
+}
+
+.admin-floor-tools button.active {
+    background: #1b1b1b;
+    color: #fff;
+}
+
+.admin-floor-group button,
+.admin-floor-upload {
+    min-height: 36px;
+    border-color: rgba(0, 0, 0, .1);
+    border-radius: 8px;
+    color: #1b1b1b;
+    font-size: 11px;
+}
+
+.admin-floor-blueprint {
+    padding: 0;
+    overflow: visible;
+}
+
+.admin-floor-group.admin-floor-blueprint .admin-floor-section-toggle {
+    min-height: 36px;
+    padding: 0 12px;
+    letter-spacing: .08em;
+}
+
+.admin-floor-group .admin-floor-section-toggle {
+    min-height: 46px;
+    color: rgba(0, 0, 0, .55);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+}
+
+.admin-floor-blueprint-content {
+    gap: 7px;
+    padding: 0 12px 10px;
+}
+
+.admin-floor-blueprint-name {
+    overflow: hidden;
+    color: rgba(0, 0, 0, .56);
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.admin-floor-blueprint .admin-floor-blueprint-actions {
+    gap: 6px;
+    margin-top: 0;
+}
+
+.admin-floor-blueprint .admin-floor-blueprint-actions button {
+    flex: 1;
+    min-height: 32px;
+}
+
+.admin-floor-blueprint .admin-floor-field {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+}
+
+.admin-floor-blueprint .admin-floor-field input[type="range"] {
+    flex: 1;
+    min-width: 0;
+}
+
+.admin-floor-blueprint .admin-floor-field input[type="number"] {
+    flex: 1;
+    min-width: 0;
+}
+
+.admin-floor-upload {
+    min-height: 34px;
+    border-style: dashed;
+    background: rgba(0, 0, 0, .025);
+}
+
+.admin-floor-field {
+    gap: 5px;
+    color: rgba(0, 0, 0, .62);
+    font-size: 11px;
+}
+
+.admin-floor-field input[type="number"],
+.admin-floor-input-wrap {
+    min-height: 36px;
+    border-color: rgba(0, 0, 0, .1);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, .035);
+}
+
+.admin-floor-input-wrap {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    border: 1px solid rgba(0, 0, 0, .1);
+}
+
+.admin-floor-input-wrap input {
+    width: 100%;
+    min-width: 0;
+    height: 34px;
+    padding: 0 9px;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #1b1b1b;
+}
+
+.admin-floor-input-wrap small {
+    padding-right: 9px;
+    color: rgba(0, 0, 0, .5);
+}
+
+.admin-floor-wall-settings {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.admin-floor-measurement-toggle {
+    display: flex;
+    min-height: 42px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 8px;
+    color: #333;
+    font-size: 11px;
+}
+
+.admin-floor-measurement-toggle button {
+    position: relative;
+    width: 36px;
+    min-width: 36px;
+    height: 21px;
+    min-height: 21px;
+    padding: 2px;
+    justify-content: flex-start;
+    border: 0;
+    border-radius: 999px;
+    background: #d4d4d8;
+    transition: background .15s ease;
+}
+
+.admin-floor-measurement-toggle button span {
+    display: block;
+    width: 17px;
+    height: 17px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .18);
+    transition: transform .15s ease;
+}
+
+.admin-floor-measurement-toggle button.on {
+    background: #1b1b1b;
+}
+
+.admin-floor-measurement-toggle button.on span {
+    transform: translateX(15px);
+}
+
+.admin-floor-group .admin-floor-section-toggle svg {
+    color: rgba(0, 0, 0, .4);
+}
+
+.admin-floor-measurements {
+    gap: 9px;
+    padding-top: 0;
+}
+
+.admin-floor-measurements > div {
+    padding: 0;
+    background: transparent;
+    font-size: 12px;
+}
+
+.admin-floor-measurements strong {
+    font-variant-numeric: tabular-nums;
+}
+
+.admin-floor-confirm {
+    gap: 10px;
+    padding-top: 16px;
+    border-bottom: 0;
+}
+
+.admin-floor-confirm button {
+    min-height: 38px;
+    border-radius: 999px;
+    background: #1b1b1b;
+}
+
+.admin-floor-group .admin-floor-remove-blueprint {
+    align-self: flex-start;
+    min-height: 30px;
+}
+
+.admin-floor-calibration {
+    gap: 5px;
+    padding: 7px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, .035);
+}
+
+.admin-floor-blueprint .admin-floor-calibration .admin-floor-field {
+    align-items: flex-start;
+}
+
+.admin-floor-blueprint .admin-floor-calibration button {
+    min-height: 30px;
+}
+
+.admin-floor-blueprint .admin-floor-note {
+    font-size: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .admin-floor-tools button,
+    .admin-floor-measurement-toggle button,
+    .admin-floor-measurement-toggle button span {
+        transition: none;
+    }
+}

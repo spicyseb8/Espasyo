@@ -31,6 +31,7 @@ export function editorReducer(
             };
         case "ADD_WALL":
             if (state.walkthroughMode) return state;
+            if (state.workflowType === "admin-managed") return state;
             return {
                 ...state,
                 walls: [
@@ -40,24 +41,28 @@ export function editorReducer(
             };
         case "SET_WALLS":
             if (state.walkthroughMode) return state;
+            if (state.workflowType === "admin-managed") return state;
             return {
                 ...state,
                 walls: action.payload
             };
         case "SET_CORNERS":
             if (state.walkthroughMode) return state;
+            if (state.workflowType === "admin-managed") return state;
             return {
                 ...state,
                 corners: action.payload
             };
         case "SET_WALL_HEIGHT":
             if (state.walkthroughMode) return state;
+            if (state.workflowType === "admin-managed") return state;
             return {
                 ...state,
                 wallHeight: action.payload
             };
         case "SET_WALL_THICKNESS":
             if (state.walkthroughMode) return state;
+            if (state.workflowType === "admin-managed") return state;
             return {
                 ...state,
                 wallThickness: action.payload
@@ -124,6 +129,7 @@ export function editorReducer(
         }
         case "REMOVE_WALL":
             if (state.walkthroughMode) return state;
+            if (state.workflowType === "admin-managed") return state;
             return {
                 ...state,
                 walls:
@@ -153,6 +159,7 @@ export function editorReducer(
             };
         case "REMOVE_CORNER":
             if (state.walkthroughMode) return state;
+            if (state.workflowType === "admin-managed") return state;
             return {
                 ...state,
                 corners:
@@ -377,10 +384,11 @@ export function editorReducer(
             return {
                 ...state,
                 layoutConfirmed: true,
-                activeTab: "build"
+                activeTab: "furniture"
             };
         case "ADD_DOOR":
             if (state.walkthroughMode) return state;
+            if (state.workflowType === "admin-managed") return state;
             return {
                 ...state,
                 doors: [
@@ -390,6 +398,7 @@ export function editorReducer(
             };
         case "UPDATE_DOOR":
             if (state.walkthroughMode) return state;
+            if (state.workflowType === "admin-managed") return state;
             return {
                 ...state,
                 doors:
@@ -406,6 +415,7 @@ export function editorReducer(
             };
         case "REMOVE_DOOR":
             if (state.walkthroughMode) return state;
+            if (state.workflowType === "admin-managed") return state;
             return {
                 ...state,
                 doors:
@@ -422,6 +432,7 @@ export function editorReducer(
             };
         case "ADD_WINDOW":
             if (state.walkthroughMode) return state;
+            if (state.workflowType === "admin-managed") return state;
             return {
                 ...state,
                 windows: [
@@ -431,6 +442,7 @@ export function editorReducer(
             };
         case "UPDATE_WINDOW":
             if (state.walkthroughMode) return state;
+            if (state.workflowType === "admin-managed") return state;
             return {
                 ...state,
                 windows:
@@ -447,6 +459,7 @@ export function editorReducer(
             };
         case "REMOVE_WINDOW":
             if (state.walkthroughMode) return state;
+            if (state.workflowType === "admin-managed") return state;
             return {
                 ...state,
                 windows:
@@ -509,6 +522,7 @@ export function editorReducer(
             };
         case "ADD_OPENING":
             if (state.walkthroughMode) return state;
+            if (state.workflowType === "admin-managed") return state;
             return {
                 ...state,
                 openings: [
@@ -553,6 +567,7 @@ export function editorReducer(
             };
         case "SET_BLUEPRINT":
             if (state.walkthroughMode) return state;
+            if (state.workflowType === "admin-managed") return state;
             return {
                 ...state,
                 blueprint:
@@ -560,6 +575,7 @@ export function editorReducer(
             };
         case "REMOVE_BLUEPRINT":
             if (state.walkthroughMode) return state;
+            if (state.workflowType === "admin-managed") return state;
             return {
                 ...state,
                 blueprint: null
@@ -586,6 +602,7 @@ export function editorReducer(
             };
         case "UPDATE_BLUEPRINT":
             if (state.walkthroughMode) return state;
+            if (state.workflowType === "admin-managed") return state;
             if (!state.blueprint) return state;
             return {
                 ...state,
@@ -596,6 +613,7 @@ export function editorReducer(
             };
         case "SET_BLUEPRINT_LOCKED":
             if (state.walkthroughMode) return state;
+            if (state.workflowType === "admin-managed") return state;
             if (!state.blueprint) return state;
             return {
                 ...state,
@@ -607,6 +625,7 @@ export function editorReducer(
             };
         case "SET_BLUEPRINT_OPACITY":
             if (state.walkthroughMode) return state;
+            if (state.workflowType === "admin-managed") return state;
             if (!state.blueprint) return state;
             return {
                 ...state,
@@ -624,6 +643,7 @@ export function editorReducer(
             };
         case "SET_BLUEPRINT_SELECTED":
             if (state.walkthroughMode) return state;
+            if (state.workflowType === "admin-managed") return state;
             if (!state.blueprint) return state;
             return {
                 ...state,
@@ -635,6 +655,7 @@ export function editorReducer(
             };
         case "SET_BLUEPRINT_CALIBRATION_MODE":
             if (state.walkthroughMode) return state;
+            if (state.workflowType === "admin-managed") return state;
             return {
                 ...state,
                 blueprintCalibrationMode:
@@ -961,6 +982,8 @@ export function editorReducer(
                             savedWindow.width,
                         height:
                             savedWindow.height,
+                        wallWidth:
+                            savedWindow.wallWidth ?? savedWindow.width,
                         depth:
                             savedWindow.depth
                     })
@@ -1026,6 +1049,18 @@ export function editorReducer(
 
             return {
                 ...initialState,
+                workflowType:
+                    project.workflowType === "admin-managed"
+                        ? "admin-managed"
+                        : "legacy",
+                structuralOwner:
+                    project.structuralOwner,
+                structuralStatus:
+                    project.structuralStatus,
+                structuralRevision:
+                    project.structuralRevision,
+                publishedStructuralRevision:
+                    project.publishedStructuralRevision,
                 walls:
                     restoredWalls,
                 corners:
@@ -1081,10 +1116,7 @@ export function editorReducer(
                             ...project.blueprint
                         }
                         : null,
-                activeTab:
-                    project.layoutConfirmed
-                        ? "build"
-                        : "floorplan"
+                activeTab: "furniture"
             };
         }
         default:

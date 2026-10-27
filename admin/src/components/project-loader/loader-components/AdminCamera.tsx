@@ -20,7 +20,11 @@ const FAST_MOVE_MULTIPLIER = 2;
 const FOCUS_DISTANCE = 3.5;
 const FOCUS_SPEED = 7;
 
-export default function AdminCamera() {
+export default function AdminCamera({
+    leftOrbitEnabled = true
+}: {
+    leftOrbitEnabled?: boolean;
+}) {
     const controlsRef =
         useRef<OrbitControlsImpl | null>(null);
 
@@ -239,9 +243,7 @@ export default function AdminCamera() {
             const controls =
                 controlsRef.current;
 
-            if (!controls) {
-                return;
-            }
+            if (!controls) return;
 
             if (
                 focusTarget.current &&
@@ -443,7 +445,7 @@ export default function AdminCamera() {
             makeDefault
             enablePan
             enableZoom
-            enableRotate
+            enableRotate={leftOrbitEnabled}
             screenSpacePanning={false}
             minDistance={MIN_DISTANCE}
             maxDistance={MAX_DISTANCE}

@@ -73,6 +73,9 @@ export interface AdminDoorData {
     height:
         number;
 
+    wallWidth?:
+        number;
+
 }
 
 
@@ -95,6 +98,9 @@ export interface AdminWindowData {
         number;
 
     height:
+        number;
+
+    wallWidth?:
         number;
 
 }
@@ -125,6 +131,9 @@ export interface AdminOpeningData {
         "rectangle"
         | "arch";
 
+    archRise?:
+        number;
+
 }
 
 
@@ -150,7 +159,10 @@ export function buildAdminWallMeshes(
         AdminOpeningData[] = [],
 
     windows:
-        AdminWindowData[] = []
+        AdminWindowData[] = [],
+
+    excludedElementId:
+        string | null = null
 
 ):
     AdminWallPieceData[] {
@@ -222,6 +234,9 @@ export function buildAdminWallMeshes(
             "rectangle"
             | "arch";
 
+        archRise?:
+            number;
+
     }
 
 
@@ -237,6 +252,10 @@ export function buildAdminWallMeshes(
         const door
         of doors
     ) {
+
+        if (door.id === excludedElementId) {
+            continue;
+        }
 
         if (
             door.wallId !==
@@ -260,7 +279,7 @@ export function buildAdminWallMeshes(
 
 
         const halfWidth =
-            door.width *
+            (door.wallWidth ?? door.width) *
             0.5;
 
 
@@ -421,7 +440,10 @@ export function buildAdminWallMeshes(
                 "opening",
 
             shape:
-                opening.shape
+                opening.shape,
+
+            archRise:
+                opening.archRise
 
         });
 
@@ -436,6 +458,10 @@ export function buildAdminWallMeshes(
         const window
         of windows
     ) {
+
+        if (window.id === excludedElementId) {
+            continue;
+        }
 
         if (
             window.wallId !==
@@ -460,7 +486,7 @@ export function buildAdminWallMeshes(
 
         const actualWidth =
             Math.max(
-                window.width,
+                window.wallWidth ?? window.width,
                 0.001
             );
 
@@ -788,6 +814,8 @@ export function buildAdminWallMeshes(
 
                 cutout.openingTop,
 
+                cutout.archRise,
+
                 wallHeight,
 
                 wallThickness,
@@ -967,6 +995,9 @@ function buildArchPieces(
     openingHeight:
         number,
 
+    requestedArchRise:
+        number | undefined,
+
     wallHeight:
         number,
 
@@ -987,22 +1018,30 @@ function buildArchPieces(
 
 ) {
 
+    const archRise =
+        Math.min(
+            openingHeight,
+            Math.max(
+                0.01,
+                requestedArchRise ?? openingWidth * 0.5
+            )
+        );
+
+    const halfOpeningWidth =
+        openingWidth * 0.5;
+
     const radius =
-        openingWidth *
-        0.5;
+        (halfOpeningWidth * halfOpeningWidth + archRise * archRise) /
+        (2 * archRise);
 
 
     const springHeight =
         openingHeight -
-        radius;
+        archRise;
 
 
     const archHeight =
-        Math.max(
-            0,
-            openingHeight -
-            springHeight
-        );
+        archRise;
 
 
     if (
@@ -1105,7 +1144,7 @@ function buildArchPieces(
             springHeight;
 
 
-        const halfOpeningWidth =
+        const currentHalfWidth =
             Math.sqrt(
 
                 Math.max(
@@ -1113,7 +1152,7 @@ function buildArchPieces(
                     0,
 
                     radius * radius -
-                    relativeY * relativeY
+                    (radius - archRise + relativeY) ** 2
 
                 )
 
@@ -1125,8 +1164,8 @@ function buildArchPieces(
 
                 0,
 
-                radius -
-                halfOpeningWidth
+                halfOpeningWidth -
+                currentHalfWidth
 
             );
 

@@ -38,6 +38,23 @@ export interface UserProject {
     schemaVersion:
         number;
 
+    interiorJsonPath?:
+        string;
+
+    interiorJsonUrl?:
+        string;
+
+    workflowType?:
+        "legacy" |
+        "admin-managed";
+
+    structuralStatus?:
+        "draft" |
+        "published";
+
+    publishedStructuralRevision?:
+        number;
+
     createdAt?:
         unknown;
 
@@ -97,6 +114,17 @@ export async function getUserProjects(
             document.data() as
             Partial<UserProject>;
 
+        if (
+            data.workflowType === "admin-managed" &&
+            (
+                data.structuralStatus !== "published" ||
+                typeof data.publishedStructuralRevision !== "number" ||
+                data.publishedStructuralRevision < 1
+            )
+        ) {
+            continue;
+        }
+
 
         //--------------------------------------------------
         // Only accept valid project documents.
@@ -120,7 +148,8 @@ export async function getUserProjects(
 
         if (
             typeof data.jsonUrl !==
-            "string"
+            "string" ||
+            data.jsonUrl.trim() === ""
         ) {
             continue;
         }
@@ -160,6 +189,33 @@ export async function getUserProjects(
                     ? data.schemaVersion
 
                     : 1,
+
+            workflowType:
+                data.workflowType === "admin-managed"
+                    ? "admin-managed"
+                    : data.workflowType === "legacy"
+                        ? "legacy"
+                        : undefined,
+
+            structuralStatus:
+                data.structuralStatus === "published" || data.structuralStatus === "draft"
+                    ? data.structuralStatus
+                    : undefined,
+
+            publishedStructuralRevision:
+                typeof data.publishedStructuralRevision === "number"
+                    ? data.publishedStructuralRevision
+                    : undefined,
+
+            interiorJsonPath:
+                typeof data.interiorJsonPath === "string"
+                    ? data.interiorJsonPath
+                    : undefined,
+
+            interiorJsonUrl:
+                typeof data.interiorJsonUrl === "string"
+                    ? data.interiorJsonUrl
+                    : undefined,
 
             createdAt:
                 data.createdAt,

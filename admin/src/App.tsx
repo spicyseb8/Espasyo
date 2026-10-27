@@ -6,6 +6,7 @@ import AssetLibrary from "@/components/pages/AssetLibrary/AssetLibrary";
 import ModelSizeChecker from "@/components/pages/loader";
 import ProjectManagement from "@/components/pages/ProjectManagement/ProjectManagement";
 import AdminProjectLoader from "@/components/project-loader/AdminProjectLoader";
+import AdminStructuralEditor from "@/components/project-editor/AdminStructuralEditor";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import Login from "@/components/auth/Login";
 import UserTable from "@/components/pages/UserTable/UserTable";
@@ -42,6 +43,24 @@ function App() {
         element={
           <RequireAdmin>
             <ModelSizeChecker />
+          </RequireAdmin>
+        }
+      />
+
+      <Route
+        path="/projects/new/:ownerId"
+        element={
+          <RequireAdmin>
+            <AdminStructuralEditor />
+          </RequireAdmin>
+        }
+      />
+
+      <Route
+        path="/projects/edit/:projectId"
+        element={
+          <RequireAdmin>
+            <AdminStructuralEditor />
           </RequireAdmin>
         }
       />

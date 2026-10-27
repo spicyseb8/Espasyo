@@ -1,0 +1,1490 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { ChangeEvent } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import {
+    ArrowLeft,
+    DraftingCompass,
+    Hammer,
+    Redo2,
+    Save,
+    Send,
+    Trash2,
+    Undo2
+} from "lucide-react";
+import { Vector3 } from "three";
+import LoadingScreen from "@/components/LoadingScreen";
+import type { Corner } from "@/components/project-loader/engine/walls/Corner";
+import type { Wall } from "@/components/project-loader/engine/walls/WallTypes";
+import type { Asset } from "@/components/project-loader/engine/assets/Asset";
+import { pointInPolygon } from "@/components/project-loader/engine/regions/Polygon";
+import { solveRegions } from "@/components/project-loader/engine/regions/RegionSolver";
+import { getAdminProject } from "@/services/assets/projectService";
+import {
+    claimExistingManagedProject,
+    publishLocalManagedStructure,
+    saveManagedStructure
+} from "@/services/assets/projectStructureService";
+import { validateStructuralProjectData } from "@/services/assets/projectStructureContract";
+import {
+    loadLocalManagedProjectDraft,
+    removeLocalManagedProjectDraft,
+    saveLocalManagedProjectDraft
+} from "@/services/assets/localManagedProjectDraft";
+import { getDoorAssets, getWindowAssets } from "@/services/assets/FirebaseDoorWindowLibrary";
+import AdminBuildPanel from "./AdminBuildPanel";
+import AdminFloorPlanPanel from "./AdminFloorPlanPanel";
+import type { AdminStructuralTool } from "./AdminFloorPlanPanel";
+import AdminStructureScene from "./AdminStructureScene";
+import {
+    blueprintDisplayBounds,
+    calculateCalibratedBlueprintWidth,
+    distanceBetween2D,
+    svgPointToWorld
+} from "./blueprintGeometry";
+import {
+    addWallSegmentToStructure,
+    closestPointOnWall,
+    findOrCreateCorner,
+    getRoomPreviewGeometry,
+    snapToCorner,
+    snapToGrid,
+    snapToWallEndpoint,
+    type Point3
+} from "./structureGeometry";
+import {
+    calculateBuildElementPlacement,
+    type BuildElementPlacementCandidate
+} from "./buildElementPlacement";
+import type { AdminElementModelBounds } from "@/components/project-loader/loader-components/AdminElementModelUtils";
+import { createManagedStructure, type ManagedStructure, type StructureCorner, type StructureElement, type StructureWall } from "./structureTypes";
+import {
+    applyStructureElementPlacement,
+    removeStructureElement,
+    type StructureElementAction,
+    type StructureElementKind
+} from "./structureElementActions";
+import "./AdminStructuralEditor.css";
+
+type Point = { x: number; y: number };
+type CalibrationStep = "idle" | "first-point" | "second-point" | "enter-measurement";
+type SelectedStructureElement = { kind: StructureElementKind; id: string };
+type ActiveElementPlacement = {
+    kind: StructureElementKind;
+    action: StructureElementAction;
+    source: StructureElement;
+};
+
+const WORLD_SIZE = 20;
+const CENTER = WORLD_SIZE / 2;
+const DEFAULT_DOOR_DIMENSIONS = { width: 0.9, height: 2.1 };
+const DEFAULT_WINDOW_DIMENSIONS = { width: 1.2, height: 1.4 };
+
+function validPositiveNumber(value: number): boolean {
+    return Number.isFinite(value) && value > 0;
+}
+
+function scenePointToWorldPoint(scenePoint: { x: number; z: number }): Point3 {
+    const converted = svgPointToWorld({
+        x: scenePoint.x + CENTER,
+        y: scenePoint.z + CENTER
+    }, WORLD_SIZE);
+    return { x: converted.x, y: 0, z: converted.y };
+}
+
+function snapWorldPoint(point: Point3, structure: ManagedStructure): Point3 {
+    let snapped = snapToGrid(point, structure.gridSize);
+    snapped = snapToWallEndpoint(snapped, structure.walls);
+    return snapToCorner(snapped, structure.corners);
+}
+
+export default function AdminStructuralEditor() {
+    const { ownerId, projectId } = useParams();
+    const location = useLocation();
+    const navigate = useNavigate();
+    const ownerName = typeof (location.state as { ownerName?: unknown } | null)?.ownerName === "string"
+        ? (location.state as { ownerName: string }).ownerName
+        : null;
+    const showInitializationLoading = !projectId ||
+        (location.state as { showInitializationLoading?: unknown } | null)?.showInitializationLoading === true;
+    const [initializationState, setInitializationState] = useState<"loading" | "ready" | "error">(
+        showInitializationLoading ? "loading" : "ready"
+    );
+    const [isLocalDraft, setIsLocalDraft] = useState(!projectId);
+    const [structure, setStructure] = useState<ManagedStructure | null>(null);
+    const [tool, setTool] = useState<AdminStructuralTool>("wall");
+    const [pendingWallStart, setPendingWallStart] = useState<StructureCorner | null>(null);
+    const [previewWallEnd, setPreviewWallEnd] = useState<Point3 | null>(null);
+    const [pendingRoomStart, setPendingRoomStart] = useState<{ x: number; z: number } | null>(null);
+    const [previewRoomEnd, setPreviewRoomEnd] = useState<Point3 | null>(null);
+    const [selectedWallId, setSelectedWallId] = useState<string | null>(null);
+    const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
+    const [selectedStructureElement, setSelectedStructureElement] = useState<SelectedStructureElement | null>(null);
+    const [activeElementPlacement, setActiveElementPlacement] = useState<ActiveElementPlacement | null>(null);
+    const [movePreviewReady, setMovePreviewReady] = useState(false);
+    const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
+    const [doors, setDoors] = useState<Asset[]>([]);
+    const [windows, setWindows] = useState<Asset[]>([]);
+    const [assetsLoading, setAssetsLoading] = useState(true);
+    const [assetsError, setAssetsError] = useState("");
+    const [placementWidth, setPlacementWidth] = useState(DEFAULT_DOOR_DIMENSIONS.width);
+    const [placementHeight, setPlacementHeight] = useState(DEFAULT_DOOR_DIMENSIONS.height);
+    const [placementWidthEdited, setPlacementWidthEdited] = useState(false);
+    const [placementHeightEdited, setPlacementHeightEdited] = useState(false);
+    const [assetModelBounds, setAssetModelBounds] = useState<Record<string, AdminElementModelBounds>>({});
+    const [buildPointer, setBuildPointer] = useState<{ point: Point3; wallId: string | null } | null>(null);
+    const [blueprintUrl, setBlueprintUrl] = useState<string | null>(null);
+    const [blueprintName, setBlueprintName] = useState("");
+    const [blueprintVisible, setBlueprintVisible] = useState(true);
+    const [blueprintLocked, setBlueprintLocked] = useState(false);
+    const [blueprintOpacity, setBlueprintOpacity] = useState(0.45);
+    const [blueprintPosition, setBlueprintPosition] = useState({ x: 0, z: 0 });
+    const [blueprintRotation, setBlueprintRotation] = useState(0);
+    const [calibrationPoints, setCalibrationPoints] = useState<Point[]>([]);
+    const [calibrationLineEnd, setCalibrationLineEnd] = useState<Point | null>(null);
+    const [calibrationStep, setCalibrationStep] = useState<CalibrationStep>("idle");
+    const [measuredBlueprintLength, setMeasuredBlueprintLength] = useState<number | null>(null);
+    const [actualBlueprintLength, setActualBlueprintLength] = useState("");
+    const [blueprintWidth, setBlueprintWidth] = useState(10);
+    const [blueprintAspectRatio, setBlueprintAspectRatio] = useState(1);
+    const [revision, setRevision] = useState(1);
+    const [projectName, setProjectName] = useState("Untitled floor plan");
+    const [status, setStatus] = useState("");
+    const [savingAction, setSavingAction] = useState<"draft" | "publish" | null>(null);
+    const [history, setHistory] = useState<ManagedStructure[]>([]);
+    const [future, setFuture] = useState<ManagedStructure[]>([]);
+    const [workspaceView, setWorkspaceView] = useState<"floorplan" | "build">("floorplan");
+    const [workspacePanelOpen, setWorkspacePanelOpen] = useState(true);
+    const [showWallMeasurements, setShowWallMeasurements] = useState(true);
+    const handleAssetModelBounds = useCallback((assetId: string, bounds: AdminElementModelBounds) => {
+        setAssetModelBounds(current => {
+            const existing = current[assetId];
+            if (
+                existing?.width === bounds.width &&
+                existing.height === bounds.height &&
+                existing.depth === bounds.depth
+            ) {
+                return current;
+            }
+            return { ...current, [assetId]: bounds };
+        });
+
+        if (selectedAsset?.id !== assetId) return;
+        if (!placementWidthEdited) setPlacementWidth(selectedAsset.width ?? bounds.width);
+        if (!placementHeightEdited) setPlacementHeight(selectedAsset.height ?? bounds.height);
+    }, [placementHeightEdited, placementWidthEdited, selectedAsset]);
+
+    useEffect(() => () => {
+        if (blueprintUrl?.startsWith("blob:")) URL.revokeObjectURL(blueprintUrl);
+    }, [blueprintUrl]);
+
+    useEffect(() => {
+        let cancelled = false;
+        Promise.all([getDoorAssets(), getWindowAssets()])
+            .then(([doorAssets, windowAssets]) => {
+                if (cancelled) return;
+                setDoors(doorAssets);
+                setWindows(windowAssets);
+            })
+            .catch(error => {
+                if (cancelled) return;
+                setAssetsError(error instanceof Error ? error.message : "Unable to load door and window assets.");
+            })
+            .finally(() => {
+                if (!cancelled) setAssetsLoading(false);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    useEffect(() => {
+        let cancelled = false;
+        async function loadManagedProject(nextProjectId: string, expectedOwnerId?: string) {
+            const metadata = await getAdminProject(nextProjectId);
+            if (!metadata.projectId.trim() || !metadata.ownerId.trim()) {
+                throw new Error("Project metadata is missing its project ID or client owner UID.");
+            }
+            if (metadata.workflowType !== "admin-managed") {
+                throw new Error("This is a legacy project. Open it in the project viewer instead.");
+            }
+            if (expectedOwnerId && metadata.ownerId !== expectedOwnerId) {
+                throw new Error("The designated project belongs to a different client.");
+            }
+            await claimExistingManagedProject(metadata.ownerId, metadata.projectId);
+
+            const jsonUrl = metadata.draftJsonUrl?.trim()
+                || (metadata.structuralStatus === "published" ? metadata.jsonUrl.trim() : "");
+            if (!jsonUrl) {
+                if (metadata.structureInitialized !== false) {
+                    throw new Error(metadata.structuralStatus === "draft"
+                        ? "This draft has no saved draft JSON. The published project was not loaded to avoid overwriting it."
+                        : "This project has no saved draft or published JSON file.");
+                }
+                return {
+                    structure: createManagedStructure(
+                        metadata.projectId,
+                        metadata.projectName,
+                        metadata.ownerId
+                    ),
+                    projectName: metadata.projectName,
+                    revision: metadata.structuralRevision ?? 0
+                };
+            }
+
+            const response = await fetch(jsonUrl);
+            if (!response.ok) throw new Error(`Unable to load project JSON (${response.status}).`);
+            const loadedData: unknown = await response.json();
+            const validationErrors = validateStructuralProjectData(loadedData);
+            if (validationErrors.length) {
+                throw new Error(`Saved project JSON is invalid: ${validationErrors.join(" ")}`);
+            }
+            const loaded = loadedData as ManagedStructure;
+            if (!loaded.projectId.trim() || !loaded.ownerId.trim()) {
+                throw new Error("Saved project JSON is missing its project ID or client owner UID.");
+            }
+            if (loaded.projectId !== metadata.projectId) throw new Error("Project ID metadata does not match saved JSON.");
+            if (loaded.ownerId !== metadata.ownerId) throw new Error("Project owner metadata does not match saved JSON.");
+            return {
+                structure: loaded,
+                projectName: loaded.projectName,
+                revision: loaded.structuralRevision ?? metadata.structuralRevision ?? 1
+            };
+        }
+
+        async function initialize() {
+            if (showInitializationLoading) setInitializationState("loading");
+            if (projectId) {
+                const initialized = await loadManagedProject(projectId);
+                if (!cancelled) {
+                    setStructure(initialized.structure);
+                    setProjectName(initialized.projectName);
+                    setRevision(initialized.revision);
+                    setIsLocalDraft(false);
+                    setInitializationState("ready");
+                }
+            } else {
+                const expectedOwnerId = ownerId?.trim();
+                if (!expectedOwnerId) {
+                    throw new Error("A client account is required. Return to Projects and select a client.");
+                }
+                const savedDraft = loadLocalManagedProjectDraft(expectedOwnerId);
+                const draftId = savedDraft?.draftId ?? `local-${crypto.randomUUID()}`;
+                const initializedStructure = savedDraft
+                    ? savedDraft.structure
+                    : createManagedStructure(draftId, "Untitled floor plan", expectedOwnerId);
+                const initializedProjectName = savedDraft?.projectName ?? "Untitled floor plan";
+                if (!cancelled) {
+                    setStructure(initializedStructure);
+                    setProjectName(initializedProjectName);
+                    setRevision(savedDraft?.revision ?? 0);
+                    setIsLocalDraft(true);
+                    setStatus(savedDraft
+                        ? "Restored this client's local unpublished draft."
+                        : "Local unpublished draft created. Save Draft stores it in this browser; Publish shares it with the client.");
+                    setInitializationState("ready");
+                }
+            }
+        }
+        initialize().catch(error => {
+            if (!cancelled) {
+                const message = error instanceof Error ? error.message.trim() : "";
+                setInitializationState("error");
+                setStatus(message
+                    ? `Unable to initialize project: ${message}`
+                    : "Unable to initialize project. Return to Projects and try again.");
+            }
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, [ownerId, projectId, showInitializationLoading]);
+
+    useEffect(() => {
+        if (!isLocalDraft || !structure) return;
+        try {
+            saveLocalManagedProjectDraft({
+                schemaVersion: 1,
+                draftId: structure.projectId,
+                ownerId: structure.ownerId,
+                projectName,
+                structure: { ...structure, projectName, blueprint: null },
+                revision,
+                updatedAt: new Date().toISOString()
+            });
+        } catch (error) {
+            console.error("Unable to autosave the local floor-plan draft.", error);
+        }
+    }, [isLocalDraft, projectName, revision, structure]);
+
+    const structureCorners = structure?.corners;
+    const structureWalls = structure?.walls;
+    const geometry = useMemo(() => {
+        if (!structureCorners || !structureWalls) {
+            return { corners: [] as Corner[], walls: [] as Wall[], regions: [] };
+        }
+        const corners: Corner[] = structureCorners.map(corner => ({
+            id: corner.id,
+            position: new Vector3(corner.position.x, corner.position.y, corner.position.z)
+        }));
+        const walls: Wall[] = structureWalls.map(wall => ({
+            id: wall.id,
+            start: {
+                id: wall.start.id,
+                position: new Vector3(wall.start.position.x, wall.start.position.y, wall.start.position.z)
+            },
+            end: {
+                id: wall.end.id,
+                position: new Vector3(wall.end.position.x, wall.end.position.y, wall.end.position.z)
+            }
+        }));
+        return { corners, walls, regions: solveRegions(corners, walls) };
+    }, [structureCorners, structureWalls]);
+
+    const selectedElement = structure && selectedStructureElement
+        ? (selectedStructureElement.kind === "door" ? structure.doors : structure.windows)
+            .find(element => element.id === selectedStructureElement.id) ?? null
+        : null;
+    const activeBuildAsset = structure?.layoutConfirmed && selectedAsset && tool === selectedAsset.type
+        ? selectedAsset
+        : null;
+    const activeAssetBounds = activeBuildAsset ? assetModelBounds[activeBuildAsset.id] : undefined;
+    const activeElementSource = activeElementPlacement && activeBuildAsset &&
+        activeElementPlacement.kind === activeBuildAsset.type
+        ? activeElementPlacement.source
+        : null;
+    const effectivePlacementWidth = activeElementSource
+        ? activeElementSource.width
+        : placementWidthEdited
+        ? placementWidth
+        : activeBuildAsset?.width ?? activeAssetBounds?.width ?? 0;
+    const effectivePlacementHeight = activeElementSource
+        ? activeElementSource.height
+        : placementHeightEdited
+        ? placementHeight
+        : activeBuildAsset?.height ?? activeAssetBounds?.height ?? 0;
+    const getBuildElementCandidate = (point: Point3, preferredWallId?: string | null) => {
+        if (!structure || !activeBuildAsset) return null;
+        return calculateBuildElementPlacement({
+            structure,
+            asset: activeBuildAsset,
+            point,
+            placementWidth: effectivePlacementWidth,
+            placementHeight: effectivePlacementHeight,
+            placementDepth: activeElementSource?.depth,
+            modelBounds: activeAssetBounds,
+            preferredWallId,
+            excludeElementId: activeElementPlacement?.action === "move"
+                ? activeElementSource?.id
+                : null
+        });
+    };
+    const buildElementPlacement: BuildElementPlacementCandidate | null = buildPointer
+        ? getBuildElementCandidate(buildPointer.point, buildPointer.wallId ?? selectedWallId)
+        : null;
+    const wallPreview: StructureWall | null =
+        structure &&
+        (!blueprintUrl || blueprintLocked) &&
+        !structure.layoutConfirmed &&
+        tool === "wall" &&
+        calibrationStep === "idle" &&
+        pendingWallStart &&
+        previewWallEnd
+            ? {
+                id: "temporary-wall-preview",
+                start: pendingWallStart,
+                end: {
+                    id: "temporary-wall-preview-end",
+                    position: previewWallEnd
+                }
+            }
+            : null;
+    const roomPreview =
+        structure &&
+        (!blueprintUrl || blueprintLocked) &&
+        !structure.layoutConfirmed &&
+        tool === "room" &&
+        calibrationStep === "idle" &&
+        pendingRoomStart &&
+        previewRoomEnd
+            ? getRoomPreviewGeometry(
+                { x: pendingRoomStart.x, y: 0, z: pendingRoomStart.z },
+                previewRoomEnd
+            )
+            : null;
+
+    const commit = (next: ManagedStructure) => {
+        if (!structure) return;
+        setHistory(previous => [...previous.slice(-49), structure]);
+        setFuture([]);
+        setStructure(next);
+    };
+
+    const undo = () => {
+        const previous = history.at(-1);
+        if (!previous || !structure) return;
+        setFuture(items => [structure, ...items]);
+        setHistory(items => items.slice(0, -1));
+        setStructure(previous);
+        setPendingWallStart(null);
+        setPreviewWallEnd(null);
+        setPendingRoomStart(null);
+        setPreviewRoomEnd(null);
+        setSelectedWallId(null);
+        setSelectedRegionId(null);
+        setSelectedStructureElement(null);
+        setActiveElementPlacement(null);
+        setBuildPointer(null);
+    };
+
+    const redo = () => {
+        const next = future[0];
+        if (!next || !structure) return;
+        setHistory(items => [...items, structure]);
+        setFuture(items => items.slice(1));
+        setStructure(next);
+        setPendingWallStart(null);
+        setPreviewWallEnd(null);
+        setPendingRoomStart(null);
+        setPreviewRoomEnd(null);
+        setSelectedWallId(null);
+        setSelectedRegionId(null);
+        setSelectedStructureElement(null);
+        setActiveElementPlacement(null);
+        setBuildPointer(null);
+    };
+
+    const beginElementPlacement = (action: StructureElementAction) => {
+        if (!structure || !selectedElement || !selectedStructureElement) return;
+        const elementAssets = selectedStructureElement.kind === "door" ? doors : windows;
+        const asset = elementAssets.find(item => item.id === selectedElement.assetId);
+        if (!asset) {
+            setStatus(`Unable to ${action} ${selectedStructureElement.kind}: its asset is unavailable.`);
+            return;
+        }
+
+        setActiveElementPlacement({
+            kind: selectedStructureElement.kind,
+            action,
+            source: selectedElement
+        });
+        setMovePreviewReady(false);
+        setSelectedAsset(asset);
+        setSelectedWallId(null);
+        setSelectedRegionId(null);
+        setTool(selectedStructureElement.kind);
+        setBuildPointer(null);
+        setStatus(action === "move"
+            ? `Move the ${selectedStructureElement.kind} to a valid wall position.`
+            : `Choose a valid wall position for the duplicated ${selectedStructureElement.kind}.`);
+    };
+
+    const removeSelectedElement = () => {
+        if (!structure || !selectedStructureElement) return;
+        const next = removeStructureElement(
+            structure,
+            selectedStructureElement.kind,
+            selectedStructureElement.id
+        );
+        if (!next) return;
+        commit(next);
+        setSelectedStructureElement(null);
+        setActiveElementPlacement(null);
+        setMovePreviewReady(false);
+        setSelectedAsset(null);
+        setBuildPointer(null);
+        setTool("select");
+        setStatus(`${selectedStructureElement.kind === "door" ? "Door" : "Window"} removed.`);
+    };
+
+    const selectStructureElement = (kind: StructureElementKind, id: string) => {
+        if (tool !== "select" || calibrationStep !== "idle") return;
+        setSelectedStructureElement({ kind, id });
+        setSelectedWallId(null);
+        setSelectedRegionId(null);
+    };
+
+    const handleBuildElementPreviewReady = useCallback(() => {
+        if (activeElementPlacement?.action === "move") {
+            setMovePreviewReady(true);
+        }
+    }, [activeElementPlacement?.action]);
+
+    const recordCalibrationPoint = (point: Point) => {
+        if (calibrationStep === "idle") return false;
+        if (blueprintLocked) {
+            setStatus("Unlock the blueprint before calibrating it.");
+            return true;
+        }
+        if (!blueprintVisible) {
+            setStatus("Show the blueprint before selecting calibration points.");
+            return true;
+        }
+        const bounds = blueprintDisplayBounds(blueprintWidth, blueprintAspectRatio);
+        const localPoint = {
+            x: point.x - blueprintPosition.x,
+            y: point.y - blueprintPosition.z
+        };
+        const cosine = Math.cos(blueprintRotation);
+        const sine = Math.sin(blueprintRotation);
+        const blueprintLocalPoint = {
+            x: localPoint.x * cosine - localPoint.y * sine,
+            y: -localPoint.x * sine - localPoint.y * cosine
+        };
+        if (
+            blueprintLocalPoint.x < bounds.x ||
+            blueprintLocalPoint.x > bounds.x + bounds.width ||
+            blueprintLocalPoint.y < bounds.y ||
+            blueprintLocalPoint.y > bounds.y + bounds.height
+        ) {
+            setStatus("Choose calibration points on the visible blueprint.");
+            return true;
+        }
+        if (calibrationStep === "first-point") {
+            setCalibrationPoints([point]);
+            setCalibrationLineEnd(point);
+            setCalibrationStep("second-point");
+            setStatus("First calibration point selected. Choose the second point.");
+            return true;
+        }
+        if (calibrationStep === "second-point") {
+            const firstPoint = calibrationPoints[0];
+            if (!firstPoint) return true;
+            const points = [...calibrationPoints, point];
+            const measured = distanceBetween2D(firstPoint, point);
+            if (measured <= 0) {
+                setStatus("Choose two different blueprint points.");
+                return true;
+            }
+            setCalibrationPoints(points);
+            setCalibrationLineEnd(null);
+            setMeasuredBlueprintLength(measured);
+            setCalibrationStep("enter-measurement");
+            setStatus("Enter the real-world distance between the selected points.");
+            return true;
+        }
+        return true;
+    };
+
+    const addWallSegment = (point: { x: number; z: number }) => {
+        if (!structure || structure.layoutConfirmed) return;
+        const existingCorners = pendingWallStart && !structure.corners.some(corner => corner.id === pendingWallStart.id)
+            ? [...structure.corners, pendingWallStart]
+            : structure.corners;
+        const found = findOrCreateCorner({ x: point.x, y: 0, z: point.z }, existingCorners);
+        if (!pendingWallStart) {
+            setPendingWallStart(found.corner);
+            return;
+        }
+        if (pendingWallStart.id === found.corner.id) return;
+        commit(addWallSegmentToStructure(
+            { ...structure, corners: found.corners },
+            pendingWallStart,
+            found.corner
+        ));
+        setPendingWallStart(found.corner);
+        setPreviewWallEnd(null);
+    };
+
+    const addRoomRectangle = (point: { x: number; z: number }) => {
+        if (!structure || structure.layoutConfirmed) return;
+        if (!pendingRoomStart) {
+            setPendingRoomStart(point);
+            setPreviewRoomEnd({ x: point.x, y: 0, z: point.z });
+            setStatus("Choose the opposite corner of the room in the scene.");
+            return;
+        }
+
+        const minX = Math.min(pendingRoomStart.x, point.x);
+        const maxX = Math.max(pendingRoomStart.x, point.x);
+        const minZ = Math.min(pendingRoomStart.z, point.z);
+        const maxZ = Math.max(pendingRoomStart.z, point.z);
+        if (maxX - minX < structure.gridSize || maxZ - minZ < structure.gridSize) {
+            setStatus("Choose opposite room corners at least one grid step apart.");
+            return;
+        }
+
+        let roomStructure = structure;
+        const roomCorners: StructureCorner[] = [];
+        for (const position of [
+            { x: minX, y: 0, z: minZ },
+            { x: maxX, y: 0, z: minZ },
+            { x: maxX, y: 0, z: maxZ },
+            { x: minX, y: 0, z: maxZ }
+        ]) {
+            const found = findOrCreateCorner(position, roomStructure.corners);
+            roomStructure = { ...roomStructure, corners: found.corners };
+            roomCorners.push(found.corner);
+        }
+        for (let index = 0; index < roomCorners.length; index += 1) {
+            roomStructure = addWallSegmentToStructure(
+                roomStructure,
+                roomCorners[index],
+                roomCorners[(index + 1) % roomCorners.length]
+            );
+        }
+        commit(roomStructure);
+        setPendingRoomStart(null);
+        setPreviewRoomEnd(null);
+        setStatus("Room created from the selected opposite corners.");
+    };
+
+    const placeBuildAsset = (wallId: string | null, point: { x: number; y: number; z: number }) => {
+        if (!structure || !selectedAsset) {
+            setStatus("Select an asset before placing it.");
+            return;
+        }
+        if (!structure.layoutConfirmed) {
+            setStatus("Confirm the layout before placing doors, windows, or openings.");
+            return;
+        }
+        if (!wallId) {
+            setStatus("Click a wall to place the selected asset.");
+            return;
+        }
+        const candidate = getBuildElementCandidate(
+            point,
+            wallId
+        );
+        setBuildPointer(null);
+        if (!candidate) {
+            setStatus("Click directly on a valid wall to place the selected asset.");
+            return;
+        }
+        if (!candidate.valid) {
+            setStatus(candidate.reason);
+            return;
+        }
+
+        if (selectedAsset.type === "opening") {
+            commit({
+                ...structure,
+                openings: [...structure.openings, {
+                    id: crypto.randomUUID(),
+                    wallId: candidate.wallId,
+                    position: candidate.position,
+                    rotationY: candidate.rotationY,
+                    width: candidate.width,
+                    height: candidate.height,
+                    depth: candidate.depth,
+                    shape: candidate.shape ?? "rectangle",
+                    archRise: candidate.archRise
+                }]
+            });
+            setTool("select");
+            setBuildPointer(null);
+            setStatus("Opening placed.");
+            return;
+        }
+
+        if (selectedAsset.type !== "door" && selectedAsset.type !== "window") {
+            setStatus("This asset type cannot be placed on a wall.");
+            return;
+        }
+        if (activeElementPlacement) {
+            const next = applyStructureElementPlacement(
+                structure,
+                activeElementPlacement.kind,
+                activeElementPlacement.source,
+                activeElementPlacement.action,
+                candidate,
+                crypto.randomUUID()
+            );
+            if (!next) {
+                setStatus("This placement is no longer valid. Choose another wall position.");
+                return;
+            }
+            const placedId = activeElementPlacement.action === "move"
+                ? activeElementPlacement.source.id
+                : next[activeElementPlacement.kind === "door" ? "doors" : "windows"].at(-1)?.id;
+            commit(next);
+            setSelectedStructureElement(placedId
+                ? { kind: activeElementPlacement.kind, id: placedId }
+                : null);
+            setActiveElementPlacement(null);
+            setSelectedAsset(null);
+            setTool("select");
+            setBuildPointer(null);
+            setStatus(activeElementPlacement.action === "move"
+                ? `${activeElementPlacement.kind === "door" ? "Door" : "Window"} moved.`
+                : `${activeElementPlacement.kind === "door" ? "Door" : "Window"} duplicated.`);
+            return;
+        }
+        const element = {
+            id: crypto.randomUUID(),
+            assetId: selectedAsset.id,
+            wallId: candidate.wallId,
+            position: candidate.position,
+            rotationY: candidate.rotationY,
+            width: candidate.width,
+            height: candidate.height,
+            wallWidth: candidate.wallWidth,
+            depth: candidate.depth
+        };
+        commit(selectedAsset.type === "door"
+            ? { ...structure, doors: [...structure.doors, element] }
+            : { ...structure, windows: [...structure.windows, element] });
+        setTool("select");
+        setBuildPointer(null);
+        setStatus(`${selectedAsset.type === "door" ? "Door" : "Window"} placed.`);
+    };
+
+    const handleScenePoint = (scenePoint: { x: number; y?: number; z: number }, forcedWallId: string | null = null) => {
+        setPreviewWallEnd(null);
+        setPreviewRoomEnd(null);
+        setBuildPointer(null);
+        if (!structure) return;
+        const rawPoint = {
+            ...scenePointToWorldPoint(scenePoint),
+            y: selectedAsset?.type === "window" || activeElementPlacement?.kind === "window"
+                ? scenePoint.y ?? 0
+                : 0
+        };
+        if (recordCalibrationPoint({ x: rawPoint.x, y: rawPoint.z })) return;
+        if (
+            blueprintUrl &&
+            !blueprintLocked &&
+            (tool === "wall" || tool === "room")
+        ) {
+            return;
+        }
+
+        const snapped = snapWorldPoint(rawPoint, structure);
+        const planarPoint = { x: snapped.x, z: snapped.z };
+
+        if (tool === "wall") {
+            addWallSegment(planarPoint);
+            return;
+        }
+
+        if (tool === "room") {
+            addRoomRectangle(planarPoint);
+            return;
+        }
+
+        if (tool === "select") {
+            setSelectedStructureElement(null);
+            let nearestWall: StructureWall | null = null;
+            let nearestDistance = 0.35;
+            for (const wall of structure.walls) {
+                const closest = closestPointOnWall(snapped, wall);
+                const distance = Math.hypot(planarPoint.x - closest.x, planarPoint.z - closest.z);
+                if (distance < nearestDistance) {
+                    nearestWall = wall;
+                    nearestDistance = distance;
+                }
+            }
+            setSelectedWallId(nearestWall?.id ?? null);
+            const region = nearestWall
+                ? null
+                : geometry.regions.find(item => {
+                    const point = new Vector3(planarPoint.x, 0, planarPoint.z);
+                    return pointInPolygon(point, item.corners) &&
+                        !item.boundaryLoops.slice(1).some(loop =>
+                            pointInPolygon(point, loop.corners)
+                        );
+                });
+            setSelectedRegionId(region?.id ?? null);
+            return;
+        }
+
+        const wallId = forcedWallId ?? selectedWallId;
+        placeBuildAsset(wallId, { ...planarPoint, y: rawPoint.y });
+    };
+
+    const handleScenePointerMove = (scenePoint: { x: number; y: number; z: number; wallId?: string } | null) => {
+        if (calibrationStep === "second-point") {
+            if (scenePoint) {
+                const point = scenePointToWorldPoint(scenePoint);
+                setCalibrationLineEnd({ x: point.x, y: point.z });
+            } else {
+                setCalibrationLineEnd(null);
+            }
+            setPreviewWallEnd(null);
+            setPreviewRoomEnd(null);
+            setBuildPointer(null);
+            return;
+        }
+
+        if (
+            blueprintUrl &&
+            !blueprintLocked &&
+            (tool === "wall" || tool === "room")
+        ) {
+            setPreviewWallEnd(null);
+            setPreviewRoomEnd(null);
+            return;
+        }
+
+        if (
+            !scenePoint ||
+            !structure ||
+            calibrationStep !== "idle"
+        ) {
+            setPreviewWallEnd(null);
+            setPreviewRoomEnd(null);
+            setBuildPointer(null);
+            return;
+        }
+
+        const nextPoint = snapWorldPoint({
+            ...scenePointToWorldPoint(scenePoint),
+            y: activeBuildAsset?.type === "window"
+                ? scenePoint.y
+                : 0
+        }, structure);
+        if (!structure.layoutConfirmed && tool === "wall" && pendingWallStart) {
+            setPreviewRoomEnd(null);
+            setBuildPointer(null);
+            setPreviewWallEnd(current =>
+                current &&
+                current.x === nextPoint.x &&
+                current.y === nextPoint.y &&
+                current.z === nextPoint.z
+                    ? current
+                    : nextPoint
+            );
+            return;
+        }
+        if (!structure.layoutConfirmed && tool === "room" && pendingRoomStart) {
+            setPreviewWallEnd(null);
+            setBuildPointer(null);
+            setPreviewRoomEnd(current =>
+                current &&
+                current.x === nextPoint.x &&
+                current.y === nextPoint.y &&
+                current.z === nextPoint.z
+                    ? current
+                    : nextPoint
+            );
+            return;
+        }
+        if (activeBuildAsset) {
+            setPreviewWallEnd(null);
+            setPreviewRoomEnd(null);
+            setBuildPointer({
+                point: nextPoint,
+                wallId: scenePoint.wallId ?? selectedWallId
+            });
+            return;
+        }
+        setPreviewWallEnd(null);
+        setPreviewRoomEnd(null);
+        setBuildPointer(null);
+    };
+
+    const cancelDrawing = () => {
+        const hasPendingWall = tool === "wall" && pendingWallStart !== null;
+        const hasPendingRoom = tool === "room" && pendingRoomStart !== null;
+        if (!hasPendingWall && !hasPendingRoom) return;
+
+        setPendingWallStart(null);
+        setPreviewWallEnd(null);
+        setPendingRoomStart(null);
+        setPreviewRoomEnd(null);
+        setTool("select");
+    };
+
+    const cancelBuildPlacement = () => {
+        const cancelledPlacement = activeElementPlacement;
+        setActiveElementPlacement(null);
+        setMovePreviewReady(false);
+        setBuildPointer(null);
+        if (cancelledPlacement) setSelectedAsset(null);
+        setTool("select");
+        if (cancelledPlacement) {
+            setSelectedStructureElement({
+                kind: cancelledPlacement.kind,
+                id: cancelledPlacement.source.id
+            });
+        }
+        setStatus("Placement cancelled.");
+    };
+
+    const handleWallClick = (wallId: string, point: Vector3) => {
+        if (tool === "select" && calibrationStep === "idle") {
+            setSelectedStructureElement(null);
+            setSelectedWallId(wallId);
+            setSelectedRegionId(null);
+            return;
+        }
+        handleScenePoint({ x: point.x, y: point.y, z: point.z }, wallId);
+    };
+
+    const removeSelectedWall = () => {
+        if (!structure || !selectedWallId || structure.layoutConfirmed) return;
+        commit({
+            ...structure,
+            walls: structure.walls.filter(wall => wall.id !== selectedWallId),
+            corners: structure.corners.filter(corner =>
+                structure.walls.some(wall =>
+                    wall.id !== selectedWallId &&
+                    (wall.start.id === corner.id || wall.end.id === corner.id)
+                )
+            ),
+            doors: structure.doors.filter(door => door.wallId !== selectedWallId),
+            windows: structure.windows.filter(window => window.wallId !== selectedWallId),
+            openings: structure.openings.filter(opening => opening.wallId !== selectedWallId)
+        });
+        setSelectedWallId(null);
+        setSelectedRegionId(null);
+        setSelectedStructureElement(null);
+        setPendingWallStart(null);
+        setPreviewWallEnd(null);
+        setPendingRoomStart(null);
+        setPreviewRoomEnd(null);
+    };
+
+    const handleBlueprintUpload = (event: ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        if (!["image/png", "image/jpeg"].includes(file.type)) {
+            setStatus("Please upload a JPG or PNG blueprint.");
+            event.target.value = "";
+            return;
+        }
+        const url = URL.createObjectURL(file);
+        const image = new Image();
+        image.onload = () => {
+            if (image.width <= 0 || image.height <= 0) {
+                URL.revokeObjectURL(url);
+                setStatus("Unable to read the selected blueprint image.");
+                return;
+            }
+            if (blueprintUrl?.startsWith("blob:")) URL.revokeObjectURL(blueprintUrl);
+            setBlueprintAspectRatio(image.width / image.height);
+            setBlueprintUrl(url);
+            setBlueprintName(file.name);
+            setBlueprintVisible(true);
+            setBlueprintLocked(false);
+            setBlueprintPosition({ x: 0, z: 0 });
+            setBlueprintRotation(0);
+            setCalibrationStep("idle");
+            setCalibrationPoints([]);
+            setCalibrationLineEnd(null);
+            setMeasuredBlueprintLength(null);
+            setStatus("Blueprint loaded for this editing session only.");
+        };
+        image.onerror = () => {
+            URL.revokeObjectURL(url);
+            setStatus("Unable to read the selected blueprint image.");
+        };
+        image.src = url;
+        event.target.value = "";
+    };
+
+    const removeBlueprint = () => {
+        if (blueprintUrl?.startsWith("blob:")) URL.revokeObjectURL(blueprintUrl);
+        setBlueprintUrl(null);
+        setBlueprintName("");
+        setBlueprintVisible(false);
+        setBlueprintLocked(false);
+        setBlueprintPosition({ x: 0, z: 0 });
+        setBlueprintRotation(0);
+        setCalibrationStep("idle");
+        setCalibrationPoints([]);
+        setCalibrationLineEnd(null);
+        setMeasuredBlueprintLength(null);
+        setActualBlueprintLength("");
+        setStatus("Blueprint removed from this editing session.");
+    };
+
+    const startCalibration = () => {
+        if (!blueprintUrl) return;
+        if (blueprintLocked) {
+            setStatus("Unlock the blueprint before calibrating it.");
+            return;
+        }
+        setBlueprintVisible(true);
+        setCalibrationPoints([]);
+        setCalibrationLineEnd(null);
+        setMeasuredBlueprintLength(null);
+        setActualBlueprintLength("");
+        setCalibrationStep("first-point");
+        setStatus("Choose two points on the blueprint with a known distance.");
+    };
+
+    const cancelCalibration = () => {
+        setCalibrationStep("idle");
+        setCalibrationPoints([]);
+        setCalibrationLineEnd(null);
+        setMeasuredBlueprintLength(null);
+        setActualBlueprintLength("");
+    };
+
+    const applyCalibration = () => {
+        if (measuredBlueprintLength === null || !validPositiveNumber(measuredBlueprintLength)) {
+            setStatus("Choose two different blueprint points first.");
+            return;
+        }
+        const realLength = Number(actualBlueprintLength);
+        if (!validPositiveNumber(realLength)) {
+            setStatus("Enter a valid real-world measurement greater than zero.");
+            return;
+        }
+        try {
+            const width = calculateCalibratedBlueprintWidth({
+                measuredLength: measuredBlueprintLength,
+                realLength,
+                currentWidth: blueprintWidth
+            });
+            setBlueprintWidth(width);
+            setCalibrationStep("idle");
+            setCalibrationPoints([]);
+            setCalibrationLineEnd(null);
+            setMeasuredBlueprintLength(null);
+            setActualBlueprintLength("");
+            setStatus(`Blueprint calibrated to ${width.toFixed(2)} scene units wide.`);
+        } catch (error) {
+            setStatus(error instanceof Error ? error.message : "Unable to calibrate the blueprint.");
+        }
+    };
+
+    const selectAsset = (asset: Asset) => {
+        setActiveElementPlacement(null);
+        setSelectedStructureElement(null);
+        setSelectedAsset(asset);
+        setBuildPointer(null);
+        setPlacementWidthEdited(false);
+        setPlacementHeightEdited(false);
+        if (asset.type === "door") {
+            const bounds = assetModelBounds[asset.id];
+            setPlacementWidth(asset.width ?? bounds?.width ?? DEFAULT_DOOR_DIMENSIONS.width);
+            setPlacementHeight(asset.height ?? bounds?.height ?? DEFAULT_DOOR_DIMENSIONS.height);
+        } else if (asset.type === "window") {
+            const bounds = assetModelBounds[asset.id];
+            setPlacementWidth(asset.width ?? bounds?.width ?? DEFAULT_WINDOW_DIMENSIONS.width);
+            setPlacementHeight(asset.height ?? bounds?.height ?? DEFAULT_WINDOW_DIMENSIONS.height);
+        }
+    };
+
+    const activateAsset = (asset: Asset) => {
+        if (!structure?.layoutConfirmed) return;
+        const assetTool = asset.type === "door" || asset.type === "window" || asset.type === "opening"
+            ? asset.type
+            : null;
+        if (!assetTool) {
+            setStatus("This asset cannot be placed by the structural editor.");
+            return;
+        }
+        if (selectedAsset?.id === asset.id && tool === assetTool) {
+            setActiveElementPlacement(null);
+            setTool("select");
+            setBuildPointer(null);
+            setStatus("Placement cancelled.");
+            return;
+        }
+        setActiveElementPlacement(null);
+        setSelectedStructureElement(null);
+        setSelectedAsset(asset);
+        setTool(assetTool);
+        setBuildPointer(null);
+        setPendingWallStart(null);
+        setPreviewWallEnd(null);
+        setPendingRoomStart(null);
+        setPreviewRoomEnd(null);
+        setStatus(`Placement active for ${asset.name}. Move over a wall and click to place it.`);
+    };
+
+    const confirmLayout = () => {
+        if (!structure || structure.layoutConfirmed) return;
+        if (!window.confirm("Once confirmed, the wall and room layout can no longer be edited. Continue?")) return;
+        commit({ ...structure, layoutConfirmed: true });
+        setPendingWallStart(null);
+        setPreviewWallEnd(null);
+        setPendingRoomStart(null);
+        setPreviewRoomEnd(null);
+        setTool("select");
+        setStatus("Layout confirmed. Build placement is now available.");
+    };
+
+    const updateWallHeight = (height: number) => {
+        if (!structure || structure.layoutConfirmed || !validPositiveNumber(height)) return;
+        commit({ ...structure, wallHeight: height });
+    };
+
+    const updateWallThickness = (wallThickness: number) => {
+        if (!structure || structure.layoutConfirmed || !validPositiveNumber(wallThickness)) return;
+        commit({ ...structure, wallThickness });
+    };
+
+    const updateOpeningSetting = (key: "openingWidth" | "openingHeight" | "archRise", value: number) => {
+        if (!structure || !validPositiveNumber(value)) return;
+        if (key === "archRise" && value > structure.openingHeight) return;
+        commit({ ...structure, [key]: value });
+    };
+
+    const save = async (published: boolean) => {
+        if (!structure || savingAction) return;
+        if (!structure.projectId.trim() || !structure.ownerId.trim()) {
+            setStatus("Project ID and client owner UID are required before saving.");
+            return;
+        }
+        setSavingAction(published ? "publish" : "draft");
+        try {
+            setStatus(isLocalDraft
+                ? published ? "Publishing local draft..." : "Saving local draft..."
+                : published ? "Publishing..." : "Saving draft...");
+            const savedAt = new Date().toISOString();
+            const nextStructure = { ...structure, projectName, savedAt, blueprint: null };
+            if (isLocalDraft && !published) {
+                saveLocalManagedProjectDraft({
+                    schemaVersion: 1,
+                    draftId: structure.projectId,
+                    ownerId: structure.ownerId,
+                    projectName,
+                    structure: nextStructure,
+                    revision,
+                    updatedAt: savedAt
+                });
+                setStatus("Local draft saved in this browser. It has not been shared with the client.");
+                return;
+            }
+
+            if (isLocalDraft) {
+                const result = await publishLocalManagedStructure({
+                    projectName,
+                    ownerId: structure.ownerId,
+                    projectData: nextStructure
+                });
+                const publishedStructure = {
+                    ...nextStructure,
+                    projectId: result.projectId,
+                    structuralRevision: result.revision,
+                    workflowType: "admin-managed" as const,
+                    structuralOwner: "admin" as const,
+                    structuralStatus: "published" as const,
+                    publishedStructuralRevision: result.revision
+                };
+                setStructure(publishedStructure);
+                setRevision(result.revision);
+                setHistory([]);
+                setFuture([]);
+                setIsLocalDraft(false);
+                let localDraftCleanupFailed = false;
+                try {
+                    removeLocalManagedProjectDraft(structure.ownerId);
+                } catch (error) {
+                    console.error("Published project but could not remove its local draft.", error);
+                    localDraftCleanupFailed = true;
+                }
+                navigate(`/projects/edit/${result.projectId}`, {
+                    replace: true,
+                    state: { ownerName }
+                });
+                setStatus(localDraftCleanupFailed
+                    ? "Project published, but its local draft could not be removed from this browser."
+                    : "Project published successfully.");
+                return;
+            }
+
+            const nextRevision = published
+                ? Math.max(revision, 0) + 1
+                : Math.max(revision, 1);
+            await saveManagedStructure({
+                projectId: structure.projectId,
+                projectName,
+                ownerId: structure.ownerId,
+                projectData: nextStructure,
+                revision: nextRevision,
+                published
+            });
+            commit(nextStructure);
+            setRevision(nextRevision);
+            setStatus(published ? "Project published successfully." : "Draft saved successfully.");
+        } catch (error) {
+            setStatus(error instanceof Error ? error.message : "Unable to save project.");
+        } finally {
+            setSavingAction(null);
+        }
+    };
+
+    const canSave = Boolean(structure?.projectId.trim() && structure.ownerId.trim());
+
+    const handleWorkspaceTabChange = (nextView: "floorplan" | "build") => {
+        if (nextView === workspaceView) {
+            setWorkspacePanelOpen(open => !open);
+            return;
+        }
+        setWorkspaceView(nextView);
+        setWorkspacePanelOpen(true);
+    };
+
+    if (
+        showInitializationLoading &&
+        initializationState !== "error" &&
+        (initializationState === "loading" || !isLocalDraft || structure?.ownerId !== ownerId)
+    ) {
+        return <LoadingScreen label="Preparing Floor Plan" />;
+    }
+
+    if (showInitializationLoading && initializationState === "error") {
+        return (
+            <div className="flex h-screen w-screen items-center justify-center bg-zinc-950 text-white">
+                <div className="max-w-lg text-center">
+                    <h2 className="text-lg font-semibold">Unable to prepare floor plan</h2>
+                    <p className="mt-2 break-words text-sm text-zinc-400">{status}</p>
+                    <button
+                        type="button"
+                        className="mt-5 rounded-md bg-white px-4 py-2 text-sm font-medium text-black hover:bg-zinc-200"
+                        onClick={() => navigate(-1)}
+                    >
+                        Back to Projects
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="admin-editor">
+            <header className="admin-editor-header">
+                <div className="admin-editor-header-back">
+                    <button type="button" onClick={() => navigate(-1)} aria-label="Back" title="Back">
+                        <ArrowLeft size={16} />
+                    </button>
+                </div>
+                <div className="admin-editor-project">
+                    <span className="admin-editor-owner" title={ownerName?.trim() || "Unknown client"}>
+                        {ownerName?.trim() || "Unknown client"}
+                    </span>
+                    <input
+                        value={projectName}
+                        onChange={event => setProjectName(event.target.value)}
+                        aria-label="Project name"
+                        style={{ textAlign: "center", fontSize: "14px" }}
+                    />
+                </div>
+                <div className="admin-editor-header-actions">
+                {isLocalDraft && (
+                    <span className="admin-editor-status" role="status">
+                        Unpublished local draft — stored in this browser only
+                    </span>
+                )}
+                <div className="admin-editor-history-actions" aria-label="Structure history">
+                        <button type="button" onClick={undo} disabled={!history.length} title="Undo" aria-label="Undo">
+                            <Undo2 size={16} />
+                        </button>
+                        <button type="button" onClick={redo} disabled={!future.length} title="Redo" aria-label="Redo">
+                            <Redo2 size={16} />
+                        </button>
+                        <button type="button" onClick={removeSelectedWall} disabled={!selectedWallId || structure?.layoutConfirmed} title="Delete selected wall" aria-label="Delete selected wall">
+                            <Trash2 size={16} />
+                        </button>
+                    </div>
+                    {!status.startsWith("Blueprint calibrated to") && (
+                        <span className={`admin-editor-status ${status.toLowerCase().includes("unable") || status.toLowerCase().includes("error") ? "error" : ""}`} role="status">
+                            {status}
+                        </span>
+                    )}
+                    <div className="admin-editor-actions">
+                        <button type="button" onClick={() => void save(false)} disabled={!canSave || savingAction !== null} title={isLocalDraft ? "Save draft locally" : "Save draft"} aria-label={isLocalDraft ? "Save draft locally" : "Save draft"}>
+                            <Save size={16} /><span>{savingAction === "draft" ? "Saving..." : isLocalDraft ? "Save draft locally" : "Save draft"}</span>
+                        </button>
+                        <button type="button" className="primary" onClick={() => void save(true)} disabled={!canSave || savingAction !== null} title="Publish" aria-label="Publish">
+                            <Send size={16} /><span>{savingAction === "publish" ? "Publishing..." : "Publish"}</span>
+                        </button>
+                    </div>
+                </div>
+            </header>
+            <aside className={`admin-editor-sidebar ${workspacePanelOpen ? "is-open" : "is-closed"}`}>
+                <div className="admin-editor-tabs" role="tablist" aria-label="Editor panels">
+                    <button
+                        type="button"
+                        role="tab"
+                        aria-selected={workspaceView === "floorplan" && workspacePanelOpen}
+                        aria-pressed={workspaceView === "floorplan" && workspacePanelOpen}
+                        className={workspaceView === "floorplan" && workspacePanelOpen ? "active" : ""}
+                        onClick={() => handleWorkspaceTabChange("floorplan")}
+                    >
+                        <DraftingCompass size={17} />
+                        {workspaceView === "floorplan" && workspacePanelOpen && <span>Floor Plan</span>}
+                    </button>
+                    <button
+                        type="button"
+                        role="tab"
+                        aria-selected={workspaceView === "build" && workspacePanelOpen}
+                        aria-pressed={workspaceView === "build" && workspacePanelOpen}
+                        className={workspaceView === "build" && workspacePanelOpen ? "active" : ""}
+                        onClick={() => handleWorkspaceTabChange("build")}
+                    >
+                        <Hammer size={17} />
+                        {workspaceView === "build" && workspacePanelOpen && <span>Build</span>}
+                    </button>
+                </div>
+                <div className={`admin-editor-panel-content ${workspacePanelOpen ? "is-open" : "is-closed"}`}>
+                    {structure && (
+                        <div className={`admin-editor-panel-view ${workspacePanelOpen && workspaceView === "floorplan" ? "active" : ""}`}>
+                            <AdminFloorPlanPanel
+                                structure={structure}
+                                tool={tool}
+                                blueprintUrl={blueprintUrl}
+                                blueprintName={blueprintName}
+                                blueprintVisible={blueprintVisible}
+                                blueprintOpacity={blueprintOpacity}
+                                blueprintLocked={blueprintLocked}
+                                calibrationStep={calibrationStep}
+                                measuredBlueprintLength={measuredBlueprintLength}
+                                actualBlueprintLength={actualBlueprintLength}
+                                showWallMeasurements={showWallMeasurements}
+                                status={status}
+                                onToolChange={nextTool => {
+                                    setActiveElementPlacement(null);
+                                    setSelectedStructureElement(null);
+                                    setTool(nextTool);
+                                    setBuildPointer(null);
+                                    setPendingWallStart(null);
+                                    setPreviewWallEnd(null);
+                                    setPendingRoomStart(null);
+                                    setPreviewRoomEnd(null);
+                                }}
+                                onBlueprintUpload={handleBlueprintUpload}
+                                onBlueprintRemove={removeBlueprint}
+                                onBlueprintVisibilityChange={() => {
+                                    if (blueprintVisible && calibrationStep !== "idle") cancelCalibration();
+                                    setBlueprintVisible(value => !value);
+                                }}
+                                onBlueprintOpacityChange={setBlueprintOpacity}
+                                onBlueprintLockChange={() => {
+                                    if (!blueprintLocked && calibrationStep !== "idle") cancelCalibration();
+                                    setPendingWallStart(null);
+                                    setPreviewWallEnd(null);
+                                    setPendingRoomStart(null);
+                                    setPreviewRoomEnd(null);
+                                    setBlueprintLocked(value => !value);
+                                }}
+                                onCalibrationStart={startCalibration}
+                                onCalibrationCancel={cancelCalibration}
+                                onCalibrationLengthChange={setActualBlueprintLength}
+                                onCalibrationApply={applyCalibration}
+                                onWallHeightChange={updateWallHeight}
+                                onWallThicknessChange={updateWallThickness}
+                                onShowWallMeasurementsChange={setShowWallMeasurements}
+                                onConfirmLayout={confirmLayout}
+                            />
+                        </div>
+                    )}
+                    {structure && (
+                        <div className={`admin-editor-panel-view ${workspacePanelOpen && workspaceView === "build" ? "active" : ""}`}>
+                            <AdminBuildPanel
+                                structure={structure}
+                                doors={doors}
+                                windows={windows}
+                                loading={assetsLoading}
+                                loadError={assetsError}
+                                selectedAsset={selectedAsset}
+                                tool={tool}
+                                placementWidth={placementWidth}
+                                placementHeight={placementHeight}
+                                onSelectAsset={selectAsset}
+                                onActivateAsset={activateAsset}
+                                onPlacementWidthChange={value => {
+                                    if (validPositiveNumber(value)) {
+                                        setPlacementWidth(value);
+                                        setPlacementWidthEdited(true);
+                                    }
+                                }}
+                                onPlacementHeightChange={value => {
+                                    if (validPositiveNumber(value)) {
+                                        setPlacementHeight(value);
+                                        setPlacementHeightEdited(true);
+                                    }
+                                }}
+                                onOpeningWidthChange={value => updateOpeningSetting("openingWidth", value)}
+                                onOpeningHeightChange={value => updateOpeningSetting("openingHeight", value)}
+                                onArchRiseChange={value => updateOpeningSetting("archRise", value)}
+                            />
+                        </div>
+                    )}
+                    {!structure && (
+                        <p className="admin-editor-loading">
+                            {status || "Loading project..."}
+                        </p>
+                    )}
+                </div>
+            </aside>
+            <main className="admin-editor-main" aria-label="Structural editing scene">
+                {structure && (
+                    <AdminStructureScene
+                        structure={structure}
+                        blueprintUrl={blueprintUrl}
+                        blueprintLocked={blueprintLocked}
+                        blueprintVisible={blueprintVisible}
+                        blueprintOpacity={blueprintOpacity}
+                        blueprintWidth={blueprintWidth}
+                        blueprintAspectRatio={blueprintAspectRatio}
+                        blueprintPosition={blueprintPosition}
+                        blueprintRotation={blueprintRotation}
+                        blueprintCalibrationActive={calibrationStep !== "idle"}
+                        calibrationLine={
+                            calibrationStep === "second-point" &&
+                            calibrationPoints[0] &&
+                            calibrationLineEnd
+                                ? {
+                                    start: new Vector3(calibrationPoints[0].x, 0.04, calibrationPoints[0].y),
+                                    end: new Vector3(calibrationLineEnd.x, 0.04, calibrationLineEnd.y)
+                                }
+                                : null
+                        }
+                        onBlueprintPositionChange={setBlueprintPosition}
+                        onBlueprintRotationChange={setBlueprintRotation}
+                        selectedWallId={selectedWallId}
+                        selectedRegionId={selectedRegionId}
+                        selectionEnabled={tool === "select" && calibrationStep === "idle"}
+                        onFloorSelect={regionId => {
+                            setSelectedStructureElement(null);
+                            setSelectedWallId(null);
+                            setSelectedRegionId(regionId);
+                        }}
+                        wallPreview={wallPreview}
+                        showWallMeasurements={showWallMeasurements}
+                        roomPreview={roomPreview}
+                        buildElementAsset={activeBuildAsset}
+                        buildElementPlacement={buildElementPlacement}
+                        onAssetModelBounds={handleAssetModelBounds}
+                        drawingActive={
+                            (tool === "wall" && pendingWallStart !== null) ||
+                            (tool === "room" && pendingRoomStart !== null)
+                        }
+                        placementActive={activeBuildAsset !== null}
+                        onCancelDrawing={cancelDrawing}
+                        onCancelPlacement={cancelBuildPlacement}
+                        onScenePoint={point => handleScenePoint(point)}
+                        onScenePointerMove={handleScenePointerMove}
+                        onWallClick={handleWallClick}
+                        onDoorSelect={id => selectStructureElement("door", id)}
+                        onWindowSelect={id => selectStructureElement("window", id)}
+                        selectedElement={activeElementPlacement ? null : selectedStructureElement}
+                        onMoveSelectedElement={() => beginElementPlacement("move")}
+                        onDuplicateSelectedElement={() => beginElementPlacement("duplicate")}
+                        onRemoveSelectedElement={removeSelectedElement}
+                        hiddenDoorId={
+                            movePreviewReady &&
+                            buildElementPlacement &&
+                            activeElementPlacement?.action === "move" &&
+                            activeElementPlacement.kind === "door"
+                                ? activeElementPlacement.source.id
+                                : null
+                        }
+                        hiddenWindowId={
+                            movePreviewReady &&
+                            buildElementPlacement &&
+                            activeElementPlacement?.action === "move" &&
+                            activeElementPlacement.kind === "window"
+                                ? activeElementPlacement.source.id
+                                : null
+                        }
+                        movingElement={
+                            activeElementPlacement?.action === "move"
+                                ? {
+                                    kind: activeElementPlacement.kind,
+                                    id: activeElementPlacement.source.id
+                                }
+                                : null
+                        }
+                        onBuildElementPreviewReady={handleBuildElementPreviewReady}
+                    />
+                )}
+            </main>
+        </div>
+    );
+}

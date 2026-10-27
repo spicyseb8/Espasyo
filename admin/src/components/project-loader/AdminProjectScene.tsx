@@ -289,7 +289,8 @@ function convertDoor(
         wallId: door.wallId,
         position: toVector3(door.position),
         width: door.width,
-        height: door.height
+        height: door.height,
+        wallWidth: door.wallWidth ?? door.width
     };
 }
 
@@ -301,7 +302,8 @@ function convertWindow(
         wallId: window.wallId,
         position: toVector3(window.position),
         width: window.width,
-        height: window.height
+        height: window.height,
+        wallWidth: window.wallWidth ?? window.width
     };
 }
 
@@ -314,7 +316,7 @@ function convertOpening(
         position: toVector3(opening.position),
         width: opening.width,
         height: opening.height,
-        shape: opening.shape
+        shape: opening.shape,
+        archRise: opening.archRise
     };
 }
-

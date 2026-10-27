@@ -292,10 +292,6 @@ export default function DesignPanel() {
     const handleSelectFloorMaterial = (
         materialId: string
     ) => {
-        if (!state.layoutConfirmed) {
-            return;
-        }
-
         dispatch({
             type: "SET_ACTIVE_FLOOR_MATERIAL",
             payload: materialId
@@ -305,10 +301,6 @@ export default function DesignPanel() {
     const handleSelectWallMaterial = (
         materialId: string
     ) => {
-        if (!state.layoutConfirmed) {
-            return;
-        }
-
         dispatch({
             type: "SET_ACTIVE_WALL_MATERIAL",
             payload: materialId
@@ -317,7 +309,6 @@ export default function DesignPanel() {
 
     const handleApplyFloor = () => {
         if (
-            !state.layoutConfirmed ||
             !state.selectedRegionId ||
             !selectedFloorMaterialId
         ) {
@@ -335,7 +326,6 @@ export default function DesignPanel() {
 
     const handleApplyFloorToAll = () => {
         if (
-            !state.layoutConfirmed ||
             !selectedFloorMaterialId
         ) {
             return;
@@ -355,7 +345,6 @@ export default function DesignPanel() {
     // Apply the selected material to only the clicked wall face.
     const handleApplyWall = () => {
         if (
-            !state.layoutConfirmed ||
             !state.selectedWallId ||
             state.selectedWallSide === null ||
             state.selectedWallSide === undefined ||
@@ -378,7 +367,6 @@ export default function DesignPanel() {
 
     const handleApplyWallToRoom = () => {
         if (
-            !state.layoutConfirmed ||
             !selectedWallRegionForEdit ||
             !selectedWallMaterialId
         ) {
@@ -396,7 +384,6 @@ export default function DesignPanel() {
 
     const handleApplyWallToAll = () => {
         if (
-            !state.layoutConfirmed ||
             !selectedWallMaterialId
         ) {
             return;
@@ -411,12 +398,8 @@ export default function DesignPanel() {
         });
     };
 
-    const layoutConfirmed =
-        state.layoutConfirmed;
-
     const canApplyWall =
         Boolean(
-            layoutConfirmed &&
             state.selectedWallId &&
             state.selectedWallSide !== null &&
             state.selectedWallSide !== undefined &&
@@ -424,24 +407,7 @@ export default function DesignPanel() {
         );
 
     return (
-        <div
-            className="design-panel"
-            style={{
-                opacity: layoutConfirmed ? 1 : 0.5
-            }}
-        >
-            {!layoutConfirmed && (
-                <div
-                    className="material-empty"
-                    style={{
-                        marginBottom: "10px",
-                        textAlign: "center"
-                    }}
-                >
-                    Confirm the layout first before applying floor or wall finishes.
-                </div>
-            )}
-
+        <div className="design-panel">
             <MaterialSection
                 title="Floor"
                 materials={flooringMaterials}
@@ -450,12 +416,10 @@ export default function DesignPanel() {
                 onApply={handleApplyFloor}
                 onApplyToAll={handleApplyFloorToAll}
                 canApply={Boolean(
-                    layoutConfirmed &&
                     state.selectedRegionId &&
                     selectedFloorMaterialId
                 )}
                 canApplyToAll={Boolean(
-                    layoutConfirmed &&
                     selectedFloorMaterialId &&
                     regions.length > 0
                 )}
@@ -471,12 +435,10 @@ export default function DesignPanel() {
                 onApplyToAll={handleApplyWallToAll}
                 canApply={canApplyWall}
                 canApplyToRoom={Boolean(
-                    layoutConfirmed &&
                     selectedWallRegionForEdit &&
                     selectedWallMaterialId
                 )}
                 canApplyToAll={Boolean(
-                    layoutConfirmed &&
                     selectedWallMaterialId &&
                     regions.length > 0
                 )}

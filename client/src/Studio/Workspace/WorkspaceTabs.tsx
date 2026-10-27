@@ -1,6 +1,4 @@
 import {
-    DraftingCompass,
-    Hammer,
     Sofa,
     Paintbrush,
     FolderOpen,
@@ -10,8 +8,6 @@ import { motion, useReducedMotion } from "motion/react";
 interface Props {
     activeTab: string;
 
-    layoutConfirmed: boolean;
-
     walkthroughMode: boolean;
 
     panelOpen: boolean;
@@ -20,16 +16,6 @@ interface Props {
 }
 
 const TABS = [
-    {
-        id: "floorplan",
-        label: "Floor Plan",
-        icon: DraftingCompass,
-    },
-    {
-        id: "build",
-        label: "Build",
-        icon: Hammer,
-    },
     {
         id: "furniture",
         label: "Furniture",

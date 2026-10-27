@@ -41,7 +41,6 @@ export default function Workspace() {
             >
                 <WorkspaceTabs
                     activeTab={state.activeTab}
-                    layoutConfirmed={state.layoutConfirmed}
                     walkthroughMode={state.walkthroughMode}
                     panelOpen={panelOpen}
                     onTabChange={handleTabChange}

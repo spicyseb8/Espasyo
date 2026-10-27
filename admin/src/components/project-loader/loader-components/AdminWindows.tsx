@@ -18,12 +18,17 @@ interface AdminWindowsProps {
     wallThickness:
         number;
 
+    onWindowSelect?: (windowId: string) => void;
+    hiddenWindowId?: string | null;
+
 }
 
 
 export default function AdminWindows({
     windows,
-    wallThickness
+    wallThickness,
+    onWindowSelect,
+    hiddenWindowId
 }: AdminWindowsProps) {
 
     return (
@@ -33,6 +38,8 @@ export default function AdminWindows({
             {
                 windows.map(
                     window => {
+
+                        if (window.id === hiddenWindowId) return null;
 
                         const asset = getCachedDoorWindowAsset(window.assetId);
 
@@ -68,6 +75,8 @@ export default function AdminWindows({
                                 wallThickness={
                                     wallThickness
                                 }
+
+                                onSelect={onWindowSelect}
 
                             />
 

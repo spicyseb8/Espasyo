@@ -634,13 +634,12 @@ if (
                     !currentState.layoutConfirmed;
 
                 //--------------------------------------------------
-                // Global history is only active AFTER
-                // Confirm Layout.
+                // Design actions use global history regardless of
+                // whether the legacy layout was confirmed.
                 //--------------------------------------------------
 
                 const shouldRecordGlobal =
-                    globalEditorAction &&
-                    currentState.layoutConfirmed;
+                    globalEditorAction;
 
                 //==================================================
                 // FLOOR PLAN
@@ -952,13 +951,17 @@ if (
             }
 
             //--------------------------------------------------
-            // BEFORE CONFIRM:
-            // use Floor Plan history.
+            // Use floor-plan history only when there is no design
+            // history to undo.
             //--------------------------------------------------
 
-            if (
-                !currentState.layoutConfirmed
-            ) {
+            const useFloorPlanHistory =
+                !currentState.layoutConfirmed &&
+                currentState.workflowType !== "admin-managed" &&
+                editorPast.current.length === 0 &&
+                editorFuture.current.length === 0;
+
+            if (useFloorPlanHistory) {
 
                 flushPendingFloorHistory();
 
@@ -1098,12 +1101,17 @@ if (
             }
 
             //==================================================
-            // BEFORE CONFIRM
+            // Use floor-plan history only when there is no design
+            // redo history.
             //==================================================
 
-            if (
-                !currentState.layoutConfirmed
-            ) {
+            const useFloorPlanHistory =
+                !currentState.layoutConfirmed &&
+                currentState.workflowType !== "admin-managed" &&
+                editorPast.current.length === 0 &&
+                editorFuture.current.length === 0;
+
+            if (useFloorPlanHistory) {
 
                 flushPendingFloorHistory();
 
@@ -1314,19 +1322,19 @@ if (
 
     void historyVersion;
 
-    const canUndo =
-        state.layoutConfirmed
+    const designHistoryActive =
+        state.layoutConfirmed ||
+        state.workflowType === "admin-managed" ||
+        editorPast.current.length > 0 ||
+        editorFuture.current.length > 0;
 
-            ? editorPast.current.length > 0
+    const canUndo = designHistoryActive
+        ? editorPast.current.length > 0
+        : floorPast.current.length > 0;
 
-            : floorPast.current.length > 0;
-
-    const canRedo =
-        state.layoutConfirmed
-
-            ? editorFuture.current.length > 0
-
-            : floorFuture.current.length > 0;
+    const canRedo = designHistoryActive
+        ? editorFuture.current.length > 0
+        : floorFuture.current.length > 0;
 
     //==================================================
     // PROVIDER

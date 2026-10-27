@@ -1,16 +1,22 @@
 import { useEffect, useMemo } from "react";
 import { useGLTF } from "@react-three/drei";
 import { Mesh } from "three";
+import type { ThreeEvent } from "@react-three/fiber";
 import type { Asset } from "../engine/assets/Asset";
 import type { SavedDoor } from "../ProjectTypes";
 import { emitAdminCommentTarget } from "../../../services/assets/adminCommentEvents";
 import AdminModelErrorBoundary from "./AdminModelErrorBoundary";
+import {
+    fitAdminElementModelToBounds,
+    prepareAdminDoorModel
+} from "./AdminElementModelUtils";
 import { disposeClonedMaterials } from "@/lib/disposeClonedMaterials";
 
 interface AdminDoorProps {
     door: SavedDoor;
     asset: Asset;
     wallThickness: number;
+    onSelect?: (doorId: string) => void;
 }
 
 const DOOR_CASING_WIDTH = 0.075;
@@ -149,7 +155,8 @@ function DoorCasing({
 export default function AdminDoor({
     door,
     asset,
-    wallThickness
+    wallThickness,
+    onSelect
 }: AdminDoorProps) {
     if (
         typeof asset.model !== "string" ||
@@ -169,6 +176,7 @@ export default function AdminDoor({
                 door={door}
                 asset={asset}
                 wallThickness={wallThickness}
+                onSelect={onSelect}
             />
         </AdminModelErrorBoundary>
     );
@@ -177,22 +185,18 @@ export default function AdminDoor({
 function AdminDoorModel({
     door,
     asset,
-    wallThickness
+    wallThickness,
+    onSelect
 }: AdminDoorProps) {
     const { scene } = useGLTF(asset.model);
 
     const model = useMemo(() => {
-        const clone = scene.clone(true);
-
-        const scale =
-            asset.scale ??
-            1;
-
-        clone.scale.set(
-            scale,
-            scale,
-            scale
-        );
+        const clone = prepareAdminDoorModel(scene, asset);
+        fitAdminElementModelToBounds(clone, {
+            width: door.width,
+            height: door.height,
+            depth: door.depth
+        });
 
         clone.traverse(child => {
             child.userData = {
@@ -217,6 +221,9 @@ function AdminDoorModel({
         return clone;
     }, [
         scene,
+        door.width,
+        door.height,
+        door.depth,
         asset.scale,
         door.id
     ]);
@@ -233,8 +240,9 @@ function AdminDoorModel({
         door.rotationY +
         rotationOffsetY;
 
-    const handleClick = (event: any) => {
+    const handleClick = (event: ThreeEvent<MouseEvent>) => {
         event.stopPropagation();
+        onSelect?.(door.id);
 
         emitAdminCommentTarget({
             targetType: "door",
@@ -262,7 +270,7 @@ function AdminDoorModel({
         >
             <DoorCasing
                 doorId={door.id}
-                width={door.width}
+                width={door.wallWidth ?? door.width}
                 height={door.height}
                 wallThickness={wallThickness}
             />

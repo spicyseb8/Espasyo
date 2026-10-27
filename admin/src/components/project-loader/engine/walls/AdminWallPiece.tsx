@@ -11,6 +11,9 @@ import type {
 import AdminWallFinishSurface from "./AdminWallFinishSurface";
 import type { AdminWallPieceData } from "./AdminWallMeshBuilder";
 import { emitAdminCommentTarget } from "../../../../services/assets/adminCommentEvents";
+import type { Vector3 } from "three";
+import { DoubleSide } from "three";
+import type { ThreeEvent } from "@react-three/fiber";
 
 interface AdminWallPieceProps {
     wallId: string;
@@ -18,6 +21,9 @@ interface AdminWallPieceProps {
     piece: AdminWallPieceData;
     regions: Region[];
     finishSides: AdminWallFinishSide[];
+    onWallClick?: (wallId: string, position: Vector3) => void;
+    onWallPointerMove?: (wallId: string, position: Vector3) => void;
+    selected: boolean;
 }
 
 const WALL_TRIM_HEIGHT = 0.12;
@@ -140,7 +146,10 @@ export default function AdminWallPiece({
     physicalWall,
     piece,
     regions,
-    finishSides
+    finishSides,
+    onWallClick,
+    onWallPointerMove,
+    selected
 }: AdminWallPieceProps) {
     const pieceBottom =
         piece.position.y -
@@ -255,15 +264,29 @@ export default function AdminWallPiece({
 
         return geometry;
     }, [piece]);
+    const highlightArchGeometry = useMemo(
+        () => selected && archGeometry ? archGeometry.clone() : null,
+        [archGeometry, selected]
+    );
 
-    const handleWallClick = (event: any) => {
+    const handleWallClick = (event: ThreeEvent<MouseEvent>) => {
         event.stopPropagation();
 
+        if (onWallClick) {
+            onWallClick(wallId, event.point);
+            return;
+        }
+
         emitAdminCommentTarget({
-    targetType: "wall",
-    targetId: wallId,
-    targetLabel: "Wall"
-});
+            targetType: "wall",
+            targetId: wallId,
+            targetLabel: "Wall"
+        });
+    };
+
+    const handleWallPointerMove = (event: ThreeEvent<PointerEvent>) => {
+        event.stopPropagation();
+        onWallPointerMove?.(wallId, event.point);
     };
 
     if (
@@ -279,6 +302,7 @@ export default function AdminWallPiece({
                     castShadow
                     receiveShadow
                     onClick={handleWallClick}
+                    onPointerMove={handleWallPointerMove}
                     userData={{
                         wallId
                     }}
@@ -286,8 +310,30 @@ export default function AdminWallPiece({
                     <meshStandardMaterial
                         color="#D9D9D9"
                         roughness={0.82}
+                        side={DoubleSide}
                     />
                 </mesh>
+                {highlightArchGeometry && (
+                    <mesh
+                        geometry={highlightArchGeometry}
+                        position={piece.position}
+                        rotation={[0, -piece.rotationY, 0]}
+                        scale={[1, 1, 1.03]}
+                        raycast={() => null}
+                        renderOrder={2}
+                    >
+                        <meshBasicMaterial
+                            color="#3b82f6"
+                            transparent
+                            opacity={0.2}
+                            depthWrite={false}
+                            side={DoubleSide}
+                            polygonOffset
+                            polygonOffsetFactor={-1}
+                            polygonOffsetUnits={-1}
+                        />
+                    </mesh>
+                )}
 
                 {finishSides.map(finish => (
                     <AdminWallFinishSurface
@@ -308,6 +354,7 @@ export default function AdminWallPiece({
                 castShadow
                 receiveShadow
                 onClick={handleWallClick}
+                onPointerMove={handleWallPointerMove}
                 userData={{
                     wallId
                 }}
@@ -322,8 +369,35 @@ export default function AdminWallPiece({
                 <meshStandardMaterial
                     color="#D9D9D9"
                     roughness={0.82}
+                    side={DoubleSide}
                 />
             </mesh>
+            {selected && (
+                <mesh
+                    position={piece.position}
+                    rotation={[0, -piece.rotationY, 0]}
+                    raycast={() => null}
+                    renderOrder={2}
+                >
+                    <boxGeometry
+                        args={[
+                            piece.width + 0.002,
+                            piece.height + 0.002,
+                            piece.thickness + 0.006
+                        ]}
+                    />
+                    <meshBasicMaterial
+                        color="#3b82f6"
+                        transparent
+                        opacity={0.2}
+                        depthWrite={false}
+                        side={DoubleSide}
+                        polygonOffset
+                        polygonOffsetFactor={-1}
+                        polygonOffsetUnits={-1}
+                    />
+                </mesh>
+            )}
 
             {touchesFloor &&
                 trimSides.map(side => (

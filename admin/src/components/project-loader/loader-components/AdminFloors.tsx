@@ -42,13 +42,25 @@ interface AdminFloorsProps {
     floorFinishes:
         Record<string, string>;
 
+    selectedRegionId?: string | null;
+
+    onSelectRegion?: (regionId: string) => void;
+
+    allowInteractionPropagation?: boolean;
+
+    showAreaLabels?: boolean;
+
 }
 
 
 export default function AdminFloors({
     corners,
     walls,
-    floorFinishes
+    floorFinishes,
+    selectedRegionId = null,
+    onSelectRegion,
+    allowInteractionPropagation = false,
+    showAreaLabels = true
 }: AdminFloorsProps) {
 
     const [
@@ -239,6 +251,22 @@ export default function AdminFloors({
 
                             floorFinishes={
                                 floorFinishes
+                            }
+
+                            selected={
+                                region.id === selectedRegionId
+                            }
+
+                            onSelect={
+                                onSelectRegion
+                            }
+
+                            allowInteractionPropagation={
+                                allowInteractionPropagation
+                            }
+
+                            showAreaLabel={
+                                showAreaLabels
                             }
 
                         />

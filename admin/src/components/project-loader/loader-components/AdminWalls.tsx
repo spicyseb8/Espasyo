@@ -69,6 +69,16 @@ interface AdminWallsProps {
             string,
             Record<string, string>
         >;
+
+    onWallClick?:
+        (wallId: string, position: Vector3) => void;
+
+    onWallPointerMove?:
+        (wallId: string, position: Vector3) => void;
+
+    selectedWallId?: string | null;
+
+    excludedCutoutElementId?: string | null;
 }
 
 interface WallOutlineProps {
@@ -418,7 +428,11 @@ function AdminWalls({
     openings,
     wallHeight,
     wallThickness,
-    wallFinishes
+    wallFinishes,
+    onWallClick,
+    onWallPointerMove,
+    selectedWallId,
+    excludedCutoutElementId
 }: AdminWallsProps) {
     const regions:
         Region[] =
@@ -446,7 +460,8 @@ function AdminWalls({
                                 wallThickness,
                                 doors,
                                 openings,
-                                windows
+                                windows,
+                                excludedCutoutElementId
                             );
 
                         const finishSides =
@@ -500,6 +515,15 @@ function AdminWalls({
                                                 }
                                                 finishSides={
                                                     finishSides
+                                                }
+                                                onWallClick={
+                                                    onWallClick
+                                                }
+                                                onWallPointerMove={
+                                                    onWallPointerMove
+                                                }
+                                                selected={
+                                                    selectedWallId === wall.id
                                                 }
                                             />
                                         )

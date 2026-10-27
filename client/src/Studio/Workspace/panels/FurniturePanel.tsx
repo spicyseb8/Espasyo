@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import "./FurniturePanel.css";
 import { Search } from "lucide-react";
-import useEditor from "../../../context/editor/useEditor";
 import AssetSection from "./AssetSection";
 import type { Asset } from "../../../assets/Asset";
 import { getFurnitureAssets } from "../../../engine/furniture/FirebaseFurnitureLibrary";
@@ -23,7 +22,6 @@ function filterFurniture(
 }
 
 export default function FurniturePanel() {
-    const { state } = useEditor();
     const [furnitureAssets, setFurnitureAssets] = useState<Asset[]>([]);
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
@@ -79,29 +77,8 @@ export default function FurniturePanel() {
     const hasResults = sections.some(
         section => section.assets.length > 0
     );
-    const layoutLocked = !state.layoutConfirmed;
-
     return (
-        <div
-            className="furniture-panel"
-            style={{
-                opacity: layoutLocked ? 0.5 : 1,
-                pointerEvents: layoutLocked ? "none" : "auto"
-            }}
-        >
-            {layoutLocked && (
-                <div
-                    style={{
-                        padding: "10px 12px",
-                        textAlign: "center",
-                        fontSize: "12px",
-                        lineHeight: 1.4
-                    }}
-                >
-                    Confirm the layout first before placing furniture.
-                </div>
-            )}
-
+        <div className="furniture-panel">
             <div className="furniture-panel-search">
                 <Search
                     size={16}

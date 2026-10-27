@@ -37,6 +37,7 @@ import {
 } from "firebase/storage";
 
 import {
+    createManagedInteriorData,
     createProjectData
 } from "../../../services/projectSerializer";
 
@@ -512,6 +513,28 @@ export default function ProjectPanel() {
                     );
                 }
 
+                if (
+                    metadata.workflowType === "admin-managed" &&
+                    (
+                        metadata.structuralStatus !== "published" ||
+                        typeof metadata.publishedStructuralRevision !== "number" ||
+                        metadata.publishedStructuralRevision < 1
+                    )
+                ) {
+                    throw new Error(
+                        "This structural project has not been published and cannot be saved as an interior design."
+                    );
+                }
+
+                if (
+                    state.workflowType === "admin-managed" &&
+                    metadata.workflowType !== "admin-managed"
+                ) {
+                    throw new Error(
+                        "Project workflow metadata changed. Reopen the project before saving."
+                    );
+                }
+
                 const currentDeadline =
                     isValidProjectDeadline(
                         metadata.deadline
@@ -586,6 +609,7 @@ export default function ProjectPanel() {
             // PREPARE PROJECT JSON
             //==================================================
 
+            const isManaged = state.workflowType === "admin-managed";
             const projectData = {
                 ...createProjectData(
                     state,
@@ -593,16 +617,15 @@ export default function ProjectPanel() {
                     trimmedName,
                     user.uid
                 ),
-
-                // Explicitly include both wall-side finishes.
                 wallFinishes: state.wallFinishes
             };
 
             const estimatedCost =
                 projectData.costEstimate.total;
 
-            const json =
-                JSON.stringify(
+            const json = isManaged
+                ? JSON.stringify(createManagedInteriorData(state), null, 2)
+                : JSON.stringify(
                     projectData,
                     null,
                     2
@@ -612,8 +635,9 @@ export default function ProjectPanel() {
             // UPLOAD PROJECT JSON TO FIREBASE STORAGE
             //==================================================
 
-            const storagePath =
-                `projects/${user.uid}/${currentProjectId}.json`;
+            const storagePath = isManaged
+                ? `projects/${user.uid}/${currentProjectId}.interior.json`
+                : `projects/${user.uid}/${currentProjectId}.json`;
 
             const storageRef = ref(
                 storage,
@@ -696,23 +720,23 @@ export default function ProjectPanel() {
                 ownerId:
                     user.uid,
 
-                jsonPath:
-                    storagePath,
-
-                jsonUrl:
-                    downloadUrl,
-
                 schemaVersion:
                     1,
 
                 estimatedCost:
                     estimatedCost,
 
-
-
                 updatedAt:
                     serverTimestamp()
             };
+
+            if (!isManaged) {
+                projectMetadata.jsonPath = storagePath;
+                projectMetadata.jsonUrl = downloadUrl;
+            } else {
+                projectMetadata.interiorJsonPath = storagePath;
+                projectMetadata.interiorJsonUrl = downloadUrl;
+            }
 
             if (thumbnailPath) {
                 projectMetadata.thumbnailPath =

@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "test": "node --test src/services/assets/flooringDimensions.test.mjs src/services/assets/furnitureCategories.test.mjs",
+    "test": "node --test src/services/assets/flooringDimensions.test.mjs src/services/assets/furnitureCategories.test.mjs src/services/assets/projectStructureContract.test.mjs src/services/assets/localManagedProjectDraft.test.mjs src/services/assets/managedStructurePublication.test.mjs src/components/project-editor/blueprintGeometry.test.mjs src/components/project-editor/structureGeometry.test.mjs src/components/project-editor/structureElementActions.test.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
   },

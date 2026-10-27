@@ -4,8 +4,6 @@ import {
 
 import "./WorkspaceContent.css";
 
-import FloorPlanPanel from "./panels/FloorPlanPanel";
-import BuildPanel from "./panels/BuildPanel";
 import FurniturePanel from "./panels/FurniturePanel";
 import DesignPanel from "./panels/DesignPanel";
 import ProjectPanel from "./panels/ProjectPanel";
@@ -51,16 +49,10 @@ export default function WorkspaceContent({
     //==================================================
 
     const panels = {
-
-        floorplan: <FloorPlanPanel />,
-
-        build: <BuildPanel />,
-
         furniture: <FurniturePanel />,
-
         project: <ProjectPanel />
-
     };
+    const activePanel = panels[activeTab as keyof typeof panels] ?? <FurniturePanel />;
 
     return (
 
@@ -70,7 +62,7 @@ export default function WorkspaceContent({
 
                 <div key={activeTab} className="workspace-content-inner">
 
-                    {panels[activeTab as keyof typeof panels]}
+                    {activePanel}
 
                 </div>
 

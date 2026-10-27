@@ -1,16 +1,22 @@
 import { useEffect, useMemo } from "react";
 import { useGLTF } from "@react-three/drei";
-import { Box3, Group, Mesh, Vector3 } from "three";
+import { Mesh } from "three";
+import type { ThreeEvent } from "@react-three/fiber";
 import type { Asset } from "../engine/assets/Asset";
 import type { SavedWindow } from "../ProjectTypes";
 import { emitAdminCommentTarget } from "../../../services/assets/adminCommentEvents";
 import AdminModelErrorBoundary from "./AdminModelErrorBoundary";
+import {
+    fitAdminElementModelToBounds,
+    normalizeAdminWindowModel
+} from "./AdminElementModelUtils";
 import { disposeClonedMaterials } from "@/lib/disposeClonedMaterials";
 
 interface AdminWindowProps {
     window: SavedWindow;
     asset: Asset;
     wallThickness: number;
+    onSelect?: (windowId: string) => void;
 }
 
 const WINDOW_CASING_WIDTH = 0.060;
@@ -175,46 +181,11 @@ function WindowCasing({
     );
 }
 
-function normalizeWindowModel(
-    source: Group,
-    asset: Asset
-): Group {
-    const model =
-        source.clone(true);
-
-    const scale =
-        asset.scale ??
-        1;
-
-    model.scale.set(
-        scale,
-        scale,
-        scale
-    );
-
-    model.updateMatrixWorld(true);
-
-    const box =
-        new Box3().setFromObject(model);
-
-    const center =
-        new Vector3();
-
-    box.getCenter(center);
-
-    model.position.x -= center.x;
-    model.position.y -= center.y;
-    model.position.z -= center.z;
-
-    model.updateMatrixWorld(true);
-
-    return model;
-}
-
 export default function AdminWindow({
     window,
     asset,
-    wallThickness
+    wallThickness,
+    onSelect
 }: AdminWindowProps) {
     if (
         typeof asset.model !== "string" ||
@@ -234,6 +205,7 @@ export default function AdminWindow({
                 window={window}
                 asset={asset}
                 wallThickness={wallThickness}
+                onSelect={onSelect}
             />
         </AdminModelErrorBoundary>
     );
@@ -242,17 +214,24 @@ export default function AdminWindow({
 function AdminWindowModel({
     window,
     asset,
-    wallThickness
+    wallThickness,
+    onSelect
 }: AdminWindowProps) {
     const { scene } =
         useGLTF(asset.model);
 
     const model = useMemo(() => {
         const normalized =
-            normalizeWindowModel(
+            normalizeAdminWindowModel(
                 scene,
                 asset
             );
+
+        fitAdminElementModelToBounds(normalized, {
+            width: window.width,
+            height: window.height,
+            depth: window.depth
+        });
 
         normalized.traverse(child => {
             child.userData = {
@@ -296,6 +275,9 @@ function AdminWindowModel({
     }, [
         scene,
         asset,
+        window.width,
+        window.height,
+        window.depth,
         window.id
     ]);
 
@@ -307,8 +289,9 @@ function AdminWindowModel({
         window.rotationY +
         (asset.rotationOffsetY ?? 0);
 
-    const handleClick = (event: any) => {
+    const handleClick = (event: ThreeEvent<MouseEvent>) => {
         event.stopPropagation();
+        onSelect?.(window.id);
 
         emitAdminCommentTarget({
             targetType: "window",
@@ -336,7 +319,7 @@ function AdminWindowModel({
         >
             <WindowCasing
                 windowId={window.id}
-                width={window.width}
+                width={window.wallWidth ?? window.width}
                 height={window.height}
                 wallThickness={wallThickness}
             />

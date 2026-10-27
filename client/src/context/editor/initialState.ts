@@ -3,7 +3,12 @@ import { Tool } from "./tools";
 import { BuildTool } from "../BuildTool";
 
 export const initialState: EditorState = {
-    activeTab: "floorplan",
+    workflowType: "legacy",
+    structuralOwner: undefined,
+    structuralStatus: undefined,
+    structuralRevision: undefined,
+    publishedStructuralRevision: undefined,
+    activeTab: "furniture",
     activeTool: Tool.None,
     walls: [],
     corners: [],

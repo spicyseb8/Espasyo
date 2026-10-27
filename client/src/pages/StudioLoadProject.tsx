@@ -36,6 +36,10 @@ import {
 } from "../engine/AssetPreloader";
 
 import {
+    mergeManagedInteriorData
+} from "../services/managedProjectData";
+
+import {
     clearProjectSession,
     saveProjectBaseline
 } from "../services/projectEditSessionService";
@@ -184,6 +188,19 @@ function LoadProjectContent() {
                     );
                 }
 
+                if (
+                    projectMetadata.workflowType === "admin-managed" &&
+                    (
+                        projectMetadata.structuralStatus !== "published" ||
+                        typeof projectMetadata.publishedStructuralRevision !== "number" ||
+                        projectMetadata.publishedStructuralRevision < 1
+                    )
+                ) {
+                    throw new Error(
+                        "This project has not been published yet."
+                    );
+                }
+
                 //==================================================
                 // LOAD THE ADMIN-SET DEADLINE
                 //==================================================
@@ -251,6 +268,49 @@ function LoadProjectContent() {
 
                 const projectData =
                     await response.json();
+
+                if (projectMetadata.workflowType === "admin-managed") {
+                    if (
+                        projectData.projectId !== projectId ||
+                        projectData.ownerId !== user.uid ||
+                        projectData.workflowType !== "admin-managed" ||
+                        projectData.structuralStatus !== "published" ||
+                        projectData.publishedStructuralRevision !== projectMetadata.publishedStructuralRevision ||
+                        projectData.structuralRevision !== projectMetadata.publishedStructuralRevision ||
+                        !Array.isArray(projectData.walls) ||
+                        !Array.isArray(projectData.corners) ||
+                        !Array.isArray(projectData.doors) ||
+                        !Array.isArray(projectData.windows) ||
+                        !Array.isArray(projectData.openings)
+                    ) {
+                        throw new Error(
+                            "The published structure does not match this project's owner, ID, or revision."
+                        );
+                    }
+                }
+
+                if (
+                    projectMetadata.workflowType === "admin-managed" &&
+                    typeof projectMetadata.interiorJsonUrl === "string" &&
+                    projectMetadata.interiorJsonUrl.trim() !== ""
+                ) {
+                    const interiorResponse = await fetch(projectMetadata.interiorJsonUrl.trim(), {
+                        cache: "no-store",
+                        signal: controller.signal
+                    });
+                    if (!interiorResponse.ok) {
+                        throw new Error(`Interior project request failed with HTTP ${interiorResponse.status}.`);
+                    }
+                    const interiorData = await interiorResponse.json();
+                    Object.assign(projectData, mergeManagedInteriorData(
+                        projectData,
+                        interiorData as {
+                            furniture?: unknown[];
+                            floorFinishes?: Record<string, string>;
+                            wallFinishes?: Record<string, Record<string, string>>;
+                        }
+                    ));
+                }
 
                 if (cancelled) {
                     return;

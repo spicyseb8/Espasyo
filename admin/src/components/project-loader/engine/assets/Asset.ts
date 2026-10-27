@@ -61,6 +61,12 @@ export interface Asset {
 
     price?: number;
 
+    width?: number;
+
+    height?: number;
+
+    depth?: number;
+
 
     //--------------------------------------------------
     // Opening

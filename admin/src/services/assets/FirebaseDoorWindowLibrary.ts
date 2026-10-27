@@ -49,6 +49,14 @@ interface FirebaseBuildAssetDocument {
     scale?: unknown;
 
     rotation_offset_y?: unknown;
+
+    width?: unknown;
+
+    height?: unknown;
+
+    depth?: unknown;
+
+    dimensions?: unknown;
 }
 
 
@@ -210,6 +218,18 @@ function normalizeCategory(
     }
 
     return undefined;
+}
+
+function positiveDimension(
+    directValue: unknown,
+    nestedValue: unknown
+): number | undefined {
+    const value =
+        Number(directValue ?? nestedValue);
+
+    return Number.isFinite(value) && value > 0
+        ? value
+        : undefined;
 }
 
 
@@ -499,6 +519,12 @@ async function buildAsset(
             ? "door"
             : "window";
 
+    const dimensions =
+        typeof data.dimensions === "object" &&
+        data.dimensions !== null
+            ? data.dimensions as Record<string, unknown>
+            : {};
+
     //--------------------------------------------------
     // Convert Firebase → Admin Asset
     //--------------------------------------------------
@@ -524,6 +550,15 @@ async function buildAsset(
             )
                 ? priceNumber
                 : 0,
+
+        width:
+            positiveDimension(data.width, dimensions.width),
+
+        height:
+            positiveDimension(data.height, dimensions.height),
+
+        depth:
+            positiveDimension(data.depth, dimensions.depth),
 
         rotationOffsetY,
 

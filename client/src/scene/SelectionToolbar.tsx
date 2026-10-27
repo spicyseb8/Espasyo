@@ -1068,6 +1068,13 @@ export default function SelectionToolbar() {
 
     }
 
+    if (
+        state.workflowType === "admin-managed" &&
+        selectedType !== "furniture"
+    ) {
+        return null;
+    }
+
     const furnitureAsset =
         furniture
 
@@ -1242,7 +1249,7 @@ export default function SelectionToolbar() {
     async function duplicateDoor() {
     setDeleteOpen(false);
 
-    if (!door) {
+    if (!door || state.workflowType === "admin-managed") {
         return;
     }
 
@@ -1289,7 +1296,7 @@ export default function SelectionToolbar() {
     async function duplicateWindow() {
     setDeleteOpen(false);
 
-    if (!selectedWindow) {
+    if (!selectedWindow || state.workflowType === "admin-managed") {
         return;
     }
 
@@ -1660,7 +1667,8 @@ export default function SelectionToolbar() {
         );
 
         if (
-            !door
+            !door ||
+            state.workflowType === "admin-managed"
         ) {
             return;
         }
@@ -1698,7 +1706,8 @@ export default function SelectionToolbar() {
         );
 
         if (
-            !selectedWindow
+            !selectedWindow ||
+            state.workflowType === "admin-managed"
         ) {
             return;
         }
@@ -1734,6 +1743,13 @@ export default function SelectionToolbar() {
         setDeleteOpen(
             false
         );
+
+        if (
+            state.workflowType === "admin-managed" &&
+            selectedType !== "furniture"
+        ) {
+            return;
+        }
 
         if (
 
@@ -2378,7 +2394,8 @@ export default function SelectionToolbar() {
 
                     {
                         selectedType ===
-                            "door" && (
+                            "door" &&
+                        state.workflowType !== "admin-managed" && (
 
                             <>
 
@@ -2427,7 +2444,8 @@ export default function SelectionToolbar() {
 
                     {
                         selectedType ===
-                            "window" && (
+                            "window" &&
+                        state.workflowType !== "admin-managed" && (
 
                             <>
 
@@ -2489,6 +2507,8 @@ export default function SelectionToolbar() {
                         }}
                     />
 
+                    {(selectedType === "furniture" ||
+                        state.workflowType !== "admin-managed") && (
                     <button
                         type="button"
                         className=
@@ -2511,8 +2531,11 @@ export default function SelectionToolbar() {
                         </span>
 
                     </button>
+                    )}
 
                     {
+                        (selectedType === "furniture" ||
+                            state.workflowType !== "admin-managed") &&
                         deleteOpen && (
 
                             <DeleteDialog

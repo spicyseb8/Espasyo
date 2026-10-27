@@ -15,6 +15,11 @@ export interface BlueprintCalibrationPoint {
 }
 
 export interface EditorState {
+    workflowType?: "legacy" | "admin-managed";
+    structuralOwner?: "admin";
+    structuralStatus?: "draft" | "published";
+    structuralRevision?: number;
+    publishedStructuralRevision?: number;
     activeTab: string;
     activeTool: Tool;
     walkthroughMode: boolean;

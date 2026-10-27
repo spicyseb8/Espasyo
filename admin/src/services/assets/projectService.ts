@@ -14,9 +14,17 @@ export interface AdminProject {
     projectId: string;
     projectName: string;
     ownerId: string;
+    workflowType?: "legacy" | "admin-managed";
+    structuralOwner?: "admin";
+    structuralStatus?: "draft" | "published";
+    structuralRevision?: number;
+    publishedStructuralRevision?: number;
+    structureInitialized?: boolean;
     ownerName?: string;
     jsonPath: string;
     jsonUrl: string;
+    draftJsonPath?: string;
+    draftJsonUrl?: string;
     thumbnailPath?: string;
     thumbnailUrl?: string;
     schemaVersion: number;
@@ -174,6 +182,38 @@ function mapProject(
                 ? data.ownerId
                 : "",
 
+        workflowType:
+            data.workflowType === "admin-managed"
+                ? "admin-managed"
+                : data.workflowType === "legacy"
+                    ? "legacy"
+                    : undefined,
+
+        structuralOwner:
+            data.structuralOwner === "admin"
+                ? "admin"
+                : undefined,
+
+        structuralStatus:
+            data.structuralStatus === "draft" || data.structuralStatus === "published"
+                ? data.structuralStatus
+                : undefined,
+
+        structuralRevision:
+            typeof data.structuralRevision === "number"
+                ? data.structuralRevision
+                : undefined,
+
+        publishedStructuralRevision:
+            typeof data.publishedStructuralRevision === "number"
+                ? data.publishedStructuralRevision
+                : undefined,
+
+        structureInitialized:
+            typeof data.structureInitialized === "boolean"
+                ? data.structureInitialized
+                : undefined,
+
         ownerName:
             typeof data.ownerName === "string"
                 ? data.ownerName
@@ -188,6 +228,16 @@ function mapProject(
             typeof data.jsonUrl === "string"
                 ? data.jsonUrl
                 : "",
+
+        draftJsonPath:
+            typeof data.draftJsonPath === "string"
+                ? data.draftJsonPath
+                : undefined,
+
+        draftJsonUrl:
+            typeof data.draftJsonUrl === "string"
+                ? data.draftJsonUrl
+                : undefined,
 
         thumbnailPath:
             typeof data.thumbnailPath === "string"
@@ -228,6 +278,35 @@ function mapProject(
 //==================================================
 // GET ALL PROJECTS
 //==================================================
+
+export interface AdminClient {
+    id: string;
+    uid: string;
+    name: string;
+    email?: string;
+}
+
+export async function getAdminClients(): Promise<AdminClient[]> {
+    const snapshot = await getDocs(collection(db, "users"));
+
+    return snapshot.docs.map(document => {
+        const data = document.data();
+        const uid = typeof data.uid === "string" && data.uid.trim() !== ""
+            ? data.uid.trim()
+            : document.id;
+
+        return {
+            id: document.id,
+            uid,
+            name: typeof data.full_name === "string"
+                ? data.full_name
+                : typeof data.name === "string"
+                    ? data.name
+                    : "Unknown User",
+            email: typeof data.email === "string" ? data.email : undefined
+        };
+    });
+}
 
 export async function getAdminProjects():
     Promise<AdminProject[]> {

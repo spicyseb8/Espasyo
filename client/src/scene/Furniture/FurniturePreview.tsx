@@ -962,10 +962,6 @@ export default function FurniturePreview() {
         );
     };
 
-    if (!state.layoutConfirmed) {
-        return null;
-    }
-
     const movingFurniture = state.movingFurnitureId
         ? findFurniture(state.furniture, state.movingFurnitureId)
         : null;
