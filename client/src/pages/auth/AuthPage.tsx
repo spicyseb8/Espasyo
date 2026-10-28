@@ -1,17 +1,11 @@
 import { useState } from "react";
 
 import { LoginForm } from "../../components/auth/Login";
-import { SignupForm } from "../../components/auth/Register";
-import { ForgotPasswordForm } from "../../components/auth/ForgotPassword";
-import { VerifyEmailForm } from "../../components/auth/VerifyEmail";
 
 // Put your image in /public (e.g. /public/auth-hero.jpg) and point this at it.
 const AUTH_IMAGE = "/auth-hero.jpg";
 
-type AuthMode = "login" | "signup" | "forgot" | "verify";
-
 export default function AuthPage() {
-  const [mode, setMode] = useState<AuthMode>("login");
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
 
@@ -27,30 +21,10 @@ export default function AuthPage() {
           </div>
         </header>
 
-        {/* Form (switches by mode, same logic as before) */}
+        {/* Login form */}
         <main className="flex flex-1 items-center justify-center px-6 pb-10">
           <div className="flex w-full max-w-sm flex-col gap-6">
-            {mode === "login" && (
-              <LoginForm
-                onSignup={() => setMode("signup")}
-                onForgotPassword={() => setMode("forgot")}
-              />
-            )}
-
-            {mode === "signup" && (
-              <SignupForm
-                onLogin={() => setMode("login")}
-                onVerify={() => setMode("verify")}
-              />
-            )}
-
-            {mode === "forgot" && (
-              <ForgotPasswordForm onLogin={() => setMode("login")} />
-            )}
-
-            {mode === "verify" && (
-              <VerifyEmailForm onLogin={() => setMode("login")} />
-            )}
+            <LoginForm />
           </div>
         </main>
 
