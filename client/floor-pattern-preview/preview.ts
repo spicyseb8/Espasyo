@@ -4,6 +4,7 @@ import {
   DEFAULT_FLOOR_GROUT_WIDTH_M,
   FLOOR_PATTERN_DEFINITIONS,
 } from "../../shared/flooring/patterns";
+import { calculateFloorImageCoverCrop } from "../../shared/flooring/patternCanvas";
 import type {
   FloorPatternLayout,
 } from "../../shared/flooring/patterns";
@@ -120,7 +121,7 @@ function createPatternCard(label: string, layout: FloorPatternLayout): HTMLEleme
   if (aspect.mismatch) {
     warning.textContent =
       `Image ratio ${aspect.imageAspectRatio.toFixed(2)} differs from physical tile ratio ` +
-      `${aspect.physicalAspectRatio.toFixed(2)}. The image is contained, not stretched.`;
+      `${aspect.physicalAspectRatio.toFixed(2)}. The image is center-cropped to fill the tile face.`;
   }
 
   card.append(header, canvas, warning);
@@ -193,22 +194,23 @@ function drawTile(
   );
 
   const imageSize = getTileImageSize();
-  const sourceAspect = imageSize.width / imageSize.height;
   const faceAspect = faceLength / faceWidth;
-  let drawWidth = faceLength * PREVIEW_SCALE;
-  let drawHeight = faceWidth * PREVIEW_SCALE;
-  if (sourceAspect > faceAspect) {
-    drawHeight = drawWidth / sourceAspect;
-  } else {
-    drawWidth = drawHeight * sourceAspect;
-  }
+  const crop = calculateFloorImageCoverCrop(
+    imageSize.width,
+    imageSize.height,
+    faceAspect,
+  );
 
   context.drawImage(
     tileImage,
-    -drawWidth / 2,
-    -drawHeight / 2,
-    drawWidth,
-    drawHeight,
+    crop.x,
+    crop.y,
+    crop.width,
+    crop.height,
+    -faceLength * PREVIEW_SCALE / 2,
+    -faceWidth * PREVIEW_SCALE / 2,
+    faceLength * PREVIEW_SCALE,
+    faceWidth * PREVIEW_SCALE,
   );
   context.restore();
 }

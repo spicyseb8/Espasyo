@@ -11,7 +11,7 @@
     <main>
       <header class="page-header">
         <div>
-          <p class="eyebrow">Temporary visual test · Phase 1</p>
+          <p class="eyebrow">Temporary visual test · shared pattern module</p>
           <h1>Single-tile floor patterns</h1>
           <p class="intro">
             Layouts come directly from <code>shared/flooring/patterns.ts</code>.
@@ -29,9 +29,9 @@
       <p id="image-status" class="image-status" role="status"></p>
       <section id="pattern-rows" aria-live="polite"></section>
       <footer>
-        Dashed outlines show one repeat cell. The image is contained within
-        each tile face to avoid distortion; an aspect-ratio difference is
-        reported instead of changing the configured tile dimensions.
+        Dashed outlines show one repeat cell. Each image is center-cropped to
+        fill the physical tile face without stretching; image dimensions do not
+        change the configured tile dimensions.
       </footer>
     </main>
     <script type="module" src="./preview.ts"></script>

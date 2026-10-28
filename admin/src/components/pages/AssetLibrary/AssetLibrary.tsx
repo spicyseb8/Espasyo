@@ -63,6 +63,11 @@ import { deleteAsset } from "@/services/assets/deleteAsset";
 import { removeCachedDoorWindowAsset } from "@/services/assets/FirebaseDoorWindowLibrary";
 import { removeCachedFloorMaterial } from "@/services/assets/floorsload";
 import { removeCachedFurnitureAsset } from "@/services/assets/furnitureload";
+import {
+  FLOOR_PATTERN_DEFINITIONS,
+  isFloorPattern,
+} from "../../../../../shared/flooring/patterns";
+import type { FloorPattern } from "../../../../../shared/flooring/patterns";
 
 interface AssetLibraryProps {
   type: AssetType;
@@ -121,6 +126,8 @@ export default function AssetLibrary({
   // Existing assets without dimensions start with blank fields.
   const [editLength, setEditLength] = useState("");
   const [editWidth, setEditWidth] = useState("");
+  const [editFloorPattern, setEditFloorPattern] =
+    useState<FloorPattern>("stack-bond");
 
   const [editStatus, setEditStatus] =
     useState<AssetStatus>("available");
@@ -290,6 +297,9 @@ export default function AssetLibrary({
     setEditWidth(
       metersToCentimetersInput(asset.width)
     );
+    setEditFloorPattern(
+      isFloorPattern(asset.floorPattern) ? asset.floorPattern : "stack-bond"
+    );
 
     setEditStatus(asset.asset_status ?? "available");
     setDetailPage(1);
@@ -306,6 +316,11 @@ export default function AssetLibrary({
     setEditLength(metersToCentimetersInput(selectedAsset.length));
 
     setEditWidth(metersToCentimetersInput(selectedAsset.width));
+    setEditFloorPattern(
+      isFloorPattern(selectedAsset.floorPattern)
+        ? selectedAsset.floorPattern
+        : "stack-bond"
+    );
 
     setEditStatus(
       selectedAsset.asset_status ?? "available"
@@ -325,6 +340,11 @@ export default function AssetLibrary({
     setEditLength(metersToCentimetersInput(selectedAsset.length));
 
     setEditWidth(metersToCentimetersInput(selectedAsset.width));
+    setEditFloorPattern(
+      isFloorPattern(selectedAsset.floorPattern)
+        ? selectedAsset.floorPattern
+        : "stack-bond"
+    );
 
     setEditStatus(
       selectedAsset.asset_status ?? "available"
@@ -430,6 +450,10 @@ export default function AssetLibrary({
             }),
         asset_status: editStatus,
         ...(floorDimensions ?? {}),
+        ...(selectedAsset.asset_type === "floor" &&
+        selectedAsset.floorMaterialMode === "single-tile"
+          ? { floorPattern: editFloorPattern }
+          : {}),
       });
 
       let cacheWarning = false;
@@ -459,6 +483,10 @@ export default function AssetLibrary({
                   : numericPrice,
             }),
         ...(floorDimensions ?? {}),
+        ...(selectedAsset.asset_type === "floor" &&
+        selectedAsset.floorMaterialMode === "single-tile"
+          ? { floorPattern: editFloorPattern }
+          : {}),
       };
 
       setSelectedAsset(updatedAsset);
@@ -854,7 +882,7 @@ export default function AssetLibrary({
                     </p>
 
                     <p className="mb-3 text-xs text-muted-foreground">
-                      Enter the flooring piece length and width in centimeters.
+                      Enter the physical tile length and width in centimeters.
                     </p>
 
                     <div className="grid grid-cols-2 gap-3">
@@ -910,6 +938,36 @@ export default function AssetLibrary({
                         </div>
                       </div>
                     </div>
+
+                    {selectedAsset.floorMaterialMode === "single-tile" ? (
+                      <div className="mt-4 space-y-2">
+                        <label htmlFor="edit-floor-pattern" className="text-xs font-medium">
+                          Laying pattern
+                        </label>
+                        <Select
+                          value={editFloorPattern}
+                          onValueChange={(value) => {
+                            if (isFloorPattern(value)) setEditFloorPattern(value);
+                          }}
+                          disabled={saving}
+                        >
+                          <SelectTrigger id="edit-floor-pattern">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {FLOOR_PATTERN_DEFINITIONS.map((pattern) => (
+                              <SelectItem key={pattern.id} value={pattern.id}>
+                                {pattern.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ) : (
+                      <p className="mt-4 text-xs text-muted-foreground">
+                        This older material keeps its existing texture-sheet rendering. Editing dimensions will not convert it to single-tile mode.
+                      </p>
+                    )}
                   </div>
                 )}
 

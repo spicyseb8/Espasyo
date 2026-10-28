@@ -5,6 +5,10 @@ import type {
   AssetType,
 } from "./asset-types";
 import { isOptionalFurniturePrice } from "./furnitureCategories";
+import {
+  DEFAULT_FLOOR_GROUT_WIDTH_M,
+} from "../../../../shared/flooring/patterns";
+import type { FloorPattern } from "../../../../shared/flooring/patterns";
 
 export interface CreateAssetInput {
   asset_type: AssetType;
@@ -18,6 +22,7 @@ export interface CreateAssetInput {
   // Values are converted to meters before this service is called.
   length?: number;
   width?: number;
+  floorPattern?: FloorPattern;
 
   modelFile?: File;
   diffuseFile?: File;
@@ -74,6 +79,17 @@ export async function createAsset(
         "Floor width must be greater than 0."
       );
     }
+
+    if (!input.floorPattern) {
+      throw new Error("Choose a floor tile pattern.");
+    }
+
+    if (
+      input.length <= DEFAULT_FLOOR_GROUT_WIDTH_M ||
+      input.width <= DEFAULT_FLOOR_GROUT_WIDTH_M
+    ) {
+      throw new Error("Floor tile dimensions must each be greater than the 3 mm grout width.");
+    }
   } else if (
     !(
       input.asset_type === "furniture" &&
@@ -106,8 +122,13 @@ export async function createAsset(
 
   // Send the dimensions only for floor assets.
   if (input.asset_type === "floor") {
+    const floorPattern = input.floorPattern;
+    if (!floorPattern) {
+      throw new Error("Choose a floor tile pattern.");
+    }
     formData.append("length", String(input.length));
     formData.append("width", String(input.width));
+    formData.append("floorPattern", floorPattern);
   }
 
   if (input.modelFile) {

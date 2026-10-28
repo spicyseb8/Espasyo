@@ -3,6 +3,7 @@ import { Html } from "@react-three/drei";
 import {
     CanvasTexture,
     DoubleSide,
+    Float32BufferAttribute,
     Path,
     Shape,
     ShapeGeometry,
@@ -13,9 +14,16 @@ import type { ThreeEvent } from "@react-three/fiber";
 import type { Region } from "../engine/regions/Polygon";
 import type { Material } from "../engine/materials/MaterialTypes";
 import {
+    createFloorPatternLayout,
+    getFloorPatternUV,
+    isFloorPattern
+} from "../../../../../shared/flooring/patterns";
+import {
     DEFAULT_FLOOR_MATERIAL_ID,
     LOCAL_DEFAULT_FLOOR_TEXTURE,
+    getCachedFloorPatternTexture,
     getCachedFloorTexture,
+    preloadFloorPatternTexture,
     preloadFloorTexture
 } from "../../../services/assets/floorsload";
 import { emitAdminCommentTarget } from "../../../services/assets/adminCommentEvents";
@@ -31,34 +39,74 @@ interface AdminFloorProps {
 }
 
 function useFloorTexture(
-    url?: string
+    url: string | undefined,
+    material: Material
 ): Texture | null {
-    const [loadedTexture, setLoadedTexture] = useState<Texture | null>(null);
+    const materialSettings = useMemo<Material>(() => ({
+        id: material.id,
+        name: material.name,
+        category: material.category,
+        pricePerSquareMeter: material.pricePerSquareMeter,
+        floorMaterialMode: material.floorMaterialMode,
+        floorPattern: material.floorPattern,
+        length: material.length,
+        width: material.width
+    }), [
+        material.id,
+        material.name,
+        material.category,
+        material.pricePerSquareMeter,
+        material.floorMaterialMode,
+        material.floorPattern,
+        material.length,
+        material.width
+    ]);
+    const requestKey = url
+        ? JSON.stringify([
+            url,
+            materialSettings.floorMaterialMode,
+            materialSettings.floorPattern,
+            materialSettings.length,
+            materialSettings.width
+        ])
+        : "";
+    const [loadedTexture, setLoadedTexture] =
+        useState<{ key: string; texture: Texture | null } | null>(null);
 
     useEffect(() => {
-        if (!url) {
-            setLoadedTexture(null);
-            return;
-        }
+        if (!url) return;
 
         let cancelled = false;
 
-        preloadFloorTexture(url).then(texture => {
+        const loadTexture =
+            materialSettings.floorMaterialMode === "single-tile"
+                ? preloadFloorPatternTexture(url, materialSettings)
+                : preloadFloorTexture(url);
+        loadTexture.then(texture => {
             if (!cancelled) {
-                setLoadedTexture(texture);
+                setLoadedTexture({ key: requestKey, texture });
             }
         });
 
         return () => {
             cancelled = true;
         };
-    }, [url]);
+    }, [
+        url,
+        materialSettings,
+        requestKey
+    ]);
 
     if (!url) {
         return null;
     }
 
-    return getCachedFloorTexture(url) ?? loadedTexture;
+    return (
+        (materialSettings.floorMaterialMode === "single-tile"
+            ? getCachedFloorPatternTexture(url, materialSettings)
+            : getCachedFloorTexture(url)) ??
+        (loadedTexture?.key === requestKey ? loadedTexture.texture : null)
+    );
 }
 
 function distanceToSegment(point: Vector3, start: Vector3, end: Vector3): number {
@@ -184,7 +232,8 @@ export default function AdminFloor({
         selectedMaterial ?? defaultMaterial;
 
     const floorTexture = useFloorTexture(
-        displayMaterial.texture
+        displayMaterial.texture,
+        displayMaterial
     );
 
     const geometry = useMemo(() => {
@@ -261,6 +310,56 @@ export default function AdminFloor({
         return new ShapeGeometry(shape);
     }, [region.boundaryLoops]);
 
+    const floorGeometry = useMemo(() => {
+        const length = displayMaterial.length;
+        const width = displayMaterial.width;
+        if (
+            !geometry ||
+            displayMaterial.floorMaterialMode !== "single-tile" ||
+            !isFloorPattern(displayMaterial.floorPattern) ||
+            typeof length !== "number" ||
+            typeof width !== "number"
+        ) {
+            return geometry;
+        }
+
+        const layout = createFloorPatternLayout(
+            displayMaterial.floorPattern,
+            length,
+            width
+        );
+        const patternedGeometry = geometry.clone();
+        const positions = patternedGeometry.getAttribute("position");
+        const uvValues = new Float32Array(positions.count * 2);
+
+        for (let index = 0; index < positions.count; index += 1) {
+            const uv = getFloorPatternUV(
+                positions.getX(index),
+                positions.getY(index),
+                layout
+            );
+            uvValues[index * 2] = uv.x;
+            uvValues[index * 2 + 1] = uv.y;
+        }
+
+        patternedGeometry.setAttribute(
+            "uv",
+            new Float32BufferAttribute(uvValues, 2)
+        );
+        return patternedGeometry;
+    }, [
+        geometry,
+        displayMaterial.floorMaterialMode,
+        displayMaterial.floorPattern,
+        displayMaterial.length,
+        displayMaterial.width
+    ]);
+
+    useEffect(() => {
+        if (!floorGeometry || floorGeometry === geometry) return;
+        return () => floorGeometry.dispose();
+    }, [floorGeometry, geometry]);
+
     const highlightGeometry = useMemo(
         () => selected ? geometry?.clone() ?? null : null,
         [geometry, selected]
@@ -328,7 +427,7 @@ export default function AdminFloor({
     return (
         <group>
             <mesh
-                geometry={geometry}
+                geometry={floorGeometry ?? geometry}
                 position={[0, floorY, 0]}
                 rotation={[-Math.PI / 2, 0, 0]}
                 receiveShadow

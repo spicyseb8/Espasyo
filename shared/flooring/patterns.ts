@@ -2,8 +2,6 @@ export const DEFAULT_FLOOR_GROUT_WIDTH_M = 0.003;
 export const DEFAULT_FLOOR_GROUT_COLOR = "#808080";
 export const ASPECT_RATIO_WARNING_TOLERANCE = 0.1;
 
-const MAX_HERRINGBONE_TILES_PER_CELL = 512;
-
 export const FLOOR_PATTERN_DEFINITIONS = [
     {
         id: "stack-bond",
@@ -20,15 +18,14 @@ export const FLOOR_PATTERN_DEFINITIONS = [
         label: "Diagonal",
         description: "Stack Bond rotated 45 degrees relative to world axes.",
     },
-    {
-        id: "herringbone",
-        label: "Herringbone",
-        description: "Alternating horizontal and perpendicular tile courses.",
-    },
 ] as const;
 
 export type FloorPattern = (typeof FLOOR_PATTERN_DEFINITIONS)[number]["id"];
 export type FloorDimensionUnit = "cm" | "mm";
+
+export function isFloorPattern(value: unknown): value is FloorPattern {
+    return FLOOR_PATTERN_DEFINITIONS.some(({ id }) => id === value);
+}
 
 export interface FloorVector {
     x: number;
@@ -59,6 +56,27 @@ export interface FloorAspectRatioCheck {
     physicalAspectRatio: number;
     relativeDifference: number;
     mismatch: boolean;
+}
+
+export function getFloorPatternUV(
+    x: number,
+    y: number,
+    layout: FloorPatternLayout,
+): FloorVector {
+    if (!Number.isFinite(x) || !Number.isFinite(y)) {
+        throw new RangeError("Floor coordinates must be finite numbers.");
+    }
+
+    const { a, b } = layout.repeatCell;
+    const determinant = a.x * b.y - a.y * b.x;
+    if (!Number.isFinite(determinant) || Math.abs(determinant) < 1e-12) {
+        throw new RangeError("Floor pattern repeat cell must have a non-zero area.");
+    }
+
+    return {
+        x: (x * b.y - y * b.x) / determinant,
+        y: (y * a.x - x * a.y) / determinant,
+    };
 }
 
 export function floorDimensionToMeters(value: number, unit: FloorDimensionUnit): number {
@@ -151,8 +169,6 @@ export function createFloorPatternLayout(
             };
         case "diagonal":
             return diagonalLayout(layout);
-        case "herringbone":
-            return herringboneLayout(layout);
         default:
             throw new RangeError(`Unsupported floor pattern: ${String(pattern)}.`);
     }
@@ -175,105 +191,9 @@ function diagonalLayout(
     };
 }
 
-function herringboneLayout(
-    layout: Omit<FloorPatternLayout, "repeatCell" | "tiles">,
-): FloorPatternLayout {
-    const dimensions = toCommonDecimalUnits(layout.tileLengthM, layout.tileWidthM);
-    const { lengthUnits, widthUnits } = dimensions;
-    const commonUnits = leastCommonMultiple(lengthUnits, widthUnits);
-    const periodUnits = commonUnits * 2;
-    const horizontalCount = periodUnits / lengthUnits;
-    const verticalCount = periodUnits / widthUnits;
-
-    if (horizontalCount + verticalCount > MAX_HERRINGBONE_TILES_PER_CELL) {
-        throw new RangeError(
-            "The herringbone repeat cell is too large for these tile dimensions; choose a different pattern or simpler tile dimensions.",
-        );
-    }
-
-    const repeatWidthM = periodUnits * dimensions.metersPerUnit;
-    const tiles: FloorTilePlacement[] = [];
-
-    for (let index = 0; index < horizontalCount; index += 1) {
-        tiles.push({
-            center: {
-                x: (index + 0.5) * layout.tileLengthM,
-                y: layout.tileWidthM / 2,
-            },
-            rotationRadians: 0,
-        });
-    }
-
-    for (let index = 0; index < verticalCount; index += 1) {
-        tiles.push({
-            center: {
-                x: index * layout.tileWidthM,
-                y: layout.tileWidthM + layout.tileLengthM / 2,
-            },
-            rotationRadians: Math.PI / 2,
-        });
-    }
-
-    return {
-        ...layout,
-        repeatCell: {
-            a: { x: repeatWidthM, y: 0 },
-            b: { x: 0, y: layout.tileWidthM + layout.tileLengthM },
-        },
-        tiles,
-    };
-}
-
 function validateTileDimensions(tileLengthM: number, tileWidthM: number): void {
     if (!Number.isFinite(tileLengthM) || tileLengthM <= 0 ||
         !Number.isFinite(tileWidthM) || tileWidthM <= 0) {
         throw new RangeError("Tile dimensions must be finite positive numbers.");
     }
-}
-
-function toCommonDecimalUnits(
-    lengthM: number,
-    widthM: number,
-): { lengthUnits: number; widthUnits: number; metersPerUnit: number } {
-    const length = decimalParts(lengthM);
-    const width = decimalParts(widthM);
-    const commonPower = Math.min(length.power, width.power);
-    const lengthUnits = length.coefficient * 10 ** (length.power - commonPower);
-    const widthUnits = width.coefficient * 10 ** (width.power - commonPower);
-    const metersPerUnit = 10 ** commonPower;
-
-    if (!Number.isSafeInteger(lengthUnits) || !Number.isSafeInteger(widthUnits) ||
-        !Number.isFinite(metersPerUnit) || metersPerUnit <= 0) {
-        throw new RangeError("Tile dimensions are outside the supported precision range.");
-    }
-
-    return { lengthUnits, widthUnits, metersPerUnit };
-}
-
-function decimalParts(value: number): { coefficient: number; power: number } {
-    const [significand, exponent = "0"] = value.toString().toLowerCase().split("e");
-    const [integerPart, fractionalPart = ""] = significand.split(".");
-
-    return {
-        coefficient: Number(`${integerPart}${fractionalPart}`),
-        power: Number(exponent) - fractionalPart.length,
-    };
-}
-
-function leastCommonMultiple(left: number, right: number): number {
-    const gcd = greatestCommonDivisor(left, right);
-    const lcm = (left / gcd) * right;
-    if (!Number.isSafeInteger(lcm)) {
-        throw new RangeError("Tile dimensions produce an unrepresentable repeat cell.");
-    }
-    return lcm;
-}
-
-function greatestCommonDivisor(left: number, right: number): number {
-    let a = left;
-    let b = right;
-    while (b !== 0) {
-        [a, b] = [b, a % b];
-    }
-    return a;
 }

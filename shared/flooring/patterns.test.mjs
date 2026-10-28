@@ -8,7 +8,11 @@ import {
     checkFloorImageAspectRatio,
     createFloorPatternLayout,
     floorDimensionToMeters,
+    getFloorPatternUV,
 } from "./patterns.ts";
+import {
+    calculateFloorImageCoverCrop,
+} from "./patternCanvas.ts";
 
 const closeTo = (actual, expected, tolerance = 1e-9) => {
     assert.ok(
@@ -65,13 +69,13 @@ function cellArea(layout) {
     return Math.abs(a.x * b.y - a.y * b.x);
 }
 
-test("defines exactly the four requested editable patterns", () => {
+test("defines only Stack Bond, Brick Bond, and Diagonal patterns", () => {
     assert.deepEqual(FLOOR_PATTERN_DEFINITIONS.map(({ id }) => id), [
         "stack-bond",
         "brick-bond",
         "diagonal",
-        "herringbone",
     ]);
+    assert.throws(() => createFloorPatternLayout("herringbone", 0.6, 0.3), RangeError);
 });
 
 test("converts cm and mm dimensions to meters and rejects invalid dimensions", () => {
@@ -114,40 +118,6 @@ test("Diagonal rotates the tile and both repeat axes by 45 degrees", () => {
     assertCellHasNoTileGapsOrOverlaps(layout);
 });
 
-test("Herringbone alternates perpendicular courses with a seamless repeat cell", () => {
-    const layout = createFloorPatternLayout("herringbone", 0.6, 0.3);
-    const horizontalTiles = layout.tiles.filter(({ rotationRadians }) => rotationRadians === 0);
-    const verticalTiles = layout.tiles.filter(({ rotationRadians }) => rotationRadians !== 0);
-
-    assert.equal(horizontalTiles.length, 2);
-    assert.equal(verticalTiles.length, 4);
-    assert.ok(verticalTiles.every(({ rotationRadians }) => rotationRadians === Math.PI / 2));
-    closeTo(layout.repeatCell.a.x, 1.2);
-    closeTo(layout.repeatCell.b.y, 0.9);
-    closeTo(
-        layout.tiles.length * layout.tileLengthM * layout.tileWidthM,
-        cellArea(layout),
-    );
-    assertCellHasNoTileGapsOrOverlaps(layout);
-});
-
-test("Herringbone supports square and non-2:1 rectangular tile dimensions", () => {
-    for (const [length, width] of [[0.4, 0.4], [0.6, 0.4], [0.6000004, 0.3000002]]) {
-        const layout = createFloorPatternLayout("herringbone", length, width);
-
-        assert.ok(layout.tiles.some(({ rotationRadians }) => rotationRadians === 0));
-        assert.ok(layout.tiles.some(({ rotationRadians }) => rotationRadians === Math.PI / 2));
-        closeTo(
-            layout.tiles.length * layout.tileLengthM * layout.tileWidthM,
-            cellArea(layout),
-        );
-        assertCellHasNoTileGapsOrOverlaps(layout);
-    }
-
-    const preciseDimensions = createFloorPatternLayout("herringbone", 0.6000004, 0.3000002);
-    closeTo(preciseDimensions.repeatCell.a.x, 1.2000008);
-});
-
 test("all patterns keep configured physical tile area independent of image size", () => {
     for (const { id } of FLOOR_PATTERN_DEFINITIONS) {
         const layout = createFloorPatternLayout(id, 0.6, 0.3);
@@ -155,6 +125,24 @@ test("all patterns keep configured physical tile area independent of image size"
 
         closeTo(nominalTileArea, cellArea(layout));
     }
+});
+
+test("maps world coordinates into repeat-cell UVs for all patterns", () => {
+    for (const { id } of FLOOR_PATTERN_DEFINITIONS) {
+        const layout = createFloorPatternLayout(id, 0.6, 0.3);
+        const { a, b } = layout.repeatCell;
+
+        assert.deepEqual(getFloorPatternUV(0, 0, layout), { x: 0, y: 0 });
+        const uvA = getFloorPatternUV(a.x, a.y, layout);
+        const uvB = getFloorPatternUV(b.x, b.y, layout);
+        closeTo(uvA.x, 1);
+        closeTo(uvA.y, 0);
+        closeTo(uvB.x, 0);
+        closeTo(uvB.y, 1);
+    }
+
+    const layout = createFloorPatternLayout("stack-bond", 0.6, 0.3);
+    assert.throws(() => getFloorPatternUV(Number.NaN, 0, layout), RangeError);
 });
 
 test("grout defaults to 3 mm and remains an independent centered gap", () => {
@@ -179,4 +167,23 @@ test("image resolution does not affect physical dimensions; aspect mismatch is r
     assert.equal(lowResolution.imageAspectRatio, highResolution.imageAspectRatio);
     assert.ok(mismatched.relativeDifference > ASPECT_RATIO_WARNING_TOLERANCE);
     assert.equal(mismatched.mismatch, true);
+});
+
+test("cover-crops uploaded images to fill the configured tile face", () => {
+    const wideImage = calculateFloorImageCoverCrop(1200, 600, 1);
+    assert.deepEqual(wideImage, {
+        x: 300,
+        y: 0,
+        width: 600,
+        height: 600,
+    });
+
+    const tallImage = calculateFloorImageCoverCrop(600, 1200, 2);
+    assert.deepEqual(tallImage, {
+        x: 0,
+        y: 450,
+        width: 600,
+        height: 300,
+    });
+    assert.throws(() => calculateFloorImageCoverCrop(0, 200, 1), RangeError);
 });
