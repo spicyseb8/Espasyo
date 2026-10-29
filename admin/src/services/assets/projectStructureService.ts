@@ -20,6 +20,7 @@ import {
     findSingleManagedProjectId,
     validateStructuralProjectData
 } from "./projectStructureContract";
+import { getInitialClientDesignLifecycle } from "./projectLifecycle";
 import { publishManagedStructure } from "./managedStructurePublication";
 
 function getPhilippineYear(): number {
@@ -327,6 +328,7 @@ export async function publishLocalManagedStructure(input: PublishLocalManagedStr
                     structuralStatus: "published",
                     structuralRevision: publication.revision,
                     publishedStructuralRevision: publication.revision,
+                    ...getInitialClientDesignLifecycle(undefined),
                     structureInitialized: true,
                     jsonPath: publication.storagePath,
                     jsonUrl: publication.jsonUrl,
@@ -442,6 +444,10 @@ export async function saveManagedStructure(input: SaveManagedStructureInput) {
         metadata.jsonPath = storagePath;
         metadata.jsonUrl = jsonUrl;
         metadata.publishedStructuralRevision = input.revision;
+        Object.assign(
+            metadata,
+            getInitialClientDesignLifecycle(existingData.clientDesignStarted)
+        );
     } else {
         metadata.draftJsonPath = storagePath;
         metadata.draftJsonUrl = jsonUrl;

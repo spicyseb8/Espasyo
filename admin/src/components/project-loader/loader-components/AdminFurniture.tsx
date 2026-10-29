@@ -11,11 +11,13 @@ import { disposeClonedMaterials } from "@/lib/disposeClonedMaterials";
 interface AdminFurnitureProps {
     furniture: SavedFurniture;
     asset: Asset;
+    onAssetError: (assetId: string) => void;
 }
 
 export default function AdminFurniture({
     furniture,
-    asset
+    asset,
+    onAssetError
 }: AdminFurnitureProps) {
     if (
         typeof asset.model !== "string" ||
@@ -28,15 +30,17 @@ export default function AdminFurniture({
                 assetId: furniture.assetId
             }
         );
+        onAssetError(asset.id);
 
         return null;
     }
 
     return (
-        <AdminModelErrorBoundary assetId={asset.id}>
+        <AdminModelErrorBoundary assetId={asset.id} onError={onAssetError}>
             <AdminFurnitureModel
                 furniture={furniture}
                 asset={asset}
+                onAssetError={onAssetError}
             />
         </AdminModelErrorBoundary>
     );

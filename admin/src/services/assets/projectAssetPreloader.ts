@@ -46,7 +46,8 @@ function preloadModels(urls: string[]): void {
     }
 }
 
-async function preloadWallTextures(urls: string[]): Promise<void> {
+async function preloadWallTextures(urls: string[]): Promise<Set<string>> {
+    const failedUrls = new Set<string>();
     for (const batch of splitIntoBatches(urls, TEXTURE_BATCH_SIZE)) {
         const results = await Promise.allSettled(
             batch.map(url => preloadWallTexture(url))
@@ -54,6 +55,7 @@ async function preloadWallTextures(urls: string[]): Promise<void> {
 
         results.forEach((result, index) => {
             if (result.status === "rejected") {
+                failedUrls.add(batch[index]);
                 console.error(
                     "Failed to preload admin project wall texture:",
                     batch[index],
@@ -62,6 +64,7 @@ async function preloadWallTextures(urls: string[]): Promise<void> {
             }
         });
     }
+    return failedUrls;
 }
 
 function logCatalogFailure<T>(
@@ -78,7 +81,7 @@ function logCatalogFailure<T>(
 
 export async function preloadAdminProjectAssets(
     projectData: SavedProjectData
-): Promise<void> {
+): Promise<string[]> {
     const [
         furnitureResult,
         doorWindowResult,
@@ -115,10 +118,12 @@ export async function preloadAdminProjectAssets(
         ...projectData.windows.map(item => item.assetId)
     ]);
 
+    const unavailableAssetIds = new Set<string>();
     const modelUrls = uniqueUrls(
         [...projectAssetIds].flatMap(assetId => {
             const asset = assetsById.get(assetId);
-            if (!asset) {
+            if (!asset || typeof asset.model !== "string" || asset.model.trim() === "") {
+                unavailableAssetIds.add(assetId);
                 console.warn("Project asset not found for preloading:", assetId);
                 return [];
             }
@@ -135,25 +140,51 @@ export async function preloadAdminProjectAssets(
             Object.values(finishes)
         )
     );
+    const availableFloorIds = new Set(floorMaterials.map(material => material.id));
+    const availableWallIds = new Set(wallMaterials.map(material => material.id));
+    for (const materialId of floorMaterialIds) {
+        if (!availableFloorIds.has(materialId)) unavailableAssetIds.add(materialId);
+    }
+    for (const materialId of wallMaterialIds) {
+        if (!availableWallIds.has(materialId)) unavailableAssetIds.add(materialId);
+    }
 
+    const selectedFloorMaterials = floorMaterials.filter(material =>
+        floorMaterialIds.has(material.id)
+    );
+    const selectedWallMaterials = wallMaterials.filter(material =>
+        wallMaterialIds.has(material.id)
+    );
     const floorTextureUrls = uniqueUrls([
         LOCAL_DEFAULT_FLOOR_TEXTURE,
         defaultFloor?.texture,
-        ...floorMaterials
-            .filter(material => floorMaterialIds.has(material.id))
+        ...selectedFloorMaterials
             .map(material => material.texture)
     ]);
-    const wallTextureUrls = uniqueUrls(
-        wallMaterials
-            .filter(material => wallMaterialIds.has(material.id))
-            .map(material => material.texture)
-    );
+    const wallTextureUrls = uniqueUrls(selectedWallMaterials.map(material => material.texture));
 
-    await Promise.all([
-        preloadModels(modelUrls),
-        Promise.all(
-            floorTextureUrls.map(url => preloadFloorTexture(url))
-        ),
-        preloadWallTextures(wallTextureUrls)
+    const [failedWallUrls, floorTextureResults] = await Promise.all([
+        preloadWallTextures(wallTextureUrls),
+        Promise.all(floorTextureUrls.map(url => preloadFloorTexture(url)))
     ]);
+    await preloadModels(modelUrls);
+
+    const loadedFloorTextureUrls = new Set(
+        floorTextureUrls.filter((_, index) => floorTextureResults[index] !== null)
+    );
+    for (const material of selectedFloorMaterials) {
+        if (
+            !material.texture ||
+            !loadedFloorTextureUrls.has(material.texture.trim())
+        ) {
+            unavailableAssetIds.add(material.id);
+        }
+    }
+    for (const material of selectedWallMaterials) {
+        if (!material.texture || failedWallUrls.has(material.texture.trim())) {
+            unavailableAssetIds.add(material.id);
+        }
+    }
+
+    return [...unavailableAssetIds];
 }

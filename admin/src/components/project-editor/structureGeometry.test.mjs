@@ -6,9 +6,12 @@ import { polygonArea } from "../project-loader/engine/regions/Polygon.ts";
 import {
     addWallSegmentToStructure,
     findOrCreateCorner,
+    findNearestWallEndpoint,
     getRoomPreviewGeometry,
     findSegmentIntersections,
+    hasPartialPolygonOverlap,
     mergeCollinearWalls,
+    resolveWallDrawingPoint,
     removeDuplicateWalls,
     snap90Degrees,
     snapToCorner,
@@ -17,6 +20,77 @@ import {
 } from "./structureGeometry.ts";
 import { createManagedStructure } from "./structureTypes.ts";
 import { calculateBuildElementPlacement } from "./buildElementPlacement.ts";
+import { solveRegions } from "../project-loader/engine/regions/RegionSolver.ts";
+import { createAdminFloorGeometry } from "../project-loader/loader-components/floorGeometry.ts";
+
+function solveStructureRegions(structure) {
+    return solveRegions(
+        structure.corners.map(corner => ({
+            id: corner.id,
+            position: new Vector3(corner.position.x, 0, corner.position.z)
+        })),
+        structure.walls.map(wall => ({
+            id: wall.id,
+            start: { id: wall.start.id, position: new Vector3(wall.start.position.x, 0, wall.start.position.z) },
+            end: { id: wall.end.id, position: new Vector3(wall.end.position.x, 0, wall.end.position.z) }
+        }))
+    );
+}
+
+function assertFloorTriangulation(regions) {
+    const meshes = [];
+    for (const region of regions) {
+        const geometry = createAdminFloorGeometry(region.boundaryLoops);
+        assert.ok(geometry, `region ${region.id} should produce floor geometry`);
+        const positions = geometry.getAttribute("position");
+        const indices = geometry.getIndex();
+        assert.ok(positions && positions.count >= 3);
+        assert.ok(indices && indices.count >= 3);
+        assert.ok([...positions.array].every(Number.isFinite));
+        for (let index = 0; index < indices.count; index += 3) {
+            const a = new Vector3().fromBufferAttribute(positions, indices.getX(index));
+            const b = new Vector3().fromBufferAttribute(positions, indices.getX(index + 1));
+            const c = new Vector3().fromBufferAttribute(positions, indices.getX(index + 2));
+            assert.ok(b.clone().sub(a).cross(c.clone().sub(a)).lengthSq() > 0);
+        }
+        meshes.push({
+            area: Math.abs(region.area),
+            vertexCount: positions.count,
+            indexCount: indices.count
+        });
+        geometry.dispose();
+    }
+    return meshes;
+}
+
+function addRectangularRoom(structure, minX, minZ, maxX, maxZ, prefix) {
+    const corners = [
+        { id: `${prefix}-sw`, position: { x: minX, y: 0, z: minZ } },
+        { id: `${prefix}-se`, position: { x: maxX, y: 0, z: minZ } },
+        { id: `${prefix}-ne`, position: { x: maxX, y: 0, z: maxZ } },
+        { id: `${prefix}-nw`, position: { x: minX, y: 0, z: maxZ } }
+    ];
+    let result = { ...structure, corners: [...structure.corners, ...corners] };
+    for (let index = 0; index < corners.length; index += 1) {
+        result = addWallSegmentToStructure(
+            result,
+            corners[index],
+            corners[(index + 1) % corners.length]
+        );
+    }
+    return result;
+}
+
+function addWallAtPoints(structure, startPosition, endPosition) {
+    const start = findOrCreateCorner(startPosition, structure.corners);
+    const withStart = { ...structure, corners: start.corners };
+    const end = findOrCreateCorner(endPosition, withStart.corners);
+    return addWallSegmentToStructure(
+        { ...withStart, corners: end.corners },
+        start.corner,
+        end.corner
+    );
+}
 
 test("grid and corner snapping match source geometry conventions", () => {
     assert.deepEqual(snapToGrid({ x: 0.63, y: 0, z: -0.62 }, 0.25), { x: 0.75, y: 0, z: -0.5 });
@@ -323,6 +397,66 @@ test("corner lookup and creation preserve stable IDs", () => {
     assert.equal(created.corners.length, 2);
 });
 
+test("wall endpoint snapping reuses existing corner IDs and coordinates", () => {
+    const corner = { id: "endpoint", position: { x: 2, y: 0, z: 3 } };
+    const nearest = findNearestWallEndpoint(
+        { x: 2.1, y: 0, z: 3 },
+        [],
+        [{ id: "wall", start: corner, end: { id: "end", position: { x: 4, y: 0, z: 3 } } }]
+    );
+
+    assert.equal(nearest.id, "endpoint");
+    assert.deepEqual(nearest.position, corner.position);
+});
+
+test("committed wall endpoints retain the resolved snap coordinate and reject zero length", () => {
+    const structure = createManagedStructure("p1", "Plan", "owner");
+    const start = { id: "start", position: { x: 0, y: 0, z: 0 } };
+    const snappedEnd = { id: "corner", position: { x: 2, y: 0, z: 1.5 } };
+    const withWall = addWallSegmentToStructure(
+        { ...structure, corners: [start, snappedEnd] },
+        start,
+        snappedEnd
+    );
+
+    assert.deepEqual(withWall.walls[0].end.position, snappedEnd.position);
+    assert.equal(
+        addWallSegmentToStructure(withWall, snappedEnd, snappedEnd),
+        withWall
+    );
+});
+
+test("partial room overlaps are distinguished from adjoining and nested regions", () => {
+    const first = [
+        { x: 0, y: 0, z: 0 },
+        { x: 4, y: 0, z: 0 },
+        { x: 4, y: 0, z: 4 },
+        { x: 0, y: 0, z: 4 }
+    ];
+    const adjoining = [
+        { x: 4, y: 0, z: 0 },
+        { x: 8, y: 0, z: 0 },
+        { x: 8, y: 0, z: 4 },
+        { x: 4, y: 0, z: 4 }
+    ];
+    const overlapping = [
+        { x: 2, y: 0, z: 2 },
+        { x: 6, y: 0, z: 2 },
+        { x: 6, y: 0, z: 6 },
+        { x: 2, y: 0, z: 6 }
+    ];
+    const nested = [
+        { x: 1, y: 0, z: 1 },
+        { x: 3, y: 0, z: 1 },
+        { x: 3, y: 0, z: 3 },
+        { x: 1, y: 0, z: 3 }
+    ];
+
+    assert.equal(hasPartialPolygonOverlap(first, adjoining), false);
+    assert.equal(hasPartialPolygonOverlap(first, overlapping), true);
+    assert.equal(hasPartialPolygonOverlap(first, nested), false);
+});
+
 test("new wall intersections are ordered", () => {
     const wall = { id: "wall-a", start: { id: "a", position: { x: 0, y: 0, z: 0 } }, end: { id: "b", position: { x: 0, y: 0, z: 4 } } };
     const intersections = findSegmentIntersections({ x: -1, y: 0, z: 2 }, { x: 1, y: 0, z: 2 }, [wall]);
@@ -373,6 +507,153 @@ test("room wall segments share corners and create a closed rectangle", () => {
     assert.equal(structure.corners.length, 4);
 });
 
+test("adjoining rooms preserve both floor regions without boundary-touching holes", () => {
+    let structure = createManagedStructure("p1", "Plan", "owner");
+    const points = [
+        { x: 0, y: 0, z: 0 },
+        { x: 4, y: 0, z: 0 },
+        { x: 8, y: 0, z: 0 },
+        { x: 0, y: 0, z: 3 },
+        { x: 4, y: 0, z: 3 },
+        { x: 8, y: 0, z: 3 }
+    ];
+    const corners = points.map((position, index) => ({ id: `c${index}`, position }));
+    structure = { ...structure, corners };
+
+    const roomLoops = [
+        [corners[0], corners[1], corners[4], corners[3]],
+        [corners[1], corners[2], corners[5], corners[4]]
+    ];
+    for (const loop of roomLoops) {
+        for (let index = 0; index < loop.length; index += 1) {
+            structure = addWallSegmentToStructure(
+                structure,
+                loop[index],
+                loop[(index + 1) % loop.length]
+            );
+        }
+    }
+
+    const regions = solveRegions(
+        structure.corners.map(corner => ({
+            id: corner.id,
+            position: new Vector3(corner.position.x, corner.position.y, corner.position.z)
+        })),
+        structure.walls.map(wall => ({
+            id: wall.id,
+            start: { id: wall.start.id, position: new Vector3(wall.start.position.x, 0, wall.start.position.z) },
+            end: { id: wall.end.id, position: new Vector3(wall.end.position.x, 0, wall.end.position.z) }
+        }))
+    );
+
+    assert.equal(regions.length, 2);
+    assert.deepEqual(regions.map(region => Math.abs(region.area)).sort(), [12, 12]);
+    assert.ok(regions.every(region => region.boundaryLoops.length === 1));
+    assert.ok(regions.every(region => region.adjacentRegionIds.length === 1));
+});
+
+test("partially overlapping wall loops resolve to non-overlapping valid floor faces", () => {
+    let structure = createManagedStructure("p1", "Plan", "owner");
+    const loops = [
+        [
+            { x: 0, y: 0, z: 0 },
+            { x: 4, y: 0, z: 0 },
+            { x: 4, y: 0, z: 4 },
+            { x: 0, y: 0, z: 4 }
+        ],
+        [
+            { x: 2, y: 0, z: 2 },
+            { x: 6, y: 0, z: 2 },
+            { x: 6, y: 0, z: 6 },
+            { x: 2, y: 0, z: 6 }
+        ]
+    ].map((positions, loopIndex) =>
+        positions.map((position, index) => ({
+            id: `overlap-${loopIndex}-${index}`,
+            position
+        }))
+    );
+    structure = { ...structure, corners: loops.flat() };
+    for (const loop of loops) {
+        for (let index = 0; index < loop.length; index += 1) {
+            structure = addWallSegmentToStructure(
+                structure,
+                loop[index],
+                loop[(index + 1) % loop.length]
+            );
+        }
+    }
+
+    const regions = solveRegions(
+        structure.corners.map(corner => ({
+            id: corner.id,
+            position: new Vector3(corner.position.x, 0, corner.position.z)
+        })),
+        structure.walls.map(wall => ({
+            id: wall.id,
+            start: { id: wall.start.id, position: new Vector3(wall.start.position.x, 0, wall.start.position.z) },
+            end: { id: wall.end.id, position: new Vector3(wall.end.position.x, 0, wall.end.position.z) }
+        }))
+    );
+
+    assert.deepEqual(regions.map(region => Math.abs(region.area)).sort((a, b) => a - b), [4, 12, 12]);
+    assert.ok(regions.every(region => region.boundaryLoops.length === 1));
+});
+
+test("strictly nested room floors retain a valid contained floor region", () => {
+    let structure = createManagedStructure("p1", "Plan", "owner");
+    const loops = [
+        [
+            { x: 0, y: 0, z: 0 },
+            { x: 6, y: 0, z: 0 },
+            { x: 6, y: 0, z: 6 },
+            { x: 0, y: 0, z: 6 }
+        ],
+        [
+            { x: 2, y: 0, z: 2 },
+            { x: 4, y: 0, z: 2 },
+            { x: 4, y: 0, z: 4 },
+            { x: 2, y: 0, z: 4 }
+        ]
+    ].map((positions, loopIndex) =>
+        positions.map((position, index) => ({
+            id: `loop-${loopIndex}-corner-${index}`,
+            position
+        }))
+    );
+    structure = { ...structure, corners: loops.flat() };
+    for (const loop of loops) {
+        for (let index = 0; index < loop.length; index += 1) {
+            structure = addWallSegmentToStructure(
+                structure,
+                loop[index],
+                loop[(index + 1) % loop.length]
+            );
+        }
+    }
+
+    const regions = solveRegions(
+        structure.corners.map(corner => ({
+            id: corner.id,
+            position: new Vector3(corner.position.x, 0, corner.position.z)
+        })),
+        structure.walls.map(wall => ({
+            id: wall.id,
+            start: { id: wall.start.id, position: new Vector3(wall.start.position.x, 0, wall.start.position.z) },
+            end: { id: wall.end.id, position: new Vector3(wall.end.position.x, 0, wall.end.position.z) }
+        }))
+    );
+
+    assert.equal(regions.length, 2);
+    const parent = regions.find(region => region.childRegionIds.length === 1);
+    const child = regions.find(region => region.parentRegionId !== null);
+    assert.ok(parent);
+    assert.ok(child);
+    assert.equal(parent.boundaryLoops.length, 2);
+    assert.equal(Math.abs(parent.area), 32);
+    assert.equal(Math.abs(child.area), 4);
+});
+
 test("wall segment insertion splits existing walls at intersections", () => {
     let structure = createManagedStructure("p1", "Plan", "owner");
     const start = { id: "start", position: { x: -1, y: 0, z: 2 } };
@@ -393,6 +674,149 @@ test("wall segment insertion splits existing walls at intersections", () => {
 
     assert.equal(structure.walls.length, 4);
     assert.equal(structure.corners.length, 5);
+});
+
+test("a wall intersecting both sides of a room splits its boundary into two valid floors", () => {
+    let structure = createManagedStructure("p1", "Plan", "owner");
+    const corners = [
+        { id: "sw", position: { x: 0, y: 0, z: 0 } },
+        { id: "se", position: { x: 4, y: 0, z: 0 } },
+        { id: "ne", position: { x: 4, y: 0, z: 4 } },
+        { id: "nw", position: { x: 0, y: 0, z: 4 } }
+    ];
+    structure = {
+        ...structure,
+        corners,
+        doors: [{
+            id: "existing-door",
+            assetId: "door",
+            wallId: "east",
+            position: { x: 4, y: 0, z: 1 },
+            rotationY: 0,
+            width: 0.9,
+            height: 2,
+            depth: 0.1
+        }],
+        wallFinishes: { east: { north: "finish-a", south: "finish-b" } }
+    };
+
+    for (const [index, [start, end]] of [
+        [corners[0], corners[1]],
+        [corners[1], corners[2]],
+        [corners[2], corners[3]],
+        [corners[3], corners[0]]
+    ].entries()) {
+        structure = addWallSegmentToStructure(structure, start, end);
+        if (index === 1) {
+            structure.walls = structure.walls.map(wall =>
+                wall.start.id === "se" && wall.end.id === "ne"
+                    ? { ...wall, id: "east" }
+                    : wall
+            );
+        }
+    }
+
+    const start = { id: "outside-west", position: { x: -1, y: 0, z: 2 } };
+    const end = { id: "outside-east", position: { x: 5, y: 0, z: 2 } };
+    structure = addWallSegmentToStructure(
+        { ...structure, corners: [...structure.corners, start, end] },
+        start,
+        end
+    );
+
+    const regions = solveRegions(
+        structure.corners.map(corner => ({
+            id: corner.id,
+            position: new Vector3(corner.position.x, 0, corner.position.z)
+        })),
+        structure.walls.map(wall => ({
+            id: wall.id,
+            start: { id: wall.start.id, position: new Vector3(wall.start.position.x, 0, wall.start.position.z) },
+            end: { id: wall.end.id, position: new Vector3(wall.end.position.x, 0, wall.end.position.z) }
+        }))
+    );
+    const doorHost = structure.walls.find(wall => wall.id === structure.doors[0].wallId);
+    const finishBearingEastSections = structure.walls.filter(wall =>
+        wall.start.position.x === 4 && wall.end.position.x === 4
+    );
+
+    assert.deepEqual(regions.map(region => Math.abs(region.area)).sort((a, b) => a - b), [8, 8]);
+    assert.equal(regions.every(region => region.corners.length === 4), true);
+    assert.ok(doorHost);
+    assert.equal(doorHost.start.position.x, 4);
+    assert.equal(doorHost.end.position.x, 4);
+    assert.ok(
+        structure.doors[0].position.z >= Math.min(doorHost.start.position.z, doorHost.end.position.z) &&
+        structure.doors[0].position.z <= Math.max(doorHost.start.position.z, doorHost.end.position.z)
+    );
+    assert.ok(finishBearingEastSections.length >= 2);
+    assert.ok(finishBearingEastSections.every(wall => structure.wallFinishes[wall.id]));
+});
+
+test("a one-sided wall intersection preserves the existing closed floor", () => {
+    let structure = createManagedStructure("p1", "Plan", "owner");
+    const corners = [
+        { id: "sw", position: { x: 0, y: 0, z: 0 } },
+        { id: "se", position: { x: 4, y: 0, z: 0 } },
+        { id: "ne", position: { x: 4, y: 0, z: 4 } },
+        { id: "nw", position: { x: 0, y: 0, z: 4 } }
+    ];
+    structure = { ...structure, corners };
+    for (const [start, end] of [
+        [corners[0], corners[1]],
+        [corners[1], corners[2]],
+        [corners[2], corners[3]],
+        [corners[3], corners[0]]
+    ]) {
+        structure = addWallSegmentToStructure(structure, start, end);
+    }
+    const start = { id: "outside", position: { x: -1, y: 0, z: 2 } };
+    const end = { id: "boundary", position: { x: 0, y: 0, z: 2 } };
+    structure = addWallSegmentToStructure(
+        { ...structure, corners: [...structure.corners, start, end] },
+        start,
+        end
+    );
+
+    const regions = solveRegions(
+        structure.corners.map(corner => ({
+            id: corner.id,
+            position: new Vector3(corner.position.x, 0, corner.position.z)
+        })),
+        structure.walls.map(wall => ({
+            id: wall.id,
+            start: { id: wall.start.id, position: new Vector3(wall.start.position.x, 0, wall.start.position.z) },
+            end: { id: wall.end.id, position: new Vector3(wall.end.position.x, 0, wall.end.position.z) }
+        }))
+    );
+
+    assert.equal(regions.length, 1);
+    assert.equal(Math.abs(regions[0].area), 16);
+});
+
+test("overlapping collinear wall segments share one normalized boundary", () => {
+    let structure = createManagedStructure("p1", "Plan", "owner");
+    const corners = [
+        { id: "a", position: { x: 0, y: 0, z: 0 } },
+        { id: "b", position: { x: 4, y: 0, z: 0 } },
+        { id: "c", position: { x: 2, y: 0, z: 0 } },
+        { id: "d", position: { x: 6, y: 0, z: 0 } }
+    ];
+    structure = {
+        ...structure,
+        corners,
+        walls: [{
+            id: "existing",
+            start: { id: "a", position: corners[0].position },
+            end: { id: "b", position: corners[1].position }
+        }]
+    };
+
+    structure = addWallSegmentToStructure(structure, corners[2], corners[3]);
+
+    assert.equal(structure.walls.length, 1);
+    assert.equal(structure.walls[0].start.position.x, 0);
+    assert.equal(structure.walls[0].end.position.x, 6);
 });
 
 test("arch rise changes the shared admin wall opening geometry", () => {
@@ -420,4 +844,140 @@ test("arch rise changes the shared admin wall opening geometry", () => {
     ]);
 
     assert.notDeepEqual(pieces(lowerArch), pieces(tallerArch));
+});
+
+test("a closed room produces a triangulated floor from the admin floor geometry builder", () => {
+    const structure = addRectangularRoom(
+        createManagedStructure("p1", "Plan", "owner"),
+        0,
+        0,
+        4,
+        4,
+        "room"
+    );
+    const regions = solveStructureRegions(structure);
+
+    assert.equal(regions.length, 1);
+    assert.equal(Math.abs(regions[0].area), 16);
+    assertFloorTriangulation(regions);
+});
+
+test("wall-face clicks snap to host wall centerlines and divide an off-grid room", () => {
+    let structure = addRectangularRoom(
+        createManagedStructure("p1", "Plan", "owner"),
+        0.13,
+        0.13,
+        4.13,
+        4.13,
+        "room"
+    );
+    const before = solveStructureRegions(structure);
+    assert.equal(before.length, 1);
+    assertFloorTriangulation(before);
+
+    const westWall = structure.walls.find(wall =>
+        wall.start.position.x === 0.13 && wall.end.position.x === 0.13
+    );
+    const eastWall = structure.walls.find(wall =>
+        wall.start.position.x === 4.13 && wall.end.position.x === 4.13
+    );
+    assert.ok(westWall);
+    assert.ok(eastWall);
+
+    const clickNearWestFace = { x: 0.205, y: 0, z: 2.13 };
+    const clickNearEastFace = { x: 4.055, y: 0, z: 2.13 };
+    const gridSnappedWest = snapToGrid(clickNearWestFace, structure.gridSize);
+    const gridSnappedEast = snapToGrid(clickNearEastFace, structure.gridSize);
+    assert.ok(gridSnappedWest.x > westWall.start.position.x);
+    assert.ok(gridSnappedEast.x < eastWall.start.position.x);
+    const priorGridSnapRegions = solveStructureRegions(
+        addWallAtPoints(structure, gridSnappedWest, gridSnappedEast)
+    );
+    assert.equal(priorGridSnapRegions.length, 1);
+    assert.ok(Math.abs(Math.abs(priorGridSnapRegions[0].area) - 16) < 1e-9);
+
+    const start = resolveWallDrawingPoint(clickNearWestFace, structure, null, westWall.id);
+    const end = resolveWallDrawingPoint(clickNearEastFace, structure, null, eastWall.id);
+    assert.equal(start.x, 0.13);
+    assert.equal(end.x, 4.13);
+    structure = addWallAtPoints(structure, start, end);
+
+    const regions = solveStructureRegions(structure);
+    assert.deepEqual(regions.map(region => Math.abs(region.area)).sort(), [8, 8]);
+    assert.deepEqual(
+        assertFloorTriangulation(regions)
+            .map(mesh => [mesh.area, mesh.vertexCount, mesh.indexCount])
+            .sort((a, b) => a[0] - b[0]),
+        [[8, 4, 6], [8, 4, 6]]
+    );
+});
+
+test("a wall connecting only one room boundary preserves the original floor", () => {
+    const base = addRectangularRoom(
+        createManagedStructure("p1", "Plan", "owner"),
+        0,
+        0,
+        4,
+        4,
+        "room"
+    );
+    const westWall = base.walls.find(wall =>
+        wall.start.position.x === 0 && wall.end.position.x === 0
+    );
+    assert.ok(westWall);
+    const start = resolveWallDrawingPoint(
+        { x: 0, y: 0, z: 2 },
+        base,
+        null,
+        westWall.id
+    );
+    const structure = addWallAtPoints(
+        base,
+        start,
+        { x: 2, y: 0, z: 2 }
+    );
+    const regions = solveStructureRegions(structure);
+
+    assert.equal(regions.length, 1);
+    assert.equal(Math.abs(regions[0].area), 16);
+    assertFloorTriangulation(regions);
+});
+
+test("adjoining rooms sharing a wall retain two triangulated floor regions", () => {
+    let structure = addRectangularRoom(
+        createManagedStructure("p1", "Plan", "owner"),
+        0,
+        0,
+        4,
+        4,
+        "west"
+    );
+    structure = addRectangularRoom(structure, 4, 0, 8, 4, "east");
+    const regions = solveStructureRegions(structure);
+
+    assert.deepEqual(regions.map(region => Math.abs(region.area)).sort(), [16, 16]);
+    assertFloorTriangulation(regions);
+});
+
+test("undo and redo snapshots preserve valid room floor triangulation", () => {
+    const before = addRectangularRoom(
+        createManagedStructure("p1", "Plan", "owner"),
+        0,
+        0,
+        4,
+        4,
+        "room"
+    );
+    const partition = addWallAtPoints(
+        before,
+        { x: 0, y: 0, z: 2 },
+        { x: 4, y: 0, z: 2 }
+    );
+    const undoState = before;
+    const redoState = partition;
+
+    assert.deepEqual(solveStructureRegions(undoState).map(region => Math.abs(region.area)), [16]);
+    assertFloorTriangulation(solveStructureRegions(undoState));
+    assert.deepEqual(solveStructureRegions(redoState).map(region => Math.abs(region.area)).sort(), [8, 8]);
+    assertFloorTriangulation(solveStructureRegions(redoState));
 });

@@ -3,6 +3,7 @@ import { Component, type ReactNode } from "react";
 interface AdminModelErrorBoundaryProps {
     assetId: string;
     children: ReactNode;
+    onError?: (assetId: string) => void;
 }
 
 interface AdminModelErrorBoundaryState {
@@ -22,6 +23,7 @@ export default class AdminModelErrorBoundary extends Component<
     }
 
     componentDidCatch(error: Error) {
+        this.props.onError?.(this.props.assetId);
         console.error(
             "Failed to render admin project model:",
             this.props.assetId,

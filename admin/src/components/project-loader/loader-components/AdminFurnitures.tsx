@@ -19,6 +19,7 @@ interface AdminFurnituresProps {
 
     furniture:
         SavedFurniture[];
+    onAssetError: (assetId: string) => void;
 
 }
 
@@ -28,7 +29,8 @@ interface AdminFurnituresProps {
 //==================================================
 
 export default function AdminFurnitures({
-    furniture
+    furniture,
+    onAssetError
 }: AdminFurnituresProps) {
     const assets = getCachedFurnitureAssets();
 
@@ -59,6 +61,7 @@ export default function AdminFurnitures({
                                 "Admin furniture asset not found:",
                                 item.assetId
                             );
+                            onAssetError(item.assetId);
 
                             return null;
 
@@ -80,7 +83,7 @@ export default function AdminFurnitures({
                                 asset={
                                     asset
                                 }
-
+                                onAssetError={onAssetError}
                             />
 
                         );

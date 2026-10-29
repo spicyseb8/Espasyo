@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 
 import { auth } from "@/firebase/firebase";
-import LoadingScreen from "@/components/LoadingScreen";
 
 import {
     Card,
@@ -33,7 +32,6 @@ import {
 import {
     Search,
     FolderOpen,
-    Plus,
     User,
     ArrowDownAZ,
     ArrowUpAZ,
@@ -42,11 +40,13 @@ import {
 } from "lucide-react";
 
 import {
-    getAdminClients,
     getAdminProjects,
-    type AdminClient,
     type AdminProject
 } from "../../../services/assets/projectService";
+import {
+    getClientDesignedProjects,
+    getUnverifiedManagedProjects
+} from "../../../services/assets/projectLifecycle";
 
 import ProjectDetailsModal from "./ProjectDetailsModal";
 
@@ -224,15 +224,10 @@ export default function ProjectManagement() {
     const navigate = useNavigate();
 
     const [projects, setProjects] = useState<AdminProject[]>([]);
+    const [unverifiedProjects, setUnverifiedProjects] = useState<AdminProject[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [search, setSearch] = useState("");
-    const [clients, setClients] = useState<AdminClient[]>([]);
-    const [clientDialogOpen, setClientDialogOpen] = useState(false);
-    const [selectedClientId, setSelectedClientId] = useState("");
-    const [openingFloorPlan, setOpeningFloorPlan] = useState(false);
-    const openingFloorPlanRef = useRef(false);
-    const openingFloorPlanTimeoutRef = useRef<number | null>(null);
 
     const [sortField, setSortField] = useState<SortField>("Date Modified");
     const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
@@ -255,6 +250,7 @@ export default function ProjectManagement() {
             if (!user) {
                 if (!cancelled) {
                     setProjects([]);
+                    setUnverifiedProjects([]);
                     setError("Please log in to view projects.");
                     setLoading(false);
                 }
@@ -268,14 +264,11 @@ export default function ProjectManagement() {
                 }
 
                 // Admin project list: returns ALL projects.
-                const [loadedProjects, loadedClients] = await Promise.all([
-                    getAdminProjects(),
-                    getAdminClients()
-                ]);
+                const loadedProjects = await getAdminProjects();
 
                 if (!cancelled) {
-                    setProjects(loadedProjects);
-                    setClients(loadedClients);
+                    setProjects(getClientDesignedProjects(loadedProjects));
+                    setUnverifiedProjects(getUnverifiedManagedProjects(loadedProjects));
                 }
 
             } catch (loadError) {
@@ -305,13 +298,6 @@ export default function ProjectManagement() {
         };
 
     }, []);
-
-    useEffect(() => () => {
-        if (openingFloorPlanTimeoutRef.current !== null) {
-            window.clearTimeout(openingFloorPlanTimeoutRef.current);
-        }
-    }, []);
-
 
     //==================================================
     // FILTER + SORT
@@ -380,38 +366,9 @@ export default function ProjectManagement() {
         navigate(`/projects/view/${project.projectId}`);
     }
 
-    function createProjectForClient() {
-        if (openingFloorPlanRef.current) return;
-        const client = clients.find(item => item.id === selectedClientId);
-        if (!client) return;
-        openingFloorPlanRef.current = true;
-        setOpeningFloorPlan(true);
-        setClientDialogOpen(false);
-        openingFloorPlanTimeoutRef.current = window.setTimeout(() => {
-            openingFloorPlanRef.current = false;
-            openingFloorPlanTimeoutRef.current = null;
-            setOpeningFloorPlan(false);
-            setError("The floor-plan editor did not open. Please try again.");
-        }, 15_000);
-        try {
-            navigate(`/projects/new/${encodeURIComponent(client.uid)}`, {
-                state: { ownerName: client.name }
-            });
-        } catch (navigationError) {
-            if (openingFloorPlanTimeoutRef.current !== null) {
-                window.clearTimeout(openingFloorPlanTimeoutRef.current);
-                openingFloorPlanTimeoutRef.current = null;
-            }
-            openingFloorPlanRef.current = false;
-            setOpeningFloorPlan(false);
-            setError(navigationError instanceof Error
-                ? `Unable to open the floor plan: ${navigationError.message}`
-                : "Unable to open the floor plan.");
-        }
-    }
-
-    if (openingFloorPlan) {
-        return <LoadingScreen label="Preparing Floor Plan" />;
+    function handleReviewClientDesign(project: AdminProject) {
+        setSelectedProject(null);
+        navigate(`/projects/view/${project.projectId}`);
     }
 
 
@@ -431,24 +388,15 @@ export default function ProjectManagement() {
 
                         <div>
                             <CardTitle className="text-base">
-                                User Projects
+                                Client-Designed Projects
                             </CardTitle>
 
                             <CardDescription>
-                                Select a project to view its details.
+                                Projects with successfully saved client interior designs.
                             </CardDescription>
                         </div>
 
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                            <button
-                                type="button"
-                                className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground"
-                                onClick={() => setClientDialogOpen(true)}
-                            >
-                                <Plus size={16} />
-                                New floor-plan project
-                            </button>
-
                             <div className="relative w-full sm:w-64">
                                 <Search
                                     size={16}
@@ -539,38 +487,20 @@ export default function ProjectManagement() {
 
 
                 <CardContent className="p-0">
-                    {clientDialogOpen && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-                            <div className="w-full max-w-md rounded-lg border border-border bg-background p-4 shadow-lg">
-                                <div className="mb-4">
-                                    <p className="font-medium">Create floor-plan project</p>
-                                    <p className="mt-1 text-sm text-muted-foreground">Select the client who will own the project.</p>
-                                </div>
-                                <label className="grid gap-2 text-sm">
-                                    Client
-                                    <select
-                                        className="h-9 rounded-md border border-border bg-background px-3"
-                                        value={selectedClientId}
-                                        onChange={event => setSelectedClientId(event.target.value)}
-                                    >
-                                        <option value="">Select a client</option>
-                                        {clients.map(client => (
-                                            <option key={client.id} value={client.id}>
-                                                {client.name}{client.email ? ` (${client.email})` : ""}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </label>
-                                <div className="mt-5 flex justify-end gap-2">
-                                    <button type="button" className="h-9 rounded-md border border-border px-3 text-sm" onClick={() => setClientDialogOpen(false)}>Cancel</button>
-                                    <button type="button" className="h-9 rounded-md bg-primary px-3 text-sm text-primary-foreground disabled:opacity-50" disabled={!selectedClientId || openingFloorPlan} onClick={createProjectForClient}>
-                                        Create local draft
-                                    </button>
-                                </div>
-                            </div>
+                    {!loading && !error && unverifiedProjects.length > 0 && (
+                        <div className="mx-4 mt-4 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950">
+                            <p className="font-medium">
+                                {unverifiedProjects.length} project(s) could not be classified and are excluded from Client-Designed Projects.
+                            </p>
+                            <ul className="mt-1 list-inside list-disc">
+                                {unverifiedProjects.map(project => (
+                                    <li key={project.projectId}>
+                                        {project.projectName} ({project.projectId}) — {project.lifecycleError || "Project assignment or publication metadata could not be verified."}
+                                    </li>
+                                ))}
+                            </ul>
                         </div>
                     )}
-
                     {/* LOADING */}
                     {loading && (
                         <div className="flex min-h-64 items-center justify-center">
@@ -803,6 +733,7 @@ export default function ProjectManagement() {
                     }
                 }}
                 onOpenProject={handleOpenProject}
+                onReviewClientDesign={handleReviewClientDesign}
                 onDeadlineSaved={(projectId, deadline) => {
                     setProjects(current =>
                         current.map(project =>

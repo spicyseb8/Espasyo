@@ -10,6 +10,7 @@ import {
 import {
     Vector3
 } from "three";
+import type { ThreeEvent } from "@react-three/fiber";
 
 import {
     solveRegions
@@ -71,10 +72,10 @@ interface AdminWallsProps {
         >;
 
     onWallClick?:
-        (wallId: string, position: Vector3) => void;
+        (wallId: string, position: Vector3, event: ThreeEvent<MouseEvent>) => void;
 
     onWallPointerMove?:
-        (wallId: string, position: Vector3) => void;
+        (wallId: string, position: Vector3, event: ThreeEvent<PointerEvent>) => void;
 
     selectedWallId?: string | null;
 

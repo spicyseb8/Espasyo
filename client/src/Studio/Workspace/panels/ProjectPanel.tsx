@@ -42,6 +42,12 @@ import {
 } from "../../../services/projectSerializer";
 
 import {
+    getClientDesignLifecycleUpdate,
+    hasMeaningfulManagedInteriorChanges,
+    saveManagedInteriorData
+} from "../../../services/managedProjectData";
+
+import {
     captureSceneThumbnail
 } from "../../../services/projectThumbnail";
 
@@ -623,155 +629,113 @@ export default function ProjectPanel() {
             const estimatedCost =
                 projectData.costEstimate.total;
 
-            const json = isManaged
-                ? JSON.stringify(createManagedInteriorData(state), null, 2)
-                : JSON.stringify(
-                    projectData,
-                    null,
-                    2
-                );
-
-            //==================================================
-            // UPLOAD PROJECT JSON TO FIREBASE STORAGE
-            //==================================================
-
-            const storagePath = isManaged
-                ? `projects/${user.uid}/${currentProjectId}.interior.json`
-                : `projects/${user.uid}/${currentProjectId}.json`;
-
-            const storageRef = ref(
-                storage,
-                storagePath
-            );
-
-            setMessage(
-                "Saving project..."
-            );
-
-            await uploadString(
-                storageRef,
-                json,
-                "raw",
-                {
-                    contentType:
-                        "application/json"
-                }
-            );
-
-            const downloadUrl =
-                await getDownloadURL(
-                    storageRef
-                );
-
-            //==================================================
-            // CAPTURE AND UPLOAD THUMBNAIL
-            //==================================================
-
             const thumbnailDataUrl =
                 captureSceneThumbnail();
 
-            let thumbnailPath:
-                string | undefined;
-
-            let thumbnailUrl:
-                string | undefined;
-
-            if (thumbnailDataUrl) {
-                thumbnailPath =
-                    `projects/${user.uid}/${currentProjectId}.jpg`;
-
-                const thumbnailRef = ref(
-                    storage,
-                    thumbnailPath
-                );
-
-                setMessage(
-                    "Saving project thumbnail..."
-                );
-
-                await uploadString(
-                    thumbnailRef,
-                    thumbnailDataUrl,
-                    "data_url",
-                    {
-                        contentType:
-                            "image/jpeg"
-                    }
-                );
-
-                thumbnailUrl =
-                    await getDownloadURL(
-                        thumbnailRef
-                    );
-            }
-
-            //==================================================
-            // BUILD FIRESTORE PROJECT METADATA
-            //==================================================
-
-            const projectMetadata:
-                Record<string, unknown> = {
-                projectId:
-                    currentProjectId,
-
-                projectName:
-                    trimmedName,
-
-                ownerId:
-                    user.uid,
-
-                schemaVersion:
-                    1,
-
-                estimatedCost:
-                    estimatedCost,
-
-                updatedAt:
-                    serverTimestamp()
-            };
-
-            if (!isManaged) {
-                projectMetadata.jsonPath = storagePath;
-                projectMetadata.jsonUrl = downloadUrl;
-            } else {
-                projectMetadata.interiorJsonPath = storagePath;
-                projectMetadata.interiorJsonUrl = downloadUrl;
-            }
-
-            if (thumbnailPath) {
-                projectMetadata.thumbnailPath =
-                    thumbnailPath;
-            }
-
-            if (thumbnailUrl) {
-                projectMetadata.thumbnailUrl =
-                    thumbnailUrl;
-            }
-
-            if (isNewProject) {
-                projectMetadata.createdAt =
-                    serverTimestamp();
-            }
-
-            //==================================================
-            // SAVE METADATA TO FIRESTORE
-            //==================================================
-            //
-            // Firestore document ID and embedded projectId
-            // both use the same formatted project ID.
-            //==================================================
-
-            await setDoc(
-                doc(
-                    db,
-                    "projects",
-                    currentProjectId
-                ),
-                projectMetadata,
-                {
-                    merge: true
+            const uploadThumbnail = thumbnailDataUrl
+                ? async () => {
+                    const path = `projects/${user.uid}/${currentProjectId}.jpg`;
+                    const thumbnailRef = ref(storage, path);
+                    setMessage("Saving project thumbnail...");
+                    await uploadString(thumbnailRef, thumbnailDataUrl, "data_url", {
+                        contentType: "image/jpeg"
+                    });
+                    return {
+                        thumbnailPath: path,
+                        thumbnailUrl: await getDownloadURL(thumbnailRef)
+                    };
                 }
-            );
+                : undefined;
+
+            if (isManaged) {
+                setMessage("Saving project...");
+                const interiorData = createManagedInteriorData(
+                    state,
+                    currentProjectId,
+                    user.uid
+                );
+                await saveManagedInteriorData({
+                    projectId: currentProjectId,
+                    ownerId: user.uid,
+                    projectName: trimmedName,
+                    estimatedCost,
+                    interiorData,
+                    hasMeaningfulChanges: hasMeaningfulManagedInteriorChanges(interiorData),
+                    updatedAt: serverTimestamp(),
+                    createdAt: isNewProject ? serverTimestamp() : undefined,
+                    uploadJson: async (path, json) => {
+                        const storageRef = ref(storage, path);
+                        await uploadString(storageRef, json, "raw", {
+                            contentType: "application/json"
+                        });
+                        return getDownloadURL(storageRef);
+                    },
+                    uploadThumbnail,
+                    updateMetadata: async metadata => {
+                        const projectRef = doc(db, "projects", currentProjectId);
+                        await runTransaction(db, async transaction => {
+                            const snapshot = await transaction.get(projectRef);
+                            if (!snapshot.exists()) {
+                                throw new Error("The designated client project no longer exists.");
+                            }
+                            const currentMetadata = snapshot.data();
+                            if (
+                                currentMetadata.projectId !== currentProjectId ||
+                                currentMetadata.ownerId !== user.uid ||
+                                currentMetadata.workflowType !== "admin-managed" ||
+                                currentMetadata.structuralStatus !== "published" ||
+                                typeof currentMetadata.publishedStructuralRevision !== "number"
+                            ) {
+                                throw new Error(
+                                    "Project ownership or published structure changed. Interior changes were not marked as saved."
+                                );
+                            }
+                            const lifecycle = getClientDesignLifecycleUpdate(
+                                currentMetadata,
+                                metadata.clientDesignStarted === true,
+                                serverTimestamp()
+                            );
+                            transaction.set(projectRef, {
+                                ...metadata,
+                                ...lifecycle
+                            }, { merge: true });
+                        });
+                    }
+                });
+            } else {
+                const json = JSON.stringify(projectData, null, 2);
+                const storagePath = `projects/${user.uid}/${currentProjectId}.json`;
+                const storageRef = ref(storage, storagePath);
+                setMessage("Saving project...");
+                await uploadString(storageRef, json, "raw", {
+                    contentType: "application/json"
+                });
+                const downloadUrl = await getDownloadURL(storageRef);
+
+                const thumbnail = await uploadThumbnail?.();
+
+                const projectMetadata: Record<string, unknown> = {
+                    projectId: currentProjectId,
+                    projectName: trimmedName,
+                    ownerId: user.uid,
+                    schemaVersion: 1,
+                    estimatedCost,
+                    updatedAt: serverTimestamp(),
+                    jsonPath: storagePath,
+                    jsonUrl: downloadUrl
+                };
+                if (thumbnail) {
+                    projectMetadata.thumbnailPath = thumbnail.thumbnailPath;
+                    projectMetadata.thumbnailUrl = thumbnail.thumbnailUrl;
+                }
+                if (isNewProject) projectMetadata.createdAt = serverTimestamp();
+
+                await setDoc(
+                    doc(db, "projects", currentProjectId),
+                    projectMetadata,
+                    { merge: true }
+                );
+            }
 
             //==================================================
             // SAVE BASELINE

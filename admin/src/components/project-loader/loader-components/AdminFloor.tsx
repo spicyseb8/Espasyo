@@ -3,9 +3,6 @@ import { Html } from "@react-three/drei";
 import {
     CanvasTexture,
     DoubleSide,
-    Path,
-    Shape,
-    ShapeGeometry,
     Texture,
     Vector3
 } from "three";
@@ -19,6 +16,7 @@ import {
     preloadFloorTexture
 } from "../../../services/assets/floorsload";
 import { emitAdminCommentTarget } from "../../../services/assets/adminCommentEvents";
+import { createAdminFloorGeometry } from "./floorGeometry";
 
 interface AdminFloorProps {
     region: Region;
@@ -187,79 +185,10 @@ export default function AdminFloor({
         displayMaterial.texture
     );
 
-    const geometry = useMemo(() => {
-        const loops = region.boundaryLoops ?? [];
-
-        if (loops.length === 0) {
-            return null;
-        }
-
-        const outer = loops[0].corners.filter(Boolean);
-
-        if (outer.length < 3) {
-            return null;
-        }
-
-        const shape = new Shape();
-
-        shape.moveTo(
-            outer[0].x,
-            -outer[0].z
-        );
-
-        for (
-            let i = 1;
-            i < outer.length;
-            i++
-        ) {
-            shape.lineTo(
-                outer[i].x,
-                -outer[i].z
-            );
-        }
-
-        shape.closePath();
-
-        const holes = loops
-            .slice(1)
-            .map(loop => {
-                const points = loop.corners.filter(Boolean);
-
-                if (points.length < 3) {
-                    return null;
-                }
-
-                const hole = new Path();
-
-                hole.moveTo(
-                    points[0].x,
-                    -points[0].z
-                );
-
-                for (
-                    let i = 1;
-                    i < points.length;
-                    i++
-                ) {
-                    hole.lineTo(
-                        points[i].x,
-                        -points[i].z
-                    );
-                }
-
-                hole.closePath();
-
-                return hole;
-            })
-            .filter(
-                (hole): hole is Path =>
-                    hole !== null
-            );
-
-        shape.holes = holes;
-
-        return new ShapeGeometry(shape);
-    }, [region.boundaryLoops]);
+    const geometry = useMemo(
+        () => createAdminFloorGeometry(region.boundaryLoops),
+        [region.boundaryLoops]
+    );
 
     const highlightGeometry = useMemo(
         () => selected ? geometry?.clone() ?? null : null,

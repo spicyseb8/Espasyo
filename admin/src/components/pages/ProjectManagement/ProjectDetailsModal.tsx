@@ -47,6 +47,7 @@ interface ProjectDetailsModalProps {
     project: AdminProject | null;
     onOpenChange: (open: boolean) => void;
     onOpenProject: (project: AdminProject) => void;
+    onReviewClientDesign: (project: AdminProject) => void;
 
     // Allows the parent project list to update immediately after saving.
     onDeadlineSaved?: (
@@ -59,6 +60,7 @@ export default function ProjectDetailsModal({
     project,
     onOpenChange,
     onOpenProject,
+    onReviewClientDesign,
     onDeadlineSaved
 }: ProjectDetailsModalProps) {
     const [generatingPdf, setGeneratingPdf] =
@@ -401,6 +403,17 @@ export default function ProjectDetailsModal({
                                 </dl>
 
                                 <div className="mt-auto pt-8">
+                                    {project.workflowType === "admin-managed" && (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className="mb-2 w-full"
+                                            size="lg"
+                                            onClick={() => onReviewClientDesign(project)}
+                                        >
+                                            Review Client Design
+                                        </Button>
+                                    )}
                                     <Button
                                         className="w-full"
                                         size="lg"

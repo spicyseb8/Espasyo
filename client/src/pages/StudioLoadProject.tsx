@@ -36,6 +36,7 @@ import {
 } from "../engine/AssetPreloader";
 
 import {
+    loadManagedInteriorData,
     mergeManagedInteriorData
 } from "../services/managedProjectData";
 
@@ -291,24 +292,24 @@ function LoadProjectContent() {
 
                 if (
                     projectMetadata.workflowType === "admin-managed" &&
-                    typeof projectMetadata.interiorJsonUrl === "string" &&
-                    projectMetadata.interiorJsonUrl.trim() !== ""
+                    projectData.workflowType === "admin-managed"
                 ) {
-                    const interiorResponse = await fetch(projectMetadata.interiorJsonUrl.trim(), {
-                        cache: "no-store",
+                    const interiorData = await loadManagedInteriorData({
+                        projectId,
+                        ownerId: user.uid,
+                        interiorJsonPath: typeof projectMetadata.interiorJsonPath === "string"
+                            ? projectMetadata.interiorJsonPath
+                            : undefined,
+                        interiorJsonUrl: typeof projectMetadata.interiorJsonUrl === "string"
+                            ? projectMetadata.interiorJsonUrl
+                            : undefined
+                    }, (input, init) => fetch(input, {
+                        ...init,
                         signal: controller.signal
-                    });
-                    if (!interiorResponse.ok) {
-                        throw new Error(`Interior project request failed with HTTP ${interiorResponse.status}.`);
-                    }
-                    const interiorData = await interiorResponse.json();
+                    }));
                     Object.assign(projectData, mergeManagedInteriorData(
                         projectData,
-                        interiorData as {
-                            furniture?: unknown[];
-                            floorFinishes?: Record<string, string>;
-                            wallFinishes?: Record<string, Record<string, string>>;
-                        }
+                        interiorData
                     ));
                 }
 

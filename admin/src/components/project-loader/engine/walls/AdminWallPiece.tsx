@@ -21,8 +21,8 @@ interface AdminWallPieceProps {
     piece: AdminWallPieceData;
     regions: Region[];
     finishSides: AdminWallFinishSide[];
-    onWallClick?: (wallId: string, position: Vector3) => void;
-    onWallPointerMove?: (wallId: string, position: Vector3) => void;
+    onWallClick?: (wallId: string, position: Vector3, event: ThreeEvent<MouseEvent>) => void;
+    onWallPointerMove?: (wallId: string, position: Vector3, event: ThreeEvent<PointerEvent>) => void;
     selected: boolean;
 }
 
@@ -273,7 +273,7 @@ export default function AdminWallPiece({
         event.stopPropagation();
 
         if (onWallClick) {
-            onWallClick(wallId, event.point);
+            onWallClick(wallId, event.point, event);
             return;
         }
 
@@ -286,7 +286,7 @@ export default function AdminWallPiece({
 
     const handleWallPointerMove = (event: ThreeEvent<PointerEvent>) => {
         event.stopPropagation();
-        onWallPointerMove?.(wallId, event.point);
+        onWallPointerMove?.(wallId, event.point, event);
     };
 
     if (

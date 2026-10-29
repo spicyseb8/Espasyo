@@ -7,6 +7,7 @@ import { getAdminProject } from "@/services/assets/projectService";
 import type { AdminProject } from "@/services/assets/projectService";
 import { filterUnavailableProjectAssets } from "@/services/assets/filterUnavailableProjectAssets";
 import { preloadAdminProjectAssets } from "@/services/assets/projectAssetPreloader";
+import { loadAdminManagedProjectForReview } from "@/services/assets/managedInteriorReview";
 
 import type { SavedProjectData } from "./ProjectTypes";
 import AdminProjectViewer from "./AdminProjectViewer";
@@ -16,6 +17,7 @@ import LoadingScreen from "@/components/LoadingScreen";
 interface LoadedProject {
     metadata: AdminProject;
     data: SavedProjectData;
+    unavailableAssetIds: string[];
 }
 
 export default function AdminProjectLoader() {
@@ -65,51 +67,40 @@ export default function AdminProjectLoader() {
                 const metadata = await getAdminProject(projectId);
                 if (cancelled || controller.signal.aborted) return;
 
-                //==================================================
-                // JSON URL
-                //==================================================
-                // We intentionally use jsonUrl instead of the
-                // Firebase Storage SDK so this loader does not
-                // require admin read permission on the Storage path.
-                //==================================================
-                if (!metadata.jsonUrl || metadata.jsonUrl.trim() === "") {
-                    throw new Error("This project does not have a valid JSON download URL.");
+                let data: unknown;
+                if (metadata.workflowType === "admin-managed") {
+                    data = await loadAdminManagedProjectForReview(metadata, (input, init) =>
+                        fetch(input, { ...init, signal: controller.signal })
+                    );
+                } else {
+                    // Legacy projects continue to load the JSON referenced by jsonUrl.
+                    if (!metadata.jsonUrl || metadata.jsonUrl.trim() === "") {
+                        throw new Error("This project does not have a valid JSON download URL.");
+                    }
+                    const response = await fetch(metadata.jsonUrl.trim(), {
+                        method: "GET",
+                        cache: "no-store",
+                        signal: controller.signal
+                    });
+                    if (!response.ok) {
+                        throw new Error(`Project JSON request failed with HTTP ${response.status}.`);
+                    }
+                    data = await response.json();
                 }
 
-                const jsonUrl = metadata.jsonUrl.trim();
-
-                //==================================================
-                // DOWNLOAD JSON
-                //==================================================
-                const response = await fetch(jsonUrl, {
-                    method: "GET",
-                    cache: "no-store",
-                    signal: controller.signal
-                });
-
-                if (!response.ok) {
-                    throw new Error(`Project JSON request failed with HTTP ${response.status}.`);
-                }
-
-                const data = await response.json();
-
-                //==================================================
-                // VALIDATE
-                //==================================================
                 validateProjectData(data);
-
                 if (cancelled || controller.signal.aborted) return;
 
-                const projectData = await filterUnavailableProjectAssets(
-                    data as SavedProjectData
-                );
+                const projectData = metadata.workflowType === "admin-managed"
+                    ? data as SavedProjectData
+                    : await filterUnavailableProjectAssets(data as SavedProjectData);
 
                 if (cancelled || controller.signal.aborted) return;
 
                 //==================================================
                 // PRELOAD THIS PROJECT'S ASSETS
                 //==================================================
-                await preloadAdminProjectAssets(projectData);
+                const unavailableAssetIds = await preloadAdminProjectAssets(projectData);
 
                 if (cancelled || controller.signal.aborted) return;
 
@@ -118,7 +109,8 @@ export default function AdminProjectLoader() {
                 //==================================================
                 setLoadedProject({
                     metadata,
-                    data: projectData
+                    data: projectData,
+                    unavailableAssetIds
                 });
 
                 setLoading(false);
@@ -188,6 +180,7 @@ export default function AdminProjectLoader() {
         <AdminProjectViewer
             metadata={loadedProject.metadata}
             projectData={loadedProject.data}
+            unavailableAssetIds={loadedProject.unavailableAssetIds}
         />
     );
 }
