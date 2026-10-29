@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/button";
 
 import {
-    ExternalLink,
     FolderOpen,
     User,
     CalendarDays,
@@ -35,6 +34,7 @@ import {
 } from "./ProjectManagement";
 
 import {
+    getAdminProject,
     getTodayLocalDate,
     updateProjectDeadline
 } from "../../../services/assets/projectService";
@@ -42,11 +42,13 @@ import {
 import {
     downloadAdminCostBreakdownPDF
 } from "../../project-loader/engine/cost/AdminCostBreakdownPDF";
+import {
+    loadAdminManagedProjectForReview
+} from "@/services/assets/managedInteriorReview";
 
 interface ProjectDetailsModalProps {
     project: AdminProject | null;
     onOpenChange: (open: boolean) => void;
-    onOpenProject: (project: AdminProject) => void;
     onReviewClientDesign: (project: AdminProject) => void;
 
     // Allows the parent project list to update immediately after saving.
@@ -59,7 +61,6 @@ interface ProjectDetailsModalProps {
 export default function ProjectDetailsModal({
     project,
     onOpenChange,
-    onOpenProject,
     onReviewClientDesign,
     onDeadlineSaved
 }: ProjectDetailsModalProps) {
@@ -109,28 +110,28 @@ export default function ProjectDetailsModal({
         setPdfError("");
 
         try {
-            if (!project.jsonUrl?.trim()) {
-                throw new Error(
-                    "This project does not have a valid JSON download URL."
-                );
-            }
+            let projectData: unknown;
+            if (project.workflowType === "admin-managed") {
+                const latestMetadata = await getAdminProject(project.projectId);
+                projectData = await loadAdminManagedProjectForReview(latestMetadata);
+            } else {
+                if (!project.jsonUrl?.trim()) {
+                    throw new Error(
+                        "This project does not have a valid JSON download URL."
+                    );
+                }
 
-            const response = await fetch(
-                project.jsonUrl.trim(),
-                {
+                const response = await fetch(project.jsonUrl.trim(), {
                     method: "GET",
                     cache: "no-store"
+                });
+                if (!response.ok) {
+                    throw new Error(
+                        `Failed to download project data (HTTP ${response.status}).`
+                    );
                 }
-            );
-
-            if (!response.ok) {
-                throw new Error(
-                    `Failed to download project data (HTTP ${response.status}).`
-                );
+                projectData = await response.json();
             }
-
-            const projectData: unknown =
-                await response.json();
 
             downloadAdminCostBreakdownPDF(
                 projectData,
@@ -414,14 +415,6 @@ export default function ProjectDetailsModal({
                                             Review Client Design
                                         </Button>
                                     )}
-                                    <Button
-                                        className="w-full"
-                                        size="lg"
-                                        onClick={() => onOpenProject(project)}
-                                    >
-                                        <ExternalLink size={16} />
-                                        Open Project
-                                    </Button>
                                 </div>
                             </div>
                         </div>

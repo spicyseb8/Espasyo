@@ -41,7 +41,10 @@ export function mergeManagedInteriorData<T extends Record<string, unknown>>(
         ...publishedStructure,
         furniture: interiorPayload?.furniture ?? [],
         floorFinishes: interiorPayload?.floorFinishes ?? {},
-        wallFinishes: interiorPayload?.wallFinishes ?? {}
+        wallFinishes: interiorPayload?.wallFinishes ?? {},
+        costEstimate: interiorPayload
+            ? interiorPayload.costEstimate
+            : publishedStructure.costEstimate
     };
 }
 
@@ -155,8 +158,37 @@ async function loadInteriorPayload(
     ) {
         throw new Error("Interior design wall finishes are invalid.");
     }
+    if (
+        value.costEstimate !== undefined &&
+        !isSavedCostEstimate(value.costEstimate)
+    ) {
+        throw new Error("Interior design cost estimate is invalid.");
+    }
 
     return value as AdminManagedInteriorPayload;
+}
+
+function isSavedCostEstimate(value: unknown): boolean {
+    if (
+        !isRecord(value) ||
+        !Array.isArray(value.items) ||
+        !Number.isFinite(value.subtotal) ||
+        !Number.isFinite(value.total)
+    ) {
+        return false;
+    }
+
+    return value.items.every(item =>
+        isRecord(item) &&
+        ["furniture", "flooring", "wallFinish", "doors", "windows"].includes(
+            String(item.category)
+        ) &&
+        typeof item.name === "string" &&
+        Number.isFinite(item.quantity) &&
+        typeof item.unit === "string" &&
+        Number.isFinite(item.rate) &&
+        Number.isFinite(item.subtotal)
+    );
 }
 
 function isSavedFurniture(value: unknown): boolean {

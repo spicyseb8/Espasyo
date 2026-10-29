@@ -159,8 +159,9 @@ function getProjectTime(value: unknown): number {
 //==================================================
 
 export function formatCost(project: AdminProject): string {
-
-    const cost = project.totalCost ?? project.estimatedCost;
+    const cost = project.workflowType === "admin-managed"
+        ? project.estimatedCost ?? project.totalCost
+        : project.totalCost ?? project.estimatedCost;
 
     if (typeof cost !== "number" || !Number.isFinite(cost)) {
         return "Not available";
@@ -345,26 +346,6 @@ export default function ProjectManagement() {
 
     }, [projects, search, sortField, sortDirection]);
 
-
-    //==================================================
-    // OPEN PROJECT
-    //==================================================
-    //
-    // Opens the ADMIN view-only loader,
-    // NOT /studio/load/:projectId
-    //
-    //==================================================
-
-    function handleOpenProject(project: AdminProject) {
-        setSelectedProject(null);
-        if (project.workflowType === "admin-managed") {
-            navigate(`/projects/edit/${project.projectId}`, {
-                state: { ownerName: project.ownerName }
-            });
-            return;
-        }
-        navigate(`/projects/view/${project.projectId}`);
-    }
 
     function handleReviewClientDesign(project: AdminProject) {
         setSelectedProject(null);
@@ -732,7 +713,6 @@ export default function ProjectManagement() {
                         setSelectedProject(null);
                     }
                 }}
-                onOpenProject={handleOpenProject}
                 onReviewClientDesign={handleReviewClientDesign}
                 onDeadlineSaved={(projectId, deadline) => {
                     setProjects(current =>

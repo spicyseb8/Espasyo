@@ -139,7 +139,13 @@ export default function AdminProjectLoader() {
     //==================================================
     // LOADING
     //==================================================
-    if (!error && loading) {
+    if (
+        !error &&
+        (
+            loading ||
+            loadedProject?.metadata.projectId !== projectId
+        )
+    ) {
         return <LoadingScreen />;
     }
 

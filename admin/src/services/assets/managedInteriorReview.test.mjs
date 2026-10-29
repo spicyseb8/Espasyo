@@ -15,6 +15,36 @@ const furniturePlacement = {
     depth: 0.7,
     height: 1.1
 };
+const savedCostEstimate = {
+    items: [
+        {
+            category: "furniture",
+            name: "Chair",
+            quantity: 1,
+            unit: "item",
+            rate: 2500,
+            subtotal: 2500
+        },
+        {
+            category: "flooring",
+            name: "Floor tile",
+            quantity: 12,
+            unit: "pieces",
+            rate: 185,
+            subtotal: 2220
+        },
+        {
+            category: "wallFinish",
+            name: "Paint",
+            quantity: 2,
+            unit: "L",
+            rate: 160,
+            subtotal: 320
+        }
+    ],
+    subtotal: 5040,
+    total: 5040
+};
 
 function createMetadata(overrides = {}) {
     return {
@@ -46,7 +76,12 @@ function createStructure() {
         openings: [],
         furniture: [],
         floorFinishes: {},
-        wallFinishes: {}
+        wallFinishes: {},
+        costEstimate: {
+            items: [],
+            subtotal: 0,
+            total: 0
+        }
     };
 }
 
@@ -69,7 +104,8 @@ test("admin review loads published structure and then merges the client's furnit
                 ownerId: "client-uid",
                 furniture: [furniturePlacement],
                 floorFinishes: { "room-1": "floor-asset" },
-                wallFinishes: { "room-1": { "wall-1:1": "wall-asset" } }
+                wallFinishes: { "room-1": { "wall-1:1": "wall-asset" } },
+                costEstimate: savedCostEstimate
             });
     });
 
@@ -84,6 +120,8 @@ test("admin review loads published structure and then merges the client's furnit
     assert.deepEqual(loaded.wallFinishes, {
         "room-1": { "wall-1:1": "wall-asset" }
     });
+    assert.deepEqual(loaded.costEstimate, savedCostEstimate);
+    assert.equal(loaded.costEstimate.total, 5040);
     assert.equal(loaded.structuralRevision, 7);
     assert.equal(loaded.publishedStructuralRevision, 7);
 });
@@ -110,6 +148,7 @@ test("admin review gracefully loads a published project with no interior file", 
     assert.deepEqual(loaded.furniture, []);
     assert.deepEqual(loaded.floorFinishes, {});
     assert.deepEqual(loaded.wallFinishes, {});
+    assert.deepEqual(loaded.costEstimate, createStructure().costEstimate);
 
     const deletedFile = await loadAdminManagedProjectForReview(
         createMetadata(),
@@ -118,6 +157,29 @@ test("admin review gracefully loads a published project with no interior file", 
             : response(null, 404)
     );
     assert.deepEqual(deletedFile.furniture, []);
+});
+
+test("admin review does not reuse the published estimate when saved interior has no estimate", () => {
+    const merged = mergeManagedInteriorData(createStructure(), {
+        furniture: [furniturePlacement],
+        floorFinishes: {},
+        wallFinishes: {}
+    });
+    assert.equal(merged.costEstimate, undefined);
+});
+
+test("admin review rejects malformed saved cost estimates", async () => {
+    await assert.rejects(
+        loadAdminManagedProjectForReview(createMetadata(), async url =>
+            url.endsWith("structure.json")
+                ? response(createStructure())
+                : response({
+                    ownerId: "client-uid",
+                    costEstimate: { items: "invalid", total: 100, subtotal: 100 }
+                })
+        ),
+        /cost estimate is invalid/
+    );
 });
 
 test("admin review rejects wrong project/client references and invalid furniture data", async () => {
