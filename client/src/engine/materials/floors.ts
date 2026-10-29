@@ -14,6 +14,7 @@ import {
 } from "three";
 import {
     createFloorPatternLayout,
+    isHerringboneTileRatio,
     isFloorPattern
 } from "../../../../shared/flooring/patterns";
 import type {
@@ -308,7 +309,9 @@ async function buildFloorMaterial(
         data.floorMaterialMode === "single-tile" &&
         floorPattern &&
         length &&
-        width
+        width &&
+        (floorPattern !== "herringbone" ||
+            isHerringboneTileRatio(length, width))
             ? "single-tile"
             : undefined,
     floorPattern,

@@ -7,6 +7,7 @@ import type {
 import { isOptionalFurniturePrice } from "./furnitureCategories";
 import {
   DEFAULT_FLOOR_GROUT_WIDTH_M,
+  isHerringboneTileRatio,
 } from "../../../../shared/flooring/patterns";
 import type { FloorPattern } from "../../../../shared/flooring/patterns";
 
@@ -89,6 +90,13 @@ export async function createAsset(
       input.width <= DEFAULT_FLOOR_GROUT_WIDTH_M
     ) {
       throw new Error("Floor tile dimensions must each be greater than the 3 mm grout width.");
+    }
+
+    if (
+      input.floorPattern === "herringbone" &&
+      !isHerringboneTileRatio(input.length, input.width)
+    ) {
+      throw new Error("Herringbone requires tile length to be twice the tile width.");
     }
   } else if (
     !(

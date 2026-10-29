@@ -64,10 +64,15 @@ import { removeCachedDoorWindowAsset } from "@/services/assets/FirebaseDoorWindo
 import { removeCachedFloorMaterial } from "@/services/assets/floorsload";
 import { removeCachedFurnitureAsset } from "@/services/assets/furnitureload";
 import {
+  floorDimensionToMeters,
   FLOOR_PATTERN_DEFINITIONS,
+  isHerringboneTileRatio,
   isFloorPattern,
 } from "../../../../../shared/flooring/patterns";
-import type { FloorPattern } from "../../../../../shared/flooring/patterns";
+import type {
+  FloorDimensionUnit,
+  FloorPattern,
+} from "../../../../../shared/flooring/patterns";
 
 interface AssetLibraryProps {
   type: AssetType;
@@ -126,6 +131,8 @@ export default function AssetLibrary({
   // Existing assets without dimensions start with blank fields.
   const [editLength, setEditLength] = useState("");
   const [editWidth, setEditWidth] = useState("");
+  const [editFloorDimensionUnit, setEditFloorDimensionUnit] =
+    useState<FloorDimensionUnit>("cm");
   const [editFloorPattern, setEditFloorPattern] =
     useState<FloorPattern>("stack-bond");
 
@@ -143,6 +150,44 @@ export default function AssetLibrary({
   const [createNotice, setCreateNotice] = useState("");
 
   const assetsPerPage = 20;
+
+  const selectedPreviewAsset = useMemo(() => {
+    if (
+      !selectedAsset ||
+      selectedAsset.asset_type !== "floor" ||
+      selectedAsset.floorMaterialMode !== "single-tile"
+    ) {
+      return selectedAsset;
+    }
+
+    const enteredLength = Number(editLength);
+    const enteredWidth = Number(editWidth);
+    const previewLength =
+      editLength.trim() &&
+      Number.isFinite(enteredLength) &&
+      enteredLength > 0
+        ? floorDimensionToMeters(enteredLength, editFloorDimensionUnit)
+        : selectedAsset.length;
+    const previewWidth =
+      editWidth.trim() &&
+      Number.isFinite(enteredWidth) &&
+      enteredWidth > 0
+        ? floorDimensionToMeters(enteredWidth, editFloorDimensionUnit)
+        : selectedAsset.width;
+
+    return {
+      ...selectedAsset,
+      floorPattern: editFloorPattern,
+      length: previewLength,
+      width: previewWidth,
+    };
+  }, [
+    selectedAsset,
+    editFloorPattern,
+    editFloorDimensionUnit,
+    editLength,
+    editWidth,
+  ]);
 
   //==================================================
   // LOAD ASSETS
@@ -278,6 +323,24 @@ export default function AssetLibrary({
     onTypeChange?.(value);
   };
 
+  const handleFloorDimensionUnitChange = (value: string | null) => {
+    if (value !== "cm" && value !== "mm") return;
+    if (value === editFloorDimensionUnit) return;
+
+    const factor = value === "mm" ? 10 : 0.1;
+    const convert = (current: string) => {
+      if (!current.trim()) return current;
+      const numeric = Number(current);
+      return Number.isFinite(numeric)
+        ? String(numeric * factor)
+        : current;
+    };
+
+    setEditLength(convert(editLength));
+    setEditWidth(convert(editWidth));
+    setEditFloorDimensionUnit(value);
+  };
+
   //==================================================
   // SELECT AND EDIT ASSET
   //==================================================
@@ -297,6 +360,7 @@ export default function AssetLibrary({
     setEditWidth(
       metersToCentimetersInput(asset.width)
     );
+    setEditFloorDimensionUnit("cm");
     setEditFloorPattern(
       isFloorPattern(asset.floorPattern) ? asset.floorPattern : "stack-bond"
     );
@@ -316,6 +380,7 @@ export default function AssetLibrary({
     setEditLength(metersToCentimetersInput(selectedAsset.length));
 
     setEditWidth(metersToCentimetersInput(selectedAsset.width));
+    setEditFloorDimensionUnit("cm");
     setEditFloorPattern(
       isFloorPattern(selectedAsset.floorPattern)
         ? selectedAsset.floorPattern
@@ -340,6 +405,7 @@ export default function AssetLibrary({
     setEditLength(metersToCentimetersInput(selectedAsset.length));
 
     setEditWidth(metersToCentimetersInput(selectedAsset.width));
+    setEditFloorDimensionUnit("cm");
     setEditFloorPattern(
       isFloorPattern(selectedAsset.floorPattern)
         ? selectedAsset.floorPattern
@@ -405,7 +471,7 @@ export default function AssetLibrary({
         numericLength <= 0
       ) {
         setSaveError(
-          "Floor length must be greater than 0 centimeters."
+          `Floor length must be greater than 0 ${editFloorDimensionUnit}.`
         );
         return;
       }
@@ -416,19 +482,41 @@ export default function AssetLibrary({
         numericWidth <= 0
       ) {
         setSaveError(
-          "Floor width must be greater than 0 centimeters."
+          `Floor width must be greater than 0 ${editFloorDimensionUnit}.`
         );
+        return;
+      }
+
+      if (
+        selectedAsset.floorMaterialMode === "single-tile" &&
+        editFloorPattern === "herringbone" &&
+        !isHerringboneTileRatio(
+          resolveMeterDimension(
+            numericLength,
+            selectedAsset.length,
+            editFloorDimensionUnit
+          ),
+          resolveMeterDimension(
+            numericWidth,
+            selectedAsset.width,
+            editFloorDimensionUnit
+          )
+        )
+      ) {
+        setSaveError("Herringbone requires tile length to be twice the tile width.");
         return;
       }
 
       floorDimensions = {
         length: resolveMeterDimension(
           numericLength,
-          selectedAsset.length
+          selectedAsset.length,
+          editFloorDimensionUnit
         ),
         width: resolveMeterDimension(
           numericWidth,
-          selectedAsset.width
+          selectedAsset.width,
+          editFloorDimensionUnit
         ),
       };
     }
@@ -789,7 +877,11 @@ export default function AssetLibrary({
                   </label>
 
                   <div className="h-36 overflow-hidden rounded-xl border border-border bg-muted">
-                    <AssetThumbnail asset={selectedAsset} staticPreview />
+                    {selectedAsset.asset_type === "furniture" ? (
+                      <AssetThumbnail asset={selectedAsset} staticPreview />
+                    ) : (
+                      <PreviewScene asset={selectedPreviewAsset} />
+                    )}
                   </div>
                 </div>
 
@@ -871,6 +963,11 @@ export default function AssetLibrary({
                         </SelectItem>
                       </SelectContent>
                     </Select>
+                    {editFloorPattern === "herringbone" && (
+                      <p className="text-xs text-muted-foreground">
+                        Herringbone requires tile length to be twice the tile width.
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -882,8 +979,30 @@ export default function AssetLibrary({
                     </p>
 
                     <p className="mb-3 text-xs text-muted-foreground">
-                      Enter the physical tile length and width in centimeters.
+                      Enter the physical tile length and width in centimeters or millimeters.
                     </p>
+
+                    <div className="mb-3 max-w-36 space-y-2">
+                      <label
+                        htmlFor="edit-floor-dimension-unit"
+                        className="text-xs font-medium"
+                      >
+                        Unit
+                      </label>
+                      <Select
+                        value={editFloorDimensionUnit}
+                        onValueChange={handleFloorDimensionUnitChange}
+                        disabled={saving}
+                      >
+                        <SelectTrigger id="edit-floor-dimension-unit">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cm">cm</SelectItem>
+                          <SelectItem value="mm">mm</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
 
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-2">
@@ -908,7 +1027,9 @@ export default function AssetLibrary({
                             disabled={saving}
                             required
                           />
-                          <span className="text-sm text-muted-foreground">cm</span>
+                          <span className="text-sm text-muted-foreground">
+                            {editFloorDimensionUnit}
+                          </span>
                         </div>
                       </div>
 
@@ -934,7 +1055,9 @@ export default function AssetLibrary({
                             disabled={saving}
                             required
                           />
-                          <span className="text-sm text-muted-foreground">cm</span>
+                          <span className="text-sm text-muted-foreground">
+                            {editFloorDimensionUnit}
+                          </span>
                         </div>
                       </div>
                     </div>

@@ -20,3 +20,8 @@ test("reopening and saving stored dimensions preserves their meter values", () =
 test("changed centimeter values convert back to meters", () => {
   assert.equal(resolveMeterDimension(75, 0.6), 0.75);
 });
+
+test("millimeter values convert to meters and preserve existing precision", () => {
+  assert.equal(resolveMeterDimension(600, 0.6, "mm"), 0.6);
+  assert.equal(resolveMeterDimension(750, 0.6, "mm"), 0.75);
+});

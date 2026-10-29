@@ -9,6 +9,7 @@ import {
     createFloorPatternLayout,
     floorDimensionToMeters,
     getFloorPatternUV,
+    isHerringboneTileRatio,
 } from "./patterns.ts";
 import {
     calculateFloorImageCoverCrop,
@@ -69,13 +70,13 @@ function cellArea(layout) {
     return Math.abs(a.x * b.y - a.y * b.x);
 }
 
-test("defines only Stack Bond, Brick Bond, and Diagonal patterns", () => {
+test("defines only Stack Bond, Brick Bond, Diagonal, and Herringbone patterns", () => {
     assert.deepEqual(FLOOR_PATTERN_DEFINITIONS.map(({ id }) => id), [
         "stack-bond",
         "brick-bond",
         "diagonal",
+        "herringbone",
     ]);
-    assert.throws(() => createFloorPatternLayout("herringbone", 0.6, 0.3), RangeError);
 });
 
 test("converts cm and mm dimensions to meters and rejects invalid dimensions", () => {
@@ -118,10 +119,32 @@ test("Diagonal rotates the tile and both repeat axes by 45 degrees", () => {
     assertCellHasNoTileGapsOrOverlaps(layout);
 });
 
+test("Herringbone alternates horizontal and vertical tiles in a repeat cell", () => {
+    const layout = createFloorPatternLayout("herringbone", 0.6, 0.3);
+
+    closeTo(layout.repeatCell.a.x, 1.2);
+    closeTo(layout.repeatCell.b.y, 1.2);
+    assert.equal(layout.repeatCell.a.y, 0);
+    assert.equal(layout.repeatCell.b.x, 0);
+    assert.deepEqual(
+        layout.tiles.map(({ rotationRadians }) => rotationRadians),
+        [0, 0, 0, 0, Math.PI / 2, Math.PI / 2, Math.PI / 2, Math.PI / 2],
+    );
+    assert.equal(layout.tiles.length, 8);
+    assertCellHasNoTileGapsOrOverlaps(layout);
+    assert.throws(
+        () => createFloorPatternLayout("herringbone", 0.6, 0.4),
+        RangeError,
+    );
+    assert.equal(isHerringboneTileRatio(0.6, 0.3), true);
+    assert.equal(isHerringboneTileRatio(0.6, 0.4), false);
+});
+
 test("all patterns keep configured physical tile area independent of image size", () => {
     for (const { id } of FLOOR_PATTERN_DEFINITIONS) {
         const layout = createFloorPatternLayout(id, 0.6, 0.3);
-        const nominalTileArea = layout.tiles.length * layout.tileLengthM * layout.tileWidthM;
+        const nominalTileArea =
+            layout.tiles.length * layout.tileLengthM * layout.tileWidthM;
 
         closeTo(nominalTileArea, cellArea(layout));
     }

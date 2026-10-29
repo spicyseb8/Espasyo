@@ -1,6 +1,8 @@
 export const DEFAULT_FLOOR_GROUT_WIDTH_M = 0.003;
 export const DEFAULT_FLOOR_GROUT_COLOR = "#808080";
 export const ASPECT_RATIO_WARNING_TOLERANCE = 0.1;
+export const HERRINGBONE_TILE_LENGTH_WIDTH_RATIO = 2;
+const HERRINGBONE_RATIO_TOLERANCE = 1e-6;
 
 export const FLOOR_PATTERN_DEFINITIONS = [
     {
@@ -18,6 +20,11 @@ export const FLOOR_PATTERN_DEFINITIONS = [
         label: "Diagonal",
         description: "Stack Bond rotated 45 degrees relative to world axes.",
     },
+    {
+        id: "herringbone",
+        label: "Herringbone",
+        description: "Alternating horizontal and vertical tiles in a zigzag layout.",
+    },
 ] as const;
 
 export type FloorPattern = (typeof FLOOR_PATTERN_DEFINITIONS)[number]["id"];
@@ -25,6 +32,19 @@ export type FloorDimensionUnit = "cm" | "mm";
 
 export function isFloorPattern(value: unknown): value is FloorPattern {
     return FLOOR_PATTERN_DEFINITIONS.some(({ id }) => id === value);
+}
+
+export function isHerringboneTileRatio(
+    tileLengthM: number,
+    tileWidthM: number,
+): boolean {
+    return Number.isFinite(tileLengthM) &&
+        Number.isFinite(tileWidthM) &&
+        tileLengthM > 0 &&
+        tileWidthM > 0 &&
+        Math.abs(
+            tileLengthM / tileWidthM - HERRINGBONE_TILE_LENGTH_WIDTH_RATIO,
+        ) <= HERRINGBONE_RATIO_TOLERANCE;
 }
 
 export interface FloorVector {
@@ -169,9 +189,66 @@ export function createFloorPatternLayout(
             };
         case "diagonal":
             return diagonalLayout(layout);
+        case "herringbone":
+            if (!isHerringboneTileRatio(tileLengthM, tileWidthM)) {
+                throw new RangeError(
+                    "Herringbone requires the tile length to be twice its width.",
+                );
+            }
+            return herringboneLayout(layout);
         default:
             throw new RangeError(`Unsupported floor pattern: ${String(pattern)}.`);
     }
+}
+
+function herringboneLayout(
+    layout: Omit<FloorPatternLayout, "repeatCell" | "tiles">,
+): FloorPatternLayout {
+    const tileLength = layout.tileLengthM;
+    const tileWidth = layout.tileWidthM;
+    const unit = tileWidth;
+
+    return {
+        ...layout,
+        repeatCell: {
+            a: { x: tileLength * 2, y: 0 },
+            b: { x: 0, y: tileWidth * 4 },
+        },
+        tiles: [
+            {
+                center: { x: unit, y: unit / 2 },
+                rotationRadians: 0,
+            },
+            {
+                center: { x: tileLength + unit, y: unit / 2 },
+                rotationRadians: 0,
+            },
+            {
+                center: { x: tileLength + unit, y: unit * 1.5 },
+                rotationRadians: 0,
+            },
+            {
+                center: { x: unit, y: unit * 3.5 },
+                rotationRadians: 0,
+            },
+            {
+                center: { x: unit / 2, y: unit * 2 },
+                rotationRadians: Math.PI / 2,
+            },
+            {
+                center: { x: unit * 1.5, y: unit * 2 },
+                rotationRadians: Math.PI / 2,
+            },
+            {
+                center: { x: unit * 2.5, y: unit * 3 },
+                rotationRadians: Math.PI / 2,
+            },
+            {
+                center: { x: unit * 3.5, y: unit * 3 },
+                rotationRadians: Math.PI / 2,
+            },
+        ],
+    };
 }
 
 function diagonalLayout(

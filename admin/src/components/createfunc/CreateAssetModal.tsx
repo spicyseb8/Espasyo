@@ -14,6 +14,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 
 import AssetThumbnail from "@/components/asset-preview/AssetThumbnail";
+import PreviewScene from "@/components/asset-preview/PreviewScene";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -40,6 +41,7 @@ import {
   DEFAULT_FLOOR_GROUT_WIDTH_M,
   FLOOR_PATTERN_DEFINITIONS,
   floorDimensionToMeters,
+  isHerringboneTileRatio,
   isFloorPattern,
 } from "../../../../shared/flooring/patterns";
 import type {
@@ -435,7 +437,7 @@ export default function CreateAssetModal({
   const [roughness, setRoughness] = useState("0.8");
   const [metalness, setMetalness] = useState("0");
 
-  // Flooring dimensions are entered in centimeters.
+  // Flooring dimensions are entered in the selected unit and converted to meters on submit.
   const [floorLength, setFloorLength] = useState("");
   const [floorWidth, setFloorWidth] = useState("");
   const [floorDimensionUnit, setFloorDimensionUnit] =
@@ -472,8 +474,21 @@ export default function CreateAssetModal({
       CATEGORY_OPTIONS[assetType].find(([value]) => value === category)?.[1]) ||
     resolvedCategory;
 
-  // Only used for the 3D furniture preview. Textures and colors are drawn
-  // directly in the preview panel below.
+  const parsedFloorLength = Number(floorLength);
+  const parsedFloorWidth = Number(floorWidth);
+  const previewFloorLength =
+    floorLength.trim() &&
+    Number.isFinite(parsedFloorLength) &&
+    parsedFloorLength > 0
+      ? floorDimensionToMeters(parsedFloorLength, floorDimensionUnit)
+      : 0.6;
+  const previewFloorWidth =
+    floorWidth.trim() &&
+    Number.isFinite(parsedFloorWidth) &&
+    parsedFloorWidth > 0
+      ? floorDimensionToMeters(parsedFloorWidth, floorDimensionUnit)
+      : 0.3;
+
   const previewAsset: Asset = {
     id: "new-asset-preview",
     name: name.trim() || "Asset preview",
@@ -486,7 +501,20 @@ export default function CreateAssetModal({
     diffuse_url: diffusePreviewURL,
     diffuse_path: diffusePreviewURL,
     base_color_url: diffusePreviewURL,
-    color: null,
+    color:
+      assetType === "wall" && wallMode === "color"
+        ? color
+        : null,
+    roughness: Number(roughness),
+    metalness: Number(metalness),
+    floorMaterialMode:
+      assetType === "floor" ? "single-tile" : undefined,
+    floorPattern:
+      assetType === "floor" ? floorPattern : undefined,
+    length:
+      assetType === "floor" ? previewFloorLength : undefined,
+    width:
+      assetType === "floor" ? previewFloorWidth : undefined,
   };
 
   const clearPreviewURLs = () => {
@@ -701,6 +729,16 @@ export default function CreateAssetModal({
       ) {
         return setError("Tile length and width must each be greater than the 3 mm grout width.");
       }
+
+      if (
+        floorPattern === "herringbone" &&
+        !isHerringboneTileRatio(
+          floorDimensionToMeters(numericLength, floorDimensionUnit),
+          floorDimensionToMeters(numericWidth, floorDimensionUnit)
+        )
+      ) {
+        return setError("Herringbone requires tile length to be twice the tile width.");
+      }
     }
 
     setSaving(true);
@@ -778,41 +816,14 @@ export default function CreateAssetModal({
       );
     }
 
-    if (assetType === "wall" && wallMode === "color") {
-      return (
-        <div
-          className="h-full w-full transition-colors"
-          style={{ backgroundColor: color }}
-          role="img"
-          aria-label={`Wall color ${color}`}
-        />
-      );
-    }
-
-    if (diffusePreviewURL) {
-      return (
-        <div
-          className="h-full w-full"
-          role="img"
-          aria-label="Texture preview"
-          style={{
-            backgroundImage: `url(${diffusePreviewURL})`,
-            backgroundPosition: "center",
-            backgroundSize: "cover",
-            backgroundRepeat: "no-repeat",
-          }}
-        />
-      );
+    if (assetType === "floor" || assetType === "wall") {
+      return <PreviewScene asset={previewAsset} />;
     }
 
     return (
       <PreviewEmpty
         icon={ImageIcon}
-        text={
-          assetType === "floor"
-            ? "Upload a diffuse texture to see it tiled here."
-            : "Upload an image to preview this wall."
-        }
+        text="Choose an asset type to preview it in 3D."
       />
     );
   };
@@ -1133,6 +1144,8 @@ export default function CreateAssetModal({
                         <p className="text-xs text-muted-foreground">
                           Grout is neutral gray and {DEFAULT_FLOOR_GROUT_WIDTH_M * 1000} mm wide.
                           Images with a different aspect ratio are center-cropped to fill each tile.
+                          {floorPattern === "herringbone" &&
+                            " Herringbone requires a 2:1 tile length-to-width ratio."}
                         </p>
                       </Section>
                     </>

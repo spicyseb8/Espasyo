@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
 import { ContactShadows } from "@react-three/drei";
 
@@ -8,6 +9,7 @@ import PreviewLighting from "./PreviewLighting";
 import PreviewRoom from "./PreviewRoom";
 import PreviewEnvironment from "./PreviewEnvironment";
 import PreviewControls from "./PreviewControls";
+import { PREVIEW_ROOM_DIMENSIONS } from "./previewRoomDimensions";
 
 const DEFAULT_CAMERA_POSITION: [number, number, number] = [
   6,
@@ -48,10 +50,12 @@ export default function PreviewCanvas({
 
       <PreviewRoom asset={asset} />
 
-      <PreviewEnvironment />
+      <Suspense fallback={null}>
+        <PreviewEnvironment />
+      </Suspense>
 
       <ContactShadows
-        position={[0, 0.02, 0]}
+        position={[0, PREVIEW_ROOM_DIMENSIONS.floorThickness + 0.02, 0]}
         opacity={0.5}
         scale={10}
         blur={2}

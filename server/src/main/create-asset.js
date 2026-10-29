@@ -17,6 +17,7 @@ const FLOOR_PATTERNS = new Set([
   "stack-bond",
   "brick-bond",
   "diagonal",
+  "herringbone",
 ]);
 
 const ALLOWED_FURNITURE_CATEGORIES = new Set([
@@ -366,6 +367,13 @@ router.post(
 
         if (!FLOOR_PATTERNS.has(floorPattern)) {
           throw new Error("Choose a supported floor tile pattern.");
+        }
+
+        if (
+          floorPattern === "herringbone" &&
+          Math.abs(floorLength / floorWidth - 2) > 1e-6
+        ) {
+          throw new Error("Herringbone requires tile length to be twice the tile width.");
         }
       }
 
