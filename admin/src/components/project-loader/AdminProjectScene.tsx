@@ -48,6 +48,7 @@ interface AdminProjectSceneProps {
     comments: AdminComment[];
     activeTarget: AdminCommentTargetDetail | null;
     visibleCommentId: string | null;
+    onAssetError: (assetId: string) => void;
     onReady: () => void;
 }
 
@@ -56,6 +57,7 @@ export default function AdminProjectScene({
     comments,
     activeTarget,
     visibleCommentId,
+    onAssetError,
     onReady
 }: AdminProjectSceneProps) {
     const [focusedCommentId, setFocusedCommentId] =
@@ -214,6 +216,7 @@ export default function AdminProjectScene({
 
                 <AdminFurnitures
                     furniture={projectData.furniture}
+                    onAssetError={onAssetError}
                 />
 
                 <AdminCommentMarkers

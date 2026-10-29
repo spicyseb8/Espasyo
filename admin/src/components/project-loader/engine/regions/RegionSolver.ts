@@ -1,15 +1,15 @@
 import type { Corner } from "../walls/Corner";
 import type { Wall } from "../walls/WallTypes";
 import { Vector3 } from "three";
-import { buildRegionGraph } from "./RegionGraph";
-import { walkRegions } from "./RegionWalker";
+import { buildRegionGraph } from "./RegionGraph.ts";
+import { walkRegions } from "./RegionWalker.ts";
 import {
     pointInPolygon,
     polygonArea,
     polygonPerimeter,
     type BoundaryLoop,
     type Region
-} from "./Polygon";
+} from "./Polygon.ts";
 
 export function solveRegions(
     corners: Corner[],
@@ -31,6 +31,7 @@ export function solveRegions(
 
         return (
             region.corners.length >= 3 &&
+            isSimplePolygon(region.corners) &&
             area > 0.01
         );
     });
@@ -200,7 +201,7 @@ function classifyRegionRelationships(
                     return false;
                 }
 
-                return isPolygonContained(
+                return isPolygonStrictlyContained(
                     region.corners,
                     other.corners
                 );
@@ -558,6 +559,64 @@ function isPolygonContained(
                     b1,
                     b2
                 )
+            ) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+function isPolygonStrictlyContained(
+    child: Vector3[],
+    parent: Vector3[]
+): boolean {
+    if (!isPolygonContained(child, parent)) {
+        return false;
+    }
+
+    for (let childIndex = 0; childIndex < child.length; childIndex += 1) {
+        const childStart = child[childIndex];
+        const childEnd = child[(childIndex + 1) % child.length];
+        for (let parentIndex = 0; parentIndex < parent.length; parentIndex += 1) {
+            const parentStart = parent[parentIndex];
+            const parentEnd = parent[(parentIndex + 1) % parent.length];
+            if (
+                segmentsProperlyCross(childStart, childEnd, parentStart, parentEnd) ||
+                isPointOnSegment(childStart, parentStart, parentEnd) ||
+                isPointOnSegment(childEnd, parentStart, parentEnd) ||
+                isPointOnSegment(parentStart, childStart, childEnd) ||
+                isPointOnSegment(parentEnd, childStart, childEnd)
+            ) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+function isSimplePolygon(polygon: Vector3[]): boolean {
+    for (let i = 0; i < polygon.length; i += 1) {
+        const start = polygon[i];
+        const end = polygon[(i + 1) % polygon.length];
+        if (start.distanceTo(end) <= 0.0001) {
+            return false;
+        }
+
+        for (let j = i + 1; j < polygon.length; j += 1) {
+            const next = polygon[(j + 1) % polygon.length];
+            const adjacent = j === i + 1 || (i === 0 && j === polygon.length - 1);
+            if (adjacent) continue;
+
+            const otherStart = polygon[j];
+            if (
+                segmentsProperlyCross(start, end, otherStart, next) ||
+                isPointOnSegment(start, otherStart, next) ||
+                isPointOnSegment(end, otherStart, next) ||
+                isPointOnSegment(otherStart, start, end) ||
+                isPointOnSegment(next, start, end)
             ) {
                 return false;
             }

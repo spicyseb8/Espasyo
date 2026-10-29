@@ -44,11 +44,15 @@ import {
 import {
     addWallSegmentToStructure,
     closestPointOnWall,
+    findNearestWallEndpoint,
     findOrCreateCorner,
+    hasPartialPolygonOverlap,
     getRoomPreviewGeometry,
+    resolveWallDrawingPoint,
     snapToCorner,
     snapToGrid,
     snapToWallEndpoint,
+    snap90Degrees,
     type Point3
 } from "./structureGeometry";
 import {
@@ -91,7 +95,35 @@ function scenePointToWorldPoint(scenePoint: { x: number; z: number }): Point3 {
     return { x: converted.x, y: 0, z: converted.y };
 }
 
-function snapWorldPoint(point: Point3, structure: ManagedStructure): Point3 {
+function findStructureCorner(
+    structure: ManagedStructure,
+    cornerId: string
+): StructureCorner | null {
+    const corner = structure.corners.find(item => item.id === cornerId);
+    if (corner) return corner;
+    for (const wall of structure.walls) {
+        for (const endpoint of [wall.start, wall.end]) {
+            if (endpoint.id === cornerId) return endpoint;
+        }
+    }
+    return null;
+}
+
+function snapWorldPoint(
+    point: Point3,
+    structure: ManagedStructure,
+    snapCornerId: string | null = null,
+    preferStructuralEndpoint = false
+): Point3 {
+    if (snapCornerId) {
+        const snappedCorner = findStructureCorner(structure, snapCornerId);
+        if (snappedCorner) return { ...snappedCorner.position };
+    }
+    if (preferStructuralEndpoint) {
+        const nearestEndpoint = findNearestWallEndpoint(point, structure.corners, structure.walls);
+        if (nearestEndpoint) return { ...nearestEndpoint.position };
+    }
+
     let snapped = snapToGrid(point, structure.gridSize);
     snapped = snapToWallEndpoint(snapped, structure.walls);
     return snapToCorner(snapped, structure.corners);
@@ -113,7 +145,14 @@ export default function AdminStructuralEditor() {
     const [structure, setStructure] = useState<ManagedStructure | null>(null);
     const [tool, setTool] = useState<AdminStructuralTool>("wall");
     const [pendingWallStart, setPendingWallStart] = useState<StructureCorner | null>(null);
+    const [wallChainStart, setWallChainStart] = useState<StructureCorner | null>(null);
     const [previewWallEnd, setPreviewWallEnd] = useState<Point3 | null>(null);
+    const [wallGuides, setWallGuides] = useState<{
+        snapPosition: Point3 | null;
+        closing: boolean;
+        alignedX: number | null;
+        alignedZ: number | null;
+    } | null>(null);
     const [pendingRoomStart, setPendingRoomStart] = useState<{ x: number; z: number } | null>(null);
     const [previewRoomEnd, setPreviewRoomEnd] = useState<Point3 | null>(null);
     const [selectedWallId, setSelectedWallId] = useState<string | null>(null);
@@ -426,7 +465,9 @@ export default function AdminStructuralEditor() {
         setHistory(items => items.slice(0, -1));
         setStructure(previous);
         setPendingWallStart(null);
+        setWallChainStart(null);
         setPreviewWallEnd(null);
+        setWallGuides(null);
         setPendingRoomStart(null);
         setPreviewRoomEnd(null);
         setSelectedWallId(null);
@@ -443,7 +484,9 @@ export default function AdminStructuralEditor() {
         setFuture(items => items.slice(1));
         setStructure(next);
         setPendingWallStart(null);
+        setWallChainStart(null);
         setPreviewWallEnd(null);
+        setWallGuides(null);
         setPendingRoomStart(null);
         setPreviewRoomEnd(null);
         setSelectedWallId(null);
@@ -567,12 +610,15 @@ export default function AdminStructuralEditor() {
 
     const addWallSegment = (point: { x: number; z: number }) => {
         if (!structure || structure.layoutConfirmed) return;
-        const existingCorners = pendingWallStart && !structure.corners.some(corner => corner.id === pendingWallStart.id)
-            ? [...structure.corners, pendingWallStart]
-            : structure.corners;
+        const endpointCorners = structure.walls.flatMap(wall => [wall.start, wall.end]);
+        const existingCorners = [...structure.corners, ...endpointCorners];
+        if (pendingWallStart && !existingCorners.some(corner => corner.id === pendingWallStart.id)) {
+            existingCorners.push(pendingWallStart);
+        }
         const found = findOrCreateCorner({ x: point.x, y: 0, z: point.z }, existingCorners);
         if (!pendingWallStart) {
             setPendingWallStart(found.corner);
+            setWallChainStart(found.corner);
             return;
         }
         if (pendingWallStart.id === found.corner.id) return;
@@ -581,8 +627,16 @@ export default function AdminStructuralEditor() {
             pendingWallStart,
             found.corner
         ));
-        setPendingWallStart(found.corner);
         setPreviewWallEnd(null);
+        if (found.corner.id === wallChainStart?.id) {
+            setPendingWallStart(null);
+            setWallChainStart(null);
+            setWallGuides(null);
+            setStatus("Closed wall boundary created; the enclosed floor region is ready.");
+            return;
+        }
+        setPendingWallStart(found.corner);
+        setWallGuides(null);
     };
 
     const addRoomRectangle = (point: { x: number; z: number }) => {
@@ -600,6 +654,23 @@ export default function AdminStructuralEditor() {
         const maxZ = Math.max(pendingRoomStart.z, point.z);
         if (maxX - minX < structure.gridSize || maxZ - minZ < structure.gridSize) {
             setStatus("Choose opposite room corners at least one grid step apart.");
+            return;
+        }
+
+        const roomPolygon: Point3[] = [
+            { x: minX, y: 0, z: minZ },
+            { x: maxX, y: 0, z: minZ },
+            { x: maxX, y: 0, z: maxZ },
+            { x: minX, y: 0, z: maxZ }
+        ];
+        const overlapsExistingRoom = geometry.regions.some(region =>
+            hasPartialPolygonOverlap(
+                roomPolygon,
+                region.corners.map(corner => ({ x: corner.x, y: corner.y, z: corner.z }))
+            )
+        );
+        if (overlapsExistingRoom) {
+            setStatus("This room overlaps an existing room. Draw adjoining rooms or fully nested rooms instead.");
             return;
         }
 
@@ -625,6 +696,7 @@ export default function AdminStructuralEditor() {
         commit(roomStructure);
         setPendingRoomStart(null);
         setPreviewRoomEnd(null);
+        setWallGuides(null);
         setStatus("Room created from the selected opposite corners.");
     };
 
@@ -728,7 +800,11 @@ export default function AdminStructuralEditor() {
         setStatus(`${selectedAsset.type === "door" ? "Door" : "Window"} placed.`);
     };
 
-    const handleScenePoint = (scenePoint: { x: number; y?: number; z: number }, forcedWallId: string | null = null) => {
+    const handleScenePoint = (
+        scenePoint: { x: number; y?: number; z: number },
+        forcedWallId: string | null = null,
+        snapCornerId: string | null = null
+    ) => {
         setPreviewWallEnd(null);
         setPreviewRoomEnd(null);
         setBuildPointer(null);
@@ -748,7 +824,12 @@ export default function AdminStructuralEditor() {
             return;
         }
 
-        const snapped = snapWorldPoint(rawPoint, structure);
+        let snapped = tool === "wall"
+            ? resolveWallDrawingPoint(rawPoint, structure, snapCornerId, forcedWallId)
+            : snapWorldPoint(rawPoint, structure, snapCornerId);
+        if (tool === "wall" && pendingWallStart && !snapCornerId && !forcedWallId) {
+            snapped = snap90Degrees(pendingWallStart.position, snapped);
+        }
         const planarPoint = { x: snapped.x, z: snapped.z };
 
         if (tool === "wall") {
@@ -791,7 +872,18 @@ export default function AdminStructuralEditor() {
         placeBuildAsset(wallId, { ...planarPoint, y: rawPoint.y });
     };
 
-    const handleScenePointerMove = (scenePoint: { x: number; y: number; z: number; wallId?: string } | null) => {
+    const handleScenePointerMove = (scenePoint: {
+        x: number;
+        y: number;
+        z: number;
+        wallId?: string;
+        snapCornerId: string | null;
+        alignedX: number | null;
+        alignedZ: number | null;
+    } | null) => {
+        if (tool !== "wall" || structure?.layoutConfirmed) {
+            setWallGuides(null);
+        }
         if (calibrationStep === "second-point") {
             if (scenePoint) {
                 const point = scenePointToWorldPoint(scenePoint);
@@ -802,6 +894,7 @@ export default function AdminStructuralEditor() {
             setPreviewWallEnd(null);
             setPreviewRoomEnd(null);
             setBuildPointer(null);
+            setWallGuides(null);
             return;
         }
 
@@ -812,6 +905,7 @@ export default function AdminStructuralEditor() {
         ) {
             setPreviewWallEnd(null);
             setPreviewRoomEnd(null);
+            setWallGuides(null);
             return;
         }
 
@@ -823,15 +917,49 @@ export default function AdminStructuralEditor() {
             setPreviewWallEnd(null);
             setPreviewRoomEnd(null);
             setBuildPointer(null);
+            setWallGuides(null);
             return;
         }
 
-        const nextPoint = snapWorldPoint({
+        const rawPoint = {
             ...scenePointToWorldPoint(scenePoint),
             y: activeBuildAsset?.type === "window"
                 ? scenePoint.y
                 : 0
-        }, structure);
+        };
+        let nextPoint = tool === "wall"
+            ? resolveWallDrawingPoint(
+                rawPoint,
+                structure,
+                scenePoint.snapCornerId,
+                scenePoint.wallId ?? null
+            )
+            : snapWorldPoint(rawPoint, structure, scenePoint.snapCornerId);
+        if (
+            !structure.layoutConfirmed &&
+            tool === "wall" &&
+            pendingWallStart &&
+            !scenePoint.snapCornerId &&
+            !scenePoint.wallId
+        ) {
+            nextPoint = snap90Degrees(pendingWallStart.position, nextPoint);
+        }
+        if (!structure.layoutConfirmed && tool === "wall") {
+            const snapPosition = scenePoint.snapCornerId
+                ? findStructureCorner(structure, scenePoint.snapCornerId)?.position ?? null
+                : scenePoint.wallId
+                    ? nextPoint
+                    : null;
+            setWallGuides({
+                snapPosition: snapPosition ? { ...snapPosition } : null,
+                closing: Boolean(
+                    wallChainStart &&
+                    scenePoint.snapCornerId === wallChainStart.id
+                ),
+                alignedX: scenePoint.alignedX,
+                alignedZ: scenePoint.alignedZ
+            });
+        }
         if (!structure.layoutConfirmed && tool === "wall" && pendingWallStart) {
             setPreviewRoomEnd(null);
             setBuildPointer(null);
@@ -878,7 +1006,9 @@ export default function AdminStructuralEditor() {
         if (!hasPendingWall && !hasPendingRoom) return;
 
         setPendingWallStart(null);
+        setWallChainStart(null);
         setPreviewWallEnd(null);
+        setWallGuides(null);
         setPendingRoomStart(null);
         setPreviewRoomEnd(null);
         setTool("select");
@@ -900,14 +1030,14 @@ export default function AdminStructuralEditor() {
         setStatus("Placement cancelled.");
     };
 
-    const handleWallClick = (wallId: string, point: Vector3) => {
+    const handleWallClick = (wallId: string, point: Vector3, snapCornerId: string | null) => {
         if (tool === "select" && calibrationStep === "idle") {
             setSelectedStructureElement(null);
             setSelectedWallId(wallId);
             setSelectedRegionId(null);
             return;
         }
-        handleScenePoint({ x: point.x, y: point.y, z: point.z }, wallId);
+        handleScenePoint({ x: point.x, y: point.y, z: point.z }, wallId, snapCornerId);
     };
 
     const removeSelectedWall = () => {
@@ -929,7 +1059,9 @@ export default function AdminStructuralEditor() {
         setSelectedRegionId(null);
         setSelectedStructureElement(null);
         setPendingWallStart(null);
+        setWallChainStart(null);
         setPreviewWallEnd(null);
+        setWallGuides(null);
         setPendingRoomStart(null);
         setPreviewRoomEnd(null);
     };
@@ -1079,7 +1211,9 @@ export default function AdminStructuralEditor() {
         setTool(assetTool);
         setBuildPointer(null);
         setPendingWallStart(null);
+        setWallChainStart(null);
         setPreviewWallEnd(null);
+        setWallGuides(null);
         setPendingRoomStart(null);
         setPreviewRoomEnd(null);
         setStatus(`Placement active for ${asset.name}. Move over a wall and click to place it.`);
@@ -1090,7 +1224,9 @@ export default function AdminStructuralEditor() {
         if (!window.confirm("Once confirmed, the wall and room layout can no longer be edited. Continue?")) return;
         commit({ ...structure, layoutConfirmed: true });
         setPendingWallStart(null);
+        setWallChainStart(null);
         setPreviewWallEnd(null);
+        setWallGuides(null);
         setPendingRoomStart(null);
         setPreviewRoomEnd(null);
         setTool("select");
@@ -1333,7 +1469,9 @@ export default function AdminStructuralEditor() {
                                     setTool(nextTool);
                                     setBuildPointer(null);
                                     setPendingWallStart(null);
+                                    setWallChainStart(null);
                                     setPreviewWallEnd(null);
+                                    setWallGuides(null);
                                     setPendingRoomStart(null);
                                     setPreviewRoomEnd(null);
                                 }}
@@ -1347,7 +1485,9 @@ export default function AdminStructuralEditor() {
                                 onBlueprintLockChange={() => {
                                     if (!blueprintLocked && calibrationStep !== "idle") cancelCalibration();
                                     setPendingWallStart(null);
+                                    setWallChainStart(null);
                                     setPreviewWallEnd(null);
+                                    setWallGuides(null);
                                     setPendingRoomStart(null);
                                     setPreviewRoomEnd(null);
                                     setBlueprintLocked(value => !value);
@@ -1436,6 +1576,7 @@ export default function AdminStructuralEditor() {
                             setSelectedRegionId(regionId);
                         }}
                         wallPreview={wallPreview}
+                        wallGuides={wallGuides}
                         showWallMeasurements={showWallMeasurements}
                         roomPreview={roomPreview}
                         buildElementAsset={activeBuildAsset}
@@ -1448,7 +1589,9 @@ export default function AdminStructuralEditor() {
                         placementActive={activeBuildAsset !== null}
                         onCancelDrawing={cancelDrawing}
                         onCancelPlacement={cancelBuildPlacement}
-                        onScenePoint={point => handleScenePoint(point)}
+                        onScenePoint={(point, snapCornerId) =>
+                            handleScenePoint(point, null, snapCornerId)
+                        }
                         onScenePointerMove={handleScenePointerMove}
                         onWallClick={handleWallClick}
                         onDoorSelect={id => selectStructureElement("door", id)}

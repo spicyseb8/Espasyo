@@ -24,6 +24,7 @@ import LoadingScreen from "@/components/LoadingScreen";
 interface AdminProjectViewerProps {
     metadata: AdminProject;
     projectData: SavedProjectData;
+    unavailableAssetIds?: string[];
 }
 const COMMENT_CURSOR =
     `url("data:image/svg+xml,${encodeURIComponent(`
@@ -117,12 +118,17 @@ function formatCommentDate(
 
 export default function AdminProjectViewer({
     metadata,
-    projectData
+    projectData,
+    unavailableAssetIds = []
 }: AdminProjectViewerProps) {
     const navigate = useNavigate();
     const { role } = useAuth();
     const canComment = role === "admin";
     const [sceneReady, setSceneReady] = useState(false);
+    const [runtimeAssetFailures, setRuntimeAssetFailures] = useState<string[]>([]);
+    const reportedUnavailableAssetIds = [
+        ...new Set([...unavailableAssetIds, ...runtimeAssetFailures])
+    ];
     const handleSceneReady = useCallback(() => {
         setSceneReady(true);
     }, []);
@@ -581,6 +587,9 @@ export default function AdminProjectViewer({
                 visibleCommentId={
                     visibleCommentId
                 }
+                onAssetError={assetId => setRuntimeAssetFailures(current =>
+                    current.includes(assetId) ? current : [...current, assetId]
+                )}
             />
 
             {!sceneReady && (
@@ -611,6 +620,19 @@ export default function AdminProjectViewer({
                     </p>
                 </div>
             </div>
+
+            {reportedUnavailableAssetIds.length > 0 && (
+                <div
+                    role="alert"
+                    className="absolute left-4 top-[92px] z-30 max-w-[360px] rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-950 shadow"
+                >
+                    Some saved furniture or material assets could not be loaded.
+                    The rest of the design remains visible.
+                    <span className="mt-1 block break-words">
+                        Asset IDs: {reportedUnavailableAssetIds.join(", ")}
+                    </span>
+                </div>
+            )}
 
            <div
     style={{

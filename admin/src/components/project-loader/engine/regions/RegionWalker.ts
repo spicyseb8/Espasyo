@@ -12,7 +12,7 @@ import type {
 
 import {
     pointInPolygon
-} from "./Polygon";
+} from "./Polygon.ts";
 
 import type {
     Wall

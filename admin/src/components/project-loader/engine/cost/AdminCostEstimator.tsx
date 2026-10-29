@@ -181,12 +181,13 @@ export default function AdminCostEstimator({
     const [hovered, setHovered] = useState(false);
 
     const items = projectData.costEstimate?.items ?? [];
-
-    const total =
+    const estimateAvailable =
         typeof projectData.costEstimate?.total === "number" &&
-        Number.isFinite(projectData.costEstimate.total)
-            ? projectData.costEstimate.total
-            : 0;
+        Number.isFinite(projectData.costEstimate.total);
+
+    const total = estimateAvailable
+        ? projectData.costEstimate!.total
+        : null;
 
     const furnitureCount = projectData.furniture.length;
 
@@ -252,11 +253,15 @@ export default function AdminCostEstimator({
                         {items.length === 0 ? (
                             <div style={styles.empty}>
                                 <p style={styles.emptyTitle}>
-                                    No cost items yet.
+                                    {estimateAvailable
+                                        ? "No cost items yet."
+                                        : "Estimate unavailable."}
                                 </p>
 
                                 <p style={styles.emptyText}>
-                                    This project does not have a saved cost estimate.
+                                    {estimateAvailable
+                                        ? "This project has no priced items."
+                                        : "Save the client design with a current cost estimate to review pricing."}
                                 </p>
                             </div>
                         ) : (
@@ -330,7 +335,7 @@ export default function AdminCostEstimator({
                         <span style={styles.footerLabel}>Estimated Total</span>
 
                         <strong style={styles.footerTotal}>
-                            {formatCurrency(total)}
+                            {total === null ? "Unavailable" : formatCurrency(total)}
                         </strong>
                     </div>
                 </div>

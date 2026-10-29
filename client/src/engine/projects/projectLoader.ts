@@ -12,6 +12,10 @@ import {
 import type {
     SavedProjectData
 } from "../../context/editor/ProjectTypes";
+import {
+    loadManagedInteriorData,
+    mergeManagedInteriorData
+} from "../../services/managedProjectData";
 
 
 //==================================================
@@ -53,6 +57,9 @@ export interface UserProject {
         "published";
 
     publishedStructuralRevision?:
+        number;
+
+    structuralRevision?:
         number;
 
     createdAt?:
@@ -207,6 +214,11 @@ export async function getUserProjects(
                     ? data.publishedStructuralRevision
                     : undefined,
 
+            structuralRevision:
+                typeof data.structuralRevision === "number"
+                    ? data.structuralRevision
+                    : undefined,
+
             interiorJsonPath:
                 typeof data.interiorJsonPath === "string"
                     ? data.interiorJsonPath
@@ -355,13 +367,38 @@ export async function loadProjectData(
         );
     }
 
+    if (
+        data.projectId !== project.projectId ||
+        data.ownerId !== project.ownerId
+    ) {
+        throw new Error("Project JSON does not match the selected project owner and ID.");
+    }
+
+    let projectData = data as SavedProjectData;
+    if (project.workflowType === "admin-managed") {
+        if (
+            project.structuralStatus !== "published" ||
+            typeof project.publishedStructuralRevision !== "number" ||
+            projectData.workflowType !== "admin-managed" ||
+            projectData.structuralStatus !== "published" ||
+            projectData.structuralRevision !== project.publishedStructuralRevision ||
+            projectData.publishedStructuralRevision !== project.publishedStructuralRevision
+        ) {
+            throw new Error("The published structure does not match this project's revision.");
+        }
+
+        const interiorPayload = await loadManagedInteriorData(project);
+        projectData = mergeManagedInteriorData(
+            projectData,
+            interiorPayload
+        ) as SavedProjectData;
+    }
 
     //--------------------------------------------------
     // Return typed project data.
     //--------------------------------------------------
 
-    return data as
-        SavedProjectData;
+    return projectData;
 }
 
 

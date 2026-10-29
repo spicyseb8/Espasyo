@@ -59,11 +59,85 @@ interface AdminStructureSceneProps {
     hiddenWindowId?: string | null;
     movingElement?: { kind: "door" | "window"; id: string } | null;
     onBuildElementPreviewReady?: () => void;
-    onScenePoint?: (point: { x: number; y: number; z: number }) => void;
-    onScenePointerMove?: (point: { x: number; y: number; z: number; wallId?: string } | null) => void;
+    onScenePoint?: (point: { x: number; y: number; z: number }, snapCornerId: string | null) => void;
+    onScenePointerMove?: (point: {
+        x: number;
+        y: number;
+        z: number;
+        wallId?: string;
+        snapCornerId: string | null;
+        alignedX: number | null;
+        alignedZ: number | null;
+    } | null) => void;
+    wallGuides?: {
+        snapPosition: { x: number; y: number; z: number } | null;
+        closing: boolean;
+        alignedX: number | null;
+        alignedZ: number | null;
+    } | null;
     onCancelDrawing?: () => void;
     onCancelPlacement?: () => void;
-    onWallClick?: (wallId: string, point: Vector3) => void;
+    onWallClick?: (wallId: string, point: Vector3, snapCornerId: string | null) => void;
+}
+
+type PointerProjection = {
+    camera: ThreeEvent<PointerEvent>["camera"];
+    pointer: ThreeEvent<PointerEvent>["pointer"];
+    nativeEvent: { target: EventTarget | null };
+};
+
+function getPointerSnapDetails(
+    event: PointerProjection,
+    point: { x: number; y: number; z: number },
+    structure: ManagedStructure
+) {
+    const target = event.nativeEvent.target;
+    if (!(target instanceof HTMLElement)) {
+        return { snapCornerId: null, alignedX: null, alignedZ: null };
+    }
+    const bounds = target.getBoundingClientRect();
+    const corners = new Map<string, { id: string; position: { x: number; y: number; z: number } }>();
+    for (const corner of structure.corners) corners.set(corner.id, corner);
+    for (const wall of structure.walls) {
+        corners.set(wall.start.id, wall.start);
+        corners.set(wall.end.id, wall.end);
+    }
+
+    const screenDistance = (position: { x: number; y: number; z: number }) => {
+        const projected = new Vector3(position.x, position.y, position.z).project(event.camera);
+        return Math.hypot(
+            (projected.x - event.pointer.x) * bounds.width / 2,
+            (projected.y - event.pointer.y) * bounds.height / 2
+        );
+    };
+
+    let snapCornerId: string | null = null;
+    let nearestSnapDistance = 14;
+    let alignedX: number | null = null;
+    let alignedZ: number | null = null;
+    let nearestXDistance = 9;
+    let nearestZDistance = 9;
+
+    for (const corner of corners.values()) {
+        const cornerDistance = screenDistance(corner.position);
+        if (cornerDistance < nearestSnapDistance) {
+            nearestSnapDistance = cornerDistance;
+            snapCornerId = corner.id;
+        }
+
+        const xDistance = screenDistance({ x: corner.position.x, y: 0.02, z: point.z });
+        if (xDistance < nearestXDistance) {
+            nearestXDistance = xDistance;
+            alignedX = corner.position.x;
+        }
+        const zDistance = screenDistance({ x: point.x, y: 0.02, z: corner.position.z });
+        if (zDistance < nearestZDistance) {
+            nearestZDistance = zDistance;
+            alignedZ = corner.position.z;
+        }
+    }
+
+    return { snapCornerId, alignedX, alignedZ };
 }
 
 interface PreviewLabelProps {
@@ -257,6 +331,7 @@ export default function AdminStructureScene({
     onFloorSelect,
     wallPreview = null,
     roomPreview = null,
+    wallGuides = null,
     showWallMeasurements = true,
     buildElementAsset = null,
     buildElementPlacement = null,
@@ -374,28 +449,50 @@ export default function AdminStructureScene({
     const handleSceneClick = (event: ThreeEvent<MouseEvent>) => {
         if (!onScenePoint || event.nativeEvent.button !== 0) return;
         event.stopPropagation();
+        const snap = getPointerSnapDetails(event, event.point, structure);
         onScenePoint({
             x: event.point.x,
             y: event.point.y,
             z: event.point.z
-        });
+        }, snap.snapCornerId);
     };
 
     const handleScenePointerMove = (event: ThreeEvent<PointerEvent>) => {
+        const snap = getPointerSnapDetails(event, event.point, structure);
         onScenePointerMove?.({
             x: event.point.x,
             y: event.point.y,
-            z: event.point.z
+            z: event.point.z,
+            snapCornerId: snap.snapCornerId,
+            alignedX: snap.alignedX,
+            alignedZ: snap.alignedZ
         });
     };
 
-    const handleWallPointerMove = (wallId: string, point: Vector3) => {
+    const handleWallPointerMove = (
+        wallId: string,
+        point: Vector3,
+        event: ThreeEvent<PointerEvent>
+    ) => {
         onScenePointerMove?.({
             x: point.x,
             y: point.y,
             z: point.z,
-            wallId
+            wallId,
+            ...getPointerSnapDetails(event, point, structure)
         });
+    };
+
+    const handleWallClick = (
+        wallId: string,
+        point: Vector3,
+        event: ThreeEvent<MouseEvent>
+    ) => {
+        onWallClick?.(
+            wallId,
+            point,
+            getPointerSnapDetails(event, point, structure).snapCornerId
+        );
     };
 
     return (
@@ -454,6 +551,81 @@ export default function AdminStructureScene({
                         height={structure.wallHeight}
                         thickness={structure.wallThickness}
                     />
+                )}
+                {wallGuides?.alignedX !== null && wallGuides?.alignedX !== undefined && (
+                    <Line
+                        points={[
+                            [wallGuides.alignedX, 0.025, -20],
+                            [wallGuides.alignedX, 0.025, 20]
+                        ]}
+                        color="#7d99aa"
+                        lineWidth={1}
+                        transparent
+                        opacity={0.45}
+                        depthTest={false}
+                        renderOrder={100000}
+                        frustumCulled={false}
+                        raycast={() => null}
+                    />
+                )}
+                {wallGuides?.alignedZ !== null && wallGuides?.alignedZ !== undefined && (
+                    <Line
+                        points={[
+                            [-20, 0.025, wallGuides.alignedZ],
+                            [20, 0.025, wallGuides.alignedZ]
+                        ]}
+                        color="#7d99aa"
+                        lineWidth={1}
+                        transparent
+                        opacity={0.45}
+                        depthTest={false}
+                        renderOrder={100000}
+                        frustumCulled={false}
+                        raycast={() => null}
+                    />
+                )}
+                {wallGuides?.snapPosition && (
+                    <>
+                        <mesh
+                            position={[
+                                wallGuides.snapPosition.x,
+                                0.055,
+                                wallGuides.snapPosition.z
+                            ]}
+                            raycast={() => null}
+                            renderOrder={100001}
+                        >
+                            <sphereGeometry args={[0.09, 16, 16]} />
+                            <meshBasicMaterial
+                                color={wallGuides.closing ? "#19a974" : "#168bd2"}
+                                depthTest={false}
+                                toneMapped={false}
+                            />
+                        </mesh>
+                        {wallGuides.closing && (
+                            <Html
+                                position={[
+                                    wallGuides.snapPosition.x,
+                                    0.2,
+                                    wallGuides.snapPosition.z
+                                ]}
+                                center
+                                distanceFactor={10}
+                                style={{
+                                    padding: "3px 6px",
+                                    borderRadius: 4,
+                                    background: "rgba(25, 169, 116, 0.92)",
+                                    color: "#fff",
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    whiteSpace: "nowrap",
+                                    pointerEvents: "none"
+                                }}
+                            >
+                                Close room
+                            </Html>
+                        )}
+                    </>
                 )}
                 {roomPreview && (
                     <>
@@ -546,7 +718,7 @@ export default function AdminStructureScene({
                     wallFinishes={structure.wallFinishes}
                     excludedCutoutElementId={movingElement?.id}
                     selectedWallId={selectedWallId}
-                    onWallClick={onWallClick}
+                    onWallClick={handleWallClick}
                     onWallPointerMove={handleWallPointerMove}
                 />
                 <AdminDoors

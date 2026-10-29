@@ -1,5 +1,6 @@
 import type { EditorState } from "../context/editor/types";
 import { calculateCostEstimate } from "../engine/cost/CostEstimator";
+import { serializeManagedInteriorData } from "./managedProjectData";
 
 export interface ProjectStructureMetadata {
     workflowType?: "legacy" | "admin-managed";
@@ -146,22 +147,17 @@ export function createProjectData(
     };
 }
 
-export function createManagedInteriorData(state: EditorState) {
-    return {
-        furniture: state.furniture.map(item => ({
-            id: item.id,
-            assetId: item.assetId,
-            position: { x: item.position.x, y: item.position.y, z: item.position.z },
-            rotationY: item.rotationY,
-            modelOffset: { x: item.modelOffset.x, y: item.modelOffset.y, z: item.modelOffset.z },
-            width: item.width,
-            depth: item.depth,
-            height: item.height
-        })),
-        floorFinishes: { ...state.floorFinishes },
-        wallFinishes: Object.fromEntries(Object.entries(state.wallFinishes).map(([regionId, walls]) => [regionId, { ...walls }])),
-        costEstimate: calculateCostEstimate(state)
-    };
+export function createManagedInteriorData(
+    state: EditorState,
+    projectId: string,
+    ownerId: string
+) {
+    return serializeManagedInteriorData(
+        state,
+        projectId,
+        ownerId,
+        calculateCostEstimate(state)
+    );
 }
 
 export type ProjectData = ReturnType<typeof createProjectData>;

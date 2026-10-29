@@ -9,6 +9,10 @@ import {
 } from "firebase/firestore";
 
 import { auth, db } from "@/firebase/firebase";
+import {
+    classifyProjectLifecycle,
+    isProjectAssignedToOwner
+} from "./projectLifecycle";
 
 export interface AdminProject {
     projectId: string;
@@ -25,6 +29,12 @@ export interface AdminProject {
     jsonUrl: string;
     draftJsonPath?: string;
     draftJsonUrl?: string;
+    interiorJsonPath?: string;
+    interiorJsonUrl?: string;
+    clientDesignStarted?: boolean;
+    clientDesignStartedAt?: unknown;
+    lifecycleStatus?: import("./projectLifecycle").ProjectLifecycleStatus;
+    lifecycleError?: string;
     thumbnailPath?: string;
     thumbnailUrl?: string;
     schemaVersion: number;
@@ -239,6 +249,25 @@ function mapProject(
                 ? data.draftJsonUrl
                 : undefined,
 
+        interiorJsonPath:
+            typeof data.interiorJsonPath === "string"
+                ? data.interiorJsonPath
+                : undefined,
+
+        interiorJsonUrl:
+            typeof data.interiorJsonUrl === "string"
+                ? data.interiorJsonUrl
+                : undefined,
+
+        clientDesignStarted:
+            data.clientDesignStarted === true
+                ? true
+                : data.clientDesignStarted === false
+                    ? false
+                    : undefined,
+
+        clientDesignStartedAt: data.clientDesignStartedAt,
+
         thumbnailPath:
             typeof data.thumbnailPath === "string"
                 ? data.thumbnailPath
@@ -286,6 +315,10 @@ export interface AdminClient {
     email?: string;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
 export async function getAdminClients(): Promise<AdminClient[]> {
     const snapshot = await getDocs(collection(db, "users"));
 
@@ -313,14 +346,19 @@ export async function getAdminProjects():
     const [
         projectsSnapshot,
         usersSnapshot,
-        employeesSnapshot
+        employeesSnapshot,
+        assignmentsSnapshot
     ] = await Promise.all([
         getDocs(collection(db, "projects")),
         getDocs(collection(db, "users")),
-        getDocs(collection(db, "adminEmployees"))
+        getDocs(collection(db, "adminEmployees")),
+        getDocs(collection(db, "adminManagedProjectAssignments"))
     ]);
 
     const owners = new Map<string, string>();
+    const assignments = new Map(
+        assignmentsSnapshot.docs.map(document => [document.id, document.data()])
+    );
 
     usersSnapshot.docs.forEach(document => {
         const data = document.data();
@@ -383,6 +421,79 @@ export async function getAdminProjects():
                 "Unknown User"
         });
     });
+
+    await Promise.all(projects.map(async project => {
+        const assignment = assignments.get(encodeURIComponent(project.ownerId));
+        if (project.workflowType !== "admin-managed") {
+            project.lifecycleStatus = "legacy";
+            return;
+        }
+
+        try {
+            let interiorData: unknown;
+            if (
+                project.clientDesignStarted === undefined &&
+                (project.interiorJsonPath || project.interiorJsonUrl)
+            ) {
+                const expectedPath = `projects/${project.ownerId}/${project.projectId}.interior.json`;
+                if (
+                    project.interiorJsonPath &&
+                    project.interiorJsonPath !== expectedPath
+                ) {
+                    throw new Error("Interior design path does not match the designated project.");
+                }
+                if (!project.interiorJsonUrl?.trim()) {
+                    throw new Error("Interior design URL is missing.");
+                }
+                const response = await fetch(project.interiorJsonUrl, {
+                    method: "GET",
+                    cache: "no-store"
+                });
+                if (response.status !== 404) {
+                    if (!response.ok) {
+                        throw new Error(`Interior design request failed with HTTP ${response.status}.`);
+                    }
+                    interiorData = await response.json();
+                    if (!isRecord(interiorData)) {
+                        throw new Error("Interior design JSON is invalid.");
+                    }
+                    if (
+                        interiorData.projectId !== undefined &&
+                        interiorData.projectId !== project.projectId
+                    ) {
+                        throw new Error("Interior design project ID does not match.");
+                    }
+                    if (
+                        interiorData.ownerId !== undefined &&
+                        interiorData.ownerId !== project.ownerId
+                    ) {
+                        throw new Error("Interior design owner UID does not match.");
+                    }
+                }
+            }
+
+            project.lifecycleStatus = classifyProjectLifecycle(
+                project,
+                isProjectAssignedToOwner(
+                    project.ownerId,
+                    project.projectId,
+                    assignment
+                )
+                    ? project.projectId
+                    : null,
+                interiorData
+            );
+        } catch (error) {
+            project.lifecycleStatus = "unverified";
+            project.lifecycleError = error instanceof Error
+                ? error.message
+                : "Unable to verify saved client design data.";
+            console.error(
+                `Unable to classify managed project ${project.projectId}:`,
+                error
+            );
+        }
+    }));
 
     projects.sort(
         (first, second) =>
