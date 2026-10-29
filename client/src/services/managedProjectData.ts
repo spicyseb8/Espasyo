@@ -4,7 +4,15 @@ export interface ManagedInteriorPayload {
     furniture?: unknown[];
     floorFinishes?: Record<string, string>;
     wallFinishes?: Record<string, Record<string, string>>;
+    floors?: ManagedInteriorFloor[];
     costEstimate?: unknown;
+}
+
+export interface ManagedInteriorFloor {
+    floorId: string;
+    furniture: unknown[];
+    floorFinishes: Record<string, string>;
+    wallFinishes: Record<string, Record<string, string>>;
 }
 
 export interface ManagedInteriorReference {
@@ -45,7 +53,12 @@ export function hasMeaningfulManagedInteriorChanges(
     const hasFloorFinishes = isNonEmptyStringRecord(payload.floorFinishes);
     const hasWallFinishes = isRecord(payload.wallFinishes) &&
         Object.values(payload.wallFinishes).some(isNonEmptyStringRecord);
-    return hasFurniture || hasFloorFinishes || hasWallFinishes;
+    const hasFloorData = Array.isArray(payload.floors) && payload.floors.some(floor =>
+        floor.furniture.length > 0 ||
+        isNonEmptyStringRecord(floor.floorFinishes) ||
+        Object.values(floor.wallFinishes).some(isNonEmptyStringRecord)
+    );
+    return hasFurniture || hasFloorFinishes || hasWallFinishes || hasFloorData;
 }
 
 export function getClientDesignLifecycleUpdate(
@@ -76,6 +89,25 @@ export interface ManagedInteriorState {
     }>;
     floorFinishes: Record<string, string>;
     wallFinishes: Record<string, Record<string, string>>;
+    floors?: Array<{
+        floorId: string;
+        furniture: ManagedInteriorState["furniture"];
+        floorFinishes: Record<string, string>;
+        wallFinishes: Record<string, Record<string, string>>;
+    }>;
+}
+
+function serializeFurniture(items: ManagedInteriorState["furniture"]) {
+    return items.map(item => ({
+        id: item.id,
+        assetId: item.assetId,
+        position: { x: item.position.x, y: item.position.y, z: item.position.z },
+        rotationY: item.rotationY,
+        modelOffset: { x: item.modelOffset.x, y: item.modelOffset.y, z: item.modelOffset.z },
+        width: item.width,
+        depth: item.depth,
+        height: item.height
+    }));
 }
 
 export function serializeManagedInteriorData(
@@ -84,26 +116,31 @@ export function serializeManagedInteriorData(
     ownerId: string,
     costEstimate: unknown
 ): ManagedInteriorPayload {
+    const firstFloor = state.floors?.[0];
     return {
         projectId,
         ownerId,
-        furniture: state.furniture.map(item => ({
-            id: item.id,
-            assetId: item.assetId,
-            position: { x: item.position.x, y: item.position.y, z: item.position.z },
-            rotationY: item.rotationY,
-            modelOffset: { x: item.modelOffset.x, y: item.modelOffset.y, z: item.modelOffset.z },
-            width: item.width,
-            depth: item.depth,
-            height: item.height
-        })),
-        floorFinishes: { ...state.floorFinishes },
+        furniture: serializeFurniture(firstFloor?.furniture ?? state.furniture),
+        floorFinishes: { ...(firstFloor?.floorFinishes ?? state.floorFinishes) },
         wallFinishes: Object.fromEntries(
-            Object.entries(state.wallFinishes).map(([regionId, walls]) => [
+            Object.entries(firstFloor?.wallFinishes ?? state.wallFinishes).map(([regionId, walls]) => [
                 regionId,
                 { ...walls }
             ])
         ),
+        ...(state.floors ? {
+            floors: state.floors.map(floor => ({
+                floorId: floor.floorId,
+                furniture: serializeFurniture(floor.furniture),
+                floorFinishes: { ...floor.floorFinishes },
+                wallFinishes: Object.fromEntries(
+                    Object.entries(floor.wallFinishes).map(([regionId, walls]) => [
+                        regionId,
+                        { ...walls }
+                    ])
+                )
+            }))
+        } : {}),
         costEstimate
     };
 }
@@ -150,6 +187,19 @@ export function validateManagedInteriorPayload(
         !isStringRecordOfStringRecords(payload.wallFinishes)
     ) {
         throw new Error("Interior design wall finishes are invalid.");
+    }
+    if (payload.floors !== undefined && (
+        !Array.isArray(payload.floors) ||
+        payload.floors.some(floor =>
+            !isRecord(floor) ||
+            typeof floor.floorId !== "string" ||
+            !floor.floorId.trim() ||
+            !Array.isArray(floor.furniture) ||
+            !isStringRecord(floor.floorFinishes) ||
+            !isStringRecordOfStringRecords(floor.wallFinishes)
+        )
+    )) {
+        throw new Error("Interior design floor data is invalid.");
     }
 
     return payload;
@@ -245,14 +295,40 @@ export async function saveManagedInteriorData(
 export function mergeManagedInteriorData<T extends object>(
     publishedStructure: T,
     interiorPayload: ManagedInteriorPayload | null | undefined
-): T & ManagedInteriorPayload {
+): T & Omit<ManagedInteriorPayload, "floors"> {
+    const project = publishedStructure as T & {
+        floors?: Array<Record<string, unknown> & { floorId?: string; id?: string }>;
+    };
+    const interiorFloors = new Map(
+        (interiorPayload?.floors ?? []).map(floor => [floor.floorId, floor])
+    );
+    const structuralFloors = Array.isArray(project.floors)
+        ? project.floors.map((floor, index) => {
+            const floorId = floor.floorId ?? floor.id ?? (index === 0 ? "first-floor" : "");
+            const interior = interiorFloors.get(floorId);
+            return interior
+                ? {
+                    ...floor,
+                    floorId,
+                    furniture: interior.furniture,
+                    floorFinishes: interior.floorFinishes,
+                    wallFinishes: interior.wallFinishes
+                }
+                : floor;
+        })
+        : undefined;
+    const firstFloor = structuralFloors?.[0];
+    const firstInteriorFloor = firstFloor
+        ? interiorFloors.get(String(firstFloor.floorId))
+        : undefined;
     return {
         ...publishedStructure,
+        ...(structuralFloors ? { floors: structuralFloors } : {}),
         furniture: Array.isArray(interiorPayload?.furniture)
             ? interiorPayload.furniture
-            : [],
-        floorFinishes: interiorPayload?.floorFinishes ?? {},
-        wallFinishes: interiorPayload?.wallFinishes ?? {}
+            : firstInteriorFloor?.furniture ?? [],
+        floorFinishes: interiorPayload?.floorFinishes ?? firstInteriorFloor?.floorFinishes ?? {},
+        wallFinishes: interiorPayload?.wallFinishes ?? firstInteriorFloor?.wallFinishes ?? {}
     };
 }
 

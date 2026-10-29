@@ -82,6 +82,17 @@ function logCatalogFailure<T>(
 export async function preloadAdminProjectAssets(
     projectData: SavedProjectData
 ): Promise<string[]> {
+    const floorProjects = projectData.floors?.map((floor, index) => ({
+        ...floor.structure,
+        furniture: floor.furniture ?? floor.structure.furniture ??
+            (index === 0 ? projectData.furniture : []),
+        doors: floor.structure.doors ?? [],
+        windows: floor.structure.windows ?? [],
+        floorFinishes: floor.floorFinishes ?? floor.structure.floorFinishes ??
+            (index === 0 ? projectData.floorFinishes : {}),
+        wallFinishes: floor.wallFinishes ?? floor.structure.wallFinishes ??
+            (index === 0 ? projectData.wallFinishes : {})
+    })) ?? [];
     const [
         furnitureResult,
         doorWindowResult,
@@ -112,11 +123,13 @@ export async function preloadAdminProjectAssets(
         assetsById.set(asset.id, asset);
     }
 
-    const projectAssetIds = new Set([
-        ...projectData.furniture.map(item => item.assetId),
-        ...projectData.doors.map(item => item.assetId),
-        ...projectData.windows.map(item => item.assetId)
-    ]);
+    const projectAssetIds = new Set(
+        [projectData, ...floorProjects].flatMap(floor => [
+            ...(floor.furniture ?? []).map(item => item.assetId),
+            ...(floor.doors ?? []).map(item => item.assetId),
+            ...(floor.windows ?? []).map(item => item.assetId)
+        ])
+    );
 
     const unavailableAssetIds = new Set<string>();
     const modelUrls = uniqueUrls(
@@ -133,11 +146,15 @@ export async function preloadAdminProjectAssets(
     );
 
     const floorMaterialIds = new Set(
-        Object.values(projectData.floorFinishes)
+        [projectData, ...floorProjects].flatMap(floor =>
+            Object.values(floor.floorFinishes ?? {})
+        )
     );
     const wallMaterialIds = new Set(
-        Object.values(projectData.wallFinishes).flatMap(finishes =>
-            Object.values(finishes)
+        [projectData, ...floorProjects].flatMap(floor =>
+            Object.values(floor.wallFinishes ?? {}).flatMap(finishes =>
+                Object.values(finishes)
+            )
         )
     );
     const availableFloorIds = new Set(floorMaterials.map(material => material.id));

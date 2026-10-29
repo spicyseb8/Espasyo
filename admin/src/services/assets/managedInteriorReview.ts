@@ -4,6 +4,12 @@ export interface AdminManagedInteriorPayload {
     furniture?: unknown[];
     floorFinishes?: Record<string, string>;
     wallFinishes?: Record<string, Record<string, string>>;
+    floors?: Array<{
+        floorId: string;
+        furniture: unknown[];
+        floorFinishes: Record<string, string>;
+        wallFinishes: Record<string, Record<string, string>>;
+    }>;
     costEstimate?: unknown;
 }
 
@@ -36,12 +42,36 @@ export interface AdminReviewProjectData extends Record<string, unknown> {
 export function mergeManagedInteriorData<T extends Record<string, unknown>>(
     publishedStructure: T,
     interiorPayload: AdminManagedInteriorPayload | null
-): T & AdminManagedInteriorPayload {
+): T & Omit<AdminManagedInteriorPayload, "floors"> {
+    const projectFloors = Array.isArray(publishedStructure.floors)
+        ? publishedStructure.floors as Array<Record<string, unknown> & { floorId?: string; id?: string }>
+        : undefined;
+    const interiorFloors = new Map(
+        (interiorPayload?.floors ?? []).map(floor => [floor.floorId, floor])
+    );
+    const floors = projectFloors?.map((floor, index) => {
+        const floorId = floor.floorId ?? floor.id ?? (index === 0 ? "first-floor" : "");
+        const interiorFloor = interiorFloors.get(floorId);
+        return interiorFloor
+            ? {
+                ...floor,
+                floorId,
+                furniture: interiorFloor.furniture,
+                floorFinishes: interiorFloor.floorFinishes,
+                wallFinishes: interiorFloor.wallFinishes
+            }
+            : floor;
+    });
+    const firstFloor = floors?.[0];
+    const firstInteriorFloor = firstFloor
+        ? interiorFloors.get(String(firstFloor.floorId))
+        : undefined;
     return {
         ...publishedStructure,
-        furniture: interiorPayload?.furniture ?? [],
-        floorFinishes: interiorPayload?.floorFinishes ?? {},
-        wallFinishes: interiorPayload?.wallFinishes ?? {},
+        ...(floors ? { floors } : {}),
+        furniture: interiorPayload?.furniture ?? firstInteriorFloor?.furniture ?? [],
+        floorFinishes: interiorPayload?.floorFinishes ?? firstInteriorFloor?.floorFinishes ?? {},
+        wallFinishes: interiorPayload?.wallFinishes ?? firstInteriorFloor?.wallFinishes ?? {},
         costEstimate: interiorPayload
             ? interiorPayload.costEstimate
             : publishedStructure.costEstimate
@@ -86,6 +116,35 @@ export async function loadAdminManagedProjectForReview(
     for (const field of ["corners", "walls", "doors", "windows", "openings"]) {
         if (!Array.isArray(structure[field])) {
             throw new Error(`Published project JSON is missing ${field}.`);
+        }
+    }
+    if (structure.floors !== undefined) {
+        if (!Array.isArray(structure.floors) || structure.floors.length === 0) {
+            throw new Error("Published project floors are invalid.");
+        }
+        const floorIds = new Set<string>();
+        for (const [index, floorValue] of structure.floors.entries()) {
+            if (!isRecord(floorValue)) {
+                throw new Error(`Published project floor ${index + 1} is invalid.`);
+            }
+            const floorId = floorValue.floorId ?? floorValue.id;
+            const floorStructure = floorValue.structure;
+            if (
+                typeof floorId !== "string" ||
+                !floorId.trim() ||
+                floorIds.has(floorId) ||
+                typeof floorValue.name !== "string" ||
+                !floorValue.name.trim() ||
+                !isRecord(floorStructure)
+            ) {
+                throw new Error(`Published project floor ${index + 1} is invalid.`);
+            }
+            floorIds.add(floorId);
+            for (const field of ["corners", "walls", "doors", "windows", "openings"]) {
+                if (!Array.isArray(floorStructure[field])) {
+                    throw new Error(`Published project floor ${index + 1} is missing ${field}.`);
+                }
+            }
         }
     }
 
@@ -157,6 +216,20 @@ async function loadInteriorPayload(
         !isStringRecordOfStringRecords(value.wallFinishes)
     ) {
         throw new Error("Interior design wall finishes are invalid.");
+    }
+    if (value.floors !== undefined && (
+        !Array.isArray(value.floors) ||
+        !value.floors.every(floor =>
+            isRecord(floor) &&
+            typeof floor.floorId === "string" &&
+            floor.floorId.trim() !== "" &&
+            Array.isArray(floor.furniture) &&
+            floor.furniture.every(isSavedFurniture) &&
+            isStringRecord(floor.floorFinishes) &&
+            isStringRecordOfStringRecords(floor.wallFinishes)
+        )
+    )) {
+        throw new Error("Interior design floor data is invalid.");
     }
     if (
         value.costEstimate !== undefined &&

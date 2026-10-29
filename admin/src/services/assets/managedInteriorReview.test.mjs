@@ -133,6 +133,50 @@ test("admin review keeps legacy client designs and other placements when an asse
         wallFinishes: { "room-1": { "wall-1:1": "wall-asset" } }
     });
 
+    test("admin review merges interior data into matching floors without changing structure", () => {
+        const structure = {
+            ...createStructure(),
+            floors: [
+                {
+                    floorId: "floor-1",
+                    name: "1st Floor",
+                    structure: { walls: [{ id: "wall-1" }], furniture: [] }
+                },
+                {
+                    floorId: "floor-2",
+                    name: "2nd Floor",
+                    structure: { walls: [{ id: "wall-2" }], furniture: [] }
+                }
+            ],
+            activeFloorId: "floor-1"
+        };
+        const merged = mergeManagedInteriorData(structure, {
+            floors: [
+                {
+                    floorId: "floor-1",
+                    furniture: [furniturePlacement],
+                    floorFinishes: { "room-1": "floor-asset" },
+                    wallFinishes: {}
+                },
+                {
+                    floorId: "floor-2",
+                    furniture: [],
+                    floorFinishes: {},
+                    wallFinishes: { "room-2": { "wall-2:1": "wall-asset" } }
+                }
+            ]
+        });
+
+        assert.deepEqual(merged.floors[0].furniture, [furniturePlacement]);
+        assert.deepEqual(merged.floors[0].floorFinishes, { "room-1": "floor-asset" });
+        assert.deepEqual(merged.floors[1].wallFinishes, {
+            "room-2": { "wall-2:1": "wall-asset" }
+        });
+        assert.deepEqual(merged.floors[1].structure, structure.floors[1].structure);
+        assert.deepEqual(merged.walls, structure.walls);
+        assert.equal(merged.structuralRevision, structure.structuralRevision);
+    });
+
     assert.equal(merged.furniture.length, 2);
     assert.equal(merged.furniture[1].assetId, "deleted-asset");
     assert.deepEqual(merged.floorFinishes, { "room-1": "missing-floor-id" });

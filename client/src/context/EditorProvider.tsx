@@ -10,7 +10,8 @@ import {
 } from "./EditorContext";
 
 import {
-    editorReducer
+    editorReducer,
+    syncEditorFloor
 } from "./editor/editorReducer";
 
 import {
@@ -505,8 +506,20 @@ export default function EditorProvider({
                 return;
             }
 
-            const currentState =
-                stateRef.current;
+            if (action.type === "SWITCH_FLOOR") {
+                flushPendingFloorHistory();
+                flushPendingEditorHistory();
+                const currentState = stateRef.current;
+                const nextState = editorReducer(currentState, action);
+                if (nextState !== currentState) {
+                    stateRef.current = nextState;
+                    setState(nextState);
+                    refreshHistoryUI();
+                }
+                return;
+            }
+
+            const currentState = stateRef.current;
 
 
 if (
@@ -997,11 +1010,18 @@ if (
                 // Restore complete floor-plan structure.
                 //--------------------------------------------------
 
+                const snapshotState =
+                    previousSnapshot.activeFloorId === currentState.activeFloorId
+                        ? currentState
+                        : editorReducer(currentState, {
+                            type: "SWITCH_FLOOR",
+                            payload: previousSnapshot.activeFloorId
+                        });
                 const restored =
-                    restoreFloorPlanSnapshot(
-                        currentState,
+                    syncEditorFloor(restoreFloorPlanSnapshot(
+                        snapshotState,
                         previousSnapshot
-                    );
+                    ));
 
                 stateRef.current =
                     restored;
@@ -1054,11 +1074,18 @@ if (
             // Restore furniture/assets/materials only.
             //--------------------------------------------------
 
+            const snapshotState =
+                previousSnapshot.activeFloorId === currentState.activeFloorId
+                    ? currentState
+                    : editorReducer(currentState, {
+                        type: "SWITCH_FLOOR",
+                        payload: previousSnapshot.activeFloorId
+                    });
             const restored =
-                restoreEditorSnapshot(
-                    currentState,
+                syncEditorFloor(restoreEditorSnapshot(
+                    snapshotState,
                     previousSnapshot
-                );
+                ));
 
             stateRef.current =
                 restored;
@@ -1148,11 +1175,18 @@ if (
                 // Restore.
                 //--------------------------------------------------
 
+                const snapshotState =
+                    nextSnapshot.activeFloorId === currentState.activeFloorId
+                        ? currentState
+                        : editorReducer(currentState, {
+                            type: "SWITCH_FLOOR",
+                            payload: nextSnapshot.activeFloorId
+                        });
                 const restored =
-                    restoreFloorPlanSnapshot(
-                        currentState,
+                    syncEditorFloor(restoreFloorPlanSnapshot(
+                        snapshotState,
                         nextSnapshot
-                    );
+                    ));
 
                 stateRef.current =
                     restored;
@@ -1205,11 +1239,18 @@ if (
             // Restore.
             //--------------------------------------------------
 
+            const snapshotState =
+                nextSnapshot.activeFloorId === currentState.activeFloorId
+                    ? currentState
+                    : editorReducer(currentState, {
+                        type: "SWITCH_FLOOR",
+                        payload: nextSnapshot.activeFloorId
+                    });
             const restored =
-                restoreEditorSnapshot(
-                    currentState,
+                syncEditorFloor(restoreEditorSnapshot(
+                    snapshotState,
                     nextSnapshot
-                );
+                ));
 
             stateRef.current =
                 restored;

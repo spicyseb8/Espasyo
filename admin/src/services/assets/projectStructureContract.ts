@@ -157,6 +157,75 @@ export function validateStructuralProjectData(value: unknown): string[] {
         }
     }
 
+    if (value.floors !== undefined) {
+        if (!Array.isArray(value.floors) || value.floors.length === 0) {
+            errors.push("floors must be a non-empty array.");
+        } else {
+            const floorIds = new Set<string>();
+            const structuralObjectIds = new Set<string>();
+            for (const [index, floorValue] of value.floors.entries()) {
+                if (
+                    !isRecord(floorValue)
+                    || typeof (floorValue.floorId ?? floorValue.id) !== "string"
+                    || !String(floorValue.floorId ?? floorValue.id).trim()
+                    || typeof floorValue.name !== "string"
+                    || !floorValue.name.trim()
+                    || !isRecord(floorValue.structure)
+                ) {
+                    errors.push(`Floor ${index + 1} requires an id, name, and structural data.`);
+                    continue;
+                }
+
+                const floorId = String(floorValue.floorId ?? floorValue.id);
+                if (floorIds.has(floorId)) {
+                    errors.push(`Floor ID ${floorId} must be unique.`);
+                }
+                floorIds.add(floorId);
+
+                const floorStructure = floorValue.structure;
+                for (const field of ["corners", "walls", "doors", "windows", "openings"] as const) {
+                    if (!Array.isArray(floorStructure[field])) {
+                        errors.push(`Floor ${index + 1} ${field} must be an array.`);
+                    }
+                }
+                if (["corners", "walls", "doors", "windows", "openings"].some(
+                    field => !Array.isArray(floorStructure[field])
+                )) {
+                    continue;
+                }
+
+                const floorErrors = validateStructuralProjectData({
+                    ...value,
+                    ...floorStructure,
+                    floors: undefined,
+                    activeFloorId: undefined
+                });
+                errors.push(...floorErrors.map(error => `Floor ${index + 1}: ${error}`));
+                for (const field of ["corners", "walls", "doors", "windows", "openings"] as const) {
+                    for (const item of floorStructure[field] as Record<string, unknown>[]) {
+                        if (typeof item.id !== "string") continue;
+                        if (structuralObjectIds.has(item.id)) {
+                            errors.push(`Structural object ID ${item.id} must be unique across floors.`);
+                        }
+                        structuralObjectIds.add(item.id);
+                    }
+                }
+            }
+
+            if (
+                typeof value.activeFloorId !== "string"
+                || !value.floors.some(floor =>
+                    isRecord(floor)
+                    && (floor.floorId ?? floor.id) === value.activeFloorId
+                )
+            ) {
+                errors.push("activeFloorId must reference a floor in floors.");
+            }
+        }
+    } else if (value.activeFloorId !== undefined) {
+        errors.push("activeFloorId requires floor data.");
+    }
+
     if (value.workflowType === "admin-managed") {
         if (value.structuralOwner !== "admin") {
             errors.push("Managed projects must identify the admin as structural owner.");

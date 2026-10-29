@@ -1,12 +1,15 @@
 import { validateStructuralProjectData } from "./projectStructureContract.ts";
-import type { ManagedStructure } from "@/components/project-editor/structureTypes";
+import type {
+    ManagedStructure,
+    ManagedStructureProjectData
+} from "@/components/project-editor/structureTypes";
 
 export interface LocalManagedProjectDraft {
     schemaVersion: 1;
     draftId: string;
     ownerId: string;
     projectName: string;
-    structure: ManagedStructure;
+    structure: ManagedStructure | ManagedStructureProjectData;
     revision: number;
     updatedAt: string;
 }

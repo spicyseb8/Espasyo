@@ -87,6 +87,49 @@ test("publishing uploads validated structure before atomically committing metada
     assert.equal(result.published, true);
 });
 
+test("publishing preserves each floor and the selected floor in the saved project JSON", async () => {
+    const { calls, dependencies } = createDependencies();
+    const projectData = {
+        ...emptyStructure,
+        floors: [
+            {
+                floorId: "floor-one",
+                name: "1st Floor",
+                structure: {
+                    corners: [],
+                    walls: [],
+                    doors: [],
+                    windows: [],
+                    openings: []
+                }
+            },
+            {
+                floorId: "floor-two",
+                name: "2nd Floor",
+                structure: {
+                    corners: [{ id: "corner-two", position: { x: 1, y: 0, z: 1 } }],
+                    walls: [],
+                    doors: [],
+                    windows: [],
+                    openings: []
+                }
+            }
+        ],
+        activeFloorId: "floor-two"
+    };
+
+    await publishManagedStructure({
+        ownerId: "client-a",
+        projectName: "Multi-floor plan",
+        projectData
+    }, dependencies);
+
+    const uploaded = calls.find(item => typeof item === "object" && "data" in item).data;
+    assert.deepEqual(uploaded.floors.map(floor => floor.floorId), ["floor-one", "floor-two"]);
+    assert.equal(uploaded.floors[1].structure.corners[0].id, "corner-two");
+    assert.equal(uploaded.activeFloorId, "floor-two");
+});
+
 test("publishing refuses an existing designated project before allocating or uploading", async () => {
     const { calls, dependencies } = createDependencies({
         findExistingProject: async () => {

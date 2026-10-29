@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
     ArrowLeft,
     DraftingCompass,
     Hammer,
+    Plus,
     Redo2,
     Save,
     Send,
@@ -44,6 +45,7 @@ import {
 import {
     addWallSegmentToStructure,
     closestPointOnWall,
+    createManagedStructureFromExteriorOutline,
     findNearestWallEndpoint,
     findOrCreateCorner,
     hasPartialPolygonOverlap,
@@ -60,7 +62,17 @@ import {
     type BuildElementPlacementCandidate
 } from "./buildElementPlacement";
 import type { AdminElementModelBounds } from "@/components/project-loader/loader-components/AdminElementModelUtils";
-import { createManagedStructure, type ManagedStructure, type StructureCorner, type StructureElement, type StructureWall } from "./structureTypes";
+import {
+    createManagedEditorFloor,
+    createManagedStructure,
+    loadManagedEditorFloors,
+    serializeManagedStructureProject,
+    type ManagedEditorFloor,
+    type ManagedStructure,
+    type StructureCorner,
+    type StructureElement,
+    type StructureWall
+} from "./structureTypes";
 import {
     applyStructureElementPlacement,
     removeStructureElement,
@@ -77,11 +89,43 @@ type ActiveElementPlacement = {
     action: StructureElementAction;
     source: StructureElement;
 };
+type BlueprintSession = {
+    url: string | null;
+    name: string;
+    visible: boolean;
+    locked: boolean;
+    opacity: number;
+    position: { x: number; z: number };
+    rotation: number;
+    calibrationPoints: Point[];
+    calibrationLineEnd: Point | null;
+    calibrationStep: CalibrationStep;
+    measuredLength: number | null;
+    actualLength: string;
+    width: number;
+    aspectRatio: number;
+};
 
 const WORLD_SIZE = 20;
 const CENTER = WORLD_SIZE / 2;
 const DEFAULT_DOOR_DIMENSIONS = { width: 0.9, height: 2.1 };
 const DEFAULT_WINDOW_DIMENSIONS = { width: 1.2, height: 1.4 };
+const EMPTY_BLUEPRINT_SESSION: BlueprintSession = {
+    url: null,
+    name: "",
+    visible: true,
+    locked: false,
+    opacity: 0.45,
+    position: { x: 0, z: 0 },
+    rotation: 0,
+    calibrationPoints: [],
+    calibrationLineEnd: null,
+    calibrationStep: "idle",
+    measuredLength: null,
+    actualLength: "",
+    width: 10,
+    aspectRatio: 1
+};
 
 function validPositiveNumber(value: number): boolean {
     return Number.isFinite(value) && value > 0;
@@ -142,7 +186,9 @@ export default function AdminStructuralEditor() {
         showInitializationLoading ? "loading" : "ready"
     );
     const [isLocalDraft, setIsLocalDraft] = useState(!projectId);
-    const [structure, setStructure] = useState<ManagedStructure | null>(null);
+    const [floorPlans, setFloorPlans] = useState<ManagedEditorFloor[]>([]);
+    const [activeFloorId, setActiveFloorId] = useState<string | null>(null);
+    const structure = floorPlans.find(floor => floor.floorId === activeFloorId)?.structure ?? null;
     const [tool, setTool] = useState<AdminStructuralTool>("wall");
     const [pendingWallStart, setPendingWallStart] = useState<StructureCorner | null>(null);
     const [wallChainStart, setWallChainStart] = useState<StructureCorner | null>(null);
@@ -171,26 +217,76 @@ export default function AdminStructuralEditor() {
     const [placementHeightEdited, setPlacementHeightEdited] = useState(false);
     const [assetModelBounds, setAssetModelBounds] = useState<Record<string, AdminElementModelBounds>>({});
     const [buildPointer, setBuildPointer] = useState<{ point: Point3; wallId: string | null } | null>(null);
-    const [blueprintUrl, setBlueprintUrl] = useState<string | null>(null);
-    const [blueprintName, setBlueprintName] = useState("");
-    const [blueprintVisible, setBlueprintVisible] = useState(true);
-    const [blueprintLocked, setBlueprintLocked] = useState(false);
-    const [blueprintOpacity, setBlueprintOpacity] = useState(0.45);
-    const [blueprintPosition, setBlueprintPosition] = useState({ x: 0, z: 0 });
-    const [blueprintRotation, setBlueprintRotation] = useState(0);
-    const [calibrationPoints, setCalibrationPoints] = useState<Point[]>([]);
-    const [calibrationLineEnd, setCalibrationLineEnd] = useState<Point | null>(null);
-    const [calibrationStep, setCalibrationStep] = useState<CalibrationStep>("idle");
-    const [measuredBlueprintLength, setMeasuredBlueprintLength] = useState<number | null>(null);
-    const [actualBlueprintLength, setActualBlueprintLength] = useState("");
-    const [blueprintWidth, setBlueprintWidth] = useState(10);
-    const [blueprintAspectRatio, setBlueprintAspectRatio] = useState(1);
+    const [blueprintSessions, setBlueprintSessions] = useState<Record<string, BlueprintSession>>({});
+    const blueprintSessionsRef = useRef(blueprintSessions);
+    useEffect(() => {
+        blueprintSessionsRef.current = blueprintSessions;
+    }, [blueprintSessions]);
+    const activeBlueprintSession = activeFloorId
+        ? blueprintSessions[activeFloorId] ?? EMPTY_BLUEPRINT_SESSION
+        : EMPTY_BLUEPRINT_SESSION;
+    const {
+        url: blueprintUrl,
+        name: blueprintName,
+        visible: blueprintVisible,
+        locked: blueprintLocked,
+        opacity: blueprintOpacity,
+        position: blueprintPosition,
+        rotation: blueprintRotation,
+        calibrationPoints,
+        calibrationLineEnd,
+        calibrationStep,
+        measuredLength: measuredBlueprintLength,
+        actualLength: actualBlueprintLength,
+        width: blueprintWidth,
+        aspectRatio: blueprintAspectRatio
+    } = activeBlueprintSession;
     const [revision, setRevision] = useState(1);
     const [projectName, setProjectName] = useState("Untitled floor plan");
     const [status, setStatus] = useState("");
     const [savingAction, setSavingAction] = useState<"draft" | "publish" | null>(null);
-    const [history, setHistory] = useState<ManagedStructure[]>([]);
-    const [future, setFuture] = useState<ManagedStructure[]>([]);
+    const [historyByFloor, setHistoryByFloor] = useState<Record<string, ManagedStructure[]>>({});
+    const [futureByFloor, setFutureByFloor] = useState<Record<string, ManagedStructure[]>>({});
+    const history = activeFloorId ? historyByFloor[activeFloorId] ?? [] : [];
+    const future = activeFloorId ? futureByFloor[activeFloorId] ?? [] : [];
+    const [isAddFloorDialogOpen, setIsAddFloorDialogOpen] = useState(false);
+    const [newFloorMode, setNewFloorMode] = useState<"blank" | "outline">("blank");
+    const [isCreatingFloor, setIsCreatingFloor] = useState(false);
+    const updateActiveBlueprint = (updates: Partial<BlueprintSession>) => {
+        if (!activeFloorId) return;
+        setBlueprintSessions(current => ({
+            ...current,
+            [activeFloorId]: {
+                ...EMPTY_BLUEPRINT_SESSION,
+                ...current[activeFloorId],
+                ...updates
+            }
+        }));
+    };
+    const setBlueprintUrl = (url: string | null) => updateActiveBlueprint({ url });
+    const setBlueprintName = (name: string) => updateActiveBlueprint({ name });
+    const setBlueprintVisible = (visible: boolean | ((current: boolean) => boolean)) =>
+        updateActiveBlueprint({ visible: typeof visible === "function" ? visible(blueprintVisible) : visible });
+    const setBlueprintLocked = (locked: boolean | ((current: boolean) => boolean)) =>
+        updateActiveBlueprint({ locked: typeof locked === "function" ? locked(blueprintLocked) : locked });
+    const setBlueprintOpacity = (opacity: number) => updateActiveBlueprint({ opacity });
+    const setBlueprintPosition = (position: { x: number; z: number }) => updateActiveBlueprint({ position });
+    const setBlueprintRotation = (rotation: number) => updateActiveBlueprint({ rotation });
+    const setCalibrationPoints = (calibrationPoints: Point[]) => updateActiveBlueprint({ calibrationPoints });
+    const setCalibrationLineEnd = (calibrationLineEnd: Point | null) =>
+        updateActiveBlueprint({ calibrationLineEnd });
+    const setCalibrationStep = (calibrationStep: CalibrationStep) => updateActiveBlueprint({ calibrationStep });
+    const setMeasuredBlueprintLength = (measuredLength: number | null) =>
+        updateActiveBlueprint({ measuredLength });
+    const setActualBlueprintLength = (actualLength: string) => updateActiveBlueprint({ actualLength });
+    const setBlueprintWidth = (width: number) => updateActiveBlueprint({ width });
+    const setBlueprintAspectRatio = (aspectRatio: number) => updateActiveBlueprint({ aspectRatio });
+    const setActiveFloorStructure = (next: ManagedStructure) => {
+        if (!activeFloorId) return;
+        setFloorPlans(current => current.map(floor =>
+            floor.floorId === activeFloorId ? { ...floor, structure: next } : floor
+        ));
+    };
     const [workspaceView, setWorkspaceView] = useState<"floorplan" | "build">("floorplan");
     const [workspacePanelOpen, setWorkspacePanelOpen] = useState(true);
     const [showWallMeasurements, setShowWallMeasurements] = useState(true);
@@ -213,8 +309,13 @@ export default function AdminStructuralEditor() {
     }, [placementHeightEdited, placementWidthEdited, selectedAsset]);
 
     useEffect(() => () => {
-        if (blueprintUrl?.startsWith("blob:")) URL.revokeObjectURL(blueprintUrl);
-    }, [blueprintUrl]);
+        const urls = new Set(
+            Object.values(blueprintSessionsRef.current)
+                .map(session => session.url)
+                .filter((url): url is string => Boolean(url?.startsWith("blob:")))
+        );
+        urls.forEach(url => URL.revokeObjectURL(url));
+    }, []);
 
     useEffect(() => {
         let cancelled = false;
@@ -259,12 +360,14 @@ export default function AdminStructuralEditor() {
                         ? "This draft has no saved draft JSON. The published project was not loaded to avoid overwriting it."
                         : "This project has no saved draft or published JSON file.");
                 }
-                return {
-                    structure: createManagedStructure(
+                const firstFloor = createManagedEditorFloor(createManagedStructure(
                         metadata.projectId,
                         metadata.projectName,
                         metadata.ownerId
-                    ),
+                    ), 0);
+                return {
+                    floors: [firstFloor],
+                    activeFloorId: firstFloor.floorId,
                     projectName: metadata.projectName,
                     revision: metadata.structuralRevision ?? 0
                 };
@@ -284,7 +387,7 @@ export default function AdminStructuralEditor() {
             if (loaded.projectId !== metadata.projectId) throw new Error("Project ID metadata does not match saved JSON.");
             if (loaded.ownerId !== metadata.ownerId) throw new Error("Project owner metadata does not match saved JSON.");
             return {
-                structure: loaded,
+                ...loadManagedEditorFloors(loaded),
                 projectName: loaded.projectName,
                 revision: loaded.structuralRevision ?? metadata.structuralRevision ?? 1
             };
@@ -295,7 +398,8 @@ export default function AdminStructuralEditor() {
             if (projectId) {
                 const initialized = await loadManagedProject(projectId);
                 if (!cancelled) {
-                    setStructure(initialized.structure);
+                    setFloorPlans(initialized.floors);
+                    setActiveFloorId(initialized.activeFloorId);
                     setProjectName(initialized.projectName);
                     setRevision(initialized.revision);
                     setIsLocalDraft(false);
@@ -308,12 +412,19 @@ export default function AdminStructuralEditor() {
                 }
                 const savedDraft = loadLocalManagedProjectDraft(expectedOwnerId);
                 const draftId = savedDraft?.draftId ?? `local-${crypto.randomUUID()}`;
-                const initializedStructure = savedDraft
-                    ? savedDraft.structure
-                    : createManagedStructure(draftId, "Untitled floor plan", expectedOwnerId);
+                const initializedFloors = savedDraft
+                    ? loadManagedEditorFloors(savedDraft.structure)
+                    : (() => {
+                        const firstFloor = createManagedEditorFloor(
+                            createManagedStructure(draftId, "Untitled floor plan", expectedOwnerId),
+                            0
+                        );
+                        return { floors: [firstFloor], activeFloorId: firstFloor.floorId };
+                    })();
                 const initializedProjectName = savedDraft?.projectName ?? "Untitled floor plan";
                 if (!cancelled) {
-                    setStructure(initializedStructure);
+                    setFloorPlans(initializedFloors.floors);
+                    setActiveFloorId(initializedFloors.activeFloorId);
                     setProjectName(initializedProjectName);
                     setRevision(savedDraft?.revision ?? 0);
                     setIsLocalDraft(true);
@@ -339,21 +450,27 @@ export default function AdminStructuralEditor() {
     }, [ownerId, projectId, showInitializationLoading]);
 
     useEffect(() => {
-        if (!isLocalDraft || !structure) return;
+        if (!isLocalDraft || !structure || floorPlans.length === 0) return;
         try {
+            const projectData = serializeManagedStructureProject(
+                floorPlans,
+                activeFloorId ?? floorPlans[0].floorId,
+                projectName,
+                new Date().toISOString()
+            );
             saveLocalManagedProjectDraft({
                 schemaVersion: 1,
                 draftId: structure.projectId,
                 ownerId: structure.ownerId,
                 projectName,
-                structure: { ...structure, projectName, blueprint: null },
+                structure: projectData,
                 revision,
                 updatedAt: new Date().toISOString()
             });
         } catch (error) {
             console.error("Unable to autosave the local floor-plan draft.", error);
         }
-    }, [isLocalDraft, projectName, revision, structure]);
+    }, [activeFloorId, floorPlans, isLocalDraft, projectName, revision, structure]);
 
     const structureCorners = structure?.corners;
     const structureWalls = structure?.walls;
@@ -452,18 +569,27 @@ export default function AdminStructuralEditor() {
             : null;
 
     const commit = (next: ManagedStructure) => {
-        if (!structure) return;
-        setHistory(previous => [...previous.slice(-49), structure]);
-        setFuture([]);
-        setStructure(next);
+        if (!structure || !activeFloorId) return;
+        setHistoryByFloor(current => ({
+            ...current,
+            [activeFloorId]: [...(current[activeFloorId] ?? []).slice(-49), structure]
+        }));
+        setFutureByFloor(current => ({ ...current, [activeFloorId]: [] }));
+        setActiveFloorStructure(next);
     };
 
     const undo = () => {
         const previous = history.at(-1);
-        if (!previous || !structure) return;
-        setFuture(items => [structure, ...items]);
-        setHistory(items => items.slice(0, -1));
-        setStructure(previous);
+        if (!previous || !structure || !activeFloorId) return;
+        setFutureByFloor(current => ({
+            ...current,
+            [activeFloorId]: [structure, ...(current[activeFloorId] ?? [])]
+        }));
+        setHistoryByFloor(current => ({
+            ...current,
+            [activeFloorId]: (current[activeFloorId] ?? []).slice(0, -1)
+        }));
+        setActiveFloorStructure(previous);
         setPendingWallStart(null);
         setWallChainStart(null);
         setPreviewWallEnd(null);
@@ -479,10 +605,16 @@ export default function AdminStructuralEditor() {
 
     const redo = () => {
         const next = future[0];
-        if (!next || !structure) return;
-        setHistory(items => [...items, structure]);
-        setFuture(items => items.slice(1));
-        setStructure(next);
+        if (!next || !structure || !activeFloorId) return;
+        setHistoryByFloor(current => ({
+            ...current,
+            [activeFloorId]: [...(current[activeFloorId] ?? []), structure]
+        }));
+        setFutureByFloor(current => ({
+            ...current,
+            [activeFloorId]: (current[activeFloorId] ?? []).slice(1)
+        }));
+        setActiveFloorStructure(next);
         setPendingWallStart(null);
         setWallChainStart(null);
         setPreviewWallEnd(null);
@@ -1143,6 +1275,71 @@ export default function AdminStructuralEditor() {
         setActualBlueprintLength("");
     };
 
+    const resetFloorInteractions = (nextStructure: ManagedStructure) => {
+        cancelDrawing();
+        if (calibrationStep !== "idle") cancelCalibration();
+        setPendingWallStart(null);
+        setWallChainStart(null);
+        setPreviewWallEnd(null);
+        setWallGuides(null);
+        setPendingRoomStart(null);
+        setPreviewRoomEnd(null);
+        setSelectedWallId(null);
+        setSelectedRegionId(null);
+        setSelectedStructureElement(null);
+        setActiveElementPlacement(null);
+        setMovePreviewReady(false);
+        setSelectedAsset(null);
+        setBuildPointer(null);
+        setTool(nextStructure.layoutConfirmed ? "select" : "wall");
+        setWorkspaceView("floorplan");
+        setWorkspacePanelOpen(true);
+    };
+
+    const switchFloor = (floorId: string) => {
+        if (floorId === activeFloorId) return;
+        const nextFloor = floorPlans.find(floor => floor.floorId === floorId);
+        if (!nextFloor) return;
+        resetFloorInteractions(nextFloor.structure);
+        setActiveFloorId(nextFloor.floorId);
+        setStatus("");
+    };
+
+    const addFloor = () => {
+        if (!structure || isCreatingFloor) return;
+        setIsCreatingFloor(true);
+        try {
+            const newStructure = createManagedStructure(
+                structure.projectId,
+                projectName,
+                structure.ownerId
+            );
+            if (newFloorMode === "outline") {
+                const firstFloor = floorPlans[0]?.structure;
+                if (!firstFloor) throw new Error("The first floor is unavailable.");
+                Object.assign(
+                    newStructure,
+                    createManagedStructureFromExteriorOutline(firstFloor)
+                );
+            }
+
+            const newFloor = createManagedEditorFloor(newStructure, floorPlans.length);
+            resetFloorInteractions(newFloor.structure);
+            setFloorPlans(current => [...current, newFloor]);
+            setActiveFloorId(newFloor.floorId);
+            setIsAddFloorDialogOpen(false);
+            setStatus(newFloorMode === "outline"
+                ? "New floor created from the first floor's exterior outline."
+                : "New blank floor created. Upload a blueprint in the Floor Plan panel to begin tracing.");
+        } catch (error) {
+            setStatus(error instanceof Error
+                ? error.message
+                : "Unable to create the requested floor.");
+        } finally {
+            setIsCreatingFloor(false);
+        }
+    };
+
     const applyCalibration = () => {
         if (measuredBlueprintLength === null || !validPositiveNumber(measuredBlueprintLength)) {
             setStatus("Choose two different blueprint points first.");
@@ -1262,13 +1459,19 @@ export default function AdminStructuralEditor() {
                 : published ? "Publishing..." : "Saving draft...");
             const savedAt = new Date().toISOString();
             const nextStructure = { ...structure, projectName, savedAt, blueprint: null };
+            const projectData = serializeManagedStructureProject(
+                floorPlans,
+                activeFloorId ?? floorPlans[0]?.floorId ?? "",
+                projectName,
+                savedAt
+            );
             if (isLocalDraft && !published) {
                 saveLocalManagedProjectDraft({
                     schemaVersion: 1,
                     draftId: structure.projectId,
                     ownerId: structure.ownerId,
                     projectName,
-                    structure: nextStructure,
+                    structure: projectData,
                     revision,
                     updatedAt: savedAt
                 });
@@ -1280,21 +1483,20 @@ export default function AdminStructuralEditor() {
                 const result = await publishLocalManagedStructure({
                     projectName,
                     ownerId: structure.ownerId,
-                    projectData: nextStructure
+                    projectData: { ...projectData }
                 });
-                const publishedStructure = {
-                    ...nextStructure,
-                    projectId: result.projectId,
-                    structuralRevision: result.revision,
-                    workflowType: "admin-managed" as const,
-                    structuralOwner: "admin" as const,
-                    structuralStatus: "published" as const,
-                    publishedStructuralRevision: result.revision
-                };
-                setStructure(publishedStructure);
+                setFloorPlans(current => current.map(floor => ({
+                    ...floor,
+                    structure: {
+                        ...floor.structure,
+                        projectId: result.projectId,
+                        projectName,
+                        savedAt
+                    }
+                })));
                 setRevision(result.revision);
-                setHistory([]);
-                setFuture([]);
+                setHistoryByFloor({});
+                setFutureByFloor({});
                 setIsLocalDraft(false);
                 let localDraftCleanupFailed = false;
                 try {
@@ -1320,7 +1522,7 @@ export default function AdminStructuralEditor() {
                 projectId: structure.projectId,
                 projectName,
                 ownerId: structure.ownerId,
-                projectData: nextStructure,
+                projectData: { ...projectData },
                 revision: nextRevision,
                 published
             });
@@ -1390,6 +1592,31 @@ export default function AdminStructuralEditor() {
                         style={{ textAlign: "center", fontSize: "14px" }}
                     />
                 </div>
+                <div className="admin-editor-floor-switcher">
+                    <div className="admin-editor-floor-tabs" role="tablist" aria-label="Project floors">
+                        {floorPlans.map(floor => (
+                            <button
+                                key={floor.floorId}
+                                type="button"
+                                role="tab"
+                                aria-selected={floor.floorId === activeFloorId}
+                                className={floor.floorId === activeFloorId ? "active" : ""}
+                                onClick={() => switchFloor(floor.floorId)}
+                            >
+                                {floor.name}
+                            </button>
+                        ))}
+                    </div>
+                    <button
+                        type="button"
+                        className="admin-editor-add-floor"
+                        onClick={() => setIsAddFloorDialogOpen(true)}
+                        disabled={!structure || savingAction !== null}
+                    >
+                        <Plus size={14} />
+                        <span>Add Floor</span>
+                    </button>
+                </div>
                 <div className="admin-editor-header-actions">
                 {isLocalDraft && (
                     <span className="admin-editor-status" role="status">
@@ -1422,6 +1649,69 @@ export default function AdminStructuralEditor() {
                     </div>
                 </div>
             </header>
+            {isAddFloorDialogOpen && (
+                <div
+                    className="admin-editor-dialog-backdrop"
+                    onMouseDown={event => {
+                        if (event.target === event.currentTarget) setIsAddFloorDialogOpen(false);
+                    }}
+                    onKeyDown={event => {
+                        if (event.key === "Escape") setIsAddFloorDialogOpen(false);
+                    }}
+                >
+                    <section
+                        className="admin-editor-add-floor-dialog"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="admin-editor-add-floor-title"
+                    >
+                        <h2 id="admin-editor-add-floor-title">Add Floor</h2>
+                        <p>Choose how to start the new floor layout.</p>
+                        <label className="admin-editor-floor-choice">
+                            <input
+                                type="radio"
+                                name="new-floor-mode"
+                                value="blank"
+                                checked={newFloorMode === "blank"}
+                                onChange={() => setNewFloorMode("blank")}
+                            />
+                            <span>
+                                <strong>Start with a Blank Layout</strong>
+                                <small>Create an empty floor, then optionally upload and trace a blueprint.</small>
+                            </span>
+                        </label>
+                        <label className="admin-editor-floor-choice">
+                            <input
+                                type="radio"
+                                name="new-floor-mode"
+                                value="outline"
+                                checked={newFloorMode === "outline"}
+                                onChange={() => setNewFloorMode("outline")}
+                            />
+                            <span>
+                                <strong>Copy First-Floor Exterior Outline</strong>
+                                <small>Copy only closed exterior walls and boundary corners with new IDs.</small>
+                            </span>
+                        </label>
+                        <button
+                            type="button"
+                            className="admin-editor-dialog-cancel"
+                            onClick={() => setIsAddFloorDialogOpen(false)}
+                            disabled={isCreatingFloor}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="button"
+                            className="admin-editor-dialog-create"
+                            onClick={addFloor}
+                            disabled={isCreatingFloor}
+                        >
+                            {isCreatingFloor ? "Creating..." : "Create Floor"}
+                        </button>
+                    </section>
+                </div>
+            )}
             <aside className={`admin-editor-sidebar ${workspacePanelOpen ? "is-open" : "is-closed"}`}>
                 <div className="admin-editor-tabs" role="tablist" aria-label="Editor panels">
                     <button

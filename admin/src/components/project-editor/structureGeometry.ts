@@ -1,4 +1,14 @@
-import type { ManagedStructure, StructureCorner, StructureWall, StructureElement } from "./structureTypes";
+import { Vector3 } from "three";
+import {
+    createManagedStructure,
+    type ManagedStructure,
+    type StructureCorner,
+    type StructureWall,
+    type StructureElement
+} from "./structureTypes.ts";
+import type { Corner } from "../project-loader/engine/walls/Corner";
+import type { Wall } from "../project-loader/engine/walls/WallTypes";
+import { solveRegions } from "../project-loader/engine/regions/RegionSolver.ts";
 
 export interface Point3 {
     x: number;
@@ -16,6 +26,106 @@ export interface RoomPreviewGeometry {
     width: number;
     length: number;
     area: number;
+}
+
+export function getExteriorWallOutline(
+    corners: StructureCorner[],
+    walls: StructureWall[],
+    regions: Array<{ boundaryLoops: Array<{ wallIds: string[] }> }>
+): { corners: StructureCorner[]; walls: StructureWall[] } {
+    if (regions.length === 0) {
+        throw new Error("The first floor has no closed room boundaries to identify an exterior outline.");
+    }
+
+    const boundaryUseCount = new Map<string, number>();
+    for (const region of regions) {
+        for (const loop of region.boundaryLoops) {
+            for (const wallId of loop.wallIds) {
+                boundaryUseCount.set(wallId, (boundaryUseCount.get(wallId) ?? 0) + 1);
+            }
+        }
+    }
+    const exteriorWallIds = new Set(
+        [...boundaryUseCount]
+            .filter(([, useCount]) => useCount === 1)
+            .map(([wallId]) => wallId)
+    );
+    const exteriorWalls = walls.filter(wall => exteriorWallIds.has(wall.id));
+    if (exteriorWalls.length < 3) {
+        throw new Error("The first floor's exterior boundary could not be identified reliably.");
+    }
+
+    const cornerById = new Map(corners.map(corner => [corner.id, corner]));
+    const degreeByCorner = new Map<string, number>();
+    for (const wall of exteriorWalls) {
+        if (!cornerById.has(wall.start.id) || !cornerById.has(wall.end.id)) {
+            throw new Error("The first floor's exterior boundary references missing corners.");
+        }
+        degreeByCorner.set(wall.start.id, (degreeByCorner.get(wall.start.id) ?? 0) + 1);
+        degreeByCorner.set(wall.end.id, (degreeByCorner.get(wall.end.id) ?? 0) + 1);
+    }
+    if ([...degreeByCorner.values()].some(degree => degree !== 2)) {
+        throw new Error("The first floor's exterior walls do not form closed boundary loops.");
+    }
+
+    const exteriorCorners = corners.filter(corner => degreeByCorner.has(corner.id));
+    return { corners: exteriorCorners, walls: exteriorWalls };
+}
+
+export function createManagedStructureFromExteriorOutline(
+    source: ManagedStructure
+): ManagedStructure {
+    const corners: Corner[] = source.corners.map(corner => ({
+        id: corner.id,
+        position: new Vector3(corner.position.x, corner.position.y, corner.position.z)
+    }));
+    const walls: Wall[] = source.walls.map(wall => ({
+        id: wall.id,
+        start: {
+            id: wall.start.id,
+            position: new Vector3(wall.start.position.x, wall.start.position.y, wall.start.position.z)
+        },
+        end: {
+            id: wall.end.id,
+            position: new Vector3(wall.end.position.x, wall.end.position.y, wall.end.position.z)
+        }
+    }));
+    const outline = getExteriorWallOutline(
+        source.corners,
+        source.walls,
+        solveRegions(corners, walls)
+    );
+    const newCornerIds = new Map(
+        outline.corners.map(corner => [corner.id, crypto.randomUUID()])
+    );
+    const getNewCornerId = (cornerId: string): string => {
+        const newId = newCornerIds.get(cornerId);
+        if (!newId) {
+            throw new Error("The exterior boundary references a corner that could not be copied.");
+        }
+        return newId;
+    };
+    const copied = createManagedStructure(source.projectId, source.projectName, source.ownerId);
+    copied.corners = outline.corners.map(corner => ({
+        id: getNewCornerId(corner.id),
+        position: { ...corner.position }
+    }));
+    copied.walls = outline.walls.map(wall => ({
+        id: crypto.randomUUID(),
+        start: {
+            id: getNewCornerId(wall.start.id),
+            position: { ...wall.start.position }
+        },
+        end: {
+            id: getNewCornerId(wall.end.id),
+            position: { ...wall.end.position }
+        }
+    }));
+    copied.wallHeight = source.wallHeight;
+    copied.wallThickness = source.wallThickness;
+    copied.gridSize = source.gridSize;
+    copied.snapEnabled = source.snapEnabled;
+    return copied;
 }
 
 export function getRoomPreviewGeometry(start: Point3, end: Point3): RoomPreviewGeometry {

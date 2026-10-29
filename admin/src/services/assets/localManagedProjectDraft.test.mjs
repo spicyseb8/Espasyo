@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createManagedStructure } from "../../components/project-editor/structureTypes.ts";
+import {
+    createManagedEditorFloor,
+    createManagedStructure,
+    loadManagedEditorFloors,
+    serializeManagedStructureProject
+} from "../../components/project-editor/structureTypes.ts";
 import {
     loadLocalManagedProjectDraft,
     removeLocalManagedProjectDraft,
@@ -102,6 +107,56 @@ test("corrupted or outdated local draft data is discarded safely", () => {
         assert.equal(values.has("espasyo.adminManagedProjectDraft.v1:client-a"), false);
     } finally {
         console.warn = originalWarn;
+        if (previousWindow === undefined) {
+            delete globalThis.window;
+        } else {
+            globalThis.window = previousWindow;
+        }
+    }
+});
+
+test("local managed drafts restore every serialized floor", () => {
+    const values = new Map();
+    const previousWindow = globalThis.window;
+    globalThis.window = {
+        localStorage: {
+            getItem: key => values.get(key) ?? null,
+            setItem: (key, value) => values.set(key, value),
+            removeItem: key => values.delete(key)
+        }
+    };
+
+    try {
+        const first = createManagedEditorFloor(
+            createManagedStructure("local-multi", "Plan", "client-multi"),
+            0
+        );
+        const second = createManagedEditorFloor(
+            createManagedStructure("local-multi", "Plan", "client-multi"),
+            1
+        );
+        const projectData = serializeManagedStructureProject(
+            [first, second],
+            second.floorId,
+            "Plan",
+            new Date().toISOString()
+        );
+        saveLocalManagedProjectDraft({
+            schemaVersion: 1,
+            draftId: "local-multi",
+            ownerId: "client-multi",
+            projectName: "Plan",
+            structure: projectData,
+            revision: 0,
+            updatedAt: new Date().toISOString()
+        });
+
+        const restored = loadLocalManagedProjectDraft("client-multi");
+        assert.ok(restored);
+        assert.equal(restored?.structure.floors?.length, 2);
+        assert.equal(restored?.structure.activeFloorId, second.floorId);
+        assert.equal(loadManagedEditorFloors(restored.structure).floors[1].floorId, second.floorId);
+    } finally {
         if (previousWindow === undefined) {
             delete globalThis.window;
         } else {

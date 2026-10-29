@@ -12,6 +12,7 @@ import type { BlueprintCalibrationPoint } from "./types";
 import type { SavedProjectData } from "./ProjectTypes";
 
 export type EditorAction =
+    | { type: "SWITCH_FLOOR"; payload: string; }
     | { type: "SET_ACTIVE_TAB"; payload: string; }
     | { type: "SET_ACTIVE_TOOL"; payload: Tool; }
     | { type: "SET_BUILD_TOOL"; payload: BuildTool; }

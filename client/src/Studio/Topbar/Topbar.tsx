@@ -36,7 +36,7 @@ const formatCurrency = (amount: number, decimals = 2) =>
     }).format(amount);
 
 export default function Topbar() {
-    const { state, undo, redo, canUndo, canRedo } = useEditor();
+    const { state, dispatch, undo, redo, canUndo, canRedo } = useEditor();
 
     const { projectId: routeProjectId } = useParams<{ projectId?: string }>();
 
@@ -127,6 +127,25 @@ export default function Topbar() {
                     <ArrowLeft size={15} strokeWidth={1.75} />
                     <span>Studio</span>
                 </Link>
+                <nav className="floor-tabs" aria-label="Project floors">
+                    {(state.floors.length > 0
+                        ? state.floors
+                        : [{ floorId: state.activeFloorId, name: "1st Floor" }]
+                    ).map((floor, index) => (
+                        <button
+                            key={floor.floorId}
+                            type="button"
+                            className={`floor-tab${floor.floorId === state.activeFloorId ? " active" : ""}`}
+                            aria-pressed={floor.floorId === state.activeFloorId}
+                            onClick={() => dispatch({
+                                type: "SWITCH_FLOOR",
+                                payload: floor.floorId
+                            })}
+                        >
+                            {floor.name || `${index + 1} Floor`}
+                        </button>
+                    ))}
+                </nav>
             </div>
 
             {/* Center — project name */}

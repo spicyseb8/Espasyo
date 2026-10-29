@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowUpRight, MessageCircle, Send } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AdminProjectScene from "../project-loader/AdminProjectScene";
@@ -124,6 +124,43 @@ export default function AdminProjectViewer({
     const navigate = useNavigate();
     const { role } = useAuth();
     const canComment = role === "admin";
+    const reviewFloors = useMemo(() => {
+        if (projectData.floors?.length) {
+            return projectData.floors.map((floor, index) => ({
+                ...floor,
+                floorId: floor.floorId ?? floor.id ?? (index === 0 ? "first-floor" : `floor-${index + 1}`)
+            }));
+        }
+        return [{
+            floorId: "first-floor",
+            name: "1st Floor",
+            structure: projectData
+        }];
+    }, [projectData]);
+    const [activeFloorId, setActiveFloorId] = useState(
+        projectData.activeFloorId ??
+        projectData.floors?.[0]?.floorId ??
+        projectData.floors?.[0]?.id ??
+        "first-floor"
+    );
+    const activeFloorIndex = Math.max(
+        0,
+        reviewFloors.findIndex(floor => floor.floorId === activeFloorId)
+    );
+    const activeFloor = reviewFloors[activeFloorIndex];
+    const activeProjectData = useMemo(() => ({
+        ...projectData,
+        ...activeFloor.structure,
+        furniture: activeFloor.furniture ??
+            activeFloor.structure.furniture ??
+            (activeFloorIndex === 0 ? projectData.furniture : []),
+        floorFinishes: activeFloor.floorFinishes ??
+            activeFloor.structure.floorFinishes ??
+            (activeFloorIndex === 0 ? projectData.floorFinishes : {}),
+        wallFinishes: activeFloor.wallFinishes ??
+            activeFloor.structure.wallFinishes ??
+            (activeFloorIndex === 0 ? projectData.wallFinishes : {})
+    }), [activeFloor, activeFloorIndex, projectData]);
     const [sceneReady, setSceneReady] = useState(false);
     const [runtimeAssetFailures, setRuntimeAssetFailures] = useState<string[]>([]);
     const reportedUnavailableAssetIds = [
@@ -573,7 +610,7 @@ export default function AdminProjectViewer({
 >
             <AdminProjectScene
                 projectData={
-                    projectData
+                    activeProjectData
                 }
                 onReady={
                     handleSceneReady
@@ -615,6 +652,24 @@ export default function AdminProjectViewer({
                         }
                     </h1>
 
+                    <nav className="mt-2 flex max-w-[190px] gap-1 overflow-x-auto" aria-label="Review floors">
+                        {reviewFloors.map(floor => (
+                            <button
+                                key={floor.floorId}
+                                type="button"
+                                className={`shrink-0 rounded-full border px-2 py-1 text-[10px] ${
+                                    floor.floorId === activeFloor.floorId
+                                        ? "border-[#333] bg-[#333] text-white"
+                                        : "border-[#dededb] bg-white text-[#555]"
+                                }`}
+                                aria-pressed={floor.floorId === activeFloor.floorId}
+                                onClick={() => setActiveFloorId(floor.floorId)}
+                            >
+                                {floor.name}
+                            </button>
+                        ))}
+                    </nav>
+
                     <p className="mt-0.5 text-[10px] text-[#999]">
                         View-only
                     </p>
@@ -647,7 +702,7 @@ export default function AdminProjectViewer({
     }}
 >
     <AdminCostEstimator
-        projectData={projectData}
+        projectData={activeProjectData}
     />
 
     <button

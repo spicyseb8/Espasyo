@@ -8,11 +8,13 @@ import type { Door } from "../../engine/doors/DoorTypes";
 import type { Furniture } from "../../engine/furniture/FurnitureTypes";
 import type { Window } from "../../engine/windows/WindowTypes";
 import type { Opening } from "../../engine/openings/OpeningTypes";
+import type { SavedProjectData, SavedProjectFloor } from "./ProjectTypes";
+import type { EditorFloorData } from "./types";
 import {
     getWallFinishSideKey,
     WALL_SIDE_FINISH_BUCKET
 } from "../../engine/walls/WallFinishUtils";
-export function editorReducer(
+function reduceEditorAction(
     state: EditorState,
     action: EditorAction
 ): EditorState {
@@ -1122,4 +1124,141 @@ export function editorReducer(
         default:
             return state;
     }
+}
+
+function getFloorName(index: number): string {
+    const number = index + 1;
+    const suffix = number % 100 >= 11 && number % 100 <= 13
+        ? "th"
+        : number % 10 === 1
+            ? "st"
+            : number % 10 === 2
+                ? "nd"
+                : number % 10 === 3
+                    ? "rd"
+                    : "th";
+    return `${number}${suffix} Floor`;
+}
+
+function captureFloor(
+    state: EditorState,
+    floor: Pick<EditorFloorData, "floorId" | "name">
+): EditorFloorData {
+    return {
+        ...floor,
+        walls: state.walls,
+        corners: state.corners,
+        doors: state.doors,
+        furniture: state.furniture,
+        windows: state.windows,
+        openings: state.openings,
+        floorFinishes: state.floorFinishes,
+        wallFinishes: state.wallFinishes,
+        wallHeight: state.wallHeight,
+        wallThickness: state.wallThickness,
+        snapEnabled: state.snapEnabled,
+        gridSize: state.gridSize,
+        layoutConfirmed: state.layoutConfirmed,
+        archRise: state.archRise,
+        openingWidth: state.openingWidth,
+        openingHeight: state.openingHeight,
+        blueprint: state.blueprint
+    };
+}
+
+function captureActiveFloor(state: EditorState): EditorState {
+    const currentFloor = state.floors.find(floor => floor.floorId === state.activeFloorId);
+    if (!currentFloor) return state;
+    const updatedFloor = captureFloor(state, currentFloor);
+    return {
+        ...state,
+        floors: state.floors.map(floor =>
+            floor.floorId === updatedFloor.floorId ? updatedFloor : floor
+        )
+    };
+}
+
+function showFloor(state: EditorState, floor: EditorFloorData): EditorState {
+    return {
+        ...state,
+        ...floor,
+        activeFloorId: floor.floorId,
+        selectedWallSide: null,
+        selectedWallId: null,
+        selectedWallRegionId: null,
+        selectedRegionId: null,
+        selectedCornerId: null,
+        selectedOpeningId: null,
+        selectedFurnitureId: null,
+        selectedDoorId: null,
+        selectedWindowId: null,
+        selectedAsset: null,
+        movingFurnitureId: null,
+        movingDoorId: null,
+        movingWindowId: null,
+        activeFloorMaterialId: null,
+        activeWallMaterialId: null,
+        blueprintCalibrationMode: false,
+        blueprintCalibrationStart: null,
+        blueprintCalibrationEnd: null,
+        draftWallLength: null
+    };
+}
+
+export function syncEditorFloor(state: EditorState): EditorState {
+    return captureActiveFloor(state);
+}
+
+export function editorReducer(
+    state: EditorState,
+    action: EditorAction
+): EditorState {
+    if (action.type === "SWITCH_FLOOR") {
+        const floors = captureActiveFloor(state).floors;
+        const nextFloor = floors.find(floor => floor.floorId === action.payload);
+        if (!nextFloor || nextFloor.floorId === state.activeFloorId) return state;
+        return showFloor({ ...state, floors }, nextFloor);
+    }
+
+    if (action.type === "LOAD_PROJECT") {
+        const loaded = reduceEditorAction(state, action);
+        if (loaded === state) return state;
+
+        const project = action.payload as SavedProjectData;
+        const savedFloors: SavedProjectFloor[] = Array.isArray(project.floors) && project.floors.length > 0
+            ? project.floors
+            : [{
+                floorId: "first-floor",
+                name: getFloorName(0),
+                structure: project
+            }];
+        const floors = savedFloors.map((floor, index) => {
+            const structure = {
+                ...project,
+                ...floor.structure,
+                furniture: floor.furniture ?? floor.structure.furniture ??
+                    (index === 0 ? project.furniture : []),
+                floorFinishes: floor.floorFinishes ?? floor.structure.floorFinishes ??
+                    (index === 0 ? project.floorFinishes : {}),
+                wallFinishes: floor.wallFinishes ?? floor.structure.wallFinishes ??
+                    (index === 0 ? project.wallFinishes : {}),
+                floors: undefined,
+                activeFloorId: undefined
+            } as SavedProjectData;
+            const hydrated = reduceEditorAction(loaded, {
+                type: "LOAD_PROJECT",
+                payload: structure
+            });
+            return captureFloor(hydrated, {
+                floorId: floor.floorId || "first-floor",
+                name: floor.name || getFloorName(index)
+            });
+        });
+        const activeFloor = floors.find(floor => floor.floorId === project.activeFloorId) ?? floors[0];
+        return showFloor({ ...loaded, floors }, activeFloor);
+    }
+
+    const nextState = reduceEditorAction(state, action);
+    if (nextState === state) return state;
+    return captureActiveFloor(nextState);
 }

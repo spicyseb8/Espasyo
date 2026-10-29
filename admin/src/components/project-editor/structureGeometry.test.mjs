@@ -5,6 +5,8 @@ import { buildAdminWallMeshes } from "../project-loader/engine/walls/AdminWallMe
 import { polygonArea } from "../project-loader/engine/regions/Polygon.ts";
 import {
     addWallSegmentToStructure,
+    createManagedStructureFromExteriorOutline,
+    getExteriorWallOutline,
     findOrCreateCorner,
     findNearestWallEndpoint,
     getRoomPreviewGeometry,
@@ -80,6 +82,83 @@ function addRectangularRoom(structure, minX, minZ, maxX, maxZ, prefix) {
     }
     return result;
 }
+
+test("copying the first-floor outline keeps only exterior geometry with fresh IDs", () => {
+    let source = createManagedStructure("project-1", "Plan", "client-1");
+    source = addRectangularRoom(source, 0, 0, 4, 4, "left");
+    source = addRectangularRoom(source, 4, 0, 8, 4, "right");
+    source.doors = [{
+        id: "door-source",
+        assetId: "door-asset",
+        wallId: source.walls[0].id,
+        position: new Vector3(),
+        rotationY: 0,
+        width: 1,
+        height: 2,
+        depth: 0.1
+    }];
+    source.windows = [{
+        id: "window-source",
+        assetId: "window-asset",
+        wallId: source.walls[0].id,
+        position: new Vector3(),
+        rotationY: 0,
+        width: 1,
+        height: 1,
+        depth: 0.1
+    }];
+    source.openings = [{
+        id: "opening-source",
+        wallId: source.walls[0].id,
+        position: new Vector3(),
+        rotationY: 0,
+        width: 1,
+        height: 2,
+        depth: 0.1,
+        shape: "rectangle"
+    }];
+    source.furniture = [{ id: "furniture-source" }];
+    source.floorFinishes = { room: "tile" };
+    source.wallFinishes = { room: { wall: "paint" } };
+    source.wallHeight = 3.2;
+    source.wallThickness = 0.2;
+    source.gridSize = 0.5;
+    source.snapEnabled = false;
+
+    const exterior = getExteriorWallOutline(
+        source.corners,
+        source.walls,
+        solveStructureRegions(source)
+    );
+    const copied = createManagedStructureFromExteriorOutline(source);
+
+    assert.equal(exterior.walls.length, 6);
+    assert.equal(copied.walls.length, exterior.walls.length);
+    assert.equal(copied.corners.length, exterior.corners.length);
+    assert.equal(solveStructureRegions(copied).length, 1);
+    assert.ok(copied.walls.every(wall => !source.walls.some(sourceWall => sourceWall.id === wall.id)));
+    assert.ok(copied.corners.every(corner => !source.corners.some(sourceCorner => sourceCorner.id === corner.id)));
+    assert.deepEqual(copied.doors, []);
+    assert.deepEqual(copied.windows, []);
+    assert.deepEqual(copied.openings, []);
+    assert.deepEqual(copied.furniture, []);
+    assert.deepEqual(copied.floorFinishes, {});
+    assert.deepEqual(copied.wallFinishes, {});
+    assert.equal(copied.wallHeight, source.wallHeight);
+    assert.equal(copied.wallThickness, source.wallThickness);
+    assert.equal(copied.gridSize, source.gridSize);
+    assert.equal(copied.snapEnabled, source.snapEnabled);
+    copied.walls[0].start.position.x = 100;
+    assert.notEqual(source.walls[0].start.position.x, 100);
+});
+
+test("exterior-outline copy rejects geometry without closed solved boundaries", () => {
+    const source = createManagedStructure("project-1", "Plan", "client-1");
+    assert.throws(
+        () => createManagedStructureFromExteriorOutline(source),
+        /no closed room boundaries/
+    );
+});
 
 function addWallAtPoints(structure, startPosition, endPosition) {
     const start = findOrCreateCorner(startPosition, structure.corners);

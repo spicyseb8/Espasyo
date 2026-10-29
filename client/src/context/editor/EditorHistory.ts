@@ -11,6 +11,7 @@ export const MAX_HISTORY_ENTRIES =
 
 export type FloorPlanSnapshot = Pick<
     EditorState,
+    | "activeFloorId"
     | "walls"
     | "corners"
     | "wallHeight"
@@ -19,6 +20,7 @@ export type FloorPlanSnapshot = Pick<
 
 export type EditorSnapshot = Pick<
     EditorState,
+    | "activeFloorId"
     | "furniture"
     | "doors"
     | "windows"
@@ -48,6 +50,7 @@ export function createFloorPlanSnapshot(
     state: EditorState
 ): FloorPlanSnapshot {
     return {
+        activeFloorId: state.activeFloorId,
         walls: cloneValue(state.walls),
         corners: cloneValue(state.corners),
         wallHeight: state.wallHeight,
@@ -59,6 +62,7 @@ export function createEditorSnapshot(
     state: EditorState
 ): EditorSnapshot {
     return {
+        activeFloorId: state.activeFloorId,
         furniture: cloneValue(state.furniture),
         doors: cloneValue(state.doors),
         windows: cloneValue(state.windows),

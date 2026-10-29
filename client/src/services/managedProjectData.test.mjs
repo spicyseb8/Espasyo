@@ -25,6 +25,51 @@ test("managed interior merge preserves published structure", () => {
         wallFinishes: { room: { "wall-1": "paint" } }
     });
 
+    test("managed interior data stays associated with each published floor", () => {
+        const published = {
+            walls: [{ id: "first-wall" }],
+            furniture: [],
+            floors: [
+                {
+                    floorId: "floor-1",
+                    name: "1st Floor",
+                    structure: { walls: [{ id: "first-wall" }] }
+                },
+                {
+                    floorId: "floor-2",
+                    name: "2nd Floor",
+                    structure: { walls: [{ id: "second-wall" }] }
+                }
+            ],
+            structuralRevision: 7
+        };
+        const payload = {
+            floors: [
+                {
+                    floorId: "floor-1",
+                    furniture: [{ id: "chair-1", assetId: "chair" }],
+                    floorFinishes: { "room-1": "tile" },
+                    wallFinishes: {}
+                },
+                {
+                    floorId: "floor-2",
+                    furniture: [{ id: "chair-2", assetId: "chair" }],
+                    floorFinishes: {},
+                    wallFinishes: { "room-2": { "wall-2:1": "paint" } }
+                }
+            ]
+        };
+
+        const merged = mergeManagedInteriorData(published, payload);
+        assert.deepEqual(merged.floors[0].furniture, payload.floors[0].furniture);
+        assert.deepEqual(merged.floors[0].floorFinishes, payload.floors[0].floorFinishes);
+        assert.deepEqual(merged.floors[1].furniture, payload.floors[1].furniture);
+        assert.deepEqual(merged.floors[1].wallFinishes, payload.floors[1].wallFinishes);
+        assert.deepEqual(merged.floors[0].structure, published.floors[0].structure);
+        assert.deepEqual(merged.walls, published.walls);
+        assert.equal(merged.structuralRevision, 7);
+    });
+
     assert.deepEqual(merged.walls, published.walls);
     assert.deepEqual(merged.doors, published.doors);
     assert.deepEqual(merged.furniture, [{ id: "chair-1" }]);
@@ -69,6 +114,46 @@ test("managed serializer stores furniture references, placement, finishes, and c
     assert.deepEqual(interior.wallFinishes, state.wallFinishes);
     assert.equal(interior.furniture[0].assetId, "furniture-asset-42");
     assert.equal(interior.furniture[0].rotationY, 1.2);
+});
+
+test("managed interior serializer saves all floors and retains legacy first-floor fields", () => {
+    const firstItem = {
+        id: "placed-first",
+        assetId: "asset-first",
+        position: { x: 1, y: 0, z: 2 },
+        rotationY: 0.5,
+        modelOffset: { x: 0, y: 0, z: 0 },
+        width: 1,
+        depth: 1,
+        height: 1
+    };
+    const secondItem = { ...firstItem, id: "placed-second" };
+    const interior = serializeManagedInteriorData({
+        furniture: [secondItem],
+        floorFinishes: {},
+        wallFinishes: {},
+        floors: [
+            {
+                floorId: "floor-1",
+                furniture: [firstItem],
+                floorFinishes: { "room-1": "tile" },
+                wallFinishes: {}
+            },
+            {
+                floorId: "floor-2",
+                furniture: [secondItem],
+                floorFinishes: {},
+                wallFinishes: { "room-2": { "wall-2:1": "paint" } }
+            }
+        ]
+    }, "PRJ-00126", "client-uid", { total: 0 });
+
+    assert.deepEqual(interior.furniture, [firstItem]);
+    assert.equal(interior.floors.length, 2);
+    assert.deepEqual(interior.floors[0].furniture, [firstItem]);
+    assert.deepEqual(interior.floors[1].furniture, [secondItem]);
+    assert.deepEqual(interior.floors[0].floorFinishes, { "room-1": "tile" });
+    assert.deepEqual(interior.floors[1].wallFinishes, { "room-2": { "wall-2:1": "paint" } });
 });
 
 test("managed save uploads to the designated path and updates interior metadata only", async () => {

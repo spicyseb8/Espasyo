@@ -8,6 +8,8 @@ export const initialState: EditorState = {
     structuralStatus: undefined,
     structuralRevision: undefined,
     publishedStructuralRevision: undefined,
+    floors: [],
+    activeFloorId: "first-floor",
     activeTab: "furniture",
     activeTool: Tool.None,
     walls: [],

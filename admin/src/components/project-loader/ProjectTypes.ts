@@ -180,6 +180,16 @@ export interface SavedCostEstimate {
     total: number;
 }
 
+export interface SavedProjectFloor {
+    floorId?: string;
+    id?: string;
+    name: string;
+    structure: Partial<SavedProjectData>;
+    furniture?: SavedFurniture[];
+    floorFinishes?: Record<string, string>;
+    wallFinishes?: Record<string, Record<string, string>>;
+}
+
 //==================================================
 // PROJECT JSON
 //==================================================
@@ -197,6 +207,8 @@ export interface SavedProjectData {
     structuralStatus?: "draft" | "published";
     structuralRevision?: number;
     publishedStructuralRevision?: number;
+    floors?: SavedProjectFloor[];
+    activeFloorId?: string;
 
     schemaVersion: number;
 

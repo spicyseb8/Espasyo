@@ -6,6 +6,12 @@ import {
     isPublishedManagedProject,
     validateStructuralProjectData
 } from "./projectStructureContract.ts";
+import {
+    createManagedEditorFloor,
+    createManagedStructure,
+    loadManagedEditorFloors,
+    serializeManagedStructureProject
+} from "../../components/project-editor/structureTypes.ts";
 
 test("missing workflow metadata defaults to legacy", () => {
     assert.equal(getProjectWorkflowType(undefined), "legacy");
@@ -75,4 +81,96 @@ test("managed validation rejects temporary blueprint runtime data", () => {
     });
 
     assert.ok(errors.some(error => error.includes("blueprint runtime data")));
+});
+
+test("multi-floor serialization and loading preserve independent geometry and legacy projects", () => {
+    const firstStructure = createManagedStructure("project-1", "Plan", "client-1");
+    firstStructure.corners.push({
+        id: "first-corner",
+        position: { x: 0, y: 0, z: 0 }
+    });
+    const firstFloor = createManagedEditorFloor(firstStructure, 0);
+    const secondFloor = createManagedEditorFloor(
+        createManagedStructure("project-1", "Plan", "client-1"),
+        1
+    );
+    const serialized = serializeManagedStructureProject(
+        [firstFloor, secondFloor],
+        secondFloor.floorId,
+        "Plan",
+        "2026-10-29T00:00:00.000Z"
+    );
+
+    assert.equal(firstFloor.name, "1st Floor");
+    assert.equal(secondFloor.name, "2nd Floor");
+    assert.notEqual(firstFloor.floorId, secondFloor.floorId);
+    assert.equal(serialized.corners[0].id, "first-corner");
+    assert.equal(serialized.floors[1].structure.corners.length, 0);
+    assert.equal(serialized.floors[1].structure.walls.length, 0);
+    assert.equal(serialized.floors[1].structure.doors.length, 0);
+    assert.equal(serialized.floors[1].structure.windows.length, 0);
+    assert.equal(serialized.floors[1].structure.openings.length, 0);
+    assert.equal(serialized.activeFloorId, secondFloor.floorId);
+    assert.deepEqual(validateStructuralProjectData(serialized), []);
+
+    const loaded = loadManagedEditorFloors(serialized);
+    assert.equal(loaded.activeFloorId, secondFloor.floorId);
+    assert.equal(loaded.floors[0].structure.corners[0].id, "first-corner");
+    assert.equal(loaded.floors[1].structure.corners.length, 0);
+    loaded.floors[1].structure.corners.push({
+        id: "second-corner",
+        position: { x: 1, y: 0, z: 1 }
+    });
+    assert.equal(loaded.floors[0].structure.corners.length, 1);
+
+    const legacy = loadManagedEditorFloors(firstStructure);
+    assert.equal(legacy.floors.length, 1);
+    assert.equal(legacy.floors[0].name, "1st Floor");
+    assert.equal(legacy.floors[0].structure.corners[0].id, "first-corner");
+});
+
+test("blank floor initialization creates empty independent structural collections and unique floor IDs", () => {
+    const projectId = "project-1";
+    const ownerId = "client-1";
+    const first = createManagedEditorFloor(
+        createManagedStructure(projectId, "Plan", ownerId),
+        0
+    );
+    const second = createManagedEditorFloor(
+        createManagedStructure(projectId, "Plan", ownerId),
+        1
+    );
+
+    assert.notEqual(first.floorId, second.floorId);
+    for (const floor of [first, second]) {
+        assert.deepEqual(floor.structure.corners, []);
+        assert.deepEqual(floor.structure.walls, []);
+        assert.deepEqual(floor.structure.doors, []);
+        assert.deepEqual(floor.structure.windows, []);
+        assert.deepEqual(floor.structure.openings, []);
+        assert.deepEqual(floor.structure.furniture, []);
+        assert.deepEqual(floor.structure.floorFinishes, {});
+        assert.deepEqual(floor.structure.wallFinishes, {});
+    }
+});
+
+test("multi-floor validation rejects duplicate floor IDs and invalid active floor references", () => {
+    const structure = createManagedStructure("project-1", "Plan", "client-1");
+    const first = createManagedEditorFloor(structure, 0, "floor-1");
+    const second = createManagedEditorFloor(
+        createManagedStructure("project-1", "Plan", "client-1"),
+        1,
+        "floor-1"
+    );
+    const project = serializeManagedStructureProject(
+        [first, second],
+        "missing-floor",
+        "Plan",
+        "2026-10-29T00:00:00.000Z"
+    );
+    project.activeFloorId = "missing-floor";
+
+    const errors = validateStructuralProjectData(project);
+    assert.ok(errors.some(error => error.includes("must be unique")));
+    assert.ok(errors.some(error => error.includes("activeFloorId")));
 });

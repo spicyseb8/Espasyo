@@ -9,6 +9,28 @@ import type { Window } from "../../engine/windows/WindowTypes";
 import type { Opening } from "../../engine/openings/OpeningTypes";
 import type { BlueprintState } from "../../engine/blueprint/BlueprintTypes";
 
+export interface EditorFloorData {
+    floorId: string;
+    name: string;
+    walls: Wall[];
+    corners: Corner[];
+    doors: Door[];
+    furniture: Furniture[];
+    windows: Window[];
+    openings: Opening[];
+    floorFinishes: Record<string, string>;
+    wallFinishes: Record<string, Record<string, string>>;
+    wallHeight: number;
+    wallThickness: number;
+    snapEnabled: boolean;
+    gridSize: number;
+    layoutConfirmed: boolean;
+    archRise: number;
+    openingWidth: number;
+    openingHeight: number;
+    blueprint: BlueprintState | null;
+}
+
 export interface BlueprintCalibrationPoint {
     x: number;
     z: number;
@@ -20,6 +42,8 @@ export interface EditorState {
     structuralStatus?: "draft" | "published";
     structuralRevision?: number;
     publishedStructuralRevision?: number;
+    floors: EditorFloorData[];
+    activeFloorId: string;
     activeTab: string;
     activeTool: Tool;
     walkthroughMode: boolean;
