@@ -6,11 +6,26 @@ import {
 } from "firebase/firestore";
 
 import {
+    CanvasTexture,
     RepeatWrapping,
     SRGBColorSpace,
     Texture,
     TextureLoader
 } from "three";
+import {
+    createFloorPatternLayout,
+    isHerringboneTileRatio,
+    isFloorPattern
+} from "../../../../shared/flooring/patterns";
+import type {
+    FloorPatternLayout
+} from "../../../../shared/flooring/patterns";
+import {
+    createFloorPatternCanvas
+} from "../../../../shared/flooring/patternCanvas";
+import {
+    getFloorCanvasImageSource
+} from "../../../../shared/flooring/patternCanvas";
 
 import {
     db
@@ -89,6 +104,18 @@ interface FirebaseFloorAsset {
 
     pricePerPiece?:
         number;
+
+    length?:
+        number;
+
+    width?:
+        number;
+
+    floorMaterialMode?:
+        "single-tile";
+
+    floorPattern?:
+        string;
 
     name:
         string;
@@ -192,6 +219,15 @@ const floorTexturePromises =
         string,
         Promise<Texture | null>
     >();
+
+const floorPatternTextureCache =
+    new Map<string, Texture>();
+
+const floorPatternTexturePromises =
+    new Map<string, Promise<Texture | null>>();
+
+const floorPatternTextureURLs =
+    new Map<string, string>();
 
 
 //==================================================
@@ -449,6 +485,23 @@ async function buildFloorMaterial(
     // Firebase material.
     //--------------------------------------------------
 
+    const length =
+        typeof data.length === "number" &&
+        Number.isFinite(data.length) &&
+        data.length > 0
+            ? data.length
+            : undefined;
+    const width =
+        typeof data.width === "number" &&
+        Number.isFinite(data.width) &&
+        data.width > 0
+            ? data.width
+            : undefined;
+    const floorPattern =
+        isFloorPattern(data.floorPattern)
+            ? data.floorPattern
+            : undefined;
+
     return {
 
         id:
@@ -471,6 +524,22 @@ async function buildFloorMaterial(
             data.pricePerPiece >= 0
                 ? data.pricePerPiece
                 : undefined,
+
+        length,
+
+        width,
+
+        floorMaterialMode:
+            data.floorMaterialMode === "single-tile" &&
+            floorPattern &&
+            length &&
+            width &&
+            (floorPattern !== "herringbone" ||
+                isHerringboneTileRatio(length, width))
+                ? "single-tile"
+                : undefined,
+
+        floorPattern,
 
         thumbnail,
 
@@ -824,6 +893,13 @@ export function findCachedFloorMaterial(
 
 
 export function removeCachedFloorMaterial(materialId: string): void {
+    const material = cachedFloorMaterials.find(
+        entry => entry.id === materialId
+    );
+    if (material?.texture) {
+        disposeFloorPatternTexturesForURL(material.texture);
+    }
+
     cachedFloorMaterials = cachedFloorMaterials.filter(
         material => material.id !== materialId
     );
@@ -853,6 +929,52 @@ export function getCachedFloorTexture(
     return floorTextureCache.get(
         url.trim()
     );
+}
+
+function getFloorPatternSettings(
+    url: string,
+    material: Material
+): { key: string; layout: FloorPatternLayout } | null {
+    if (material.floorMaterialMode !== "single-tile") return null;
+
+    if (
+        !isFloorPattern(material.floorPattern) ||
+        typeof material.length !== "number" ||
+        !Number.isFinite(material.length) ||
+        material.length <= 0 ||
+        typeof material.width !== "number" ||
+        !Number.isFinite(material.width) ||
+        material.width <= 0
+    ) {
+        throw new RangeError(
+            `Single-tile floor material "${material.id}" has invalid pattern settings.`
+        );
+    }
+
+    return {
+        key: JSON.stringify([
+            url.trim(),
+            material.floorPattern,
+            material.length,
+            material.width
+        ]),
+        layout: createFloorPatternLayout(
+            material.floorPattern,
+            material.length,
+            material.width
+        )
+    };
+}
+
+export function getCachedFloorPatternTexture(
+    url: string | undefined,
+    material: Material
+): Texture | undefined {
+    if (!url) return undefined;
+    const settings = getFloorPatternSettings(url, material);
+    return settings
+        ? floorPatternTextureCache.get(settings.key)
+        : undefined;
 }
 
 
@@ -1016,6 +1138,75 @@ export function preloadFloorTexture(
     return promise;
 }
 
+export function preloadFloorPatternTexture(
+    url: string | undefined,
+    material: Material
+): Promise<Texture | null> {
+    if (!url || url.trim() === "") return Promise.resolve(null);
+
+    const settings = getFloorPatternSettings(url, material);
+    if (!settings) return preloadFloorTexture(url);
+
+    const cached = floorPatternTextureCache.get(settings.key);
+    if (cached) return Promise.resolve(cached);
+
+    const pending = floorPatternTexturePromises.get(settings.key);
+    if (pending) return pending;
+
+    const promise = preloadFloorTexture(url)
+        .then(sourceTexture => {
+            if (!sourceTexture) return null;
+
+            const sourceImage = getFloorCanvasImageSource(sourceTexture.image);
+            const canvas = createFloorPatternCanvas(
+                sourceImage.image,
+                sourceImage.width,
+                sourceImage.height,
+                settings.layout
+            );
+            const texture = new CanvasTexture(canvas);
+            texture.colorSpace = SRGBColorSpace;
+            texture.wrapS = RepeatWrapping;
+            texture.wrapT = RepeatWrapping;
+            texture.needsUpdate = true;
+            floorPatternTextureCache.set(settings.key, texture);
+            floorPatternTextureURLs.set(settings.key, url.trim());
+            return texture;
+        })
+        .catch(error => {
+            console.error(
+                "Failed to generate the floor pattern texture:",
+                material.id,
+                error
+            );
+            return null;
+        })
+        .finally(() => {
+            floorPatternTexturePromises.delete(settings.key);
+        });
+
+    floorPatternTexturePromises.set(settings.key, promise);
+    return promise;
+}
+
+function disposeFloorPatternTexturesForURL(url: string): void {
+    const normalizedURL = url.trim();
+    for (const [key, sourceURL] of floorPatternTextureURLs) {
+        if (sourceURL !== normalizedURL) continue;
+        floorPatternTextureCache.get(key)?.dispose();
+        floorPatternTextureCache.delete(key);
+        floorPatternTextureURLs.delete(key);
+        floorPatternTexturePromises.delete(key);
+    }
+}
+
+function disposeAllFloorPatternTextures(): void {
+    floorPatternTextureCache.forEach(texture => texture.dispose());
+    floorPatternTextureCache.clear();
+    floorPatternTextureURLs.clear();
+    floorPatternTexturePromises.clear();
+}
+
 
 //==================================================
 // REFRESH
@@ -1023,6 +1214,7 @@ export function preloadFloorTexture(
 
 export async function refreshFloorMaterials():
     Promise<Material[]> {
+    disposeAllFloorPatternTextures();
 
     cachedDefaultFloorMaterial =
         null;

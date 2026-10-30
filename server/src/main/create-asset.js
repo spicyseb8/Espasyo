@@ -12,6 +12,13 @@ import { requireRole } from "./authorization.js";
 
 const router = express.Router();
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
+const DEFAULT_FLOOR_GROUT_WIDTH_M = 0.003;
+const FLOOR_PATTERNS = new Set([
+  "stack-bond",
+  "brick-bond",
+  "diagonal",
+  "herringbone",
+]);
 
 const ALLOWED_FURNITURE_CATEGORIES = new Set([
   "tables",
@@ -321,6 +328,7 @@ router.post(
       // They are required only when creating a floor asset.
       let floorLength;
       let floorWidth;
+      const floorPattern = req.body.floorPattern;
 
       if (assetType === "floor") {
         if (
@@ -346,6 +354,26 @@ router.post(
 
         if (!Number.isFinite(floorWidth) || floorWidth <= 0) {
           throw new Error("Floor width must be greater than 0.");
+        }
+
+        if (
+          floorLength <= DEFAULT_FLOOR_GROUT_WIDTH_M ||
+          floorWidth <= DEFAULT_FLOOR_GROUT_WIDTH_M
+        ) {
+          throw new Error(
+            "Floor tile dimensions must each be greater than the 3 mm grout width."
+          );
+        }
+
+        if (!FLOOR_PATTERNS.has(floorPattern)) {
+          throw new Error("Choose a supported floor tile pattern.");
+        }
+
+        if (
+          floorPattern === "herringbone" &&
+          Math.abs(floorLength / floorWidth - 2) > 1e-6
+        ) {
+          throw new Error("Herringbone requires tile length to be twice the tile width.");
         }
       }
 
@@ -524,6 +552,8 @@ router.post(
         asset.pricePerPiece = price;
         asset.length = floorLength;
         asset.width = floorWidth;
+        asset.floorMaterialMode = "single-tile";
+        asset.floorPattern = floorPattern;
       } else {
         if (price !== undefined) {
           asset.price = price;

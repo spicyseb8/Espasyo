@@ -7,6 +7,12 @@ import {
 
 import { db } from "../../firebase/firebase";
 import { isOptionalFurniturePrice } from "./furnitureCategories";
+import {
+  DEFAULT_FLOOR_GROUT_WIDTH_M,
+  isFloorPattern,
+  isHerringboneTileRatio,
+} from "../../../../shared/flooring/patterns";
+import type { FloorPattern } from "../../../../shared/flooring/patterns";
 
 export interface UpdateAssetData {
   asset_type: "floor" | "wall" | "furniture";
@@ -22,6 +28,7 @@ export interface UpdateAssetData {
   // Values are in meters.
   length?: number;
   width?: number;
+  floorPattern?: FloorPattern;
 }
 
 export async function updateAsset(
@@ -56,6 +63,25 @@ export async function updateAsset(
       throw new Error(
         "Floor length must be greater than 0 meters."
       );
+    }
+
+    if (data.floorPattern !== undefined && !isFloorPattern(data.floorPattern)) {
+      throw new Error("Floor pattern is not supported.");
+    }
+    if (
+      data.floorPattern !== undefined &&
+      (data.length == null ||
+        data.width == null ||
+        data.length <= DEFAULT_FLOOR_GROUT_WIDTH_M ||
+        data.width <= DEFAULT_FLOOR_GROUT_WIDTH_M)
+    ) {
+      throw new Error("Floor tile dimensions must each be greater than the 3 mm grout width.");
+    }
+    if (
+      data.floorPattern === "herringbone" &&
+      !isHerringboneTileRatio(length, width ?? 0)
+    ) {
+      throw new Error("Herringbone requires tile length to be twice the tile width.");
     }
 
     if (
@@ -120,6 +146,9 @@ export async function updateAsset(
           length: data.length,
           width: data.width,
         }
+      : {}),
+    ...(data.floorPattern !== undefined
+      ? { floorPattern: data.floorPattern }
       : {}),
 
     updated_at: serverTimestamp(),

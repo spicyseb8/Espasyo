@@ -1,11 +1,30 @@
 import {
+  useMemo,
   useEffect,
   useState,
 } from "react";
+import {
+  CanvasTexture,
+  RepeatWrapping,
+  SRGBColorSpace,
+} from "three";
 
 import type {
   Asset,
 } from "@/services/assets/asset-types";
+import {
+  DEFAULT_FLOOR_GROUT_WIDTH_M,
+  createFloorPatternLayout,
+  isHerringboneTileRatio,
+  isFloorPattern,
+} from "../../../../shared/flooring/patterns";
+import type {
+  FloorPatternLayout,
+} from "../../../../shared/flooring/patterns";
+import {
+  createFloorPatternCanvas,
+  getFloorCanvasImageSource,
+} from "../../../../shared/flooring/patternCanvas";
 
 import {
   loadAssetTextures,
@@ -61,9 +80,11 @@ const DEFAULT_METALNESS =
 function AssetMaterial({
   asset,
   defaultColor,
+  floorPatternLayout,
 }: {
   asset: Asset;
   defaultColor: string;
+  floorPatternLayout?: FloorPatternLayout;
 }) {
   const [
     textures,
@@ -73,8 +94,12 @@ function AssetMaterial({
       diffuse: null,
     });
 
+  const [floorPatternTexture, setFloorPatternTexture] =
+    useState<CanvasTexture | null>(null);
+
   useEffect(() => {
     let cancelled = false;
+    let generatedPatternTexture: CanvasTexture | null = null;
 
     async function loadTextures() {
       /**
@@ -85,6 +110,7 @@ function AssetMaterial({
       setTextures({
         diffuse: null,
       });
+      setFloorPatternTexture(null);
 
       /**
        * If there is no diffuse texture,
@@ -124,6 +150,24 @@ function AssetMaterial({
           return;
         }
 
+        if (floorPatternLayout && loadedTextures.diffuse) {
+          const source = getFloorCanvasImageSource(
+            loadedTextures.diffuse.image
+          );
+          const canvas = createFloorPatternCanvas(
+            source.image,
+            source.width,
+            source.height,
+            floorPatternLayout
+          );
+          generatedPatternTexture = new CanvasTexture(canvas);
+          generatedPatternTexture.colorSpace = SRGBColorSpace;
+          generatedPatternTexture.wrapS = RepeatWrapping;
+          generatedPatternTexture.wrapT = RepeatWrapping;
+          generatedPatternTexture.needsUpdate = true;
+          setFloorPatternTexture(generatedPatternTexture);
+        }
+
         console.log(
           "[PreviewMaterials] DIFFUSE CHECK:",
           {
@@ -150,10 +194,12 @@ function AssetMaterial({
 
     return () => {
       cancelled = true;
+      generatedPatternTexture?.dispose();
     };
   }, [
     asset.id,
     asset.diffuse_path,
+    floorPatternLayout,
   ]);
 
   /**
@@ -186,7 +232,7 @@ function AssetMaterial({
    * use the Firestore/default color.
    */
   const materialColor =
-    textures.diffuse
+    floorPatternTexture || textures.diffuse
       ? "#ffffff"
       : color;
 
@@ -213,7 +259,7 @@ function AssetMaterial({
        * Firebase diffuse texture.
        */
       map={
-        textures.diffuse
+        floorPatternTexture ?? textures.diffuse
       }
 
       /**
@@ -290,6 +336,36 @@ export function FloorMaterial({
 }: {
   asset: Asset | null;
 }) {
+  const floorPatternLayout = useMemo(() => {
+    if (
+      asset?.asset_type !== "floor" ||
+      asset.floorMaterialMode !== "single-tile" ||
+      !isFloorPattern(asset.floorPattern) ||
+      typeof asset.length !== "number" ||
+      !Number.isFinite(asset.length) ||
+      asset.length <= DEFAULT_FLOOR_GROUT_WIDTH_M ||
+      typeof asset.width !== "number" ||
+      !Number.isFinite(asset.width) ||
+      asset.width <= DEFAULT_FLOOR_GROUT_WIDTH_M ||
+      (asset.floorPattern === "herringbone" &&
+        !isHerringboneTileRatio(asset.length, asset.width))
+    ) {
+      return undefined;
+    }
+
+    return createFloorPatternLayout(
+      asset.floorPattern,
+      asset.length,
+      asset.width
+    );
+  }, [
+    asset?.asset_type,
+    asset?.floorMaterialMode,
+    asset?.floorPattern,
+    asset?.length,
+    asset?.width,
+  ]);
+
   /**
    * No floor asset selected.
    */
@@ -321,6 +397,7 @@ export function FloorMaterial({
       defaultColor={
         DEFAULT_FLOOR_COLOR
       }
+      floorPatternLayout={floorPatternLayout}
     />
   );
 }

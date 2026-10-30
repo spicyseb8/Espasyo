@@ -6,11 +6,26 @@ import {
 } from "firebase/firestore";
 
 import {
+    CanvasTexture,
     RepeatWrapping,
     SRGBColorSpace,
     Texture,
     TextureLoader
 } from "three";
+import {
+    createFloorPatternLayout,
+    isHerringboneTileRatio,
+    isFloorPattern
+} from "../../../../shared/flooring/patterns";
+import type {
+    FloorPatternLayout
+} from "../../../../shared/flooring/patterns";
+import {
+    createFloorPatternCanvas
+} from "../../../../shared/flooring/patternCanvas";
+import {
+    getFloorCanvasImageSource
+} from "../../../../shared/flooring/patternCanvas";
 
 import {
     db
@@ -67,6 +82,8 @@ interface FirebaseFloorAsset {
     name: string;
     length?: number;
     width?: number;
+    floorMaterialMode?: "single-tile";
+    floorPattern?: string;
 
     diffuse_path?: string;
     storage_path?: string;
@@ -113,6 +130,8 @@ const floorTexturePromises = new Map<
     string,
     Promise<Texture | null>
 >();
+const floorPatternTextureCache = new Map<string, Texture>();
+const floorPatternTexturePromises = new Map<string, Promise<Texture | null>>();
 
 //==================================================
 // LOCAL DEFAULT MATERIAL
@@ -243,6 +262,10 @@ async function buildFloorMaterial(
         data.width > 0
             ? data.width
             : undefined;
+    const floorPattern =
+        isFloorPattern(data.floorPattern)
+            ? data.floorPattern
+            : undefined;
 
     const hasPiecePrice =
         data.pricePerPiece !== undefined;
@@ -282,6 +305,16 @@ async function buildFloorMaterial(
     // Use the validated variables declared above.
     length,
     width,
+    floorMaterialMode:
+        data.floorMaterialMode === "single-tile" &&
+        floorPattern &&
+        length &&
+        width &&
+        (floorPattern !== "herringbone" ||
+            isHerringboneTileRatio(length, width))
+            ? "single-tile"
+            : undefined,
+    floorPattern,
 
     thumbnail,
     texture,
@@ -458,6 +491,50 @@ export function getCachedFloorTexture(
     return floorTextureCache.get(url.trim());
 }
 
+function getFloorPatternSettings(
+    material: Material,
+    url: string,
+): { key: string; layout: FloorPatternLayout } | null {
+    if (material.floorMaterialMode !== "single-tile") return null;
+
+    if (
+        !isFloorPattern(material.floorPattern) ||
+        typeof material.length !== "number" ||
+        !Number.isFinite(material.length) ||
+        material.length <= 0 ||
+        typeof material.width !== "number" ||
+        !Number.isFinite(material.width) ||
+        material.width <= 0
+    ) {
+        throw new RangeError(
+            `Single-tile floor material "${material.id}" has invalid pattern settings.`,
+        );
+    }
+
+    return {
+        key: JSON.stringify([
+            url.trim(),
+            material.floorPattern,
+            material.length,
+            material.width,
+        ]),
+        layout: createFloorPatternLayout(
+            material.floorPattern,
+            material.length,
+            material.width,
+        ),
+    };
+}
+
+export function getCachedFloorPatternTexture(
+    url: string | undefined,
+    material: Material,
+): Texture | undefined {
+    if (!url) return undefined;
+    const settings = getFloorPatternSettings(material, url);
+    return settings ? floorPatternTextureCache.get(settings.key) : undefined;
+}
+
 //==================================================
 // PRELOAD FLOOR TEXTURE
 //==================================================
@@ -527,12 +604,69 @@ export function preloadFloorTexture(
     return promise;
 }
 
+export function preloadFloorPatternTexture(
+    url: string | undefined,
+    material: Material,
+): Promise<Texture | null> {
+    if (!url || url.trim() === "") return Promise.resolve(null);
+
+    const settings = getFloorPatternSettings(material, url);
+    if (!settings) return preloadFloorTexture(url);
+
+    const cached = floorPatternTextureCache.get(settings.key);
+    if (cached) return Promise.resolve(cached);
+
+    const pending = floorPatternTexturePromises.get(settings.key);
+    if (pending) return pending;
+
+    const promise = preloadFloorTexture(url)
+        .then(sourceTexture => {
+            if (!sourceTexture) return null;
+
+            const sourceImage = getFloorCanvasImageSource(sourceTexture.image);
+            const canvas = createFloorPatternCanvas(
+                sourceImage.image,
+                sourceImage.width,
+                sourceImage.height,
+                settings.layout,
+            );
+            const texture = new CanvasTexture(canvas);
+            texture.colorSpace = SRGBColorSpace;
+            texture.wrapS = RepeatWrapping;
+            texture.wrapT = RepeatWrapping;
+            texture.needsUpdate = true;
+            floorPatternTextureCache.set(settings.key, texture);
+            return texture;
+        })
+        .catch(error => {
+            console.error(
+                "Failed to generate the floor pattern texture:",
+                material.id,
+                error,
+            );
+            return null;
+        })
+        .finally(() => {
+            floorPatternTexturePromises.delete(settings.key);
+        });
+
+    floorPatternTexturePromises.set(settings.key, promise);
+    return promise;
+}
+
+function disposeFloorPatternTextures(): void {
+    floorPatternTextureCache.forEach(texture => texture.dispose());
+    floorPatternTextureCache.clear();
+    floorPatternTexturePromises.clear();
+}
+
 //==================================================
 // REFRESH
 //==================================================
 
 export async function refreshFloorMaterials():
     Promise<FloorMaterial[]> {
+    disposeFloorPatternTextures();
     cachedDefaultFloorMaterial = null;
     cachedFloorMaterials = [];
     cachedFloorStorageSources = [];

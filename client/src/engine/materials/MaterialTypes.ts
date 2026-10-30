@@ -1,3 +1,5 @@
+import type { FloorPattern } from "../../../../shared/flooring/patterns";
+
 export type MaterialCategory =
     | "flooring"
     | "wallFinish";
@@ -18,6 +20,14 @@ export interface Material {
 
     // Flooring price for one individual tile.
     pricePerPiece?: number;
+
+    length?: number;
+
+    width?: number;
+
+    floorMaterialMode?: "single-tile";
+
+    floorPattern?: FloorPattern;
 
     // Image shown in the material selection UI
     thumbnail?: string;

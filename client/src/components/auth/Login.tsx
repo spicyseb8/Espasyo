@@ -36,17 +36,10 @@ import {
 import { auth } from "@/firebase/firebase";
 import { validateLoginForm } from "@/utils/validators";
 
-interface LoginFormProps {
-  onSignup: () => void;
-  onForgotPassword: () => void;
-}
-
 export function LoginForm({
-  onSignup,
-  onForgotPassword,
   className,
   ...props
-}: LoginFormProps & React.ComponentProps<"div">) {
+}: React.ComponentProps<"div">) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -233,14 +226,6 @@ export function LoginForm({
                   <FieldLabel htmlFor="password">
                     Password
                   </FieldLabel>
-
-                  <button
-                    type="button"
-                    onClick={onForgotPassword}
-                    className="cursor-pointer ml-auto text-sm underline-offset-4 hover:underline"
-                  >
-                    Forgot your password?
-                  </button>
                 </div>
 
                 <Input
@@ -274,18 +259,6 @@ export function LoginForm({
                     ? "Signing in..."
                     : "Login"}
                 </Button>
-
-                <FieldDescription className="text-center">
-                  Don't have an account?{" "}
-
-                  <button
-                    type="button"
-                    onClick={onSignup}
-                    className="cursor-pointer ml-auto text-sm underline-offset-4 hover:underline"
-                  >
-                    Sign up
-                  </button>
-                </FieldDescription>
               </Field>
 
             </FieldGroup>

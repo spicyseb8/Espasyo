@@ -1,3 +1,5 @@
+import type { FloorPattern } from "../../../../shared/flooring/patterns";
+
 export type AssetType =
   | "floor"
   | "wall"
@@ -23,6 +25,10 @@ export interface Asset {
   length?: number | null;
 
   width?: number | null;
+
+  floorMaterialMode?: "single-tile";
+
+  floorPattern?: FloorPattern;
 
   asset_status?:
     | AssetStatus

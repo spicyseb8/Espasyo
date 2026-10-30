@@ -14,6 +14,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 
 import AssetThumbnail from "@/components/asset-preview/AssetThumbnail";
+import PreviewScene from "@/components/asset-preview/PreviewScene";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -36,7 +37,17 @@ import type {
   AssetType,
 } from "@/services/assets/asset-types";
 import { createAsset } from "@/services/assets/createAsset";
-import { centimetersToMeters } from "@/services/assets/flooringDimensions";
+import {
+  DEFAULT_FLOOR_GROUT_WIDTH_M,
+  FLOOR_PATTERN_DEFINITIONS,
+  floorDimensionToMeters,
+  isHerringboneTileRatio,
+  isFloorPattern,
+} from "../../../../shared/flooring/patterns";
+import type {
+  FloorDimensionUnit,
+  FloorPattern,
+} from "../../../../shared/flooring/patterns";
 import {
   FURNITURE_CATEGORY_OPTIONS,
   FURNITURE_SPECIAL_CATEGORIES,
@@ -426,9 +437,13 @@ export default function CreateAssetModal({
   const [roughness, setRoughness] = useState("0.8");
   const [metalness, setMetalness] = useState("0");
 
-  // Flooring dimensions are entered in centimeters.
+  // Flooring dimensions are entered in the selected unit and converted to meters on submit.
   const [floorLength, setFloorLength] = useState("");
   const [floorWidth, setFloorWidth] = useState("");
+  const [floorDimensionUnit, setFloorDimensionUnit] =
+    useState<FloorDimensionUnit>("cm");
+  const [floorPattern, setFloorPattern] =
+    useState<FloorPattern>("stack-bond");
 
   const [files, setFiles] = useState(INITIAL_FILES);
   const [modelPreviewURL, setModelPreviewURL] = useState<string | null>(null);
@@ -459,8 +474,21 @@ export default function CreateAssetModal({
       CATEGORY_OPTIONS[assetType].find(([value]) => value === category)?.[1]) ||
     resolvedCategory;
 
-  // Only used for the 3D furniture preview. Textures and colors are drawn
-  // directly in the preview panel below.
+  const parsedFloorLength = Number(floorLength);
+  const parsedFloorWidth = Number(floorWidth);
+  const previewFloorLength =
+    floorLength.trim() &&
+    Number.isFinite(parsedFloorLength) &&
+    parsedFloorLength > 0
+      ? floorDimensionToMeters(parsedFloorLength, floorDimensionUnit)
+      : 0.6;
+  const previewFloorWidth =
+    floorWidth.trim() &&
+    Number.isFinite(parsedFloorWidth) &&
+    parsedFloorWidth > 0
+      ? floorDimensionToMeters(parsedFloorWidth, floorDimensionUnit)
+      : 0.3;
+
   const previewAsset: Asset = {
     id: "new-asset-preview",
     name: name.trim() || "Asset preview",
@@ -473,7 +501,20 @@ export default function CreateAssetModal({
     diffuse_url: diffusePreviewURL,
     diffuse_path: diffusePreviewURL,
     base_color_url: diffusePreviewURL,
-    color: null,
+    color:
+      assetType === "wall" && wallMode === "color"
+        ? color
+        : null,
+    roughness: Number(roughness),
+    metalness: Number(metalness),
+    floorMaterialMode:
+      assetType === "floor" ? "single-tile" : undefined,
+    floorPattern:
+      assetType === "floor" ? floorPattern : undefined,
+    length:
+      assetType === "floor" ? previewFloorLength : undefined,
+    width:
+      assetType === "floor" ? previewFloorWidth : undefined,
   };
 
   const clearPreviewURLs = () => {
@@ -517,6 +558,8 @@ export default function CreateAssetModal({
 
     setFloorLength("");
     setFloorWidth("");
+    setFloorDimensionUnit("cm");
+    setFloorPattern("stack-bond");
 
     setFiles(INITIAL_FILES);
     setError("");
@@ -546,6 +589,8 @@ export default function CreateAssetModal({
     // Clear the old dimensions when switching asset types.
     setFloorLength("");
     setFloorWidth("");
+    setFloorDimensionUnit("cm");
+    setFloorPattern("stack-bond");
 
     setError("");
   };
@@ -667,7 +712,7 @@ export default function CreateAssetModal({
         !Number.isFinite(numericLength) ||
         numericLength <= 0
       ) {
-        return setError("Enter a floor length greater than 0 centimeters.");
+        return setError(`Enter a floor length greater than 0 ${floorDimensionUnit}.`);
       }
 
       if (
@@ -675,7 +720,24 @@ export default function CreateAssetModal({
         !Number.isFinite(numericWidth) ||
         numericWidth <= 0
       ) {
-        return setError("Enter a floor width greater than 0 centimeters.");
+        return setError(`Enter a floor width greater than 0 ${floorDimensionUnit}.`);
+      }
+
+      if (
+        floorDimensionToMeters(numericLength, floorDimensionUnit) <= DEFAULT_FLOOR_GROUT_WIDTH_M ||
+        floorDimensionToMeters(numericWidth, floorDimensionUnit) <= DEFAULT_FLOOR_GROUT_WIDTH_M
+      ) {
+        return setError("Tile length and width must each be greater than the 3 mm grout width.");
+      }
+
+      if (
+        floorPattern === "herringbone" &&
+        !isHerringboneTileRatio(
+          floorDimensionToMeters(numericLength, floorDimensionUnit),
+          floorDimensionToMeters(numericWidth, floorDimensionUnit)
+        )
+      ) {
+        return setError("Herringbone requires tile length to be twice the tile width.");
       }
     }
 
@@ -713,13 +775,16 @@ export default function CreateAssetModal({
         // Include the dimensions only for floors.
         length:
           assetType === "floor"
-            ? centimetersToMeters(Number(floorLength))
+            ? floorDimensionToMeters(Number(floorLength), floorDimensionUnit)
             : undefined,
 
         width:
           assetType === "floor"
-            ? centimetersToMeters(Number(floorWidth))
+            ? floorDimensionToMeters(Number(floorWidth), floorDimensionUnit)
             : undefined,
+
+        floorPattern:
+          assetType === "floor" ? floorPattern : undefined,
       });
 
       onCreated(created);
@@ -751,43 +816,14 @@ export default function CreateAssetModal({
       );
     }
 
-    if (assetType === "wall" && wallMode === "color") {
-      return (
-        <div
-          className="h-full w-full transition-colors"
-          style={{ backgroundColor: color }}
-          role="img"
-          aria-label={`Wall color ${color}`}
-        />
-      );
-    }
-
-    if (diffusePreviewURL) {
-      return (
-        <div
-          className="h-full w-full"
-          role="img"
-          aria-label="Texture preview"
-          style={{
-            backgroundImage: `url(${diffusePreviewURL})`,
-            backgroundPosition: "center",
-            // Floors tile like real flooring; wall images fill the frame.
-            ...(assetType === "floor"
-              ? { backgroundSize: "96px 96px", backgroundRepeat: "repeat" }
-              : { backgroundSize: "cover", backgroundRepeat: "no-repeat" }),
-          }}
-        />
-      );
+    if (assetType === "floor" || assetType === "wall") {
+      return <PreviewScene asset={previewAsset} />;
     }
 
     return (
       <PreviewEmpty
         icon={ImageIcon}
-        text={
-          assetType === "floor"
-            ? "Upload a diffuse texture to see it tiled here."
-            : "Upload an image to preview this wall."
-        }
+        text="Choose an asset type to preview it in 3D."
       />
     );
   };
@@ -992,8 +1028,8 @@ export default function CreateAssetModal({
                   {assetType === "floor" && (
                     <>
                       <Section
-                        title="Texture"
-                        description="The image repeated across the floor."
+                        title="Single tile image"
+                        description="The image is cropped to fill each configured tile face."
                       >
                         <FileField
                           label="Diffuse texture"
@@ -1009,53 +1045,108 @@ export default function CreateAssetModal({
 
                       <Section
                         title="Tile dimensions"
-                        description="Length and width of one tile, in centimeters."
+                        description="Physical size of one tile; image pixel dimensions do not affect this."
                       >
-                        <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_140px]">
                           <Field label="Length" htmlFor="floor-length" required>
-                            <div className="relative">
-                              <Input
-                                id="floor-length"
-                                type="number"
-                                min="0"
-                                step="any"
-                                className="w-full pr-10"
-                                value={floorLength}
-                                onChange={(event) =>
-                                  setFloorLength(event.target.value)
-                                }
-                                placeholder="60"
-                                required
-                                disabled={saving}
-                              />
-                              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                                cm
-                              </span>
-                            </div>
+                            <Input
+                              id="floor-length"
+                              type="number"
+                              min="0"
+                              step="any"
+                              className="w-full"
+                              value={floorLength}
+                              onChange={(event) =>
+                                setFloorLength(event.target.value)
+                              }
+                              placeholder={floorDimensionUnit === "cm" ? "60" : "600"}
+                              required
+                              disabled={saving}
+                            />
                           </Field>
 
                           <Field label="Width" htmlFor="floor-width" required>
-                            <div className="relative">
-                              <Input
-                                id="floor-width"
-                                type="number"
-                                min="0"
-                                step="any"
-                                className="w-full pr-10"
-                                value={floorWidth}
-                                onChange={(event) =>
-                                  setFloorWidth(event.target.value)
+                            <Input
+                              id="floor-width"
+                              type="number"
+                              min="0"
+                              step="any"
+                              className="w-full"
+                              value={floorWidth}
+                              onChange={(event) =>
+                                setFloorWidth(event.target.value)
+                              }
+                              placeholder={floorDimensionUnit === "cm" ? "30" : "300"}
+                              required
+                              disabled={saving}
+                            />
+                          </Field>
+
+                          <Field label="Unit" htmlFor="floor-dimension-unit" required>
+                            <Select
+                              value={floorDimensionUnit}
+                              onValueChange={(value) => {
+                                if (
+                                  value === "cm" ||
+                                  value === "mm"
+                                ) {
+                                  if (value === floorDimensionUnit) return;
+                                  const unitFactor =
+                                    value === "mm" ? 10 : 0.1;
+                                  const convertValue = (current: string) => {
+                                    if (!current.trim()) return current;
+                                    const numeric = Number(current);
+                                    return Number.isFinite(numeric)
+                                      ? String(numeric * unitFactor)
+                                      : current;
+                                  };
+                                  setFloorLength(convertValue);
+                                  setFloorWidth(convertValue);
+                                  setFloorDimensionUnit(value);
                                 }
-                                placeholder="60"
-                                required
-                                disabled={saving}
-                              />
-                              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                                cm
-                              </span>
-                            </div>
+                              }}
+                            >
+                              <SelectTrigger id="floor-dimension-unit" className="w-full">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="cm">cm</SelectItem>
+                                <SelectItem value="mm">mm</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </Field>
                         </div>
+                      </Section>
+
+                      <Section
+                        title="Laying pattern"
+                        description="Choose the arrangement for these individual tiles."
+                      >
+                        <Field label="Pattern" htmlFor="floor-pattern" required>
+                          <Select
+                            value={floorPattern}
+                            onValueChange={(value) => {
+                              if (isFloorPattern(value)) setFloorPattern(value);
+                            }}
+                          >
+                            <SelectTrigger id="floor-pattern" className="w-full">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {FLOOR_PATTERN_DEFINITIONS.map((pattern) => (
+                                <SelectItem key={pattern.id} value={pattern.id}>
+                                  {pattern.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </Field>
+                        <p className="text-xs text-muted-foreground">
+                          Grout is neutral gray and {DEFAULT_FLOOR_GROUT_WIDTH_M * 1000} mm wide.
+                          Images with a different aspect ratio are center-cropped to fill each tile.
+                          {floorPattern === "herringbone" &&
+                            " Herringbone requires a 2:1 tile length-to-width ratio."}
+                        </p>
                       </Section>
                     </>
                   )}

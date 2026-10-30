@@ -7,6 +7,10 @@ const DURATION = 1100; // ms per step
 const WHEEL_IDLE = 100; // ms of silence needed before a new wheel gesture counts
 const SWIPE_MIN = 40; // px
 
+const isInsideActiveCaption = (target: EventTarget | null) =>
+  target instanceof Element &&
+  target.closest(".home__caption--rich.is-on") !== null;
+
 /** Panels are 0..lastPanel (0 = hero). One gesture moves exactly one panel. */
 export function usePagedScroll(
   stageRef: RefObject<HTMLElement | null>,
@@ -20,6 +24,7 @@ export function usePagedScroll(
     let raf = 0;
     let lastWheel = 0;
     let touchY: number | null = null;
+    let touchStartedInCaption = false;
 
     const stageTop = () =>
       stageRef.current!.getBoundingClientRect().top + window.scrollY;
@@ -58,7 +63,7 @@ export function usePagedScroll(
     goRef.current = goToPanel;
 
     const onWheel = (e: WheelEvent) => {
-      if (e.ctrlKey || !inStage()) return;
+      if (e.ctrlKey || !inStage() || isInsideActiveCaption(e.target)) return;
       const dir = Math.sign(e.deltaY);
       if (!dir || !hasNext(dir)) return; // let the page behave normally at the ends
       e.preventDefault();
@@ -70,10 +75,16 @@ export function usePagedScroll(
     };
 
     const onTouchStart = (e: TouchEvent) => {
-      touchY = e.touches[0].clientY;
+      touchY = e.touches[0]?.clientY ?? null;
+      touchStartedInCaption = isInsideActiveCaption(e.target);
     };
     const onTouchMove = (e: TouchEvent) => {
-      if (touchY === null || !inStage()) return;
+      if (
+        touchY === null ||
+        touchStartedInCaption ||
+        !inStage()
+      )
+        return;
       const dir = Math.sign(touchY - e.touches[0].clientY);
       if (dir && hasNext(dir)) e.preventDefault();
     };
@@ -81,14 +92,29 @@ export function usePagedScroll(
       if (touchY === null) return;
       const dy = touchY - e.changedTouches[0].clientY;
       touchY = null;
+      if (touchStartedInCaption) {
+        touchStartedInCaption = false;
+        return;
+      }
       if (animating || !inStage() || Math.abs(dy) < SWIPE_MIN) return;
       const dir = Math.sign(dy);
       if (hasNext(dir)) goToPanel(panelAt() + dir);
     };
+    const onTouchCancel = () => {
+      touchY = null;
+      touchStartedInCaption = false;
+    };
 
     const onKey = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement)?.tagName;
-      if (!inStage() || tag === "INPUT" || tag === "TEXTAREA") return;
+      const target = e.target;
+      const tag = target instanceof HTMLElement ? target.tagName : "";
+      if (
+        !inStage() ||
+        isInsideActiveCaption(target) ||
+        tag === "INPUT" ||
+        tag === "TEXTAREA"
+      )
+        return;
       let dir = 0;
       if (
         ["ArrowDown", "PageDown"].includes(e.key) ||
@@ -106,6 +132,7 @@ export function usePagedScroll(
     window.addEventListener("touchstart", onTouchStart, { passive: true });
     window.addEventListener("touchmove", onTouchMove, { passive: false });
     window.addEventListener("touchend", onTouchEnd, { passive: true });
+    window.addEventListener("touchcancel", onTouchCancel, { passive: true });
     window.addEventListener("keydown", onKey);
     return () => {
       cancelAnimationFrame(raf);
@@ -113,6 +140,7 @@ export function usePagedScroll(
       window.removeEventListener("touchstart", onTouchStart);
       window.removeEventListener("touchmove", onTouchMove);
       window.removeEventListener("touchend", onTouchEnd);
+      window.removeEventListener("touchcancel", onTouchCancel);
       window.removeEventListener("keydown", onKey);
     };
   }, [stageRef, lastPanel, reduce]);

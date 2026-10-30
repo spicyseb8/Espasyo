@@ -7,6 +7,7 @@ import {
 
 import {
     CanvasTexture,
+    Float32BufferAttribute,
     Shape,
     Path,
     ShapeGeometry,
@@ -39,9 +40,17 @@ import type {
 } from "../../engine/materials/MaterialTypes";
 
 import {
+    createFloorPatternLayout,
+    getFloorPatternUV,
+    isFloorPattern
+} from "../../../../shared/flooring/patterns";
+
+import {
     DEFAULT_FLOOR_MATERIAL_ID,
     LOCAL_DEFAULT_FLOOR_TEXTURE,
+    getCachedFloorPatternTexture,
     getCachedFloorTexture,
+    preloadFloorPatternTexture,
     preloadFloorTexture
 } from "../../engine/materials/floors";
 
@@ -296,37 +305,73 @@ function computeLabelAnchor(
 }
 
 function useFloorTexture(
-    url?: string
+    url: string | undefined,
+    material: Material
 ): Texture | null {
+    const materialSettings = useMemo<Material>(() => ({
+        id: material.id,
+        name: material.name,
+        category: material.category,
+        pricePerSquareMeter: material.pricePerSquareMeter,
+        floorMaterialMode: material.floorMaterialMode,
+        floorPattern: material.floorPattern,
+        length: material.length,
+        width: material.width
+    }), [
+        material.id,
+        material.name,
+        material.category,
+        material.pricePerSquareMeter,
+        material.floorMaterialMode,
+        material.floorPattern,
+        material.length,
+        material.width
+    ]);
+    const requestKey = url
+        ? JSON.stringify([
+            url,
+            materialSettings.floorMaterialMode,
+            materialSettings.floorPattern,
+            materialSettings.length,
+            materialSettings.width
+        ])
+        : "";
     const [loadedTexture, setLoadedTexture] =
-        useState<Texture | null>(null);
+        useState<{ key: string; texture: Texture | null } | null>(null);
 
     useEffect(() => {
-        if (!url) {
-            setLoadedTexture(null);
-            return;
-        }
+        if (!url) return;
 
         let cancelled = false;
 
-        preloadFloorTexture(url).then(texture => {
+        const loadTexture =
+            materialSettings.floorMaterialMode === "single-tile"
+                ? preloadFloorPatternTexture(url, materialSettings)
+                : preloadFloorTexture(url);
+        loadTexture.then(texture => {
             if (!cancelled) {
-                setLoadedTexture(texture);
+                setLoadedTexture({ key: requestKey, texture });
             }
         });
 
         return () => {
             cancelled = true;
         };
-    }, [url]);
+    }, [
+        url,
+        materialSettings,
+        requestKey
+    ]);
 
     if (!url) {
         return null;
     }
 
     return (
-        getCachedFloorTexture(url) ??
-        loadedTexture
+        (materialSettings.floorMaterialMode === "single-tile"
+            ? getCachedFloorPatternTexture(url, materialSettings)
+            : getCachedFloorTexture(url)) ??
+        (loadedTexture?.key === requestKey ? loadedTexture.texture : null)
     );
 }
 
@@ -419,7 +464,7 @@ export default function Floor({
             material.id === DEFAULT_FLOOR_MATERIAL_ID
     );
 
-    const defaultFloorMaterial = firebaseDefaultMaterial
+    const defaultFloorMaterial: Material = firebaseDefaultMaterial
         ? {
             ...firebaseDefaultMaterial,
             texture: LOCAL_DEFAULT_FLOOR_TEXTURE,
@@ -444,7 +489,7 @@ export default function Floor({
 
     const textureUrl = displayMaterial?.texture;
 
-    const floorTexture = useFloorTexture(textureUrl);
+    const floorTexture = useFloorTexture(textureUrl, displayMaterial);
 
     const geometry = useMemo(() => {
         const loops = region.boundaryLoops ?? [];
@@ -499,6 +544,56 @@ export default function Floor({
 
         return new ShapeGeometry(shape);
     }, [region.boundaryLoops]);
+
+    const floorGeometry = useMemo(() => {
+        const length = displayMaterial.length;
+        const width = displayMaterial.width;
+        if (
+            !geometry ||
+            displayMaterial.floorMaterialMode !== "single-tile" ||
+            !isFloorPattern(displayMaterial.floorPattern) ||
+            typeof length !== "number" ||
+            typeof width !== "number"
+        ) {
+            return geometry;
+        }
+
+        const layout = createFloorPatternLayout(
+            displayMaterial.floorPattern,
+            length,
+            width
+        );
+        const patternedGeometry = geometry.clone();
+        const positions = patternedGeometry.getAttribute("position");
+        const uvValues = new Float32Array(positions.count * 2);
+
+        for (let index = 0; index < positions.count; index += 1) {
+            const uv = getFloorPatternUV(
+                positions.getX(index),
+                positions.getY(index),
+                layout
+            );
+            uvValues[index * 2] = uv.x;
+            uvValues[index * 2 + 1] = uv.y;
+        }
+
+        patternedGeometry.setAttribute(
+            "uv",
+            new Float32BufferAttribute(uvValues, 2)
+        );
+        return patternedGeometry;
+    }, [
+        geometry,
+        displayMaterial.floorMaterialMode,
+        displayMaterial.floorPattern,
+        displayMaterial.length,
+        displayMaterial.width
+    ]);
+
+    useEffect(() => {
+        if (!floorGeometry || floorGeometry === geometry) return;
+        return () => floorGeometry.dispose();
+    }, [floorGeometry, geometry]);
 
     const labelAnchor = useMemo(
         () => computeLabelAnchor(region),
@@ -588,7 +683,7 @@ export default function Floor({
         <group>
             {/* Actual floor and its applied material */}
             <mesh
-                geometry={geometry}
+                geometry={floorGeometry ?? geometry}
                 userData={{
                     isFloor: true
                 }}

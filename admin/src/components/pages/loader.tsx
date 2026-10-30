@@ -292,11 +292,11 @@ export default function ModelSizeChecker() {
             />
             <RoomDimension
               label="Back wall (W × H × T)"
-              value={`${PREVIEW_ROOM_DIMENSIONS.width.toFixed(2)} × ${PREVIEW_ROOM_DIMENSIONS.wallHeight.toFixed(2)} × ${PREVIEW_ROOM_DIMENSIONS.backWallThickness.toFixed(2)} m`}
+              value={`${PREVIEW_ROOM_DIMENSIONS.width.toFixed(2)} × ${PREVIEW_ROOM_DIMENSIONS.wallHeight.toFixed(2)} × ${PREVIEW_ROOM_DIMENSIONS.wallThickness.toFixed(2)} m`}
             />
             <RoomDimension
               label="Left wall (T × H × L)"
-              value={`${PREVIEW_ROOM_DIMENSIONS.leftWallThickness.toFixed(2)} × ${PREVIEW_ROOM_DIMENSIONS.wallHeight.toFixed(2)} × ${(PREVIEW_ROOM_DIMENSIONS.depth - PREVIEW_ROOM_DIMENSIONS.backWallThickness).toFixed(2)} m`}
+              value={`${PREVIEW_ROOM_DIMENSIONS.wallThickness.toFixed(2)} × ${PREVIEW_ROOM_DIMENSIONS.wallHeight.toFixed(2)} × ${(PREVIEW_ROOM_DIMENSIONS.depth - PREVIEW_ROOM_DIMENSIONS.wallThickness).toFixed(2)} m`}
             />
           </section>
 

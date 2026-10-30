@@ -1,0 +1,390 @@
+/* ───────── Rich room caption cards (override Home.css) ───────── */
+.home__caption.home__caption--rich {
+  width: min(440px, 100%);
+  max-height: calc(100svh - 150px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  visibility: hidden;
+  /* hide only after the fade-out finishes; show instantly */
+  transition: visibility 0s linear 0.45s;
+}
+.home__caption.home__caption--rich.is-on {
+  visibility: visible;
+  transition-delay: 0s;
+  pointer-events: auto;
+}
+
+.home__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.home__chips li {
+  padding: 4px 10px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.6);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink-60);
+}
+
+@media (max-height: 760px) {
+  .home__caption--rich .home__caption-body {
+    display: none;
+  }
+}
+
+/* ───────── Widget shell ───────── */
+.rw {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+.rw-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.rw-field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.rw-label {
+  min-width: 64px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink-60);
+}
+.rw-hint {
+  margin: 0;
+  font-size: 11px;
+  color: var(--ink-45);
+}
+
+.rw-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.rw-pill {
+  height: 28px;
+  padding: 0 11px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--ink);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s, transform 0.15s;
+}
+.rw-pill:hover {
+  border-color: var(--ink);
+}
+.rw-pill:active {
+  transform: scale(0.97);
+}
+.rw-pill[aria-pressed="true"] {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: #fff;
+}
+.rw-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.rw-icon-btn:hover {
+  border-color: var(--ink);
+}
+.rw button:focus-visible,
+.rw input:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* ───────── 1. Plan ───────── */
+.rw-plan {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  overflow: hidden;
+  border-radius: 10px;
+  background-color: rgba(255, 255, 255, 0.65);
+  background-image: radial-gradient(rgba(0, 0, 0, 0.12) 1px, transparent 1px);
+  background-size: 14px 14px;
+}
+.rw-plan__walls {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.rw-plan__walls path {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.rw-plan__walls .rw-plan__door {
+  stroke-width: 1.2;
+  stroke-dasharray: 3 3;
+  stroke: var(--ink-45);
+}
+.rw-piece {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(27, 27, 27, 0.5);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.14);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+.rw-piece:active {
+  cursor: grabbing;
+}
+.rw-piece--round {
+  border-radius: 999px;
+}
+
+/* ───────── 2. Finishes ───────── */
+.rw-room {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #ddd;
+}
+.rw-room__wall {
+  position: absolute;
+  inset: 0 0 42% 0;
+  transition: background-color 0.45s ease;
+}
+.rw-room__wall::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 18%;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.14));
+}
+.rw-room__window {
+  position: absolute;
+  top: 14%;
+  right: 12%;
+  width: 24%;
+  height: 52%;
+  border: 3px solid rgba(255, 255, 255, 0.9);
+  background: linear-gradient(180deg, #cfe3f2, #eef6fb);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+.rw-room__art {
+  position: absolute;
+  top: 20%;
+  left: 14%;
+  width: 14%;
+  height: 30%;
+  border: 3px solid rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.35);
+}
+.rw-room__floor-wrap {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 42%;
+  overflow: hidden;
+  perspective: 260px;
+}
+.rw-room__floor {
+  position: absolute;
+  inset: -30% -20% 0;
+  transform: rotateX(58deg);
+  transform-origin: top center;
+}
+.rw-room__sofa {
+  position: absolute;
+  bottom: 24%;
+  left: 24%;
+  width: 36%;
+  height: 22%;
+  border-radius: 10px 10px 6px 6px;
+  background: #5c6670;
+  box-shadow:
+    inset 0 10px 0 rgba(255, 255, 255, 0.08),
+    0 8px 14px rgba(0, 0, 0, 0.25);
+}
+.rw-room__lamp {
+  position: absolute;
+  bottom: 30%;
+  left: 66%;
+  width: 3px;
+  height: 30%;
+  background: #333;
+}
+.rw-room__lamp::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  left: -9px;
+  width: 21px;
+  height: 14px;
+  border-radius: 10px 10px 2px 2px;
+  background: #f3e3b3;
+}
+
+.rw-swatches {
+  display: flex;
+  gap: 8px;
+}
+.rw-swatch {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.rw-swatch:hover {
+  transform: scale(1.12);
+}
+.rw-swatch[aria-pressed="true"] {
+  box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px var(--ink);
+}
+
+/* ───────── 3. Estimate ───────── */
+.rw-est__stage {
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+  height: 96px;
+  padding: 8px;
+  border-radius: 10px;
+  background-color: rgba(255, 255, 255, 0.65);
+}
+.rw-est__rect {
+  position: relative;
+  min-width: 16%;
+  min-height: 16%;
+  border: 2px solid var(--ink);
+  border-radius: 3px;
+  background-color: rgba(27, 27, 27, 0.06);
+  background-image:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.2) 1px, transparent 1px),
+    linear-gradient(rgba(0, 0, 0, 0.2) 1px, transparent 1px);
+}
+.rw-est__dims {
+  position: absolute;
+  right: 6px;
+  bottom: 4px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 10px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.rw-sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rw-slider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.rw-slider input[type="range"] {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--ink);
+  touch-action: none;
+}
+.rw-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0;
+}
+.rw-stats div {
+  padding: 8px 10px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.6);
+}
+.rw-stats dt {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-45);
+}
+.rw-stats dd {
+  margin: 2px 0 0;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ───────── Footer points ───────── */
+.home__outro-points {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 28px;
+  margin: 0 0 32px;
+  padding: 0;
+  list-style: none;
+}
+.home__outro-points li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.78);
+}
+.home__outro-points li::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #fff;
+}
+
+@media (max-width: 720px) {
+  .rw-label {
+    min-width: 52px;
+  }
+  .rw-stats dd {
+    font-size: 13px;
+  }
+}

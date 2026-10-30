@@ -6,6 +6,7 @@ import { useProgress } from "@react-three/drei";
 import NavBar from "./NavBar";
 import { WAYPOINTS } from "./Waypoints";
 import { usePagedScroll } from "./usePagedScroll";
+import { RoomWidget, type WidgetKind } from "./RoomWidgets";
 import "./Home.css";
 
 const RoomScene = lazy(() => import("./Roomscene"));
@@ -16,9 +17,49 @@ const SPRING = { type: "spring", bounce: 0, duration: 0.45 } as const;
 let hasLoadedOnce = false;
 
 const FEATURES = [
-  { title: "See it in 3D", body: "Walk through every room before anything is built or bought." },
-  { title: "Arrange and choose", body: "Move furniture and try materials and finishes." },
-  { title: "Know the cost", body: "Your estimate updates as you change the design." },
+  { title: "Draw and arrange", body: "Build room layouts wall by wall and place furniture in 3D." },
+  { title: "Choose finishes", body: "Try floor finishes and wall colors before anything is built." },
+  { title: "Know the cost", body: "Room areas and flooring estimates update as you design." },
+];
+
+/*
+ * Content for each room panel, in the same order as WAYPOINTS.
+ * The LAST waypoint is the footer, so it has no entry here.
+ */
+const ROOM_CONTENT: {
+  nav: string;
+  title: string;
+  body: string;
+  chips: string[];
+  widget: WidgetKind;
+}[] = [
+  {
+    nav: "Plan & build",
+    title: "Draw walls. Arrange furniture.",
+    body: "Sketch your room layout wall by wall, then drop in furniture and move it around until the space feels right.",
+    chips: ["Room layouts", "Wall drawing", "Furniture placement"],
+    widget: "plan",
+  },
+  {
+    nav: "Finishes",
+    title: "Try floors and wall colors.",
+    body: "Swap floor finishes and repaint walls in a click, and see the result in 3D before anything is bought or built.",
+    chips: ["Floor finishes", "Wall colors", "Live 3D preview"],
+    widget: "finishes",
+  },
+  {
+    nav: "Estimate",
+    title: "Know the area and the cost.",
+    body: "Espasyo measures each room, works out how much flooring you need and what it will cost, and updates as your design changes.",
+    chips: ["Room area", "Flooring needed", "Cost estimate"],
+    widget: "estimate",
+  },
+];
+
+const OUTRO_POINTS = [
+  "First-person walkthrough",
+  "Area and flooring estimates",
+  "All your projects in one workspace",
 ];
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -124,6 +165,9 @@ export default function Home() {
   const rise = reduce ? 0 : 14;
   const lastIndex = WAYPOINTS.length - 1;
 
+  const navLabel = (i: number) =>
+    i === lastIndex ? "Get started" : ROOM_CONTENT[i]?.nav ?? WAYPOINTS[i].name;
+
   return (
     <div className="home">
       <NavBar />
@@ -168,8 +212,9 @@ export default function Home() {
                   home before it exists.
                 </h1>
                 <p className="home__hero-subhead">
-                  Lay out rooms in 3D, place real furniture, pick materials, and
-                  watch your project cost update live.
+                  Espasyo is a 3D interior design and space planning system by Jocer
+                  Construction. Draw walls, arrange furniture, pick finishes, and watch
+                  your flooring cost update live.
                 </p>
 
                 <div className="home__cta-row">
@@ -200,75 +245,117 @@ export default function Home() {
           </section>
 
           {/* ───────── One panel per room; the last one is the footer ───────── */}
-          {WAYPOINTS.map((wp, i) =>
-            i === lastIndex ? (
-              <section
-                key={wp.id}
-                className="home__panel home__panel--outro"
-                aria-label="Get started"
-              >
-                <div className="home__container">
-                  <motion.div
-                    className="home__outro"
-                    initial={false}
-                    animate={{ opacity: footerOn ? 1 : 0, y: footerOn ? 0 : rise }}
-                    transition={SPRING}
-                    style={{ pointerEvents: footerOn ? "auto" : "none" }}
-                    aria-hidden={!footerOn}
-                  >
-                    <div className="home__outro-cta">
-                      <p className="home__eyebrow home__eyebrow--light">Your turn</p>
-                      <h2 className="home__footer-title">
-                        Ready to design
-                        <br />
-                        the real thing?
-                      </h2>
-                      <Link
-                        to="/signup"
-                        className="home__cta home__cta--light"
-                        tabIndex={footerOn ? 0 : -1}
-                      >
-                        Start designing
-                        <ArrowRight className="home__cta-icon" strokeWidth={2} />
-                      </Link>
-                    </div>
+          {WAYPOINTS.map((wp, i) => {
+            if (i === lastIndex) {
+              return (
+                <section
+                  key={wp.id}
+                  className="home__panel home__panel--outro"
+                  aria-label="Get started"
+                >
+                  <div className="home__container">
+                    <motion.div
+                      className="home__outro"
+                      initial={false}
+                      animate={{ opacity: footerOn ? 1 : 0, y: footerOn ? 0 : rise }}
+                      transition={SPRING}
+                      style={{ pointerEvents: footerOn ? "auto" : "none" }}
+                      aria-hidden={!footerOn}
+                    >
+                      <div className="home__outro-cta">
+                        <p className="home__eyebrow home__eyebrow--light">Your turn</p>
+                        <h2 className="home__footer-title">
+                          Ready to design
+                          <br />
+                          the real thing?
+                        </h2>
 
-                    <footer className="home__footer-bottom">
-                      <p>© {new Date().getFullYear()} Espasyo. All rights reserved.</p>
-                      <nav aria-label="Footer">
-                        <Link to="/library" tabIndex={footerOn ? 0 : -1}>Library</Link>
-                        <Link to="/studio" tabIndex={footerOn ? 0 : -1}>Studio</Link>
-                        <Link to="/signup" tabIndex={footerOn ? 0 : -1}>Sign up</Link>
-                      </nav>
-                    </footer>
-                  </motion.div>
-                </div>
-              </section>
-            ) : (
-              <section key={wp.id} className="home__panel" aria-label={wp.name}>
+                        <ul className="home__outro-points">
+                          {OUTRO_POINTS.map((text, k) => (
+                            <motion.li
+                              key={text}
+                              initial={false}
+                              animate={{
+                                opacity: footerOn ? 1 : 0,
+                                x: footerOn ? 0 : -rise,
+                              }}
+                              transition={{ ...SPRING, delay: footerOn ? 0.12 + k * 0.09 : 0 }}
+                            >
+                              {text}
+                            </motion.li>
+                          ))}
+                        </ul>
+
+                        <Link
+                          to="/signup"
+                          className="home__cta home__cta--light"
+                          tabIndex={footerOn ? 0 : -1}
+                        >
+                          Start designing
+                          <ArrowRight className="home__cta-icon" strokeWidth={2} />
+                        </Link>
+                      </div>
+
+                      <footer className="home__footer-bottom">
+                        <p>
+                          © {new Date().getFullYear()} Espasyo by Jocer Construction. All
+                          rights reserved.
+                        </p>
+                        <nav aria-label="Footer">
+                          <Link to="/library" tabIndex={footerOn ? 0 : -1}>Library</Link>
+                          <Link to="/studio" tabIndex={footerOn ? 0 : -1}>Studio</Link>
+                          <Link to="/signup" tabIndex={footerOn ? 0 : -1}>Sign up</Link>
+                        </nav>
+                      </footer>
+                    </motion.div>
+                  </div>
+                </section>
+              );
+            }
+
+            const content = ROOM_CONTENT[i];
+            const isOn = active === i;
+
+            return (
+              <section key={wp.id} className="home__panel" aria-label={content?.nav ?? wp.name}>
                 <div className="home__container">
                   <motion.div
-                    className="home__caption"
+                    className={`home__caption${content ? " home__caption--rich" : ""}${
+                      isOn ? " is-on" : ""
+                    }`}
                     initial={false}
-                    animate={{ opacity: active === i ? 1 : 0, y: active === i ? 0 : rise }}
+                    animate={{ opacity: isOn ? 1 : 0, y: isOn ? 0 : rise }}
                     transition={SPRING}
+                    aria-hidden={!isOn}
                   >
                     <p className="home__room-index">
-                      {pad(i + 1)} <span>/ {pad(WAYPOINTS.length)}</span>
+                      {pad(i + 1)} <span>/ {pad(lastIndex)}</span>
                     </p>
-                    <h2 className="home__heading-2">{wp.name}</h2>
-                    <p className="home__caption-body">{wp.blurb}</p>
+                    <h2 className="home__heading-2">{content?.title ?? wp.name}</h2>
+                    <p className="home__caption-body">{content?.body ?? wp.blurb}</p>
+
+                    {content && (
+                      <>
+                        <ul className="home__chips">
+                          {content.chips.map((chip) => (
+                            <li key={chip}>{chip}</li>
+                          ))}
+                        </ul>
+                        <RoomWidget kind={content.widget} active={isOn} />
+                      </>
+                    )}
+
                     <div className="home__caption-track" aria-hidden>
                       <div
                         className="home__caption-fill"
-                        style={{ transform: `scaleX(${(i + 1) / WAYPOINTS.length})` }}
+                        style={{ transform: `scaleX(${(i + 1) / lastIndex})` }}
                       />
                     </div>
                   </motion.div>
                 </div>
               </section>
-            ),
-          )}
+            );
+          })}
         </div>
       </div>
 
@@ -283,12 +370,12 @@ export default function Home() {
             key={wp.id}
             type="button"
             className={`home__dot${active === i ? " is-active" : ""}`}
-            aria-label={i === lastIndex ? "Go to the end" : `Go to ${wp.name}`}
+            aria-label={i === lastIndex ? "Go to the end" : `Go to ${navLabel(i)}`}
             aria-current={active === i}
             tabIndex={showDots ? 0 : -1}
             onClick={() => goTo(i)}
           >
-            <span className="home__dot-label">{i === lastIndex ? "Get started" : wp.name}</span>
+            <span className="home__dot-label">{navLabel(i)}</span>
           </button>
         ))}
       </nav>
