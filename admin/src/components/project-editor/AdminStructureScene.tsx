@@ -3,9 +3,25 @@ import { Canvas } from "@react-three/fiber";
 import { useThree } from "@react-three/fiber";
 import { Html, Line } from "@react-three/drei";
 import { Suspense } from "react";
-import { CanvasTexture, DoubleSide, SRGBColorSpace, Vector3 } from "three";
+import {
+    CanvasTexture,
+    DoubleSide,
+    Mesh,
+    Raycaster,
+    SRGBColorSpace,
+    Vector2,
+    Vector3
+} from "three";
 import type { ThreeEvent } from "@react-three/fiber";
 import { Copy, Move, Trash2 } from "lucide-react";
+import {
+    AdminProceduralStaircase,
+    AdminStaircaseLandingMarker
+} from "./AdminProceduralStaircase";
+import type {
+    ProceduralStaircaseData,
+    StaircaseLandingData
+} from "../../../../shared/staircaseGeometry.ts";
 import type { Corner } from "@/components/project-loader/engine/walls/Corner";
 import type { Wall } from "@/components/project-loader/engine/walls/WallTypes";
 import AdminDoors from "@/components/project-loader/loader-components/AdminDoors";
@@ -15,9 +31,14 @@ import AdminLights from "@/components/project-loader/loader-components/AdminLigh
 import AdminWalls from "@/components/project-loader/loader-components/AdminWalls";
 import AdminWindows from "@/components/project-loader/loader-components/AdminWindows";
 import AdminCamera from "@/components/project-loader/loader-components/AdminCamera";
-import type { ManagedStructure, StructureWall } from "./structureTypes";
+import type {
+    ManagedStructure,
+    StructureStaircase,
+    StructureWall
+} from "./structureTypes";
+import type { StaircaseDrawingPhase } from "./staircaseActions";
 import type { RoomPreviewGeometry } from "./structureGeometry";
-import { wallLength, wallSurfaceArea } from "./structureGeometry";
+import { closestPointOnWall, wallLength, wallSurfaceArea } from "./structureGeometry";
 import type { Asset } from "@/components/project-loader/engine/assets/Asset";
 import type { BuildElementPlacementCandidate } from "./buildElementPlacement";
 import AdminBuildElementPreview, { AdminOpeningPreview } from "./AdminBuildElementPreview";
@@ -25,6 +46,7 @@ import AdminBlueprintPlane from "./AdminBlueprintPlane";
 
 interface AdminStructureSceneProps {
     structure: ManagedStructure;
+    floorId: string;
     blueprintUrl?: string | null;
     blueprintLocked?: boolean;
     blueprintVisible?: boolean;
@@ -49,17 +71,37 @@ interface AdminStructureSceneProps {
     onAssetModelBounds?: (assetId: string, bounds: { width: number; height: number; depth: number }) => void;
     drawingActive?: boolean;
     placementActive?: boolean;
+    staircaseDrawingActive?: boolean;
+    staircaseDrawingPhase?: StaircaseDrawingPhase;
     onDoorSelect?: (doorId: string) => void;
     onWindowSelect?: (windowId: string) => void;
-    selectedElement?: { kind: "door" | "window"; id: string } | null;
+    onStaircaseSelect?: (stairId: string) => void;
+    onStaircaseLandingSelect?: (landingId: string) => void;
+    selectedElement?: { kind: "door" | "window" | "staircase" | "landing"; id: string } | null;
+    staircasePreview?: {
+        stair: ProceduralStaircaseData;
+        valid: boolean;
+        validationMessage?: string | null;
+    } | null;
+    staircaseFootprint?: {
+        corners: Array<{ x: number; z: number }>;
+        valid: boolean;
+    } | null;
+    landingPreview?: {
+        landing: StaircaseLandingData;
+    } | null;
     onMoveSelectedElement?: () => void;
     onDuplicateSelectedElement?: () => void;
     onRemoveSelectedElement?: () => void;
     hiddenDoorId?: string | null;
     hiddenWindowId?: string | null;
+    hiddenStaircaseId?: string | null;
+    hiddenLandingId?: string | null;
     movingElement?: { kind: "door" | "window"; id: string } | null;
     onBuildElementPreviewReady?: () => void;
     onScenePoint?: (point: { x: number; y: number; z: number }, snapCornerId: string | null) => void;
+    onStaircaseFloorPointerMove?: (hit: StaircaseFloorHit | null) => void;
+    onStaircaseFloorClick?: (hit: StaircaseFloorHit | null) => void;
     onScenePointerMove?: (point: {
         x: number;
         y: number;
@@ -80,6 +122,17 @@ interface AdminStructureSceneProps {
     onWallClick?: (wallId: string, point: Vector3, snapCornerId: string | null) => void;
 }
 
+interface StaircaseFloorHit {
+    point: { x: number; y: number; z: number };
+    snapWallPoint: { x: number; y: number; z: number } | null;
+    regionId: string;
+    snapCornerId: string | null;
+    alignedX: number | null;
+    alignedZ: number | null;
+}
+
+const ignoreStaircaseFloorHit = () => {};
+
 type PointerProjection = {
     camera: ThreeEvent<PointerEvent>["camera"];
     pointer: ThreeEvent<PointerEvent>["pointer"];
@@ -93,7 +146,7 @@ function getPointerSnapDetails(
 ) {
     const target = event.nativeEvent.target;
     if (!(target instanceof HTMLElement)) {
-        return { snapCornerId: null, alignedX: null, alignedZ: null };
+        return { snapCornerId: null, snapWallPoint: null, alignedX: null, alignedZ: null };
     }
     const bounds = target.getBoundingClientRect();
     const corners = new Map<string, { id: string; position: { x: number; y: number; z: number } }>();
@@ -113,6 +166,8 @@ function getPointerSnapDetails(
 
     let snapCornerId: string | null = null;
     let nearestSnapDistance = 14;
+    let snapWallPoint: { x: number; y: number; z: number } | null = null;
+    let nearestWallDistance = 12;
     let alignedX: number | null = null;
     let alignedZ: number | null = null;
     let nearestXDistance = 9;
@@ -137,7 +192,16 @@ function getPointerSnapDetails(
         }
     }
 
-    return { snapCornerId, alignedX, alignedZ };
+    for (const wall of structure.walls) {
+        const wallPoint = closestPointOnWall(point, wall);
+        const wallDistance = screenDistance({ ...wallPoint, y: 0.02 });
+        if (wallDistance < nearestWallDistance) {
+            nearestWallDistance = wallDistance;
+            snapWallPoint = { ...wallPoint, y: 0 };
+        }
+    }
+
+    return { snapCornerId, snapWallPoint, alignedX, alignedZ };
 }
 
 interface PreviewLabelProps {
@@ -272,6 +336,80 @@ function DrawingContextMenuHandler({
     return null;
 }
 
+function StaircaseFloorRaycaster({
+    active,
+    floorId,
+    structure,
+    onPointerMove,
+    onClick
+}: {
+    active: boolean;
+    floorId: string;
+    structure: ManagedStructure;
+    onPointerMove: (hit: StaircaseFloorHit | null) => void;
+    onClick: (hit: StaircaseFloorHit | null) => void;
+}) {
+    const { camera, gl, scene } = useThree();
+    const raycaster = useMemo(() => new Raycaster(), []);
+    const pointer = useMemo(() => new Vector2(), []);
+
+    useEffect(() => {
+        if (!active) return;
+
+        const getFloorHit = (event: PointerEvent | MouseEvent): StaircaseFloorHit | null => {
+            const bounds = gl.domElement.getBoundingClientRect();
+            if (bounds.width <= 0 || bounds.height <= 0) return null;
+            pointer.set(
+                ((event.clientX - bounds.left) / bounds.width) * 2 - 1,
+                -((event.clientY - bounds.top) / bounds.height) * 2 + 1
+            );
+            scene.updateMatrixWorld(true);
+            raycaster.setFromCamera(pointer, camera);
+            const floorMeshes: Mesh[] = [];
+            scene.traverse(object => {
+                if (
+                    object instanceof Mesh &&
+                    object.userData.staircaseRaycastSurface === true &&
+                    object.userData.floorId === floorId &&
+                    typeof object.userData.regionId === "string"
+                ) {
+                    floorMeshes.push(object);
+                }
+            });
+            const intersection = raycaster.intersectObjects(floorMeshes, false)[0];
+            if (!intersection || typeof intersection.object.userData.regionId !== "string") {
+                return null;
+            }
+            const snap = getPointerSnapDetails({
+                camera,
+                pointer,
+                nativeEvent: { target: gl.domElement }
+            }, intersection.point, structure);
+            return {
+                point: intersection.point,
+                regionId: intersection.object.userData.regionId,
+                ...snap
+            };
+        };
+        const handlePointerMove = (event: PointerEvent) => {
+            onPointerMove(getFloorHit(event));
+        };
+        const handleClick = (event: MouseEvent) => {
+            if (event.button !== 0) return;
+            onClick(getFloorHit(event));
+        };
+
+        gl.domElement.addEventListener("pointermove", handlePointerMove);
+        gl.domElement.addEventListener("click", handleClick);
+        return () => {
+            gl.domElement.removeEventListener("pointermove", handlePointerMove);
+            gl.domElement.removeEventListener("click", handleClick);
+        };
+    }, [active, camera, floorId, gl, onClick, onPointerMove, pointer, raycaster, scene, structure]);
+
+    return null;
+}
+
 function AdminWallPreview({
     wall,
     height,
@@ -313,6 +451,7 @@ function AdminWallPreview({
 
 export default function AdminStructureScene({
     structure,
+    floorId,
     blueprintUrl,
     blueprintLocked = false,
     blueprintVisible = true,
@@ -338,17 +477,28 @@ export default function AdminStructureScene({
     onAssetModelBounds,
     drawingActive = false,
     placementActive = false,
+    staircaseDrawingActive = false,
+    staircaseDrawingPhase = "idle",
     onDoorSelect,
     onWindowSelect,
+    onStaircaseSelect,
+    onStaircaseLandingSelect,
     selectedElement = null,
+    staircasePreview = null,
+    staircaseFootprint = null,
+    landingPreview = null,
     onMoveSelectedElement,
     onDuplicateSelectedElement,
     onRemoveSelectedElement,
     hiddenDoorId = null,
     hiddenWindowId = null,
+    hiddenStaircaseId = null,
+    hiddenLandingId = null,
     movingElement = null,
     onBuildElementPreviewReady,
     onScenePoint,
+    onStaircaseFloorPointerMove,
+    onStaircaseFloorClick,
     onScenePointerMove,
     onCancelDrawing = () => {},
     onCancelPlacement = () => {},
@@ -434,15 +584,24 @@ export default function AdminStructureScene({
         ] as [number, number, number]
         : null;
     const selectedElementData = selectedElement
-        ? (selectedElement.kind === "door" ? structure.doors : structure.windows)
-            .find(element => element.id === selectedElement.id) ?? null
+        ? selectedElement.kind === "door"
+            ? structure.doors.find(element => element.id === selectedElement.id) ?? null
+            : selectedElement.kind === "window"
+                ? structure.windows.find(element => element.id === selectedElement.id) ?? null
+                : selectedElement.kind === "staircase"
+                    ? structure.stairs.find(element => element.id === selectedElement.id) ?? null
+                    : structure.stairLandings.find(element => element.id === selectedElement.id) ?? null
         : null;
+    const selectedElementPosition = selectedElementData?.position;
+    const selectedElementHeight = selectedElement?.kind === "staircase" && selectedElementData
+        ? (selectedElementData as StructureStaircase).totalRise
+        : 0;
 
-    const toolbarPosition = selectedElementData
+    const toolbarPosition = selectedElementData && selectedElementPosition
         ? [
-            selectedElementData.position.x,
-            selectedElementData.position.y + selectedElementData.height * 0.5,
-            selectedElementData.position.z
+            selectedElementPosition.x,
+            selectedElementPosition.y + selectedElementHeight + 0.25,
+            selectedElementPosition.z
         ] as [number, number, number]
         : null;
 
@@ -468,7 +627,6 @@ export default function AdminStructureScene({
             alignedZ: snap.alignedZ
         });
     };
-
     const handleWallPointerMove = (
         wallId: string,
         point: Vector3,
@@ -525,7 +683,22 @@ export default function AdminStructureScene({
                         onRotationChange={onBlueprintRotationChange}
                     />
                 )}
-                <AdminCamera leftOrbitEnabled={!blueprintUrl || blueprintLocked} />
+                <AdminCamera
+                    leftOrbitEnabled={
+                        (!blueprintUrl || blueprintLocked) &&
+                        !(staircaseDrawingActive && (
+                            staircaseDrawingPhase === "selecting-start" ||
+                            staircaseDrawingPhase === "sizing-footprint"
+                        ))
+                    }
+                />
+                <StaircaseFloorRaycaster
+                    active={staircaseDrawingActive}
+                    floorId={floorId}
+                    structure={structure}
+                    onPointerMove={onStaircaseFloorPointerMove ?? ignoreStaircaseFloorHit}
+                    onClick={onStaircaseFloorClick ?? ignoreStaircaseFloorHit}
+                />
                 <mesh
                     rotation-x={-Math.PI / 2}
                     position={[0, -0.01, 0]}
@@ -699,6 +872,7 @@ export default function AdminStructureScene({
                     </>
                 )}
                 <AdminFloors
+                    floorId={floorId}
                     corners={corners}
                     walls={walls}
                     floorFinishes={structure.floorFinishes}
@@ -707,6 +881,59 @@ export default function AdminStructureScene({
                     allowInteractionPropagation={!selectionEnabled}
                     showAreaLabels={false}
                 />
+                {structure.stairs
+                    .filter(stair => stair.floorId === floorId && stair.id !== hiddenStaircaseId)
+                    .map(stair => (
+                        <AdminProceduralStaircase
+                            key={stair.id}
+                            stair={stair}
+                            onSelect={selectionEnabled
+                                ? () => onStaircaseSelect?.(stair.id)
+                                : undefined}
+                        />
+                    ))}
+                {structure.stairLandings
+                    .filter(landing => landing.floorId === floorId && landing.id !== hiddenLandingId)
+                    .map(landing => (
+                        <AdminStaircaseLandingMarker
+                            key={landing.id}
+                            landing={landing}
+                            selected={selectedElement?.kind === "landing" && selectedElement.id === landing.id}
+                            onSelect={selectionEnabled
+                                ? () => onStaircaseLandingSelect?.(landing.id)
+                                : undefined}
+                        />
+                    ))}
+                {staircasePreview && (
+                    <AdminProceduralStaircase
+                        stair={staircasePreview.stair}
+                        preview
+                        valid={staircasePreview.valid}
+                        validationMessage={staircasePreview.validationMessage}
+                    />
+                )}
+                {staircaseFootprint && (
+                    <Line
+                        points={[
+                            ...staircaseFootprint.corners.map(point =>
+                                new Vector3(point.x, 0.035, point.z)
+                            ),
+                            ...staircaseFootprint.corners.slice(0, 1).map(point =>
+                                new Vector3(point.x, 0.035, point.z)
+                            )
+                        ]}
+                        color={staircaseFootprint.valid ? "#168bd2" : "#df4545"}
+                        lineWidth={2}
+                        depthTest={false}
+                        raycast={() => null}
+                    />
+                )}
+                {landingPreview && (
+                    <AdminStaircaseLandingMarker
+                        landing={landingPreview.landing}
+                        selected
+                    />
+                )}
                 <AdminWalls
                     corners={corners}
                     walls={walls}
@@ -767,20 +994,20 @@ export default function AdminStructureScene({
                             <button
                                 type="button"
                                 onClick={onMoveSelectedElement}
-                                title={`Move ${selectedElement.kind}`}
-                                aria-label={`Move ${selectedElement.kind}`}
+                                title={selectedElement.kind === "landing" ? "Move stair arrival" : `Move ${selectedElement.kind}`}
+                                aria-label={selectedElement.kind === "landing" ? "Move stair arrival" : `Move ${selectedElement.kind}`}
                             >
                                 <Move size={18} />
                             </button>
-                            <button
+                            {selectedElement.kind !== "landing" && <button
                                 type="button"
                                 onClick={onDuplicateSelectedElement}
                                 title={`Duplicate ${selectedElement.kind}`}
                                 aria-label={`Duplicate ${selectedElement.kind}`}
                             >
                                 <Copy size={18} />
-                            </button>
-                            <button
+                            </button>}
+                            {selectedElement.kind !== "landing" && <button
                                 type="button"
                                 className="delete"
                                 onClick={onRemoveSelectedElement}
@@ -788,7 +1015,7 @@ export default function AdminStructureScene({
                                 aria-label={`Remove ${selectedElement.kind}`}
                             >
                                 <Trash2 size={18} />
-                            </button>
+                            </button>}
                         </div>
                     </Html>
                 )}

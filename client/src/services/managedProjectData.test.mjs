@@ -15,6 +15,8 @@ test("managed interior merge preserves published structure", () => {
     const published = {
         walls: [{ id: "wall-1" }],
         doors: [{ id: "door-1" }],
+        stairs: [{ id: "stair-1", shape: "l-shaped" }],
+        stairLandings: [{ id: "landing-1", stairId: "stair-1" }],
         furniture: [],
         structuralRevision: 7,
         publishedStructuralRevision: 7
@@ -33,7 +35,11 @@ test("managed interior merge preserves published structure", () => {
                 {
                     floorId: "floor-1",
                     name: "1st Floor",
-                    structure: { walls: [{ id: "first-wall" }] }
+                    structure: {
+                        walls: [{ id: "first-wall" }],
+                        stairs: [{ id: "floor-stair" }],
+                        stairLandings: [{ id: "floor-landing" }]
+                    }
                 },
                 {
                     floorId: "floor-2",
@@ -72,6 +78,8 @@ test("managed interior merge preserves published structure", () => {
 
     assert.deepEqual(merged.walls, published.walls);
     assert.deepEqual(merged.doors, published.doors);
+    assert.deepEqual(merged.stairs, published.stairs);
+    assert.deepEqual(merged.stairLandings, published.stairLandings);
     assert.deepEqual(merged.furniture, [{ id: "chair-1" }]);
     assert.deepEqual(merged.floorFinishes, { room: "tile" });
     assert.deepEqual(merged.wallFinishes, { room: { "wall-1": "paint" } });
@@ -98,7 +106,9 @@ test("managed serializer stores furniture references, placement, finishes, and c
         wallHeight: 3,
         doors: [],
         windows: [],
-        openings: []
+        openings: [],
+        stairs: [{ id: "published-stair" }],
+        stairLandings: [{ id: "published-landing" }]
     };
     const interior = serializeManagedInteriorData(
         state,
@@ -114,6 +124,8 @@ test("managed serializer stores furniture references, placement, finishes, and c
     assert.deepEqual(interior.wallFinishes, state.wallFinishes);
     assert.equal(interior.furniture[0].assetId, "furniture-asset-42");
     assert.equal(interior.furniture[0].rotationY, 1.2);
+    assert.equal("stairs" in interior, false);
+    assert.equal("stairLandings" in interior, false);
 });
 
 test("managed interior serializer saves all floors and retains legacy first-floor fields", () => {
@@ -203,8 +215,12 @@ test("managed save uploads to the designated path and updates interior metadata 
 
     assert.deepEqual(operationOrder, ["upload", "metadata"]);
     assert.equal(uploadedJson.ownerId, "client-uid");
+    assert.equal("stairs" in uploadedJson, false);
+    assert.equal("stairLandings" in uploadedJson, false);
     assert.equal(projectMetadata.jsonPath, "published/structure.json");
+    assert.equal(projectMetadata.jsonUrl, "https://example.test/structure.json");
     assert.equal(projectMetadata.structuralRevision, 7);
+    assert.equal(projectMetadata.publishedStructuralRevision, 7);
     assert.equal(getManagedInteriorStoragePath("client-uid", "PRJ-00126"), "projects/client-uid/PRJ-00126.interior.json");
 });
 

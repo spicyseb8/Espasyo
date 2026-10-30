@@ -1,3 +1,5 @@
+import { validateStaircaseDimensions } from "../../../../shared/staircaseGeometry.ts";
+
 export type ProjectWorkflowType = "legacy" | "admin-managed";
 export type StructuralStatus = "draft" | "published";
 
@@ -74,6 +76,123 @@ function hasVector(value: unknown): boolean {
         && Number.isFinite(value.z);
 }
 
+function validateStairArrays(
+    value: Record<string, unknown>,
+    errors: string[],
+    label: string
+): void {
+    const stairs = value.stairs;
+    const landings = value.stairLandings;
+    if (stairs !== undefined && !Array.isArray(stairs)) {
+        errors.push(`${label}stairs must be an array.`);
+    }
+    if (landings !== undefined && !Array.isArray(landings)) {
+        errors.push(`${label}stairLandings must be an array.`);
+    }
+    if (Array.isArray(stairs)) {
+        for (const stair of stairs) {
+            if (
+                !isRecord(stair)
+                || typeof stair.id !== "string"
+                || typeof stair.floorId !== "string"
+                || typeof stair.destinationFloorId !== "string"
+                || typeof stair.stairConnectionId !== "string"
+                || !isRecord(stair.position)
+                || !hasVector(stair.position)
+                || typeof stair.rotationY !== "number"
+                || !Number.isFinite(stair.rotationY)
+                || typeof stair.width !== "number"
+                || typeof stair.totalRise !== "number"
+                || typeof stair.riserCount !== "number"
+                || typeof stair.treadDepth !== "number"
+                || !["straight", "l-shaped", "u-shaped"].includes(String(stair.shape))
+            ) {
+                errors.push(`${label}each staircase requires finite placement data, dimensions, a floor connection, and a supported shape.`);
+            } else if (validateStaircaseDimensions({
+                width: stair.width,
+                totalRise: stair.totalRise,
+                riserCount: stair.riserCount,
+                treadDepth: stair.treadDepth,
+                shape: stair.shape as "straight" | "l-shaped" | "u-shaped",
+                turnDirection: stair.turnDirection === "left" || stair.turnDirection === "right"
+                    ? stair.turnDirection
+                    : undefined,
+                treadThickness: typeof stair.treadThickness === "number"
+                    ? stair.treadThickness
+                    : undefined
+            })) {
+                errors.push(`${label}staircase ${stair.id} has invalid dimensions.`);
+            } else if (
+                stair.turnDirection !== undefined &&
+                stair.turnDirection !== "left" &&
+                stair.turnDirection !== "right"
+            ) {
+                errors.push(`${label}staircase ${stair.id} has an invalid turn direction.`);
+            } else if (
+                stair.railings !== undefined &&
+                typeof stair.railings !== "boolean"
+            ) {
+                errors.push(`${label}staircase ${stair.id} railings must be a boolean.`);
+            } else if (
+                stair.flights !== undefined &&
+                (!Array.isArray(stair.flights) ||
+                    stair.flights.length !== (stair.shape === "straight" ? 1 : 2) ||
+                    stair.flights.some(flight =>
+                        !isRecord(flight) ||
+                        typeof flight.id !== "string" ||
+                        !isRecord(flight.start) ||
+                        !hasVector(flight.start) ||
+                        !isRecord(flight.direction) ||
+                        typeof flight.direction.x !== "number" ||
+                        !Number.isFinite(flight.direction.x) ||
+                        typeof flight.direction.z !== "number" ||
+                        !Number.isFinite(flight.direction.z) ||
+                        ![
+                            flight.width,
+                            flight.run,
+                            flight.riserCount,
+                            flight.totalRise,
+                            flight.riserHeight,
+                            flight.treadDepth
+                        ].every(item => typeof item === "number" && Number.isFinite(item)) ||
+                        (flight.width as number) <= 0 ||
+                        (flight.run as number) <= 0 ||
+                        !Number.isInteger(flight.riserCount) ||
+                        (flight.riserCount as number) < 2 ||
+                        (flight.totalRise as number) <= 0 ||
+                        (flight.riserHeight as number) <= 0 ||
+                        (flight.treadDepth as number) <= 0
+                    ))
+            ) {
+                errors.push(`${label}staircase ${stair.id} has invalid flight parameters.`);
+            }
+        }
+    }
+    if (Array.isArray(landings)) {
+        for (const landing of landings) {
+            if (
+                !isRecord(landing)
+                || typeof landing.id !== "string"
+                || typeof landing.stairId !== "string"
+                || typeof landing.stairConnectionId !== "string"
+                || typeof landing.floorId !== "string"
+                || !isRecord(landing.position)
+                || !hasVector(landing.position)
+                || typeof landing.rotationY !== "number"
+                || !Number.isFinite(landing.rotationY)
+                || typeof landing.width !== "number"
+                || !Number.isFinite(landing.width)
+                || typeof landing.run !== "number"
+                || !Number.isFinite(landing.run)
+                || landing.width <= 0
+                || landing.run <= 0
+            ) {
+                errors.push(`${label}each stair landing requires finite placement data and a staircase connection.`);
+            }
+        }
+    }
+}
+
 export function validateStructuralProjectData(value: unknown): string[] {
     const errors: string[] = [];
 
@@ -148,6 +267,7 @@ export function validateStructuralProjectData(value: unknown): string[] {
         validateHostElements(doors, "door");
         validateHostElements(windows, "window");
         validateHostElements(openings, "opening");
+        validateStairArrays(value, errors, "");
 
         if (
             value.workflowType === "admin-managed"
@@ -163,6 +283,9 @@ export function validateStructuralProjectData(value: unknown): string[] {
         } else {
             const floorIds = new Set<string>();
             const structuralObjectIds = new Set<string>();
+            const stairConnectionIds = new Set<string>();
+            const staircaseRecords: Array<{ stair: Record<string, unknown>; floorId: string }> = [];
+            const landingRecords: Array<{ landing: Record<string, unknown>; floorId: string }> = [];
             for (const [index, floorValue] of value.floors.entries()) {
                 if (
                     !isRecord(floorValue)
@@ -183,6 +306,7 @@ export function validateStructuralProjectData(value: unknown): string[] {
                 floorIds.add(floorId);
 
                 const floorStructure = floorValue.structure;
+                validateStairArrays(floorStructure, errors, `Floor ${index + 1} `);
                 for (const field of ["corners", "walls", "doors", "windows", "openings"] as const) {
                     if (!Array.isArray(floorStructure[field])) {
                         errors.push(`Floor ${index + 1} ${field} must be an array.`);
@@ -209,6 +333,60 @@ export function validateStructuralProjectData(value: unknown): string[] {
                         }
                         structuralObjectIds.add(item.id);
                     }
+                }
+                for (const field of ["stairs", "stairLandings"] as const) {
+                    if (!Array.isArray(floorStructure[field])) continue;
+                    for (const item of floorStructure[field] as Record<string, unknown>[]) {
+                        if (typeof item.id === "string") {
+                            if (structuralObjectIds.has(item.id)) {
+                                errors.push(`Structural object ID ${item.id} must be unique across floors.`);
+                            }
+                            structuralObjectIds.add(item.id);
+                        }
+                        if (field === "stairs") staircaseRecords.push({ stair: item, floorId });
+                        else landingRecords.push({ landing: item, floorId });
+                    }
+                }
+            }
+
+            for (const { stair, floorId } of staircaseRecords) {
+                const destinationFloorId = stair.destinationFloorId;
+                const connectionId = stair.stairConnectionId;
+                if (typeof connectionId === "string") {
+                    if (stairConnectionIds.has(connectionId)) {
+                        errors.push(`Stair connection ID ${connectionId} must be unique.`);
+                    }
+                    stairConnectionIds.add(connectionId);
+                }
+                if (stair.floorId !== floorId) {
+                    errors.push(`Staircase ${String(stair.id)} floorId must match its containing floor.`);
+                }
+                if (
+                    typeof destinationFloorId !== "string"
+                    || destinationFloorId === floorId
+                    || !floorIds.has(destinationFloorId)
+                ) {
+                    errors.push(`Staircase ${String(stair.id)} must connect to a different existing floor.`);
+                }
+                const matches = landingRecords.filter(({ landing }) =>
+                    landing.stairConnectionId === connectionId &&
+                    landing.stairId === stair.id &&
+                    landing.floorId === destinationFloorId
+                );
+                if (matches.length !== 1) {
+                    errors.push(`Staircase ${String(stair.id)} must have exactly one matching destination landing.`);
+                }
+            }
+            for (const { landing, floorId } of landingRecords) {
+                if (landing.floorId !== floorId) {
+                    errors.push(`Stair landing ${String(landing.id)} floorId must match its containing floor.`);
+                }
+                if (!staircaseRecords.some(({ stair }) =>
+                    stair.id === landing.stairId &&
+                    stair.stairConnectionId === landing.stairConnectionId &&
+                    stair.destinationFloorId === floorId
+                )) {
+                    errors.push(`Stair landing ${String(landing.id)} must match a staircase on another floor.`);
                 }
             }
 

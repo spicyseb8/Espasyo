@@ -20,6 +20,7 @@ import { createAdminFloorGeometry } from "./floorGeometry";
 
 interface AdminFloorProps {
     region: Region;
+    floorId?: string;
     materials: Material[];
     floorFinishes: Record<string, string>;
     selected: boolean;
@@ -140,6 +141,7 @@ function computeLabelAnchor(region: Region): { point: Vector3; clearance: number
 
 export default function AdminFloor({
     region,
+    floorId,
     materials,
     floorFinishes,
     selected,
@@ -263,7 +265,9 @@ export default function AdminFloor({
                 receiveShadow
                 onClick={handleClick}
                 userData={{
-                    floorId: region.id
+                    floorId: floorId ?? region.id,
+                    regionId: region.id,
+                    staircaseRaycastSurface: true
                 }}
             >
                 <meshStandardMaterial

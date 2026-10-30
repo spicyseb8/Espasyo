@@ -67,10 +67,13 @@ import {
     createManagedStructure,
     loadManagedEditorFloors,
     serializeManagedStructureProject,
+    getFloorName,
     type ManagedEditorFloor,
     type ManagedStructure,
     type StructureCorner,
     type StructureElement,
+    type StructureStaircase,
+    type StructureStaircaseLanding,
     type StructureWall
 } from "./structureTypes";
 import {
@@ -79,16 +82,54 @@ import {
     type StructureElementAction,
     type StructureElementKind
 } from "./structureElementActions";
+import {
+    applyStaircasePlacement,
+    createStaircaseFootprintPreview,
+    moveStaircaseLanding,
+    removeStaircase,
+    resolveStaircaseDestinationFloorId,
+    updateStaircaseDimensions,
+    validateStaircaseFootprint,
+    validateStaircasePlacement,
+    type StaircaseCandidate,
+    type StaircaseDrawingPhase,
+    type StaircaseFootprintPreview,
+    type StaircasePlacementAction
+} from "./staircaseActions";
+import {
+    createGroupedStructureHistoryEntry,
+    redoStructureHistory,
+    undoStructureHistory,
+    type StructureHistoryEntry
+} from "./staircaseHistory";
+import {
+    calculateStaircaseDimensionsForFootprint,
+    getStaircaseFootprintRun,
+    getStaircaseFootprint,
+    validateStaircaseDimensions
+} from "../../../../shared/staircaseGeometry.ts";
+import type {
+    ProceduralStaircaseData,
+    StaircaseShape,
+    StaircaseTurnDirection,
+    StaircaseLandingData
+} from "../../../../shared/staircaseGeometry";
 import "./AdminStructuralEditor.css";
 
 type Point = { x: number; y: number };
 type CalibrationStep = "idle" | "first-point" | "second-point" | "enter-measurement";
-type SelectedStructureElement = { kind: StructureElementKind; id: string };
+type SelectedStructureElement = {
+    kind: StructureElementKind | "staircase" | "landing";
+    id: string;
+};
 type ActiveElementPlacement = {
     kind: StructureElementKind;
     action: StructureElementAction;
     source: StructureElement;
 };
+type ActiveStaircasePlacement =
+    | { kind: "staircase"; action: Exclude<StaircasePlacementAction, "place">; source: StructureStaircase }
+    | { kind: "landing"; source: StructureStaircaseLanding };
 type BlueprintSession = {
     url: string | null;
     name: string;
@@ -173,6 +214,27 @@ function snapWorldPoint(
     return snapToCorner(snapped, structure.corners);
 }
 
+function getManagedFloorRegions(structure: ManagedStructure) {
+    const corners: Corner[] = structure.corners.map(corner => ({
+        id: corner.id,
+        position: new Vector3(corner.position.x, corner.position.y, corner.position.z)
+    }));
+    const walls: Wall[] = structure.walls.map(wall => ({
+        id: wall.id,
+        start: {
+            id: wall.start.id,
+            position: new Vector3(wall.start.position.x, wall.start.position.y, wall.start.position.z)
+        },
+        end: {
+            id: wall.end.id,
+            position: new Vector3(wall.end.position.x, wall.end.position.y, wall.end.position.z)
+        }
+    }));
+    return solveRegions(corners, walls).filter(region =>
+        region.corners.length >= 3 && Math.abs(region.area || 0) > 0.01
+    );
+}
+
 export default function AdminStructuralEditor() {
     const { ownerId, projectId } = useParams();
     const location = useLocation();
@@ -205,6 +267,26 @@ export default function AdminStructuralEditor() {
     const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
     const [selectedStructureElement, setSelectedStructureElement] = useState<SelectedStructureElement | null>(null);
     const [activeElementPlacement, setActiveElementPlacement] = useState<ActiveElementPlacement | null>(null);
+    const [activeStaircasePlacement, setActiveStaircasePlacement] = useState<ActiveStaircasePlacement | null>(null);
+    const [staircasePointer, setStaircasePointer] = useState<Point3 | null>(null);
+    const [staircaseDrawingStart, setStaircaseDrawingStart] = useState<Point3 | null>(null);
+    const [staircaseFootprintPreview, setStaircaseFootprintPreview] =
+        useState<StaircaseFootprintPreview | null>(null);
+    const staircaseCommitRef = useRef(false);
+    const [staircaseDrawingPhase, setStaircaseDrawingPhase] =
+        useState<StaircaseDrawingPhase>("idle");
+    const [staircaseDrawingRegionId, setStaircaseDrawingRegionId] = useState<string | null>(null);
+    const [staircasePointerValid, setStaircasePointerValid] = useState(false);
+    const [staircaseDimensions, setStaircaseDimensions] = useState({
+        width: 1,
+        totalRise: 2.8,
+        riserCount: 16,
+        treadDepth: 0.28,
+        treadThickness: 0.04,
+        railings: true,
+        shape: "straight" as StaircaseShape,
+        turnDirection: "left" as StaircaseTurnDirection
+    });
     const [movePreviewReady, setMovePreviewReady] = useState(false);
     const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
     const [doors, setDoors] = useState<Asset[]>([]);
@@ -245,8 +327,8 @@ export default function AdminStructuralEditor() {
     const [projectName, setProjectName] = useState("Untitled floor plan");
     const [status, setStatus] = useState("");
     const [savingAction, setSavingAction] = useState<"draft" | "publish" | null>(null);
-    const [historyByFloor, setHistoryByFloor] = useState<Record<string, ManagedStructure[]>>({});
-    const [futureByFloor, setFutureByFloor] = useState<Record<string, ManagedStructure[]>>({});
+    const [historyByFloor, setHistoryByFloor] = useState<Record<string, StructureHistoryEntry[]>>({});
+    const [futureByFloor, setFutureByFloor] = useState<Record<string, StructureHistoryEntry[]>>({});
     const history = activeFloorId ? historyByFloor[activeFloorId] ?? [] : [];
     const future = activeFloorId ? futureByFloor[activeFloorId] ?? [] : [];
     const [isAddFloorDialogOpen, setIsAddFloorDialogOpen] = useState(false);
@@ -287,6 +369,10 @@ export default function AdminStructuralEditor() {
             floor.floorId === activeFloorId ? { ...floor, structure: next } : floor
         ));
     };
+    const resolvedDestinationFloorId = resolveStaircaseDestinationFloorId(
+        floorPlans,
+        activeFloorId
+    );
     const [workspaceView, setWorkspaceView] = useState<"floorplan" | "build">("floorplan");
     const [workspacePanelOpen, setWorkspacePanelOpen] = useState(true);
     const [showWallMeasurements, setShowWallMeasurements] = useState(true);
@@ -496,9 +582,16 @@ export default function AdminStructuralEditor() {
         return { corners, walls, regions: solveRegions(corners, walls) };
     }, [structureCorners, structureWalls]);
 
-    const selectedElement = structure && selectedStructureElement
+    const selectedElement = structure && selectedStructureElement &&
+        (selectedStructureElement.kind === "door" || selectedStructureElement.kind === "window")
         ? (selectedStructureElement.kind === "door" ? structure.doors : structure.windows)
             .find(element => element.id === selectedStructureElement.id) ?? null
+        : null;
+    const selectedStaircase = structure && selectedStructureElement?.kind === "staircase"
+        ? structure.stairs.find(stair => stair.id === selectedStructureElement.id) ?? null
+        : null;
+    const selectedLanding = structure && selectedStructureElement?.kind === "landing"
+        ? structure.stairLandings.find(landing => landing.id === selectedStructureElement.id) ?? null
         : null;
     const activeBuildAsset = structure?.layoutConfirmed && selectedAsset && tool === selectedAsset.type
         ? selectedAsset
@@ -537,6 +630,149 @@ export default function AdminStructuralEditor() {
     const buildElementPlacement: BuildElementPlacementCandidate | null = buildPointer
         ? getBuildElementCandidate(buildPointer.point, buildPointer.wallId ?? selectedWallId)
         : null;
+    const staircaseDimensionsForPlacement = activeStaircasePlacement?.kind === "staircase"
+        ? activeStaircasePlacement.source
+        : staircaseFootprintPreview
+            ? {
+                ...calculateStaircaseDimensionsForFootprint(
+                    staircaseFootprintPreview.length,
+                    staircaseFootprintPreview.width,
+                    structure?.wallHeight ?? staircaseDimensions.totalRise,
+                    0.28,
+                    0.175,
+                    staircaseDimensions.riserCount
+                ),
+                width: staircaseFootprintPreview.width,
+                totalRise: structure?.wallHeight ?? staircaseDimensions.totalRise,
+                treadThickness: staircaseDimensions.treadThickness,
+                railings: staircaseDimensions.railings,
+                shape: staircaseDimensions.shape,
+                turnDirection: staircaseDimensions.turnDirection
+            }
+            : {
+                ...staircaseDimensions,
+                totalRise: structure?.wallHeight ?? staircaseDimensions.totalRise
+            };
+    const staircaseDestinationForPlacement = activeStaircasePlacement?.kind === "staircase"
+        ? activeStaircasePlacement.source.destinationFloorId
+        : resolvedDestinationFloorId;
+    const staircaseRotationForPlacement = activeStaircasePlacement?.kind === "staircase"
+        ? activeStaircasePlacement.source.rotationY
+        : staircaseFootprintPreview?.candidate.rotationY ?? 0;
+    const stairCandidate: StaircaseCandidate | null = staircaseFootprintPreview &&
+        activeStaircasePlacement === null
+        ? staircaseFootprintPreview.candidate
+        : staircasePointer &&
+            (activeStaircasePlacement !== null || staircaseFootprintPreview !== null)
+        ? {
+            position: staircasePointer,
+            rotationY: activeStaircasePlacement?.kind === "landing"
+                ? activeStaircasePlacement.source.rotationY
+                : staircaseRotationForPlacement
+        }
+        : null;
+    const destinationFloor = floorPlans.find(floor =>
+        floor.floorId === staircaseDestinationForPlacement
+    );
+    const staircaseDimensionsError = validateStaircaseDimensions(staircaseDimensionsForPlacement);
+    const staircaseFootprintError = structure && stairCandidate &&
+        activeStaircasePlacement?.kind !== "landing"
+        ? staircaseDimensionsError ?? validateStaircasePlacement({
+                    candidate: stairCandidate,
+                    dimensions: staircaseDimensionsForPlacement,
+                    activeFloorId: activeFloorId ?? "",
+                    destinationFloorId: staircaseDestinationForPlacement,
+                    floors: floorPlans,
+                    sourceStructure: structure,
+                    sourceRegions: geometry.regions,
+                    destinationFloor,
+                    destinationRegions: destinationFloor
+                        ? getManagedFloorRegions(destinationFloor.structure)
+                        : [],
+                    pointerValid: staircasePointerValid,
+                    regionId: staircaseDrawingRegionId,
+                    excludedStairId: activeStaircasePlacement?.kind === "staircase"
+                        ? activeStaircasePlacement.source.id
+                        : undefined
+                })
+        : null;
+    const landingPlacementError = activeStaircasePlacement?.kind === "landing" && stairCandidate
+        ? (() => {
+            const sourceFloor = floorPlans.find(floor =>
+                floor.structure.stairs.some(stair =>
+                    stair.stairConnectionId === activeStaircasePlacement.source.stairConnectionId
+                )
+            );
+            const source = sourceFloor?.structure.stairs.find(stair =>
+                stair.stairConnectionId === activeStaircasePlacement.source.stairConnectionId
+            );
+            return source
+                ? validateStaircaseFootprint({
+                    ...source,
+                    position: stairCandidate.position,
+                    rotationY: stairCandidate.rotationY
+                }, structure?.walls ?? [], geometry.regions, source.id, structure?.stairs ?? [])
+                : "The connected staircase no longer exists.";
+        })()
+        : null;
+    const staircasePlacementError = !stairCandidate
+        ? null
+        : !staircasePointerValid
+        ? "Point to an actual room floor to position the staircase."
+        : activeStaircasePlacement?.kind === "landing"
+            ? landingPlacementError
+            : staircaseFootprintError;
+    const staircasePreview: {
+        stair: ProceduralStaircaseData;
+        valid: boolean;
+        validationMessage: string | null;
+    } | null =
+        structure && stairCandidate &&         activeStaircasePlacement?.kind !== "landing" &&
+        (tool === "staircase" || activeStaircasePlacement?.kind === "staircase")
+            ? {
+                stair: {
+                    id: activeStaircasePlacement?.kind === "staircase"
+                        ? activeStaircasePlacement.source.id
+                        : "staircase-preview",
+                    position: stairCandidate.position,
+                    rotationY: stairCandidate.rotationY,
+                    ...staircaseDimensionsForPlacement,
+                    shape: staircaseDimensionsForPlacement.shape ?? "straight",
+                    turnDirection: staircaseDimensionsForPlacement.turnDirection
+                },
+                valid: !staircasePlacementError,
+                validationMessage: staircasePlacementError
+            }
+            : null;
+    const activeFloorIndex = floorPlans.findIndex(floor => floor.floorId === activeFloorId);
+    const staircasePanelMessage = tool !== "staircase"
+        ? null
+        : !resolvedDestinationFloorId
+            ? `Create the ${getFloorName(activeFloorIndex + 1)} before placing stairs.`
+            : staircasePlacementError;
+    const staircaseFootprint = structure && stairCandidate &&
+        activeStaircasePlacement?.kind !== "landing"
+        ? {
+            corners: getStaircaseFootprint(
+                stairCandidate.position,
+                staircaseDimensionsForPlacement.width,
+                staircaseFootprintPreview?.length ??
+                    (                    getStaircaseFootprintRun(staircaseDimensionsForPlacement)),
+                stairCandidate.rotationY
+            ),
+            valid: !staircasePlacementError
+        }
+        : null;
+    const landingPreview: { landing: StaircaseLandingData } | null =
+        activeStaircasePlacement?.kind === "landing" && stairCandidate
+            ? {
+                landing: {
+                    ...activeStaircasePlacement.source,
+                    position: stairCandidate.position,
+                    rotationY: stairCandidate.rotationY
+                }
+            }
+            : null;
     const wallPreview: StructureWall | null =
         structure &&
         (!blueprintUrl || blueprintLocked) &&
@@ -572,24 +808,50 @@ export default function AdminStructuralEditor() {
         if (!structure || !activeFloorId) return;
         setHistoryByFloor(current => ({
             ...current,
-            [activeFloorId]: [...(current[activeFloorId] ?? []).slice(-49), structure]
+            [activeFloorId]: [...(current[activeFloorId] ?? []).slice(-49), { structure }]
         }));
         setFutureByFloor(current => ({ ...current, [activeFloorId]: [] }));
         setActiveFloorStructure(next);
     };
 
+    const commitFloors = (nextFloors: ManagedEditorFloor[], touchedFloorIds: string[]) => {
+        const entry = createGroupedStructureHistoryEntry(
+            floorPlans,
+            nextFloors,
+            touchedFloorIds,
+            crypto.randomUUID()
+        );
+        setHistoryByFloor(current => {
+            const next = { ...current };
+            for (const floorId of touchedFloorIds) {
+                next[floorId] = [...(current[floorId] ?? []).slice(-49), entry];
+            }
+            return next;
+        });
+        setFutureByFloor(current => {
+            const next = { ...current };
+            for (const floorId of touchedFloorIds) next[floorId] = [];
+            return next;
+        });
+        setFloorPlans(nextFloors);
+    };
+
     const undo = () => {
-        const previous = history.at(-1);
-        if (!previous || !structure || !activeFloorId) return;
-        setFutureByFloor(current => ({
-            ...current,
-            [activeFloorId]: [structure, ...(current[activeFloorId] ?? [])]
-        }));
-        setHistoryByFloor(current => ({
-            ...current,
-            [activeFloorId]: (current[activeFloorId] ?? []).slice(0, -1)
-        }));
-        setActiveFloorStructure(previous);
+        if (!structure || !activeFloorId) return;
+        const transition = undoStructureHistory(
+            floorPlans,
+            historyByFloor,
+            futureByFloor,
+            activeFloorId
+        );
+        if (!transition) return;
+        if (transition.error) {
+            setStatus(transition.error);
+            return;
+        }
+        setFloorPlans(transition.floors);
+        setHistoryByFloor(transition.historyByFloor);
+        setFutureByFloor(transition.futureByFloor);
         setPendingWallStart(null);
         setWallChainStart(null);
         setPreviewWallEnd(null);
@@ -600,21 +862,35 @@ export default function AdminStructuralEditor() {
         setSelectedRegionId(null);
         setSelectedStructureElement(null);
         setActiveElementPlacement(null);
+        setActiveStaircasePlacement(null);
+        setStaircasePointer(null);
+        setStaircaseDrawingStart(null);
+        setStaircaseDrawingRegionId(null);
+        setStaircaseFootprintPreview(null);
+        setStaircasePointerValid(false);
+        setStaircaseDrawingPhase("cancelled");
+        setStaircasePointerValid(false);
+        setStaircaseDrawingRegionId(null);
+        setStaircaseDrawingPhase("cancelled");
         setBuildPointer(null);
     };
 
     const redo = () => {
-        const next = future[0];
-        if (!next || !structure || !activeFloorId) return;
-        setHistoryByFloor(current => ({
-            ...current,
-            [activeFloorId]: [...(current[activeFloorId] ?? []), structure]
-        }));
-        setFutureByFloor(current => ({
-            ...current,
-            [activeFloorId]: (current[activeFloorId] ?? []).slice(1)
-        }));
-        setActiveFloorStructure(next);
+        if (!structure || !activeFloorId) return;
+        const transition = redoStructureHistory(
+            floorPlans,
+            historyByFloor,
+            futureByFloor,
+            activeFloorId
+        );
+        if (!transition) return;
+        if (transition.error) {
+            setStatus(transition.error);
+            return;
+        }
+        setFloorPlans(transition.floors);
+        setHistoryByFloor(transition.historyByFloor);
+        setFutureByFloor(transition.futureByFloor);
         setPendingWallStart(null);
         setWallChainStart(null);
         setPreviewWallEnd(null);
@@ -625,11 +901,14 @@ export default function AdminStructuralEditor() {
         setSelectedRegionId(null);
         setSelectedStructureElement(null);
         setActiveElementPlacement(null);
+        setActiveStaircasePlacement(null);
+        setStaircasePointer(null);
         setBuildPointer(null);
     };
 
     const beginElementPlacement = (action: StructureElementAction) => {
         if (!structure || !selectedElement || !selectedStructureElement) return;
+        if (selectedStructureElement.kind !== "door" && selectedStructureElement.kind !== "window") return;
         const elementAssets = selectedStructureElement.kind === "door" ? doors : windows;
         const asset = elementAssets.find(item => item.id === selectedElement.assetId);
         if (!asset) {
@@ -655,6 +934,25 @@ export default function AdminStructuralEditor() {
 
     const removeSelectedElement = () => {
         if (!structure || !selectedStructureElement) return;
+        if (selectedStructureElement.kind === "staircase") {
+            if (!activeFloorId) return;
+            const nextFloors = removeStaircase(
+                floorPlans,
+                activeFloorId,
+                selectedStructureElement.id
+            );
+            if (!nextFloors) return;
+            const stair = structure.stairs.find(item => item.id === selectedStructureElement.id);
+            commitFloors(
+                nextFloors,
+                [activeFloorId, ...(stair ? [stair.destinationFloorId] : [])]
+            );
+            setSelectedStructureElement(null);
+            setTool("select");
+            setStatus("Staircase and its linked destination landing removed.");
+            return;
+        }
+        if (selectedStructureElement.kind === "landing") return;
         const next = removeStructureElement(
             structure,
             selectedStructureElement.kind,
@@ -669,6 +967,208 @@ export default function AdminStructuralEditor() {
         setBuildPointer(null);
         setTool("select");
         setStatus(`${selectedStructureElement.kind === "door" ? "Door" : "Window"} removed.`);
+    };
+
+    const selectStaircase = (id: string) => {
+        if (tool !== "select" || calibrationStep !== "idle" || !structure) return;
+        const stair = structure.stairs.find(item => item.id === id);
+        if (!stair) return;
+        setSelectedStructureElement({ kind: "staircase", id });
+        setStaircaseDimensions({
+            width: stair.width,
+            totalRise: stair.totalRise,
+            riserCount: stair.riserCount,
+            treadDepth: stair.treadDepth,
+            treadThickness: stair.treadThickness ?? 0.04,
+            railings: stair.railings !== false,
+            shape: stair.shape,
+            turnDirection: stair.turnDirection ?? "left"
+        });
+        setSelectedWallId(null);
+        setSelectedRegionId(null);
+    };
+
+    const selectStaircaseLanding = (id: string) => {
+        if (tool !== "select" || calibrationStep !== "idle" || !structure) return;
+        const landing = structure.stairLandings.find(item => item.id === id);
+        if (!landing) return;
+        setSelectedStructureElement({ kind: "landing", id });
+        setSelectedWallId(null);
+        setSelectedRegionId(null);
+    };
+
+    const beginSelectedPlacement = (action: StructureElementAction) => {
+        if (!selectedStructureElement) return;
+        if (selectedStructureElement.kind === "door" || selectedStructureElement.kind === "window") {
+            beginElementPlacement(action);
+            return;
+        }
+        if (selectedStructureElement.kind === "staircase" && selectedStaircase) {
+            staircaseCommitRef.current = false;
+            setActiveStaircasePlacement({
+                kind: "staircase",
+                action,
+                source: selectedStaircase
+            });
+            setStaircasePointer(null);
+            setStaircaseFootprintPreview(null);
+            setSelectedStructureElement(null);
+            setTool("staircase");
+            setStaircaseDrawingPhase("sizing-footprint");
+            setStaircasePointerValid(false);
+            setSelectedWallId(null);
+            setSelectedRegionId(null);
+            setStatus(action === "move"
+                ? "Move the staircase to a clear floor position."
+                : "Move the duplicate preview to a clear floor position, then confirm it.");
+            return;
+        }
+        if (selectedStructureElement.kind === "landing" && selectedLanding) {
+            staircaseCommitRef.current = false;
+            setActiveStaircasePlacement({ kind: "landing", source: selectedLanding });
+            setStaircasePointer(null);
+            setStaircaseFootprintPreview(null);
+            setSelectedStructureElement(null);
+            setTool("staircase");
+            setStaircaseDrawingPhase("sizing-footprint");
+            setStaircasePointerValid(false);
+            setSelectedWallId(null);
+            setSelectedRegionId(null);
+            setStatus("Move the stair arrival marker to its position on this floor.");
+        }
+    };
+
+    const updateStaircaseDimension = (
+        key: "width" | "totalRise" | "riserCount" | "treadDepth" | "treadThickness",
+        value: number
+    ) => {
+        if (!Number.isFinite(value)) return;
+        const currentRun = staircaseFootprintPreview?.length ??
+            (selectedStaircase
+                ? getStaircaseFootprintRun(selectedStaircase)
+                : null);
+        const dimensions = {
+            ...staircaseDimensions,
+            totalRise: structure?.wallHeight ?? staircaseDimensions.totalRise,
+            [key]: value
+        };
+        if (currentRun !== null && key === "totalRise") {
+            const calculated = calculateStaircaseDimensionsForFootprint(
+                currentRun,
+                dimensions.width,
+                value
+            );
+            dimensions.riserCount = calculated.riserCount;
+            dimensions.treadDepth = calculated.treadDepth;
+        } else if (currentRun !== null && key === "riserCount") {
+            if (!Number.isInteger(value) || value < 2) {
+                setStatus("Riser count must be a whole number between 2 and 80.");
+                return;
+            }
+            dimensions.treadDepth = currentRun / (value - 1);
+        } else if (currentRun !== null && key === "treadDepth") {
+            const treadCount = Math.max(1, Math.round(currentRun / value));
+            dimensions.riserCount = treadCount + 1;
+            dimensions.treadDepth = currentRun / treadCount;
+        }
+        const dimensionError = validateStaircaseDimensions(dimensions);
+        if (dimensionError) {
+            setStatus(dimensionError);
+            return;
+        }
+        if (!selectedStaircase || !activeFloorId) {
+            setStaircaseDimensions(dimensions);
+            setStatus("");
+            return;
+        }
+        const sourceFloor = floorPlans.find(floor => floor.floorId === selectedStaircase.floorId);
+        const destinationFloor = floorPlans.find(floor => floor.floorId === selectedStaircase.destinationFloorId);
+        if (!sourceFloor || !destinationFloor) {
+            setStatus("Unable to edit staircase: its connected floor is missing.");
+            return;
+        }
+        const updated = updateStaircaseDimensions(
+            sourceFloor.structure,
+            selectedStaircase,
+            dimensions
+        );
+        const footprintError = validateStaircaseFootprint({
+            ...selectedStaircase,
+            ...dimensions
+        }, sourceFloor.structure.walls, geometry.regions, selectedStaircase.id, sourceFloor.structure.stairs);
+        if (!updated || footprintError) {
+            setStatus("These dimensions create an invalid staircase footprint.");
+            return;
+        }
+        const run = getStaircaseFootprintRun(dimensions);
+        const nextFloors = floorPlans.map(floor => {
+            if (floor.floorId === selectedStaircase.floorId) {
+                return { ...floor, structure: updated };
+            }
+            if (floor.floorId === selectedStaircase.destinationFloorId) {
+                return {
+                    ...floor,
+                    structure: {
+                        ...floor.structure,
+                        stairLandings: floor.structure.stairLandings.map(landing =>
+                            landing.stairConnectionId === selectedStaircase.stairConnectionId
+                                ? { ...landing, width: dimensions.width, run }
+                                : landing
+                        )
+                    }
+                };
+            }
+            return floor;
+        });
+        commitFloors(nextFloors, [selectedStaircase.floorId, selectedStaircase.destinationFloorId]);
+        setStaircaseDimensions(dimensions);
+        setStatus("");
+    };
+
+    const updateStaircaseRailings = (enabled: boolean) => {
+        const dimensions = { ...staircaseDimensions, railings: enabled };
+        setStaircaseDimensions(dimensions);
+        if (!selectedStaircase) return;
+        const sourceFloor = floorPlans.find(floor => floor.floorId === selectedStaircase.floorId);
+        if (!sourceFloor) {
+            setStatus("Unable to edit staircase: its floor is missing.");
+            return;
+        }
+        const nextFloors = floorPlans.map(floor =>
+            floor.floorId === selectedStaircase.floorId
+                ? {
+                    ...floor,
+                    structure: {
+                        ...floor.structure,
+                        stairs: floor.structure.stairs.map(stair =>
+                            stair.id === selectedStaircase.id
+                                ? { ...stair, railings: enabled }
+                                : stair
+                        )
+                    }
+                }
+                : floor
+        );
+        commitFloors(nextFloors, [selectedStaircase.floorId]);
+        setStatus("");
+    };
+
+    const updateStaircaseStepCount = (count: number) => {
+        if (!Number.isInteger(count) || count < 2 || count > 80) {
+            setStatus("Number of steps must be a whole number between 2 and 80.");
+            return;
+        }
+        updateStaircaseDimension("riserCount", count);
+    };
+
+    const updateStaircaseShape = (shape: StaircaseShape) => {
+        setStaircaseDimensions(current => ({ ...current, shape }));
+        setStatus("");
+    };
+
+    const updateStaircaseTurnDirection = (turnDirection: StaircaseTurnDirection) => {
+        setStaircaseDimensions(current => ({ ...current, turnDirection }));
+        setStatus("");
     };
 
     const selectStructureElement = (kind: StructureElementKind, id: string) => {
@@ -932,6 +1432,127 @@ export default function AdminStructuralEditor() {
         setStatus(`${selectedAsset.type === "door" ? "Door" : "Window"} placed.`);
     };
 
+    const placeStaircase = (
+        candidate: StaircaseCandidate,
+        dimensions = staircaseDimensionsForPlacement,
+        pointerValid = staircasePointerValid,
+        regionId = staircaseDrawingRegionId
+    ) => {
+        if (!structure || !activeFloorId) return;
+        if (staircaseCommitRef.current) return;
+        if (activeStaircasePlacement?.kind === "landing") {
+            if (!pointerValid) {
+                setStatus("Point to an actual room floor to position the arrival marker.");
+                return;
+            }
+            const sourceFloor = floorPlans.find(floor =>
+                floor.structure.stairs.some(stair =>
+                    stair.stairConnectionId === activeStaircasePlacement.source.stairConnectionId
+                )
+            );
+            const source = sourceFloor?.structure.stairs.find(stair =>
+                stair.stairConnectionId === activeStaircasePlacement.source.stairConnectionId
+            );
+            const error = source
+                ? validateStaircaseFootprint({
+                    ...source,
+                    position: candidate.position,
+                    rotationY: candidate.rotationY
+                }, structure.walls, geometry.regions, source.id, structure.stairs)
+                : "The connected staircase no longer exists.";
+            if (error) {
+                setStatus(error);
+                return;
+            }
+            const nextFloors = moveStaircaseLanding(
+                floorPlans,
+                activeStaircasePlacement.source,
+                candidate
+            );
+            if (!nextFloors) {
+                setStatus("Unable to move the stair arrival marker.");
+                return;
+            }
+            staircaseCommitRef.current = true;
+            commit(nextFloors.find(floor => floor.floorId === activeFloorId)?.structure ?? structure);
+            setActiveStaircasePlacement(null);
+            setStaircasePointer(null);
+            setTool("select");
+            setSelectedStructureElement({
+                kind: "landing",
+                id: activeStaircasePlacement.source.id
+            });
+            setStatus("Stair arrival marker moved.");
+            return;
+        }
+
+        const source = activeStaircasePlacement?.kind === "staircase"
+            ? activeStaircasePlacement.source
+            : null;
+        const action = activeStaircasePlacement?.kind === "staircase"
+            ? activeStaircasePlacement.action
+            : "place";
+        const destinationId = source?.destinationFloorId ?? staircaseDestinationForPlacement;
+        const targetFloor = floorPlans.find(floor => floor.floorId === destinationId);
+        const dimensionsError = validateStaircaseDimensions(dimensions);
+        const error = dimensionsError ?? validateStaircasePlacement({
+                    candidate,
+                    dimensions,
+                    activeFloorId,
+                    destinationFloorId: destinationId,
+                    floors: floorPlans,
+                    sourceStructure: structure,
+                    sourceRegions: geometry.regions,
+                    destinationFloor: targetFloor,
+                    destinationRegions: targetFloor
+                        ? getManagedFloorRegions(targetFloor.structure)
+                        : [],
+                    pointerValid,
+                    regionId,
+                    excludedStairId: source?.id
+                });
+        if (error) {
+            setStatus(error);
+            return;
+        }
+        const nextFloors = applyStaircasePlacement(
+            floorPlans,
+            activeFloorId,
+            destinationId,
+            candidate,
+            dimensions,
+            action,
+            source,
+            crypto.randomUUID(),
+            crypto.randomUUID(),
+            crypto.randomUUID()
+        );
+        if (!nextFloors) {
+            setStatus("Unable to place the staircase. Check its connected floor and unique IDs.");
+            return;
+        }
+        staircaseCommitRef.current = true;
+        commitFloors(nextFloors, [activeFloorId, destinationId]);
+        const placedStair = nextFloors
+            .find(floor => floor.floorId === activeFloorId)
+            ?.structure.stairs.find(stair =>
+                action === "move" ? stair.id === source?.id : stair.position === candidate.position
+            );
+        if (placedStair) {
+            setSelectedStructureElement({ kind: "staircase", id: placedStair.id });
+        }
+        setActiveStaircasePlacement(null);
+        setStaircasePointer(null);
+        setStaircaseFootprintPreview(null);
+        setStaircaseDrawingPhase("confirmed");
+        setTool("select");
+        setStatus(action === "move"
+            ? "Staircase moved."
+            : action === "duplicate"
+                ? "Staircase duplicated with a new connection."
+                : "Staircase placed.");
+    };
+
     const handleScenePoint = (
         scenePoint: { x: number; y?: number; z: number },
         forcedWallId: string | null = null,
@@ -963,6 +1584,10 @@ export default function AdminStructuralEditor() {
             snapped = snap90Degrees(pendingWallStart.position, snapped);
         }
         const planarPoint = { x: snapped.x, z: snapped.z };
+
+        if (tool === "staircase") {
+            return;
+        }
 
         if (tool === "wall") {
             addWallSegment(planarPoint);
@@ -1049,6 +1674,7 @@ export default function AdminStructuralEditor() {
             setPreviewWallEnd(null);
             setPreviewRoomEnd(null);
             setBuildPointer(null);
+            setStaircasePointer(null);
             setWallGuides(null);
             return;
         }
@@ -1059,6 +1685,7 @@ export default function AdminStructuralEditor() {
                 ? scenePoint.y
                 : 0
         };
+        if (tool === "staircase") return;
         let nextPoint = tool === "wall"
             ? resolveWallDrawingPoint(
                 rawPoint,
@@ -1132,10 +1759,164 @@ export default function AdminStructuralEditor() {
         setBuildPointer(null);
     };
 
+    const handleStaircaseFloorPointerMove = (hit: {
+        point: Point3;
+        snapWallPoint: Point3 | null;
+        regionId: string;
+        snapCornerId: string | null;
+        alignedX: number | null;
+        alignedZ: number | null;
+    } | null) => {
+        if (tool !== "staircase" || !structure) return;
+        if (!hit) {
+            setStaircasePointerValid(false);
+            setWallGuides(null);
+            return;
+        }
+
+        const snapped = hit.snapCornerId
+            ? snapWorldPoint({ ...hit.point, y: 0 }, structure, hit.snapCornerId)
+            : hit.snapWallPoint ?? snapWorldPoint({ ...hit.point, y: 0 }, structure);
+        const isStartingRoom = activeStaircasePlacement !== null ||
+            !staircaseDrawingRegionId ||
+            hit.regionId === staircaseDrawingRegionId;
+        setStaircasePointerValid(isStartingRoom);
+        setWallGuides({
+            snapPosition: hit.snapCornerId
+                ? findStructureCorner(structure, hit.snapCornerId)?.position ?? null
+                : null,
+            closing: false,
+            alignedX: hit.alignedX,
+            alignedZ: hit.alignedZ
+        });
+
+        if (staircaseDrawingPhase === "sizing-footprint" && staircaseDrawingStart) {
+            const footprint = createStaircaseFootprintPreview(
+                staircaseDrawingStart,
+                snapped,
+                structure.wallHeight,
+                0.28,
+                staircaseDimensions.riserCount
+            );
+            setStaircaseFootprintPreview(footprint);
+            setStaircasePointer(footprint.candidate.position);
+            return;
+        }
+        if (activeStaircasePlacement) {
+            setStaircasePointer(snapped);
+        }
+    };
+
+    const handleStaircaseFloorClick = (hit: {
+        point: Point3;
+        snapWallPoint: Point3 | null;
+        regionId: string;
+        snapCornerId: string | null;
+        alignedX: number | null;
+        alignedZ: number | null;
+    } | null) => {
+        if (
+            tool !== "staircase" ||
+            !structure ||
+            !activeFloorId ||
+            calibrationStep !== "idle"
+        ) return;
+        if (!hit) {
+            setStaircasePointerValid(false);
+            return;
+        }
+        const snapped = hit.snapCornerId
+            ? snapWorldPoint({ ...hit.point, y: 0 }, structure, hit.snapCornerId)
+            : hit.snapWallPoint ?? snapWorldPoint({ ...hit.point, y: 0 }, structure);
+        setStaircasePointerValid(true);
+
+        if (staircaseDrawingPhase === "selecting-start") {
+            staircaseCommitRef.current = false;
+            setStaircaseDrawingStart(snapped);
+            setStaircaseDrawingRegionId(hit.regionId);
+            setStaircasePointer(snapped);
+            setStaircaseFootprintPreview(null);
+            setStaircaseDrawingPhase("sizing-footprint");
+            setStatus("Move the pointer over the same room and click the opposite staircase corner.");
+            return;
+        }
+
+        if (staircaseDrawingPhase !== "sizing-footprint") return;
+        if (activeStaircasePlacement) {
+            setStaircaseDrawingRegionId(hit.regionId);
+            setStaircasePointer(snapped);
+            placeStaircase(
+                {
+                    position: snapped,
+                    rotationY: activeStaircasePlacement.kind === "staircase"
+                        ? activeStaircasePlacement.source.rotationY
+                        : activeStaircasePlacement.source.rotationY
+                },
+                activeStaircasePlacement.kind === "staircase"
+                    ? activeStaircasePlacement.source
+                    : staircaseDimensionsForPlacement,
+                true,
+                hit.regionId
+            );
+            return;
+        }
+        if (!staircaseDrawingStart) return;
+
+        const footprint = createStaircaseFootprintPreview(
+            staircaseDrawingStart,
+            snapped,
+            structure.wallHeight,
+            0.28,
+            staircaseDimensions.riserCount
+        );
+        setStaircaseFootprintPreview(footprint);
+        setStaircasePointer(footprint.candidate.position);
+        const pointerValid = hit.regionId === staircaseDrawingRegionId;
+        setStaircasePointerValid(pointerValid);
+        const dimensionError = validateStaircaseDimensions({
+            ...footprint.dimensions,
+            totalRise: structure.wallHeight,
+            treadThickness: staircaseDimensions.treadThickness,
+            railings: staircaseDimensions.railings,
+            shape: staircaseDimensions.shape,
+            turnDirection: staircaseDimensions.turnDirection
+        });
+        const dimensions = {
+            ...footprint.dimensions,
+            totalRise: structure.wallHeight,
+            treadThickness: staircaseDimensions.treadThickness,
+            railings: staircaseDimensions.railings,
+            shape: staircaseDimensions.shape,
+            turnDirection: staircaseDimensions.turnDirection
+        };
+        const destinationId = resolvedDestinationFloorId;
+        const targetFloor = floorPlans.find(floor => floor.floorId === destinationId);
+        const placementError = dimensionError ?? validateStaircasePlacement({
+            candidate: footprint.candidate,
+            dimensions,
+            activeFloorId,
+            destinationFloorId: destinationId,
+            floors: floorPlans,
+            sourceStructure: structure,
+            sourceRegions: geometry.regions,
+            destinationFloor: targetFloor,
+            destinationRegions: targetFloor ? getManagedFloorRegions(targetFloor.structure) : [],
+            pointerValid,
+            regionId: staircaseDrawingRegionId
+        });
+        if (placementError) {
+            setStatus(placementError);
+            return;
+        }
+        placeStaircase(footprint.candidate, dimensions, pointerValid, staircaseDrawingRegionId);
+    };
+
     const cancelDrawing = () => {
         const hasPendingWall = tool === "wall" && pendingWallStart !== null;
         const hasPendingRoom = tool === "room" && pendingRoomStart !== null;
-        if (!hasPendingWall && !hasPendingRoom) return;
+        const hasPendingStaircase = staircaseDrawingStart !== null ||
+            staircaseFootprintPreview !== null;
+        if (!hasPendingWall && !hasPendingRoom && !hasPendingStaircase) return;
 
         setPendingWallStart(null);
         setWallChainStart(null);
@@ -1143,20 +1924,36 @@ export default function AdminStructuralEditor() {
         setWallGuides(null);
         setPendingRoomStart(null);
         setPreviewRoomEnd(null);
+        setStaircaseDrawingStart(null);
+        setStaircaseFootprintPreview(null);
+        setStaircasePointer(null);
+        setStaircasePointerValid(false);
+        setStaircaseDrawingRegionId(null);
+        setStaircaseDrawingPhase("cancelled");
         setTool("select");
     };
 
     const cancelBuildPlacement = () => {
         const cancelledPlacement = activeElementPlacement;
+        const cancelledStaircasePlacement = activeStaircasePlacement;
         setActiveElementPlacement(null);
+        setActiveStaircasePlacement(null);
         setMovePreviewReady(false);
         setBuildPointer(null);
+        setStaircasePointer(null);
+        setStaircaseDrawingStart(null);
+        setStaircaseFootprintPreview(null);
         if (cancelledPlacement) setSelectedAsset(null);
         setTool("select");
         if (cancelledPlacement) {
             setSelectedStructureElement({
                 kind: cancelledPlacement.kind,
                 id: cancelledPlacement.source.id
+            });
+        } else if (cancelledStaircasePlacement) {
+            setSelectedStructureElement({
+                kind: cancelledStaircasePlacement.kind === "staircase" ? "staircase" : "landing",
+                id: cancelledStaircasePlacement.source.id
             });
         }
         setStatus("Placement cancelled.");
@@ -1288,6 +2085,13 @@ export default function AdminStructuralEditor() {
         setSelectedRegionId(null);
         setSelectedStructureElement(null);
         setActiveElementPlacement(null);
+        setActiveStaircasePlacement(null);
+        setStaircaseDrawingPhase("idle");
+        setStaircaseDrawingStart(null);
+        setStaircaseDrawingRegionId(null);
+        setStaircaseFootprintPreview(null);
+        setStaircasePointerValid(false);
+        setStaircasePointer(null);
         setMovePreviewReady(false);
         setSelectedAsset(null);
         setBuildPointer(null);
@@ -1432,7 +2236,11 @@ export default function AdminStructuralEditor() {
 
     const updateWallHeight = (height: number) => {
         if (!structure || structure.layoutConfirmed || !validPositiveNumber(height)) return;
-        commit({ ...structure, wallHeight: height });
+        commit({
+            ...structure,
+            wallHeight: height,
+            stairs: structure.stairs.map(stair => ({ ...stair, totalRise: height }))
+        });
     };
 
     const updateWallThickness = (wallThickness: number) => {
@@ -1753,11 +2561,30 @@ export default function AdminStructuralEditor() {
                                 actualBlueprintLength={actualBlueprintLength}
                                 showWallMeasurements={showWallMeasurements}
                                 status={status}
+                                staircaseStepCount={staircaseDimensions.riserCount}
+                                staircaseRailings={staircaseDimensions.railings}
+                                staircaseShape={staircaseDimensions.shape}
+                                staircaseTurnDirection={staircaseDimensions.turnDirection}
+                                staircasePlacementMessage={staircasePanelMessage}
+                                onStaircaseStepCountChange={updateStaircaseStepCount}
+                                onStaircaseRailingsChange={updateStaircaseRailings}
+                                onStaircaseShapeChange={updateStaircaseShape}
+                                onStaircaseTurnDirectionChange={updateStaircaseTurnDirection}
                                 onToolChange={nextTool => {
                                     setActiveElementPlacement(null);
+                                    setActiveStaircasePlacement(null);
                                     setSelectedStructureElement(null);
                                     setTool(nextTool);
+                                    staircaseCommitRef.current = false;
+                                    setStaircaseDrawingPhase(nextTool === "staircase"
+                                        ? "selecting-start"
+                                        : "idle");
+                                    setStaircaseDrawingStart(null);
+                                    setStaircaseDrawingRegionId(null);
+                                    setStaircaseFootprintPreview(null);
+                                    setStaircasePointerValid(false);
                                     setBuildPointer(null);
+                                    setStaircasePointer(null);
                                     setPendingWallStart(null);
                                     setWallChainStart(null);
                                     setPreviewWallEnd(null);
@@ -1836,6 +2663,7 @@ export default function AdminStructuralEditor() {
                 {structure && (
                     <AdminStructureScene
                         structure={structure}
+                        floorId={activeFloorId ?? ""}
                         blueprintUrl={blueprintUrl}
                         blueprintLocked={blueprintLocked}
                         blueprintVisible={blueprintVisible}
@@ -1876,19 +2704,32 @@ export default function AdminStructuralEditor() {
                             (tool === "wall" && pendingWallStart !== null) ||
                             (tool === "room" && pendingRoomStart !== null)
                         }
-                        placementActive={activeBuildAsset !== null}
+                        placementActive={activeBuildAsset !== null || tool === "staircase"}
+                        staircaseDrawingActive={
+                            tool === "staircase"
+                        }
+                        staircaseDrawingPhase={staircaseDrawingPhase}
                         onCancelDrawing={cancelDrawing}
                         onCancelPlacement={cancelBuildPlacement}
                         onScenePoint={(point, snapCornerId) =>
                             handleScenePoint(point, null, snapCornerId)
                         }
                         onScenePointerMove={handleScenePointerMove}
+                        onStaircaseFloorPointerMove={handleStaircaseFloorPointerMove}
+                        onStaircaseFloorClick={handleStaircaseFloorClick}
                         onWallClick={handleWallClick}
                         onDoorSelect={id => selectStructureElement("door", id)}
                         onWindowSelect={id => selectStructureElement("window", id)}
-                        selectedElement={activeElementPlacement ? null : selectedStructureElement}
-                        onMoveSelectedElement={() => beginElementPlacement("move")}
-                        onDuplicateSelectedElement={() => beginElementPlacement("duplicate")}
+                        onStaircaseSelect={selectStaircase}
+                        onStaircaseLandingSelect={selectStaircaseLanding}
+                        staircasePreview={staircasePreview}
+                        staircaseFootprint={staircaseFootprint}
+                        landingPreview={landingPreview}
+                        selectedElement={activeElementPlacement || activeStaircasePlacement
+                            ? null
+                            : selectedStructureElement}
+                        onMoveSelectedElement={() => beginSelectedPlacement("move")}
+                        onDuplicateSelectedElement={() => beginSelectedPlacement("duplicate")}
                         onRemoveSelectedElement={removeSelectedElement}
                         hiddenDoorId={
                             movePreviewReady &&
@@ -1904,6 +2745,18 @@ export default function AdminStructuralEditor() {
                             activeElementPlacement?.action === "move" &&
                             activeElementPlacement.kind === "window"
                                 ? activeElementPlacement.source.id
+                                : null
+                        }
+                        hiddenStaircaseId={
+                            staircasePointer &&
+                            activeStaircasePlacement?.kind === "staircase" &&
+                            activeStaircasePlacement.action === "move"
+                                ? activeStaircasePlacement.source.id
+                                : null
+                        }
+                        hiddenLandingId={
+                            staircasePointer && activeStaircasePlacement?.kind === "landing"
+                                ? activeStaircasePlacement.source.id
                                 : null
                         }
                         movingElement={

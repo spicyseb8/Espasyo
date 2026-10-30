@@ -1,3 +1,5 @@
+import { calculateStaircaseGeometry } from "../../../../shared/staircaseGeometry.ts";
+
 export interface SavedPoint {
     x: number;
     y: number;
@@ -39,6 +41,35 @@ export interface StructureOpening {
     archRise?: number;
 }
 
+export interface StructureStaircase {
+    id: string;
+    floorId: string;
+    destinationFloorId: string;
+    stairConnectionId: string;
+    position: SavedPoint;
+    rotationY: number;
+    width: number;
+    totalRise: number;
+    riserCount: number;
+    treadDepth: number;
+    treadThickness?: number;
+    railings?: boolean;
+    shape: StaircaseShape;
+    turnDirection?: StaircaseTurnDirection;
+    flights?: StaircaseFlightParameters[];
+}
+
+export interface StructureStaircaseLanding {
+    id: string;
+    stairId: string;
+    stairConnectionId: string;
+    floorId: string;
+    position: SavedPoint;
+    rotationY: number;
+    width: number;
+    run: number;
+}
+
 export interface ManagedStructure {
     projectId: string;
     projectName: string;
@@ -56,6 +87,8 @@ export interface ManagedStructure {
     doors: StructureElement[];
     windows: StructureElement[];
     openings: StructureOpening[];
+    stairs: StructureStaircase[];
+    stairLandings: StructureStaircaseLanding[];
     furniture: unknown[];
     floorFinishes: Record<string, string>;
     wallFinishes: Record<string, Record<string, string>>;
@@ -106,7 +139,18 @@ export function createManagedEditorFloor(
     index: number,
     floorId = crypto.randomUUID()
 ): ManagedEditorFloor {
-    return { floorId, name: getFloorName(index), structure };
+    return {
+        floorId,
+        name: getFloorName(index),
+        structure: {
+            ...structure,
+            stairs: (structure.stairs ?? []).map(stair => ({
+                ...stair,
+                totalRise: structure.wallHeight
+            })),
+            stairLandings: structure.stairLandings ?? []
+        }
+    };
 }
 
 function toManagedFloorStructure(structure: ManagedStructure): ManagedFloorStructure {
@@ -121,6 +165,8 @@ function toManagedFloorStructure(structure: ManagedStructure): ManagedFloorStruc
         doors,
         windows,
         openings,
+        stairs,
+        stairLandings,
         furniture,
         floorFinishes,
         wallFinishes,
@@ -140,6 +186,21 @@ function toManagedFloorStructure(structure: ManagedStructure): ManagedFloorStruc
         doors,
         windows,
         openings,
+        stairs: (stairs ?? []).map(stair => ({
+            ...stair,
+            flights: calculateStaircaseGeometry(stair).flights.map(flight => ({
+                id: flight.id,
+                start: { ...flight.start },
+                direction: { ...flight.direction },
+                width: flight.width,
+                run: flight.run,
+                riserCount: flight.riserCount,
+                totalRise: flight.totalRise,
+                riserHeight: flight.riserHeight,
+                treadDepth: flight.treadDepth
+            }))
+        })),
+        stairLandings: stairLandings ?? [],
         furniture,
         floorFinishes,
         wallFinishes,
@@ -162,12 +223,18 @@ export function loadManagedEditorFloors(
         return { floors: [firstFloor], activeFloorId: firstFloor.floorId };
     }
 
-    const floors = project.floors.map(floor => ({
+    const floors = project.floors.map((floor, index) => ({
         floorId: floor.floorId ?? floor.id ?? crypto.randomUUID(),
         name: floor.name,
         structure: {
             ...projectData,
             ...floor.structure,
+            stairs: (floor.structure.stairs ?? (index === 0 ? projectData.stairs ?? [] : []))
+                .map(stair => ({
+                    ...stair,
+                    totalRise: floor.structure.wallHeight
+                })),
+            stairLandings: floor.structure.stairLandings ?? (index === 0 ? projectData.stairLandings ?? [] : []),
             projectId: projectData.projectId,
             projectName: projectData.projectName,
             ownerId: projectData.ownerId,
@@ -231,6 +298,8 @@ export function createManagedStructure(projectId: string, projectName: string, o
         doors: [],
         windows: [],
         openings: [],
+        stairs: [],
+        stairLandings: [],
         furniture: [],
         floorFinishes: {},
         wallFinishes: {},
@@ -240,3 +309,8 @@ export function createManagedStructure(projectId: string, projectName: string, o
         blueprint: null
     };
 }
+import type {
+    StaircaseFlightParameters,
+    StaircaseShape,
+    StaircaseTurnDirection
+} from "../../../../shared/staircaseGeometry.ts";

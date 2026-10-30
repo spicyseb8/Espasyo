@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { ChangeEvent } from "react";
 import {
     ChevronDown,
+    ArrowUp,
     Lock,
     MousePointer2,
     PenLine,
@@ -12,6 +13,7 @@ import {
     Upload
 } from "lucide-react";
 import type { ManagedStructure } from "./structureTypes";
+import type { StaircaseShape, StaircaseTurnDirection } from "../../../../shared/staircaseGeometry.ts";
 import "./AdminFloorPlanPanel.css";
 
 export type AdminStructuralTool =
@@ -20,7 +22,8 @@ export type AdminStructuralTool =
     | "room"
     | "door"
     | "window"
-    | "opening";
+    | "opening"
+    | "staircase";
 
 type CalibrationStep =
     | "idle"
@@ -41,6 +44,11 @@ interface AdminFloorPlanPanelProps {
     actualBlueprintLength: string;
     showWallMeasurements: boolean;
     status: string;
+    staircaseStepCount: number;
+    staircaseRailings: boolean;
+    staircaseShape: StaircaseShape;
+    staircaseTurnDirection: StaircaseTurnDirection;
+    staircasePlacementMessage: string | null;
     onToolChange: (tool: AdminStructuralTool) => void;
     onBlueprintUpload: (event: ChangeEvent<HTMLInputElement>) => void;
     onBlueprintRemove: () => void;
@@ -55,12 +63,17 @@ interface AdminFloorPlanPanelProps {
     onWallThicknessChange: (thickness: number) => void;
     onShowWallMeasurementsChange: (show: boolean) => void;
     onConfirmLayout: () => void;
+    onStaircaseStepCountChange: (count: number) => void;
+    onStaircaseRailingsChange: (enabled: boolean) => void;
+    onStaircaseShapeChange: (shape: StaircaseShape) => void;
+    onStaircaseTurnDirectionChange: (direction: StaircaseTurnDirection) => void;
 }
 
 const TOOLS = [
     { id: "select", label: "Select", icon: MousePointer2 },
     { id: "wall", label: "Walls", icon: PenLine },
-    { id: "room", label: "Rooms", icon: Square }
+    { id: "room", label: "Rooms", icon: Square },
+    { id: "staircase", label: "Staircase", icon: ArrowUp }
 ] as const;
 
 export default function AdminFloorPlanPanel({
@@ -76,6 +89,11 @@ export default function AdminFloorPlanPanel({
     actualBlueprintLength,
     showWallMeasurements,
     status,
+    staircaseStepCount,
+    staircaseRailings,
+    staircaseShape,
+    staircaseTurnDirection,
+    staircasePlacementMessage,
     onToolChange,
     onBlueprintUpload,
     onBlueprintRemove,
@@ -89,10 +107,13 @@ export default function AdminFloorPlanPanel({
     onWallHeightChange,
     onWallThicknessChange,
     onShowWallMeasurementsChange,
-    onConfirmLayout
+    onConfirmLayout,
+    onStaircaseStepCountChange,
+    onStaircaseRailingsChange,
+    onStaircaseShapeChange,
+    onStaircaseTurnDirectionChange
 }: AdminFloorPlanPanelProps) {
     const [blueprintOpen, setBlueprintOpen] = useState(true);
-    const [measurementOpen, setMeasurementOpen] = useState(true);
     const layoutLocked = structure.layoutConfirmed;
     const calibrationInstructions: Record<CalibrationStep, string> = {
         idle: "",
@@ -102,7 +123,8 @@ export default function AdminFloorPlanPanel({
     };
 
     return (
-        <div className="admin-floor-plan-panel">
+        <div className="admin-floor-plan-panel" data-tool={tool}>
+            <div className="admin-floor-plan-scroll">
             <section className={`admin-floor-group ${layoutLocked ? "is-locked" : ""}`}>
                 <h3>Tools</h3>
                 <div className="admin-floor-tools" role="group" aria-label="Floor plan tools">
@@ -112,7 +134,7 @@ export default function AdminFloorPlanPanel({
                             type="button"
                             className={tool === id ? "active" : ""}
                             aria-pressed={tool === id}
-                            disabled={layoutLocked}
+                            disabled={layoutLocked && id !== "staircase"}
                             onClick={() => onToolChange(id)}
                         >
                             <Icon size={18} />
@@ -214,6 +236,61 @@ export default function AdminFloorPlanPanel({
                 )}
             </section>
 
+            {tool === "staircase" && (
+                <section className="admin-floor-group admin-floor-staircase-controls">
+                    <h3>Staircase</h3>
+                    <label className="admin-floor-field">
+                        <span>Shape</span>
+                        <select
+                            value={staircaseShape}
+                            onChange={event => onStaircaseShapeChange(event.target.value as StaircaseShape)}
+                        >
+                            <option value="straight">Straight</option>
+                            <option value="l-shaped">L-shaped (90° turn)</option>
+                            <option value="u-shaped">U-shaped (180° turn)</option>
+                        </select>
+                    </label>
+                    {staircaseShape === "l-shaped" && (
+                        <label className="admin-floor-field">
+                            <span>Turn Direction</span>
+                            <select
+                                value={staircaseTurnDirection}
+                                onChange={event =>
+                                    onStaircaseTurnDirectionChange(event.target.value as StaircaseTurnDirection)
+                                }
+                            >
+                                <option value="left">Left</option>
+                                <option value="right">Right</option>
+                            </select>
+                        </label>
+                    )}
+                    <label className="admin-floor-field">
+                        <span>Number of Steps</span>
+                        <input
+                            type="number"
+                            min="2"
+                            max="80"
+                            step="1"
+                            value={staircaseStepCount}
+                            onChange={event => onStaircaseStepCountChange(Number(event.target.value))}
+                        />
+                    </label>
+                    <label className="admin-floor-staircase-railing">
+                        <input
+                            type="checkbox"
+                            checked={staircaseRailings}
+                            onChange={event => onStaircaseRailingsChange(event.target.checked)}
+                        />
+                        <span>Include Railings</span>
+                    </label>
+                    {staircasePlacementMessage && (
+                        <p className="admin-floor-note admin-floor-staircase-message" role="alert">
+                            {staircasePlacementMessage}
+                        </p>
+                    )}
+                </section>
+            )}
+
             <section className={`admin-floor-group ${layoutLocked ? "is-locked" : ""}`}>
                 <h3>Wall Settings</h3>
                 <div className="admin-floor-wall-settings">
@@ -262,22 +339,7 @@ export default function AdminFloorPlanPanel({
                 </div>
             </section>
 
-            <section className="admin-floor-group">
-                <button
-                    type="button"
-                    className="admin-floor-section-toggle"
-                    aria-expanded={measurementOpen}
-                    onClick={() => setMeasurementOpen(open => !open)}
-                >
-                    <span>Measurements</span>
-                    <ChevronDown size={16} className={measurementOpen ? "open" : ""} />
-                </button>
-                {measurementOpen && (
-                    <div className="admin-floor-measurements">
-                        <p>Select a wall or floor to display its area in the 3D scene.</p>
-                    </div>
-                )}
-            </section>
+            </div>
 
             <section className="admin-floor-group admin-floor-confirm">
                 <h3>Layout</h3>
@@ -287,7 +349,7 @@ export default function AdminFloorPlanPanel({
                     <>
                         <p>Confirm when the wall and room layout is ready for building.</p>
                         <button type="button" onClick={onConfirmLayout}>
-                            Confirm layout
+                            Confirm Layout
                         </button>
                     </>
                 )}

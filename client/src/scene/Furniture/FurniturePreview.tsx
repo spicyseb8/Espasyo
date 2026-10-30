@@ -570,7 +570,8 @@ function FurniturePreviewModel({
                 state.wallThickness,
                 0.01,
                 {
-                    height: bounds.height
+                    height: bounds.height,
+                    stairs: state.stairs
                 }
             );
         }
@@ -716,7 +717,8 @@ function FurniturePreviewModel({
                 {
                     height: bounds.height,
                     ignoreWallId: wallHit.wall.id,
-                    ignoreFurnitureId: movingFurnitureId ?? undefined
+                    ignoreFurnitureId: movingFurnitureId ?? undefined,
+                    stairs: state.stairs
                 }
             );
 
@@ -814,7 +816,8 @@ function FurniturePreviewModel({
                     0.01,
                     {
                         height: bounds.height,
-                        ignoreFurnitureId: movingFurnitureId ?? undefined
+                        ignoreFurnitureId: movingFurnitureId ?? undefined,
+                        stairs: state.stairs
                     }
                 );
             }

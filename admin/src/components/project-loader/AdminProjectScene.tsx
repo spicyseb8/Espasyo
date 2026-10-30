@@ -11,6 +11,10 @@ import AdminDoors from "./loader-components/AdminDoors";
 import AdminFurnitures from "./loader-components/AdminFurnitures";
 import AdminWindows from "./loader-components/AdminWindows";
 import AdminCommentMarkers from "./AdminCommentMarkers";
+import {
+    AdminProceduralStaircase,
+    AdminStaircaseLandingMarker
+} from "../project-editor/AdminProceduralStaircase";
 
 import type { Corner } from "./engine/walls/Corner";
 import type { Wall } from "./engine/walls/WallTypes";
@@ -213,6 +217,14 @@ export default function AdminProjectScene({
                     windows={projectData.windows}
                     wallThickness={projectData.wallThickness}
                 />
+
+                {(projectData.stairs ?? []).map(stair => (
+                    <AdminProceduralStaircase key={stair.id} stair={stair} />
+                ))}
+
+                {(projectData.stairLandings ?? []).map(landing => (
+                    <AdminStaircaseLandingMarker key={landing.id} landing={landing} />
+                ))}
 
                 <AdminFurnitures
                     furniture={projectData.furniture}

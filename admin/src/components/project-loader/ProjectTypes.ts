@@ -2,6 +2,8 @@
 // ADMIN PROJECT JSON TYPES
 //==================================================
 
+import type { StaircaseFlightParameters } from "../../../../shared/staircaseGeometry.ts";
+
 export interface SavedVector3 {
 
     x: number;
@@ -158,6 +160,35 @@ export interface SavedOpening {
     archRise?: number;
 
 }
+
+export interface SavedStaircase {
+    id: string;
+    floorId: string;
+    destinationFloorId: string;
+    stairConnectionId: string;
+    position: SavedVector3;
+    rotationY: number;
+    width: number;
+    totalRise: number;
+    riserCount: number;
+    treadDepth: number;
+    treadThickness?: number;
+    railings?: boolean;
+    shape: "straight" | "l-shaped" | "u-shaped";
+    turnDirection?: "left" | "right";
+    flights?: StaircaseFlightParameters[];
+}
+
+export interface SavedStaircaseLanding {
+    id: string;
+    stairId: string;
+    stairConnectionId: string;
+    floorId: string;
+    position: SavedVector3;
+    rotationY: number;
+    width: number;
+    run: number;
+}
 export type CostCategory =
     | "furniture"
     | "flooring"
@@ -186,6 +217,8 @@ export interface SavedProjectFloor {
     name: string;
     structure: Partial<SavedProjectData>;
     furniture?: SavedFurniture[];
+    stairs?: SavedStaircase[];
+    stairLandings?: SavedStaircaseLanding[];
     floorFinishes?: Record<string, string>;
     wallFinishes?: Record<string, Record<string, string>>;
 }
@@ -250,6 +283,10 @@ export interface SavedProjectData {
     furniture: SavedFurniture[];
 
     openings: SavedOpening[];
+
+    stairs?: SavedStaircase[];
+
+    stairLandings?: SavedStaircaseLanding[];
 
     costEstimate?: SavedCostEstimate;
     //==================================================

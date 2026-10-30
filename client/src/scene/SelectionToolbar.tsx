@@ -1515,7 +1515,10 @@ export default function SelectionToolbar() {
                         furniture.height,
 
                     ignoreFurnitureId:
-                        furniture.id
+                        furniture.id,
+
+                    stairs:
+                        state.stairs
 
                 }
 

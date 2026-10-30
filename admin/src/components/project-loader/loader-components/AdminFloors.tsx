@@ -32,6 +32,7 @@ import AdminFloor
 
 
 interface AdminFloorsProps {
+    floorId?: string;
 
     corners:
         Corner[];
@@ -54,6 +55,7 @@ interface AdminFloorsProps {
 
 
 export default function AdminFloors({
+    floorId,
     corners,
     walls,
     floorFinishes,
@@ -243,6 +245,10 @@ export default function AdminFloors({
 
                             region={
                                 region
+                            }
+
+                            floorId={
+                                floorId
                             }
 
                             materials={

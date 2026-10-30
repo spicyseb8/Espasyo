@@ -10,6 +10,8 @@
 // instances directly.
 //==================================================
 
+import type { StaircaseFlightParameters } from "../../../../shared/staircaseGeometry.ts";
+
 
 //==================================================
 // VECTOR3 JSON
@@ -170,6 +172,35 @@ export interface SavedOpening {
 
 }
 
+export interface SavedStaircase {
+    id: string;
+    floorId: string;
+    destinationFloorId: string;
+    stairConnectionId: string;
+    position: SavedVector3;
+    rotationY: number;
+    width: number;
+    totalRise: number;
+    riserCount: number;
+    treadDepth: number;
+    treadThickness?: number;
+    railings?: boolean;
+    shape: "straight" | "l-shaped" | "u-shaped";
+    turnDirection?: "left" | "right";
+    flights?: StaircaseFlightParameters[];
+}
+
+export interface SavedStaircaseLanding {
+    id: string;
+    stairId: string;
+    stairConnectionId: string;
+    floorId: string;
+    position: SavedVector3;
+    rotationY: number;
+    width: number;
+    run: number;
+}
+
 export interface SavedProjectFloor {
     floorId: string;
     name: string;
@@ -177,6 +208,8 @@ export interface SavedProjectFloor {
     furniture?: SavedFurniture[];
     floorFinishes?: Record<string, string>;
     wallFinishes?: Record<string, Record<string, string>>;
+    stairs?: SavedStaircase[];
+    stairLandings?: SavedStaircaseLanding[];
 }
 
 
@@ -240,6 +273,10 @@ export interface SavedProjectData {
     furniture: SavedFurniture[];
 
     openings: SavedOpening[];
+
+    stairs?: SavedStaircase[];
+
+    stairLandings?: SavedStaircaseLanding[];
 
 
     //==================================================

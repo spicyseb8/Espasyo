@@ -40,6 +40,8 @@ export const initialState: EditorState = {
     furniture: [],
     windows: [],
     openings: [],
+    stairs: [],
+    stairLandings: [],
     floorFinishes: {},
     archRise: 0.5,
     openingWidth: 1,

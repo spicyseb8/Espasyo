@@ -154,6 +154,12 @@ export default function AdminProjectViewer({
         furniture: activeFloor.furniture ??
             activeFloor.structure.furniture ??
             (activeFloorIndex === 0 ? projectData.furniture : []),
+        stairs: activeFloor.stairs ??
+            activeFloor.structure.stairs ??
+            (activeFloorIndex === 0 ? projectData.stairs : []),
+        stairLandings: activeFloor.stairLandings ??
+            activeFloor.structure.stairLandings ??
+            (activeFloorIndex === 0 ? projectData.stairLandings : []),
         floorFinishes: activeFloor.floorFinishes ??
             activeFloor.structure.floorFinishes ??
             (activeFloorIndex === 0 ? projectData.floorFinishes : {}),

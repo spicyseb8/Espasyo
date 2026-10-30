@@ -8,6 +8,7 @@ import type { Furniture } from "../../engine/furniture/FurnitureTypes";
 import type { Window } from "../../engine/windows/WindowTypes";
 import type { Opening } from "../../engine/openings/OpeningTypes";
 import type { BlueprintState } from "../../engine/blueprint/BlueprintTypes";
+import type { SavedStaircase, SavedStaircaseLanding } from "./ProjectTypes";
 
 export interface EditorFloorData {
     floorId: string;
@@ -18,6 +19,8 @@ export interface EditorFloorData {
     furniture: Furniture[];
     windows: Window[];
     openings: Opening[];
+    stairs: SavedStaircase[];
+    stairLandings: SavedStaircaseLanding[];
     floorFinishes: Record<string, string>;
     wallFinishes: Record<string, Record<string, string>>;
     wallHeight: number;
@@ -77,6 +80,8 @@ export interface EditorState {
     furniture: Furniture[];
     windows: Window[];
     openings: Opening[];
+    stairs: SavedStaircase[];
+    stairLandings: SavedStaircaseLanding[];
     floorFinishes: Record<string, string>;
     wallFinishes: Record<string, Record<string, string>>;
     draftWallLength: number | null;

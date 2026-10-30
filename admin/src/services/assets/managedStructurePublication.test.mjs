@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { serializeManagedStructureProject } from "../../components/project-editor/structureTypes.ts";
 import { publishManagedStructure } from "./managedStructurePublication.ts";
 
 function createDependencies(overrides = {}) {
@@ -128,6 +129,87 @@ test("publishing preserves each floor and the selected floor in the saved projec
     assert.deepEqual(uploaded.floors.map(floor => floor.floorId), ["floor-one", "floor-two"]);
     assert.equal(uploaded.floors[1].structure.corners[0].id, "corner-two");
     assert.equal(uploaded.activeFloorId, "floor-two");
+});
+
+test("publishing preserves procedural staircase parameters and cross-floor connections", async () => {
+    const { calls, dependencies } = createDependencies();
+    const shapes = [
+        { id: "stair-straight", shape: "straight", width: 1.2 },
+        { id: "stair-l", shape: "l-shaped", width: 2.4, turnDirection: "right" },
+        { id: "stair-u", shape: "u-shaped", width: 2.4 }
+    ];
+    const stairs = shapes.map((item, index) => ({
+        ...item,
+        floorId: "floor-one",
+        destinationFloorId: "floor-two",
+        stairConnectionId: `connection-${index}`,
+        position: { x: index * 6, y: 0, z: 0 },
+        rotationY: index * Math.PI / 2,
+        totalRise: 3,
+        riserCount: 16,
+        treadDepth: 4 / 15,
+        treadThickness: 0.04,
+        railings: true
+    }));
+    const stairLandings = stairs.map((item, index) => ({
+        id: `landing-${index}`,
+        stairId: item.id,
+        stairConnectionId: item.stairConnectionId,
+        floorId: "floor-two",
+        position: { ...item.position },
+        rotationY: item.rotationY,
+        width: item.width,
+        run: 4
+    }));
+
+    const projectData = serializeManagedStructureProject([
+        {
+            floorId: "floor-one",
+            name: "1st Floor",
+            structure: {
+                ...emptyStructure,
+                blueprint: null,
+                stairs,
+                stairLandings: []
+            }
+        },
+        {
+            floorId: "floor-two",
+            name: "2nd Floor",
+            structure: {
+                ...emptyStructure,
+                blueprint: null,
+                stairs: [],
+                stairLandings
+            }
+        }
+    ], "floor-one", "Staircase plan", emptyStructure.savedAt);
+    await publishManagedStructure({
+        ownerId: "client-a",
+        projectName: "Staircase plan",
+        projectData
+    }, dependencies);
+
+    const uploaded = calls.find(item => typeof item === "object" && "data" in item).data;
+    const uploadedStairs = uploaded.floors[0].structure.stairs;
+    assert.deepEqual(uploadedStairs.map(item => item.shape), [
+        "straight",
+        "l-shaped",
+        "u-shaped"
+    ]);
+    assert.equal(uploadedStairs[1].turnDirection, "right");
+    assert.equal(uploadedStairs[2].railings, true);
+    assert.deepEqual(uploadedStairs.map(item => item.flights.length), [1, 2, 2]);
+    assert.equal(uploadedStairs[0].flights[0].riserCount, 16);
+    assert.equal(uploadedStairs[1].flights[1].direction.z, -1);
+    assert.equal(uploadedStairs[2].flights[1].direction.x, -1);
+    assert.equal(uploaded.floors[0].structure.stairLandings.length, 0);
+    assert.deepEqual(
+        uploaded.floors[1].structure.stairLandings.map(item => item.stairConnectionId),
+        ["connection-0", "connection-1", "connection-2"]
+    );
+    assert.equal(uploadedStairs[1].position.x, 6);
+    assert.equal(uploadedStairs[1].rotationY, Math.PI / 2);
 });
 
 test("publishing refuses an existing designated project before allocating or uploading", async () => {

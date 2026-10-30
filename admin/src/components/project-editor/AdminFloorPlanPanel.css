@@ -25,6 +25,22 @@
     text-transform: uppercase;
 }
 
+.admin-floor-staircase-controls .admin-floor-field {
+    margin-bottom: 12px;
+}
+
+.admin-floor-staircase-railing {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #27272a;
+    font-size: 13px;
+}
+
+.admin-floor-staircase-message {
+    color: #b42318;
+}
+
 .admin-floor-tools {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -144,7 +160,8 @@
     font-size: 11px;
 }
 
-.admin-floor-field input[type="number"] {
+.admin-floor-field input[type="number"],
+.admin-floor-field select {
     width: 100%;
     min-height: 36px;
     box-sizing: border-box;
@@ -152,6 +169,10 @@
     border: 1px solid #e4e4e7;
     border-radius: 8px;
     color: #18181b;
+}
+
+.admin-floor-note.error {
+    color: #b42318;
 }
 
 .admin-floor-field input[type="range"] {
@@ -169,7 +190,6 @@
 
 .admin-floor-note,
 .admin-floor-confirm p,
-.admin-floor-measurements p,
 .admin-floor-calibration p,
 .admin-floor-status {
     margin: 0;
@@ -180,27 +200,6 @@
 
 .admin-floor-group .secondary {
     background: #f4f4f5;
-}
-
-.admin-floor-measurements {
-    display: flex;
-    flex-direction: column;
-    gap: 11px;
-    padding-top: 10px;
-}
-
-.admin-floor-measurements > div {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 9px 10px;
-    border-radius: 8px;
-    background: #f4f4f5;
-    font-size: 12px;
-}
-
-.admin-floor-measurements strong {
-    color: #18181b;
 }
 
 .admin-floor-confirm {
@@ -240,8 +239,24 @@
 }
 
 .admin-floor-plan-panel {
+    display: flex;
+    height: 100%;
+    min-height: 0;
+    flex-direction: column;
     gap: 0;
     padding: 2px 16px 16px;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.admin-floor-plan-scroll {
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    padding-bottom: 16px;
 }
 
 .admin-floor-group {
@@ -304,6 +319,42 @@
     min-height: 36px;
     padding: 0 12px;
     letter-spacing: .08em;
+}
+
+.admin-floor-staircase-controls {
+    padding: 0 12px 12px;
+}
+
+.admin-floor-staircase-controls h3 {
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    margin: 0;
+    color: rgba(0, 0, 0, .55);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .12em;
+}
+
+.admin-floor-staircase-controls .admin-floor-field {
+    margin: 0 0 10px;
+}
+
+.admin-floor-staircase-controls .admin-floor-field input[type="number"] {
+    min-height: 36px;
+}
+
+.admin-floor-staircase-railing {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #333;
+    font-size: 11px;
+}
+
+.admin-floor-staircase-message {
+    margin-top: 8px;
+    color: #b42318;
 }
 
 .admin-floor-group .admin-floor-section-toggle {
@@ -450,31 +501,30 @@
     color: rgba(0, 0, 0, .4);
 }
 
-.admin-floor-measurements {
-    gap: 9px;
-    padding-top: 0;
-}
-
-.admin-floor-measurements > div {
-    padding: 0;
-    background: transparent;
-    font-size: 12px;
-}
-
-.admin-floor-measurements strong {
-    font-variant-numeric: tabular-nums;
-}
-
 .admin-floor-confirm {
     gap: 10px;
-    padding-top: 16px;
+    flex: 0 0 auto;
+    padding: 12px 0 14px;
+    border-top: 1px solid rgba(0, 0, 0, .08);
     border-bottom: 0;
+    background: #f8f8f7;
 }
 
 .admin-floor-confirm button {
-    min-height: 38px;
+    display: flex;
+    width: 100%;
+    min-height: 44px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 12px;
     border-radius: 999px;
     background: #1b1b1b;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.25;
+    white-space: normal;
 }
 
 .admin-floor-group .admin-floor-remove-blueprint {

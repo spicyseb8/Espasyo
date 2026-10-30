@@ -457,6 +457,9 @@
 
 .admin-editor-panel-view.active {
     display: block;
+    height: 100%;
+    min-height: 0;
+    box-sizing: border-box;
     animation: admin-panel-in .18s ease;
 }
 
@@ -928,6 +931,80 @@
     border-color: #18181b;
     background: #18181b;
     color: #fff;
+}
+
+.admin-editor-staircase-dialog {
+    display: grid;
+    gap: 12px;
+}
+
+.admin-editor-staircase-field {
+    display: grid;
+    gap: 6px;
+    color: #52525b;
+    font-size: 12px;
+}
+
+.admin-editor-staircase-field input,
+.admin-editor-staircase-field select {
+    width: 100%;
+    min-height: 36px;
+    box-sizing: border-box;
+    padding: 0 9px;
+    border: 1px solid #d4d4d8;
+    border-radius: 8px;
+    color: #18181b;
+}
+
+.admin-editor-staircase-railing {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #52525b;
+    font-size: 12px;
+}
+
+.admin-editor-staircase-summary,
+.admin-editor-staircase-error {
+    margin: 0;
+    font-size: 12px;
+}
+
+.admin-editor-staircase-summary {
+    color: #71717a;
+}
+
+.admin-editor-staircase-error {
+    color: #b42318;
+}
+
+.admin-editor-staircase-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.admin-editor-staircase-actions button {
+    width: 50%;
+    min-height: 36px;
+    margin: 0;
+    border: 1px solid #d4d4d8;
+    border-radius: 8px;
+    background: #fff;
+    color: #18181b;
+    cursor: pointer;
+    font: inherit;
+    font-size: 12px;
+}
+
+.admin-editor-staircase-actions .admin-editor-dialog-create {
+    border-color: #166534;
+    background: #166534;
+    color: #fff;
+}
+
+.admin-editor-staircase-actions button:disabled {
+    cursor: not-allowed;
+    opacity: .5;
 }
 
 @media (max-width: 760px) {

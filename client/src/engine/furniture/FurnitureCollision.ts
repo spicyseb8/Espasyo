@@ -2,11 +2,22 @@ import { Vector3 } from "three";
 
 import type { Wall } from "../walls/WallTypes";
 import type { Furniture } from "./FurnitureTypes";
+import {
+    calculateStaircaseGeometry,
+    type ProceduralStaircaseGeometry,
+    type StaircaseDimensions
+} from "../../../../shared/staircaseGeometry.ts";
 
 export type FurnitureCollisionReason =
     | "none"
     | "wall"
-    | "furniture";
+    | "furniture"
+    | "staircase";
+
+export interface FurnitureStaircaseObstacle extends StaircaseDimensions {
+    position: { x: number; y: number; z: number };
+    rotationY: number;
+}
 
 export interface FurnitureCollisionResult {
     valid: boolean;
@@ -407,6 +418,65 @@ function collidesWithFurniture(
     );
 }
 
+function collidesWithStaircase(
+    position: Vector3,
+    width: number,
+    depth: number,
+    rotationY: number,
+    stair: FurnitureStaircaseObstacle,
+    padding: number
+): boolean {
+    let geometry: ProceduralStaircaseGeometry;
+    try {
+        geometry = calculateStaircaseGeometry(stair);
+    } catch {
+        return false;
+    }
+
+    const cosine = Math.cos(stair.rotationY);
+    const sine = Math.sin(stair.rotationY);
+    const worldCenter = (x: number, z: number) => new Vector3(
+        stair.position.x + x * cosine + z * sine,
+        0,
+        stair.position.z - x * sine + z * cosine
+    );
+    const obstacleRotation = -stair.rotationY;
+    for (const flight of geometry.flights) {
+        const alongX = Math.abs(flight.direction.x) > 0.5;
+        const center = worldCenter(
+            flight.start.x + flight.direction.x * flight.run / 2,
+            flight.start.z + flight.direction.z * flight.run / 2
+        );
+        if (obbOverlap(
+            position,
+            width,
+            depth,
+            rotationY,
+            center,
+            alongX ? flight.run : flight.width,
+            alongX ? flight.width : flight.run,
+            obstacleRotation,
+            padding
+        )) return true;
+    }
+
+    for (const landing of geometry.landings) {
+        const center = worldCenter(landing.center.x, landing.center.z);
+        if (obbOverlap(
+            position,
+            width,
+            depth,
+            rotationY,
+            center,
+            landing.size.x,
+            landing.size.z,
+            obstacleRotation,
+            padding
+        )) return true;
+    }
+    return false;
+}
+
 //==================================================
 // Main collision check
 //==================================================
@@ -424,6 +494,7 @@ export function checkFurnitureCollision(
         height?: number;
         ignoreWallId?: string | null;
         ignoreFurnitureId?: string | null;
+        stairs?: FurnitureStaircaseObstacle[];
     }
 ): FurnitureCollisionResult {
     const height =
@@ -458,6 +529,26 @@ export function checkFurnitureCollision(
             return {
                 valid: false,
                 reason: "wall"
+            };
+        }
+    }
+
+    //--------------------------------------------------
+    // Staircase collision (active-floor data only)
+    //--------------------------------------------------
+
+    for (const stair of options?.stairs ?? []) {
+        if (collidesWithStaircase(
+            position,
+            width,
+            depth,
+            rotationY,
+            stair,
+            padding
+        )) {
+            return {
+                valid: false,
+                reason: "staircase"
             };
         }
     }

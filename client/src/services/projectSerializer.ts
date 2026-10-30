@@ -120,6 +120,22 @@ export function createProjectData(
             depth: opening.depth,
             archRise: opening.archRise
         })),
+        stairs: state.stairs.map(stair => ({
+            ...stair,
+            position: {
+                x: stair.position.x,
+                y: stair.position.y,
+                z: stair.position.z
+            }
+        })),
+        stairLandings: state.stairLandings.map(landing => ({
+            ...landing,
+            position: {
+                x: landing.position.x,
+                y: landing.position.y,
+                z: landing.position.z
+            }
+        })),
         floorFinishes: {
             ...state.floorFinishes
         },

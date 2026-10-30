@@ -56,6 +56,8 @@ import Doors
 
 import Windows
     from "./Windows/Windows";
+import Stairs
+    from "./Stairs/Stairs";
 
 import SelectionInteractionEvents
     from "./SelectionInteractionEvents";
@@ -352,6 +354,8 @@ export default function Scene({
                 <Doors />
 
                 <Windows />
+
+                <Stairs />
 
                 <FurnitureScene />
 

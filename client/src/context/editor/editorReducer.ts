@@ -10,6 +10,7 @@ import type { Window } from "../../engine/windows/WindowTypes";
 import type { Opening } from "../../engine/openings/OpeningTypes";
 import type { SavedProjectData, SavedProjectFloor } from "./ProjectTypes";
 import type { EditorFloorData } from "./types";
+import { getStaircaseFloorData } from "./staircaseData.ts";
 import {
     getWallFinishSideKey,
     WALL_SIDE_FINISH_BUCKET
@@ -1075,6 +1076,10 @@ function reduceEditorAction(
                     restoredFurniture,
                 openings:
                     restoredOpenings,
+                stairs:
+                    project.stairs ?? [],
+                stairLandings:
+                    project.stairLandings ?? [],
                 wallHeight:
                     project.wallHeight,
                 wallThickness:
@@ -1152,6 +1157,8 @@ function captureFloor(
         furniture: state.furniture,
         windows: state.windows,
         openings: state.openings,
+        stairs: state.stairs,
+        stairLandings: state.stairLandings,
         floorFinishes: state.floorFinishes,
         wallFinishes: state.wallFinishes,
         wallHeight: state.wallHeight,
@@ -1233,6 +1240,11 @@ export function editorReducer(
                 structure: project
             }];
         const floors = savedFloors.map((floor, index) => {
+            const staircaseData = getStaircaseFloorData({
+                ...floor.structure,
+                stairs: floor.stairs ?? floor.structure.stairs,
+                stairLandings: floor.stairLandings ?? floor.structure.stairLandings
+            }, project, index);
             const structure = {
                 ...project,
                 ...floor.structure,
@@ -1242,6 +1254,8 @@ export function editorReducer(
                     (index === 0 ? project.floorFinishes : {}),
                 wallFinishes: floor.wallFinishes ?? floor.structure.wallFinishes ??
                     (index === 0 ? project.wallFinishes : {}),
+                stairs: staircaseData.stairs,
+                stairLandings: staircaseData.stairLandings,
                 floors: undefined,
                 activeFloorId: undefined
             } as SavedProjectData;
