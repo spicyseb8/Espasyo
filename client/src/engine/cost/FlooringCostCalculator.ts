@@ -34,6 +34,9 @@ export interface FlooringCostOptions {
     corners: Corner[];
     walls: Wall[];
     floorFinishes: Record<string, string>;
+    findFloorMaterial?: (
+        materialId: string
+    ) => ReturnType<typeof findCachedFloorMaterial>;
 }
 
 //==================================================
@@ -116,9 +119,8 @@ export function calculateFlooringCosts(
         //--------------------------------------------------
 
         const firebaseMaterial =
-            findCachedFloorMaterial(
-                materialId
-            );
+            options.findFloorMaterial?.(materialId) ??
+            findCachedFloorMaterial(materialId);
 
         //--------------------------------------------------
         // Legacy material-library fallback

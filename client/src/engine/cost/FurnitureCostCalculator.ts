@@ -1,7 +1,3 @@
-import type {
-    Furniture
-} from "../furniture/FurnitureTypes";
-
 import {
     findAsset
 } from "../../assets/AssetLibrary";
@@ -20,7 +16,10 @@ import type {
 //==================================================
 
 export function calculateFurnitureCosts(
-    furnitureList: Furniture[]
+    furnitureList: Array<{ assetId: string }>,
+    findFurnitureAsset?: (
+        assetId: string
+    ) => { id: string; name: string; price?: number } | undefined
 ): CostItem[] {
 
     const grouped =
@@ -43,9 +42,8 @@ export function calculateFurnitureCosts(
         //--------------------------------------------------
 
         const asset =
-            getCachedFurnitureAsset(
-                furniture.assetId
-            ) ??
+            findFurnitureAsset?.(furniture.assetId) ??
+            getCachedFurnitureAsset(furniture.assetId) ??
             findAsset(
                 furniture.assetId
             );

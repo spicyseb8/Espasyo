@@ -16,7 +16,10 @@ import {
 
 
 export function calculateWindowCosts(
-    windows: Window[]
+    windows: Window[],
+    findWindowAsset?: (
+        assetId: string
+    ) => { id: string; name: string; price?: number } | undefined
 ): CostItem[] {
 
     const grouped =
@@ -35,6 +38,7 @@ export function calculateWindowCosts(
         //--------------------------------------------------
 
         const asset =
+            findWindowAsset?.(window.assetId) ??
             getCachedWindowAsset(
                 window.assetId
             ) ??

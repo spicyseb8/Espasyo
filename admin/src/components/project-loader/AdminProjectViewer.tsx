@@ -708,7 +708,7 @@ export default function AdminProjectViewer({
     }}
 >
     <AdminCostEstimator
-        projectData={activeProjectData}
+        projectData={projectData}
     />
 
     <button

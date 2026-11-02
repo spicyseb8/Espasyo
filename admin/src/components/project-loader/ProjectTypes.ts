@@ -199,6 +199,7 @@ export type CostCategory =
 export interface SavedCostItem {
     category: CostCategory;
     name: string;
+    floorId?: string;
     quantity: number;
     unit: string;
     rate: number;
@@ -209,6 +210,11 @@ export interface SavedCostEstimate {
     items: SavedCostItem[];
     subtotal: number;
     total: number;
+    floors?: Array<{
+        floorId: string;
+        name: string;
+        subtotal: number;
+    }>;
 }
 
 export interface SavedProjectFloor {

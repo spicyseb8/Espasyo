@@ -133,7 +133,7 @@ export default function ProjectDetailsModal({
                 projectData = await response.json();
             }
 
-            downloadAdminCostBreakdownPDF(
+            await downloadAdminCostBreakdownPDF(
                 projectData,
                 project.projectName,
                 project.projectId

@@ -3,6 +3,7 @@ import { autoTable } from "jspdf-autotable";
 import type {
     CostCategory,
     CostEstimate,
+    CostFloorEstimate,
     CostItem
 } from "./CostTypes";
 
@@ -102,6 +103,19 @@ function createFileName(projectName: string): string {
     return `espasyo-cost-breakdown-${safeName || "project"}-${date}.pdf`;
 }
 
+export function getCostBreakdownFloors(
+    estimate: CostEstimate
+): CostFloorEstimate[] {
+    return estimate.floors?.length
+        ? estimate.floors
+        : [{
+            floorId: "first-floor",
+            name: "1st Floor",
+            items: estimate.items,
+            subtotal: estimate.subtotal
+        }];
+}
+
 export function downloadCostBreakdownPdf(
     estimate: CostEstimate,
     projectName: string,
@@ -194,10 +208,44 @@ export function downloadCostBreakdownPdf(
     // COST SECTIONS
     //==================================================
 
-    for (const section of SECTIONS) {
-        const sectionItems = estimate.items.filter(item =>
+    const floors = getCostBreakdownFloors(estimate);
+
+    for (const floor of floors) {
+        if (currentY + 15 > pageHeight - 16) {
+            doc.addPage();
+            currentY = 16;
+        }
+
+        doc.setFillColor(37, 43, 36);
+        doc.roundedRect(
+            margin,
+            currentY,
+            contentWidth,
+            9,
+            1.2,
+            1.2,
+            "F"
+        );
+        doc.setTextColor(245, 243, 236);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.text(floor.name, margin + 3, currentY + 6);
+        doc.text(
+            formatMoney(floor.subtotal),
+            pageWidth - margin - 3,
+            currentY + 6,
+            { align: "right" }
+        );
+        currentY += 11;
+
+        for (const section of SECTIONS) {
+        const sectionItems = floor.items.filter(item =>
             section.categories.includes(item.category)
         );
+
+        if (sectionItems.length === 0) {
+            continue;
+        }
 
         const isWallSection =
             section.title === "WALL MATERIALS";
@@ -457,6 +505,34 @@ export function downloadCostBreakdownPdf(
 
         currentY =
             (doc.lastAutoTable?.finalY ?? currentY) + 6;
+        }
+
+        if (floor.items.length === 0) {
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(8);
+            doc.setTextColor(115, 118, 110);
+            doc.text("No cost items on this floor.", margin + 2, currentY + 2);
+            currentY += 8;
+        }
+
+        if (currentY + 12 > pageHeight - 16) {
+            doc.addPage();
+            currentY = 16;
+        }
+
+        doc.setDrawColor(220, 222, 216);
+        doc.line(margin, currentY, pageWidth - margin, currentY);
+        doc.setTextColor(67, 78, 59);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.text(`${floor.name} SUBTOTAL`, margin, currentY + 6);
+        doc.text(
+            formatMoney(floor.subtotal),
+            pageWidth - margin,
+            currentY + 6,
+            { align: "right" }
+        );
+        currentY += 12;
     }
 
     //==================================================

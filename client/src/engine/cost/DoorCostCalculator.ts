@@ -16,7 +16,10 @@ import {
 
 
 export function calculateDoorCosts(
-    doors: Door[]
+    doors: Door[],
+    findDoorAsset?: (
+        assetId: string
+    ) => { id: string; name: string; price?: number } | undefined
 ): CostItem[] {
 
     const grouped =
@@ -35,6 +38,7 @@ export function calculateDoorCosts(
         //--------------------------------------------------
 
         const asset =
+            findDoorAsset?.(door.assetId) ??
             getCachedDoorAsset(
                 door.assetId
             ) ??

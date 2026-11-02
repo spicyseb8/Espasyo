@@ -8,7 +8,7 @@ const vite = await createServer({
     configFile: false,
     optimizeDeps: { noDiscovery: true },
     root: process.cwd(),
-    server: { middlewareMode: true }
+    server: { middlewareMode: true, hmr: false }
 });
 
 const [{ solveRegions }, wallFinishUtils, { calculateWallFinishCosts }] =

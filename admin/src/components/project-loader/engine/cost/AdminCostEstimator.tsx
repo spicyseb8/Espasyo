@@ -1,10 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import { ChevronDown, Receipt } from "lucide-react";
-import type {
-    SavedCostItem,
-    SavedProjectData
-} from "../../ProjectTypes";
+import type { SavedCostItem, SavedProjectData } from "../../ProjectTypes";
+import type { CostEstimate } from "../../../../../../client/src/engine/cost/CostTypes";
+import { calculateAdminCostEstimate } from "./AdminCostCalculation";
 
 interface AdminCostEstimatorProps {
     projectData: SavedProjectData;
@@ -105,6 +104,35 @@ const styles: Record<string, CSSProperties> = {
         border: "1px solid #e5e5e1",
         background: "#ffffff"
     },
+    floorGroup: {
+        marginBottom: "12px",
+        overflow: "hidden",
+        borderRadius: "12px",
+        border: "1px solid #dfe4dc",
+        background: "#ffffff"
+    },
+    floorHeader: {
+        display: "flex",
+        width: "100%",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "11px 12px",
+        border: 0,
+        background: "#fafbf9",
+        textAlign: "left",
+        cursor: "pointer"
+    },
+    floorLabel: {
+        display: "flex",
+        alignItems: "center",
+        gap: "7px",
+        fontSize: "11px",
+        fontWeight: 600,
+        color: "#333333"
+    },
+    floorDetails: {
+        padding: "10px 10px 0"
+    },
     groupHeader: {
         display: "flex",
         alignItems: "center",
@@ -179,35 +207,64 @@ export default function AdminCostEstimator({
 }: AdminCostEstimatorProps) {
     const [open, setOpen] = useState(false);
     const [hovered, setHovered] = useState(false);
+    const [expandedFloorIds, setExpandedFloorIds] = useState<string[]>([]);
+    const [estimateState, setEstimateState] = useState<{
+        projectData: SavedProjectData;
+        result: CostEstimate;
+    } | null>(null);
+    const [estimateErrorState, setEstimateErrorState] = useState<{
+        projectData: SavedProjectData;
+        message: string;
+    } | null>(null);
 
-    const items = projectData.costEstimate?.items ?? [];
-    const estimateAvailable =
-        typeof projectData.costEstimate?.total === "number" &&
-        Number.isFinite(projectData.costEstimate.total);
+    useEffect(() => {
+        let cancelled = false;
 
-    const total = estimateAvailable
-        ? projectData.costEstimate!.total
-        : null;
+        calculateAdminCostEstimate(projectData)
+            .then(result => {
+                if (!cancelled) {
+                    setEstimateState({ projectData, result });
+                    setEstimateErrorState(null);
+                }
+            })
+            .catch(error => {
+                console.error("Failed to calculate admin project costs:", error);
+                if (!cancelled) {
+                    setEstimateErrorState({
+                        projectData,
+                        message:
+                        error instanceof Error
+                            ? error.message
+                            : "Unable to calculate this project's costs."
+                    });
+                }
+            });
 
-    const furnitureCount = projectData.furniture.length;
-
-    const groupedItems = useMemo(() => {
-        const groups: Record<SavedCostItem["category"], SavedCostItem[]> = {
-            furniture: [],
-            flooring: [],
-            wallFinish: [],
-            doors: [],
-            windows: []
+        return () => {
+            cancelled = true;
         };
+    }, [projectData]);
 
-        for (const item of items) {
-            if (groups[item.category]) {
-                groups[item.category].push(item);
-            }
-        }
-
-        return groups;
-    }, [items]);
+    const estimate = estimateState?.projectData === projectData
+        ? estimateState.result
+        : null;
+    const estimateError = estimateErrorState?.projectData === projectData
+        ? estimateErrorState.message
+        : "";
+    const items = estimate?.items ?? [];
+    const furnitureCount = useMemo(() => {
+        if (!projectData.floors?.length) return projectData.furniture.length;
+        return projectData.floors.reduce(
+            (count, floor, index) =>
+                count + (
+                    floor.furniture ??
+                    (index === 0
+                        ? projectData.furniture ?? floor.structure.furniture ?? []
+                        : floor.structure.furniture ?? [])
+                ).length,
+            0
+        );
+    }, [projectData]);
 
     return (
         <div style={styles.wrapper}>
@@ -250,82 +307,109 @@ export default function AdminCostEstimator({
                     </div>
 
                     <div style={styles.body}>
-                        {items.length === 0 ? (
+                        {estimateError ? (
                             <div style={styles.empty}>
-                                <p style={styles.emptyTitle}>
-                                    {estimateAvailable
-                                        ? "No cost items yet."
-                                        : "Estimate unavailable."}
-                                </p>
-
-                                <p style={styles.emptyText}>
-                                    {estimateAvailable
-                                        ? "This project has no priced items."
-                                        : "Save the client design with a current cost estimate to review pricing."}
-                                </p>
+                                <p style={styles.emptyTitle}>Estimate unavailable.</p>
+                                <p style={styles.emptyText}>{estimateError}</p>
+                            </div>
+                        ) : estimate === null ? (
+                            <div style={styles.empty}>
+                                <p style={styles.emptyTitle}>Calculating estimate...</p>
+                            </div>
+                        ) : estimate.floors.length === 0 ? (
+                            <div style={styles.empty}>
+                                <p style={styles.emptyTitle}>No floors to estimate.</p>
                             </div>
                         ) : (
-                            (
-                                Object.keys(
-                                    groupedItems
-                                ) as SavedCostItem["category"][]
-                            ).map(category => {
-                                const categoryItems = groupedItems[category];
-
-                                if (categoryItems.length === 0) {
-                                    return null;
-                                }
-
-                                const categoryTotal = categoryItems.reduce(
-                                    (sum, item) => sum + item.subtotal,
-                                    0
-                                );
-
+                            estimate.floors.map(floor => {
+                                const isExpanded = expandedFloorIds.includes(floor.floorId);
                                 return (
-                                    <div key={category} style={styles.group}>
-                                        <div style={styles.groupHeader}>
-                                            <span style={styles.groupLabel}>
-                                                {categoryLabels[category]}
+                                    <section key={floor.floorId} style={styles.floorGroup}>
+                                        <button
+                                            type="button"
+                                            style={styles.floorHeader}
+                                            aria-expanded={isExpanded}
+                                            onClick={() => setExpandedFloorIds(current =>
+                                                current.includes(floor.floorId)
+                                                    ? current.filter(id => id !== floor.floorId)
+                                                    : [...current, floor.floorId]
+                                            )}
+                                        >
+                                            <span style={styles.floorLabel}>
+                                                <ChevronDown
+                                                    size={14}
+                                                    style={{
+                                                        transform: isExpanded ? "rotate(180deg)" : "none",
+                                                        transition: "transform 0.15s"
+                                                    }}
+                                                />
+                                                {floor.name}
                                             </span>
-
                                             <strong style={styles.groupTotal}>
-                                                {formatCurrency(categoryTotal)}
+                                                {formatCurrency(floor.subtotal)}
                                             </strong>
-                                        </div>
-
-                                        {categoryItems.map((item, index) => (
-                                            <div
-                                                key={`${item.name}-${index}`}
-                                                style={{
-                                                    ...styles.itemRow,
-                                                    borderBottom:
-                                                        index === categoryItems.length - 1
-                                                            ? "none"
-                                                            : "1px solid #f0f0ed"
-                                                }}
-                                            >
-                                                <div style={styles.itemInfo}>
-                                                    <p style={styles.itemName}>
-                                                        {item.name}
+                                        </button>
+                                        {isExpanded && (
+                                            <div style={styles.floorDetails}>
+                                                {floor.items.length === 0 ? (
+                                                    <p style={styles.emptyText}>
+                                                        No cost items on this floor.
                                                     </p>
-
-                                                    <p style={styles.itemMeta}>
-                                                        {item.quantity.toFixed(
-                                                            item.unit === "m²" ? 2 : 0
-                                                        )}{" "}
-                                                        {item.unit}
-                                                        {" × "}
-                                                        {formatCurrency(item.rate)}/
-                                                        {item.unit}
-                                                    </p>
-                                                </div>
-
-                                                <span style={styles.itemSubtotal}>
-                                                    {formatCurrency(item.subtotal)}
-                                                </span>
+                                                ) : (Object.keys(categoryLabels) as SavedCostItem["category"][])
+                                                    .map(category => {
+                                                        const categoryItems = floor.items.filter(
+                                                            item => item.category === category
+                                                        );
+                                                        if (categoryItems.length === 0) return null;
+                                                        const categoryTotal = categoryItems.reduce(
+                                                            (sum, item) => sum + item.subtotal,
+                                                            0
+                                                        );
+                                                        return (
+                                                            <div key={category} style={styles.group}>
+                                                                <div style={styles.groupHeader}>
+                                                                    <span style={styles.groupLabel}>
+                                                                        {categoryLabels[category]}
+                                                                    </span>
+                                                                    <strong style={styles.groupTotal}>
+                                                                        {formatCurrency(categoryTotal)}
+                                                                    </strong>
+                                                                </div>
+                                                                {categoryItems.map((item, index) => (
+                                                                    <div
+                                                                        key={`${item.name}-${index}`}
+                                                                        style={{
+                                                                            ...styles.itemRow,
+                                                                            borderBottom: index === categoryItems.length - 1
+                                                                                ? "none"
+                                                                                : "1px solid #f0f0ed"
+                                                                        }}
+                                                                    >
+                                                                        <div style={styles.itemInfo}>
+                                                                            <p style={styles.itemName}>{item.name}</p>
+                                                                            <p style={styles.itemMeta}>
+                                                                                {item.quantity.toFixed(
+                                                                                    item.unit === "m²" ||
+                                                                                    item.unit === "L" ? 2 : 0
+                                                                                )}{" "}
+                                                                                {item.unit} × {formatCurrency(item.rate)}/
+                                                                                {item.category === "flooring" &&
+                                                                                item.unit === "pieces"
+                                                                                    ? "tile"
+                                                                                    : item.unit}
+                                                                            </p>
+                                                                        </div>
+                                                                        <span style={styles.itemSubtotal}>
+                                                                            {formatCurrency(item.subtotal)}
+                                                                        </span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        );
+                                                    })}
                                             </div>
-                                        ))}
-                                    </div>
+                                        )}
+                                    </section>
                                 );
                             })
                         )}
@@ -335,7 +419,9 @@ export default function AdminCostEstimator({
                         <span style={styles.footerLabel}>Estimated Total</span>
 
                         <strong style={styles.footerTotal}>
-                            {total === null ? "Unavailable" : formatCurrency(total)}
+                            {estimate === null
+                                ? estimateError ? "Unavailable" : "Calculating..."
+                                : formatCurrency(estimate.total)}
                         </strong>
                     </div>
                 </div>

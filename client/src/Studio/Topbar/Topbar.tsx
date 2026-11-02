@@ -41,6 +41,7 @@ export default function Topbar() {
     const { projectId: routeProjectId } = useParams<{ projectId?: string }>();
 
     const [open, setOpen] = useState(false);
+    const [expandedFloorIds, setExpandedFloorIds] = useState<string[]>([]);
     const dropdownRef = useRef<HTMLDivElement | null>(null);
 
     const [projectName, setProjectName] = useState<string>(() => {
@@ -58,9 +59,10 @@ export default function Topbar() {
 
     const estimate = useMemo(() => calculateCostEstimate(state), [state]);
 
-    const furnitureCount = state.furniture.length;
+    const furnitureCount = state.floors.length > 0
+        ? state.floors.reduce((count, floor) => count + floor.furniture.length, 0)
+        : state.furniture.length;
 
-    // Close the estimate dropdown on outside click or Escape
     useEffect(() => {
         const handleOutsideClick = (event: MouseEvent) => {
             if (
@@ -84,22 +86,6 @@ export default function Topbar() {
         };
     }, []);
 
-    const groupedItems = useMemo(() => {
-        const groups: Record<CostCategory, typeof estimate.items> = {
-            furniture: [],
-            flooring: [],
-            wallFinish: [],
-            doors: [],
-            windows: []
-        };
-
-        for (const item of estimate.items) {
-            groups[item.category].push(item);
-        }
-
-        return groups;
-    }, [estimate.items]);
-
     const handleDownloadReport = () => {
         try {
             downloadCostBreakdownPdf(estimate, projectName, routeProjectId);
@@ -112,6 +98,14 @@ export default function Topbar() {
                 "Unable to generate the cost breakdown report. Please try again."
             );
         }
+    };
+
+    const toggleFloor = (floorId: string) => {
+        setExpandedFloorIds(current =>
+            current.includes(floorId)
+                ? current.filter(id => id !== floorId)
+                : [...current, floorId]
+        );
     };
 
     return (
@@ -201,7 +195,7 @@ export default function Topbar() {
                     >
                         <span className="cost-estimator-label">Estimate</span>
                         <span className="cost-estimator-amount">
-                            {formatCurrency(estimate.total, 0)}
+                            {formatCurrency(estimate.total)}
                         </span>
                         <ChevronDown
                             size={14}
@@ -223,55 +217,87 @@ export default function Topbar() {
                             </div>
 
                             <div className="cost-estimator-list">
-                                {estimate.items.length === 0 ? (
+                                {estimate.floors.length === 0 ? (
                                     <div className="cost-empty">
                                         No cost items yet. Add furniture or finishes to see your
                                         estimate.
                                     </div>
                                 ) : (
-                                    CATEGORY_ORDER.map((category) => {
-                                        const items = groupedItems[category];
-                                        if (items.length === 0) return null;
-
-                                        const categoryTotal = items.reduce(
-                                            (sum, item) => sum + item.subtotal,
-                                            0
-                                        );
-
+                                    estimate.floors.map(floor => {
+                                        const isExpanded = expandedFloorIds.includes(floor.floorId);
                                         return (
-                                            <section key={category} className="cost-category">
-                                                <div className="cost-category-header">
-                                                    <span>{CATEGORY_LABELS[category]}</span>
-                                                    <strong>{formatCurrency(categoryTotal)}</strong>
-                                                </div>
+                                            <section className="cost-floor" key={floor.floorId}>
+                                                <button
+                                                    type="button"
+                                                    className="cost-floor-header"
+                                                    aria-expanded={isExpanded}
+                                                    onClick={() => toggleFloor(floor.floorId)}
+                                                >
+                                                    <span className="cost-floor-name">
+                                                        <ChevronDown
+                                                            size={13}
+                                                            className={isExpanded ? "open" : ""}
+                                                        />
+                                                        {floor.name}
+                                                    </span>
+                                                    <strong>{formatCurrency(floor.subtotal)}</strong>
+                                                </button>
+                                                {isExpanded && (
+                                                    <div className="cost-floor-details">
+                                                        {floor.items.length === 0 ? (
+                                                            <p className="cost-floor-empty">
+                                                                No cost items on this floor.
+                                                            </p>
+                                                        ) : CATEGORY_ORDER.map(category => {
+                                                            const items = floor.items.filter(
+                                                                item => item.category === category
+                                                            );
+                                                            if (items.length === 0) return null;
+                                                            const categoryTotal = items.reduce(
+                                                                (sum, item) => sum + item.subtotal,
+                                                                0
+                                                            );
 
-                                                {items.map((item, index) => (
-                                                    <div
-                                                        key={`${item.name}-${index}`}
-                                                        className="cost-item"
-                                                    >
-                                                        <div className="cost-item-info">
-                                                            <span className="cost-item-name">
-                                                                {item.name}
-                                                            </span>
-                                                            <span className="cost-item-quantity">
-                                                                {item.quantity.toFixed(
-                                                                    item.unit === "m²" ||
-                                                                    item.unit === "L" ? 2 : 0
-                                                                )}{" "}
-                                                                {item.unit} × {formatCurrency(item.rate)}/
-                                                                {item.category === "flooring" &&
-                                                                item.unit === "pieces"
-                                                                    ? "tile"
-                                                                    : item.unit}
-                                                            </span>
-                                                        </div>
-
-                                                        <span className="cost-item-total">
-                                                            {formatCurrency(item.subtotal)}
-                                                        </span>
+                                                            return (
+                                                                <section
+                                                                    key={category}
+                                                                    className="cost-category"
+                                                                >
+                                                                    <div className="cost-category-header">
+                                                                        <span>{CATEGORY_LABELS[category]}</span>
+                                                                        <strong>{formatCurrency(categoryTotal)}</strong>
+                                                                    </div>
+                                                                    {items.map((item, index) => (
+                                                                        <div
+                                                                            key={`${item.name}-${index}`}
+                                                                            className="cost-item"
+                                                                        >
+                                                                            <div className="cost-item-info">
+                                                                                <span className="cost-item-name">
+                                                                                    {item.name}
+                                                                                </span>
+                                                                                <span className="cost-item-quantity">
+                                                                                    {item.quantity.toFixed(
+                                                                                        item.unit === "m²" ||
+                                                                                        item.unit === "L" ? 2 : 0
+                                                                                    )}{" "}
+                                                                                    {item.unit} × {formatCurrency(item.rate)}/
+                                                                                    {item.category === "flooring" &&
+                                                                                    item.unit === "pieces"
+                                                                                        ? "tile"
+                                                                                        : item.unit}
+                                                                                </span>
+                                                                            </div>
+                                                                            <span className="cost-item-total">
+                                                                                {formatCurrency(item.subtotal)}
+                                                                            </span>
+                                                                        </div>
+                                                                    ))}
+                                                                </section>
+                                                            );
+                                                        })}
                                                     </div>
-                                                ))}
+                                                )}
                                             </section>
                                         );
                                     })

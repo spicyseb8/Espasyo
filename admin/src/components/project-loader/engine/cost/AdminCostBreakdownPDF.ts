@@ -1,6 +1,8 @@
 
 import { jsPDF } from "jspdf";
 import { autoTable } from "jspdf-autotable";
+import type { SavedProjectData } from "../../ProjectTypes";
+import { calculateAdminCostEstimate } from "./AdminCostCalculation";
 
 type CostCategory =
     | "furniture"
@@ -12,6 +14,7 @@ type CostCategory =
 interface SavedCostItem {
     category: CostCategory;
     name: string;
+    floorId?: string;
     quantity: number;
     unit: string;
     rate: number;
@@ -58,14 +61,6 @@ const SECTIONS: ReportSection[] = [
     }
 ];
 
-const VALID_CATEGORIES: CostCategory[] = [
-    "furniture",
-    "flooring",
-    "wallFinish",
-    "doors",
-    "windows"
-];
-
 function isRecord(value: unknown): value is RecordValue {
     return (
         typeof value === "object" &&
@@ -74,33 +69,13 @@ function isRecord(value: unknown): value is RecordValue {
     );
 }
 
-function finiteNumber(value: unknown): number | null {
-    if (
-        typeof value !== "number" ||
-        !Number.isFinite(value)
-    ) {
-        return null;
-    }
-
-    return value;
-}
-
-function optionalNumber(
-    ...values: unknown[]
-): number | undefined {
-    for (const value of values) {
-        if (value === null || value === undefined) {
-            continue;
-        }
-
-        const parsed = finiteNumber(value);
-
-        if (parsed !== null) {
-            return parsed;
-        }
-    }
-
-    return undefined;
+function isSavedProjectData(value: unknown): value is SavedProjectData {
+    return (
+        isRecord(value) &&
+        typeof value.projectId === "string" &&
+        typeof value.ownerId === "string" &&
+        (value.floors === undefined || Array.isArray(value.floors))
+    );
 }
 
 function formatMoney(amount: number): string {
@@ -162,112 +137,6 @@ function createFileName(projectName: string): string {
     return `espasyo-cost-breakdown-${safeName || "project"}-${date}.pdf`;
 }
 
-function readSavedCostItems(
-    projectData: unknown
-): SavedCostItem[] {
-    if (!isRecord(projectData)) {
-        throw new Error("The saved project JSON is invalid.");
-    }
-
-    const estimate = projectData.costEstimate;
-
-    if (
-        !isRecord(estimate) ||
-        !Array.isArray(estimate.items)
-    ) {
-        throw new Error(
-            "This saved project has no detailed cost estimate. Open and save the project in the client editor first."
-        );
-    }
-
-    return estimate.items.map(
-        (rawItem, index): SavedCostItem => {
-            if (!isRecord(rawItem)) {
-                throw new Error(
-                    `Cost item ${index + 1} is invalid.`
-                );
-            }
-
-            const category = rawItem.category;
-            const name = rawItem.name;
-            const unit = rawItem.unit;
-            const quantity = finiteNumber(rawItem.quantity);
-            const rate = finiteNumber(rawItem.rate);
-            const subtotal = finiteNumber(rawItem.subtotal);
-
-            let coats: number | undefined;
-
-            if (
-                rawItem.coats !== undefined &&
-                rawItem.coats !== null
-            ) {
-                const parsedCoats = finiteNumber(rawItem.coats);
-
-                if (parsedCoats === null) {
-                    throw new Error(
-                        `Cost item ${index + 1} has an invalid coat count.`
-                    );
-                }
-
-                coats = parsedCoats;
-            }
-
-            const dimensions = isRecord(rawItem.dimensions)
-                ? rawItem.dimensions
-                : undefined;
-
-            const pieces = optionalNumber(
-                rawItem.pieces,
-                rawItem.noOfPieces,
-                rawItem.numberOfPieces
-            );
-
-            const length = optionalNumber(
-                rawItem.length,
-                rawItem.lengthMeters,
-                rawItem.lengthInMeters,
-                dimensions?.length,
-                dimensions?.lengthMeters
-            );
-
-            const width = optionalNumber(
-                rawItem.width,
-                rawItem.widthMeters,
-                rawItem.widthInMeters,
-                dimensions?.width,
-                dimensions?.widthMeters
-            );
-
-            if (
-                typeof category !== "string" ||
-                !VALID_CATEGORIES.includes(category as CostCategory) ||
-                typeof name !== "string" ||
-                typeof unit !== "string" ||
-                quantity === null ||
-                rate === null ||
-                subtotal === null
-            ) {
-                throw new Error(
-                    `Cost item ${index + 1} is missing valid cost information.`
-                );
-            }
-
-            return {
-                category: category as CostCategory,
-                name,
-                quantity,
-                unit,
-                rate,
-                subtotal,
-                coats,
-                pieces,
-                length,
-                width
-            };
-        }
-    );
-}
-
 function prepareCostItem(
     item: SavedCostItem
 ): PreparedCostItem {
@@ -301,13 +170,17 @@ function prepareCostItem(
     };
 }
 
-export function downloadAdminCostBreakdownPDF(
+export async function downloadAdminCostBreakdownPDF(
     projectData: unknown,
     projectName: string,
     projectId: string
-): void {
-    const items = readSavedCostItems(projectData);
-    const preparedItems = items.map(prepareCostItem);
+): Promise<void> {
+    if (!isSavedProjectData(projectData)) {
+        throw new Error("The saved project JSON is invalid.");
+    }
+
+    const estimate = await calculateAdminCostEstimate(projectData);
+    const preparedItems = estimate.items.map(prepareCostItem);
 
     const doc = new jsPDF({
         orientation: "portrait",
@@ -377,10 +250,41 @@ export function downloadAdminCostBreakdownPDF(
 
     let currentY = 53;
 
-    for (const section of SECTIONS) {
+    for (const floor of estimate.floors) {
+        if (currentY + 15 > pageHeight - 16) {
+            doc.addPage();
+            currentY = 16;
+        }
+
+        doc.setFillColor(37, 43, 36);
+        doc.roundedRect(
+            margin,
+            currentY,
+            contentWidth,
+            9,
+            1.2,
+            1.2,
+            "F"
+        );
+        doc.setTextColor(245, 243, 236);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.text(floor.name, margin + 3, currentY + 6);
+        doc.text(
+            formatMoney(floor.subtotal),
+            pageWidth - margin - 3,
+            currentY + 6,
+            { align: "right" }
+        );
+        currentY += 11;
+
+        for (const section of SECTIONS) {
         const sectionItems = preparedItems.filter(item =>
+            item.floorId === floor.floorId &&
             section.categories.includes(item.category)
         );
+
+        if (sectionItems.length === 0) continue;
 
         const isWallSection =
             section.title === "WALL MATERIALS";
@@ -442,8 +346,7 @@ export function downloadAdminCostBreakdownPDF(
                     "Amount"
                 ]];
 
-        const rows = sectionItems.length > 0
-            ? sectionItems.map(item => {
+        const rows = sectionItems.map(item => {
                 if (isWallSection) {
                     return [
                         item.name,
@@ -471,32 +374,7 @@ export function downloadAdminCostBreakdownPDF(
                     formatMoney(item.rate),
                     formatMoney(item.subtotal)
                 ];
-            })
-            : [
-                isWallSection
-                    ? [
-                        "No wall paint or primer assigned.",
-                        "",
-                        "",
-                        ""
-                    ]
-                    : isFlooringSection
-                        ? [
-                            "No flooring materials assigned.",
-                            "",
-                            "",
-                            "",
-                            "",
-                            ""
-                        ]
-                        : [
-                            "No items in this section.",
-                            "",
-                            "",
-                            "",
-                            ""
-                        ]
-            ];
+            });
 
         autoTable(doc, {
             startY: currentY,
@@ -551,25 +429,40 @@ export function downloadAdminCostBreakdownPDF(
                         3: { cellWidth: 36, halign: "right" },
                         4: { cellWidth: 43, halign: "right" }
                     },
-            didParseCell: data => {
-                if (
-                    data.section === "body" &&
-                    sectionItems.length === 0 &&
-                    data.row.index === 0
-                ) {
-                    data.cell.styles.textColor = [115, 118, 110];
-                    data.cell.styles.fontStyle = "italic";
-                }
-            }
         });
 
         currentY = (doc.lastAutoTable?.finalY ?? currentY) + 6;
+        }
+
+        if (floor.items.length === 0) {
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(8);
+            doc.setTextColor(115, 118, 110);
+            doc.text("No cost items on this floor.", margin + 2, currentY + 2);
+            currentY += 8;
+        }
+
+        if (currentY + 12 > pageHeight - 16) {
+            doc.addPage();
+            currentY = 16;
+        }
+
+        doc.setDrawColor(220, 222, 216);
+        doc.line(margin, currentY, pageWidth - margin, currentY);
+        doc.setTextColor(67, 78, 59);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.text(`${floor.name} SUBTOTAL`, margin, currentY + 6);
+        doc.text(
+            formatMoney(floor.subtotal),
+            pageWidth - margin,
+            currentY + 6,
+            { align: "right" }
+        );
+        currentY += 12;
     }
 
-    const reportTotal = preparedItems.reduce(
-        (sum, item) => sum + item.displayAmount,
-        0
-    );
+    const reportTotal = estimate.total;
 
     if (currentY + 20 > pageHeight - 15) {
         doc.addPage();

@@ -18,6 +18,9 @@ export interface WallFinishCostOptions {
     windows: Window[];
     openings: Opening[];
     wallFinishes: Record<string, Record<string, string>>;
+    findWallMaterial?: (
+        materialId: string
+    ) => Material | undefined;
 }
 
 interface CutoutRect {
@@ -173,7 +176,7 @@ function calculateArchArea(
 export function calculateWallFinishCosts(
     options: WallFinishCostOptions,
     findMaterial: (materialId: string) => Material | undefined =
-        findCachedWallMaterial
+        options.findWallMaterial ?? findCachedWallMaterial
 ): CostItem[] {
     const {
         corners,

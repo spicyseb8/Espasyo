@@ -410,6 +410,63 @@
     border-radius: 999px;
 }
 
+.cost-floor {
+    border-top: 1px solid var(--tb-line-soft);
+}
+
+.cost-floor-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 0;
+    border: 0;
+    background: transparent;
+    color: var(--tb-ink);
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+}
+
+.cost-floor-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: var(--tb-t-body);
+    font-weight: 600;
+}
+
+.cost-floor-name svg {
+    color: var(--tb-ink-muted);
+    transition: transform 0.15s ease;
+}
+
+.cost-floor-name svg.open {
+    transform: rotate(180deg);
+}
+
+.cost-floor-header strong {
+    color: var(--tb-green-ink);
+    font-size: var(--tb-t-body);
+    font-variant-numeric: tabular-nums;
+}
+
+.cost-floor-details {
+    padding: 0 0 8px 20px;
+}
+
+.cost-floor-details .cost-category:first-child {
+    padding-top: 8px;
+}
+
+.cost-floor-empty {
+    margin: 0;
+    padding: 8px 0 12px;
+    color: var(--tb-ink-muted);
+    font-size: var(--tb-t-label);
+}
+
 /* Sections separated by hairlines — no nested cards */
 .cost-category {
     padding: 14px 0 6px;

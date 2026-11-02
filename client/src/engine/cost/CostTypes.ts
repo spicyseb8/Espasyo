@@ -15,6 +15,7 @@ export interface CostRate {
 export interface CostItem {
     category: CostCategory;
     name: string;
+    floorId?: string;
 
     quantity: number;
     unit: string;
@@ -31,4 +32,12 @@ export interface CostEstimate {
     subtotal: number;
 
     total: number;
+    floors: CostFloorEstimate[];
+}
+
+export interface CostFloorEstimate {
+    floorId: string;
+    name: string;
+    items: CostItem[];
+    subtotal: number;
 }

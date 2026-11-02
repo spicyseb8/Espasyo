@@ -1,157 +1,238 @@
-import type {
-    EditorState
-} from "../../context/editor/types";
-
-import type {
-    CostEstimate,
-    CostItem
-} from "./CostTypes";
-
+import type { EditorState } from "../../context/editor/types";
+import type { CostEstimate, CostFloorEstimate, CostItem } from "./CostTypes";
+import { Vector3 } from "three";
+import type { Asset } from "../../assets/Asset";
+import type { Material } from "../materials/MaterialTypes";
+import type { FloorMaterial } from "../materials/floors";
 import {
     calculateFurnitureCosts
 } from "./FurnitureCostCalculator";
-
 import {
     calculateFlooringCosts
 } from "./FlooringCostCalculator";
-
 import {
     calculateWallFinishCosts
 } from "./WallFinishCostCalculator";
-
 import {
     calculateDoorCosts
 } from "./DoorCostCalculator";
-
 import {
     calculateWindowCosts
 } from "./WindowCostCalculator";
 
-export function calculateCostEstimate(
-    state: EditorState
-): CostEstimate {
+export interface CostPoint {
+    x: number;
+    y: number;
+    z: number;
+}
 
-    //--------------------------------------------------
-    // Furniture
-    //--------------------------------------------------
+export interface CostFloorInput {
+    floorId: string;
+    name: string;
+    corners: Array<{ id: string; position: CostPoint }>;
+    walls: Array<{
+        id: string;
+        start: { id: string; position: CostPoint };
+        end: { id: string; position: CostPoint };
+    }>;
+    furniture: Array<{ assetId: string }>;
+    doors: Array<{
+        id: string;
+        assetId: string;
+        wallId: string;
+        position: CostPoint;
+        rotationY: number;
+        width: number;
+        height: number;
+        depth: number;
+    }>;
+    windows: Array<{
+        id: string;
+        assetId: string;
+        wallId: string;
+        position: CostPoint;
+        rotationY: number;
+        width: number;
+        height: number;
+        wallWidth?: number;
+        depth: number;
+    }>;
+    openings: Array<{
+        id: string;
+        wallId: string;
+        shape: "rectangle" | "arch";
+        position: CostPoint;
+        width: number;
+        height: number;
+        depth: number;
+        archRise?: number;
+    }>;
+    floorFinishes: Record<string, string>;
+    wallFinishes: Record<string, Record<string, string>>;
+    wallHeight: number;
+}
 
-    const furnitureItems =
-        calculateFurnitureCosts(
-            state.furniture
-        );
+export interface CostAssetLookups {
+    findFurnitureAsset?: (assetId: string) => Pick<Asset, "id" | "name" | "price"> | undefined;
+    findDoorAsset?: (assetId: string) => Pick<Asset, "id" | "name" | "price"> | undefined;
+    findWindowAsset?: (assetId: string) => Pick<Asset, "id" | "name" | "price"> | undefined;
+    findFloorMaterial?: (materialId: string) => FloorMaterial | undefined;
+    findWallMaterial?: (materialId: string) => Material | undefined;
+}
 
-    //--------------------------------------------------
-    // Flooring
-    //--------------------------------------------------
+function ordinalFloorName(index: number): string {
+    const number = index + 1;
+    const lastTwoDigits = number % 100;
+    const suffix = lastTwoDigits >= 11 && lastTwoDigits <= 13
+        ? "th"
+        : number % 10 === 1
+            ? "st"
+            : number % 10 === 2
+                ? "nd"
+                : number % 10 === 3
+                    ? "rd"
+                    : "th";
+    return `${number}${suffix} Floor`;
+}
 
-    const flooringItems =
-        calculateFlooringCosts({
-
-            corners:
-                state.corners,
-
-            walls:
-                state.walls,
-
-            floorFinishes:
-                state.floorFinishes
-
-        });
-
-    //--------------------------------------------------
-    // Wall finish
-    //--------------------------------------------------
-
-    const wallFinishItems =
-        calculateWallFinishCosts({
-
-        corners:
-            state.corners,
-
-        walls:
-            state.walls,
-
-        wallHeight:
-            state.wallHeight,
-
-        doors:
-            state.doors,
-
-        windows:
-            state.windows,
-
-        openings:
-            state.openings,
-
-        wallFinishes:
-            state.wallFinishes
-
-    });
-
-    //--------------------------------------------------
-    // Doors
-    //--------------------------------------------------
-
-    const doorItems =
-        calculateDoorCosts(
-            state.doors
-        );
-
-    //--------------------------------------------------
-    // Windows
-    //--------------------------------------------------
-
-    const windowItems =
-        calculateWindowCosts(
-            state.windows
-        );
-
-    //--------------------------------------------------
-    // Combine everything
-    //--------------------------------------------------
+function calculateFloorItems(
+    floor: CostFloorInput,
+    lookups: CostAssetLookups
+): CostItem[] {
+    const corners = floor.corners.map(corner => ({
+        id: corner.id,
+        position: new Vector3(
+            corner.position.x,
+            corner.position.y,
+            corner.position.z
+        )
+    }));
+    const cornersById = new Map(corners.map(corner => [corner.id, corner]));
+    const walls = floor.walls.map(wall => ({
+        id: wall.id,
+        start: cornersById.get(wall.start.id) ?? {
+            id: wall.start.id,
+            position: new Vector3(
+                wall.start.position.x,
+                wall.start.position.y,
+                wall.start.position.z
+            )
+        },
+        end: cornersById.get(wall.end.id) ?? {
+            id: wall.end.id,
+            position: new Vector3(
+                wall.end.position.x,
+                wall.end.position.y,
+                wall.end.position.z
+            )
+        }
+    }));
+    const doors = floor.doors.map(door => ({
+        ...door,
+        position: new Vector3(
+            door.position.x,
+            door.position.y,
+            door.position.z
+        )
+    }));
+    const windows = floor.windows.map(window => ({
+        ...window,
+        position: new Vector3(
+            window.position.x,
+            window.position.y,
+            window.position.z
+        )
+    }));
+    const openings = floor.openings.map(opening => ({
+        ...opening,
+        position: new Vector3(
+            opening.position.x,
+            opening.position.y,
+            opening.position.z
+        )
+    }));
 
     const items: CostItem[] = [
-
-        ...furnitureItems,
-
-        ...flooringItems,
-
-        ...wallFinishItems,
-
-        ...doorItems,
-
-        ...windowItems
-
+        ...calculateFurnitureCosts(floor.furniture, lookups.findFurnitureAsset),
+        ...calculateFlooringCosts({
+            corners,
+            walls,
+            floorFinishes: floor.floorFinishes,
+            findFloorMaterial: lookups.findFloorMaterial
+        }),
+        ...calculateWallFinishCosts({
+            corners,
+            walls,
+            wallHeight: floor.wallHeight,
+            doors,
+            windows,
+            openings,
+            wallFinishes: floor.wallFinishes,
+            findWallMaterial: lookups.findWallMaterial
+        }),
+        ...calculateDoorCosts(doors, lookups.findDoorAsset),
+        ...calculateWindowCosts(windows, lookups.findWindowAsset)
     ];
 
-    //--------------------------------------------------
-    // Calculate subtotal
-    //--------------------------------------------------
+    return items.map(item => ({
+        ...item,
+        floorId: floor.floorId
+    }));
+}
 
-    const subtotal =
-        items.reduce(
-            (
-                sum,
-                item
-            ) =>
-                sum +
-                item.subtotal,
+export function calculateCostEstimateForFloors(
+    floors: CostFloorInput[],
+    lookups: CostAssetLookups = {}
+): CostEstimate {
+    const floorEstimates: CostFloorEstimate[] = floors.map((floor, index) => {
+        const items = calculateFloorItems(floor, lookups);
+        const subtotal = items.reduce((sum, item) => sum + item.subtotal, 0);
 
-            0
-        );
-
-    //--------------------------------------------------
-    // Total
-    //--------------------------------------------------
+        return {
+            floorId: floor.floorId,
+            name: floor.name || ordinalFloorName(index),
+            items,
+            subtotal
+        };
+    });
+    const items = floorEstimates.flatMap(floor => floor.items);
+    const total = floorEstimates.reduce((sum, floor) => sum + floor.subtotal, 0);
 
     return {
-
         items,
-
-        subtotal,
-
-        total:
-            subtotal
-
+        floors: floorEstimates,
+        subtotal: total,
+        total
     };
+}
+
+export function calculateCostEstimate(
+    state: EditorState,
+    lookups: CostAssetLookups = {}
+): CostEstimate {
+    const floors: CostFloorInput[] = state.floors.length > 0
+        ? state.floors.map(floor => ({
+            ...floor,
+            corners: floor.corners,
+            walls: floor.walls,
+            furniture: floor.furniture,
+            doors: floor.doors,
+            windows: floor.windows,
+            openings: floor.openings
+        }))
+        : [{
+            floorId: state.activeFloorId || "first-floor",
+            name: "1st Floor",
+            corners: state.corners,
+            walls: state.walls,
+            furniture: state.furniture,
+            doors: state.doors,
+            windows: state.windows,
+            openings: state.openings,
+            floorFinishes: state.floorFinishes,
+            wallFinishes: state.wallFinishes,
+            wallHeight: state.wallHeight
+        }];
+
+    return calculateCostEstimateForFloors(floors, lookups);
 }
