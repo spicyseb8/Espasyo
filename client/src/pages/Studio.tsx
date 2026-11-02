@@ -1,13 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowUpRight, FolderOpen, Plus, Search } from "lucide-react";
+import { ArrowUpRight, FolderOpen, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { clearProjectSession } from "../services/projectEditSessionService";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../firebase/firebase";
-import { getDrafts } from "../services/projectDraftService";
-import type { DraftProject } from "../services/projectDraftService";
 import NavBar from "./NavBar";
+import { isAvailableStudioProject } from "./studioProjectVisibility";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -25,12 +23,10 @@ interface UserProject {
   updatedAt?: unknown;
 }
 
-type Filter = "all" | "projects" | "drafts";
 type SortKey = "recent" | "name";
 
 interface StudioItem {
   key: string;
-  kind: "project" | "draft";
   name: string;
   time: number;
   meta: string;
@@ -94,9 +90,6 @@ function formatWhen(ms: number): string {
 // ---------------------------------------------------------------------------
 // Pieces
 // ---------------------------------------------------------------------------
-const PRIMARY_BUTTON =
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-[#1b1b1b] bg-[#1b1b1b] px-5 py-2.5 text-[12px] font-medium text-white transition hover:bg-black active:translate-y-px";
-
 const GRID = "grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
 
 // Hero: full-width first division of the page (image + welcome text).
@@ -110,12 +103,10 @@ function StudioHero({
   firstName,
   stats,
   loading,
-  onCreate,
 }: {
   firstName: string;
   stats: HeroStat[];
   loading: boolean;
-  onCreate: () => void;
 }) {
   const [mounted, setMounted] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -173,13 +164,8 @@ function StudioHero({
             {firstName ? `Welcome back, ${firstName}` : "Your projects"}
           </h1>
           <p className="mt-3 max-w-sm text-[13px] leading-relaxed text-black/55">
-            Pick up where you left off, or start a new room from scratch.
+            Open a floor-plan project assigned to you by your project administrator.
           </p>
-
-          <button type="button" className={`${PRIMARY_BUTTON} mt-6`} onClick={onCreate}>
-            <Plus className="h-3.5 w-3.5" strokeWidth={2} />
-            New project
-          </button>
 
           <ul className="mt-7 flex items-center gap-5">
             {stats.map((stat, index) => (
@@ -212,7 +198,7 @@ function ProjectCard({ item }: { item: StudioItem }) {
     <button
       type="button"
       onClick={item.onOpen}
-      aria-label={`${item.kind === "draft" ? "Continue draft" : "Open project"} ${item.name}`}
+      aria-label={`Open project ${item.name}`}
       className="group text-left outline-none"
     >
       <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-black/[0.05] ring-1 ring-black/5 transition duration-200 group-hover:ring-black/20 group-focus-visible:ring-2 group-focus-visible:ring-[#1b1b1b]">
@@ -230,14 +216,8 @@ function ProjectCard({ item }: { item: StudioItem }) {
           </div>
         )}
 
-        {item.kind === "draft" && (
-          <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-[#1b1b1b] shadow-sm backdrop-blur">
-            Draft
-          </span>
-        )}
-
         <span className="absolute bottom-3 right-3 inline-flex translate-y-1 items-center gap-1 rounded-full bg-[#1b1b1b] px-3 py-1.5 text-[10px] font-medium text-white opacity-0 shadow-md transition duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100">
-          {item.kind === "draft" ? "Continue" : "Open"}
+          Open
           <ArrowUpRight className="h-3 w-3" strokeWidth={2} />
         </span>
       </div>
@@ -254,27 +234,6 @@ function ProjectCard({ item }: { item: StudioItem }) {
   );
 }
 
-function NewProjectCard({ onClick }: { onClick: () => void }) {
-  return (
-    <button type="button" onClick={onClick} className="group text-left outline-none">
-      <div className="flex aspect-[4/3] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-black/25 bg-transparent transition duration-200 group-hover:border-[#1b1b1b] group-hover:bg-black/[0.03] group-focus-visible:border-[#1b1b1b] group-focus-visible:ring-2 group-focus-visible:ring-[#1b1b1b]/20">
-        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1b1b1b] text-white transition group-hover:scale-105">
-          <Plus className="h-4 w-4" strokeWidth={2} />
-        </span>
-        <span className="text-[12px] font-medium text-[#1b1b1b]">New project</span>
-      </div>
-      <div className="mt-3 px-0.5">
-        <p className="text-[13px] font-medium leading-tight text-black/0 select-none" aria-hidden>
-          &nbsp;
-        </p>
-        <p className="mt-1 text-[10px] uppercase tracking-wide text-black/45">
-          Start from a blank room
-        </p>
-      </div>
-    </button>
-  );
-}
-
 function SkeletonCard() {
   return (
     <div>
@@ -285,36 +244,6 @@ function SkeletonCard() {
   );
 }
 
-function Tab({
-  active,
-  count,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  count: number;
-  onClick: () => void;
-  children: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-[11px] font-medium transition ${
-        active
-          ? "border-[#1b1b1b] bg-[#1b1b1b] text-white"
-          : "border-black/20 text-black/60 hover:border-black/50 hover:text-[#1b1b1b]"
-      }`}
-    >
-      {children}
-      <span className={`text-[10px] tabular-nums ${active ? "text-white/60" : "text-black/35"}`}>
-        {count}
-      </span>
-    </button>
-  );
-}
-
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
@@ -322,12 +251,10 @@ export default function Studio() {
   const navigate = useNavigate();
 
   const [projects, setProjects] = useState<UserProject[]>([]);
-  const [drafts, setDrafts] = useState<DraftProject[]>([]);
   const [firstName, setFirstName] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<SortKey>("recent");
   const [search, setSearch] = useState("");
 
@@ -338,7 +265,6 @@ export default function Studio() {
       if (!user) {
         if (!cancelled) {
           setProjects([]);
-          setDrafts([]);
           setError("Please log in to view your projects.");
           setLoading(false);
         }
@@ -354,15 +280,15 @@ export default function Studio() {
         setLoading(true);
         setError("");
 
-        const localDrafts = getDrafts(user.uid);
-
         const snapshot = await getDocs(
           query(collection(db, "projects"), where("ownerId", "==", user.uid)),
         );
 
-        const loaded: UserProject[] = snapshot.docs.map((document) => {
+        const loaded: UserProject[] = snapshot.docs.flatMap((document) => {
           const data = document.data();
-          return {
+          if (!isAvailableStudioProject(data)) return [];
+
+          return [{
             projectId:
               typeof data.projectId === "string" ? data.projectId : document.id,
             projectName:
@@ -377,11 +303,10 @@ export default function Studio() {
               typeof data.thumbnailUrl === "string" ? data.thumbnailUrl : undefined,
             createdAt: data.createdAt,
             updatedAt: data.updatedAt,
-          };
+          }];
         });
 
         if (!cancelled) {
-          setDrafts(localDrafts);
           setProjects(loaded);
         }
       } catch (loadError) {
@@ -406,18 +331,11 @@ export default function Studio() {
     };
   }, []);
 
-  function handleCreateProject() {
-    clearProjectSession();
-    localStorage.removeItem("espasyo_project_name");
-    navigate("/studio/editor");
-  }
-
   const items = useMemo<StudioItem[]>(() => {
     const projectItems: StudioItem[] = projects.map((p) => {
       const time = getTime(p.updatedAt);
       return {
         key: `project-${p.projectId}`,
-        kind: "project",
         name: p.projectName,
         time,
         meta: `Edited ${formatWhen(time)}`,
@@ -426,47 +344,26 @@ export default function Studio() {
       };
     });
 
-    const draftItems: StudioItem[] = drafts.map((d) => {
-      const time = getTime(d.savedAt);
-      return {
-        key: `draft-${d.draftId}`,
-        kind: "draft",
-        name: d.projectName,
-        time,
-        meta: `Saved ${formatWhen(time)}`,
-        thumbnail: d.thumbnail,
-        onOpen: () => {
-          localStorage.setItem("espasyo_project_name", d.projectName);
-          navigate(`/studio/editor?draft=${encodeURIComponent(d.draftId)}`);
-        },
-      };
-    });
-
-    return [...projectItems, ...draftItems];
-  }, [projects, drafts, navigate]);
+    return projectItems;
+  }, [projects, navigate]);
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
 
-    const list = items.filter((i) => {
-      if (filter === "projects" && i.kind !== "project") return false;
-      if (filter === "drafts" && i.kind !== "draft") return false;
-      if (q && !i.name.toLowerCase().includes(q)) return false;
-      return true;
-    });
+    const list = items.filter((item) =>
+      !q || item.name.toLowerCase().includes(q)
+    );
 
     return list.sort((a, b) =>
       sort === "name" ? a.name.localeCompare(b.name) : b.time - a.time,
     );
-  }, [items, filter, sort, search]);
+  }, [items, sort, search]);
 
   const isSearching = search.trim().length > 0;
-  const showNewTile = !isSearching && filter !== "drafts";
   const hasAnything = items.length > 0;
 
   const heroStats: HeroStat[] = [
-    { label: "Projects", value: projects.length },
-    { label: "Drafts", value: drafts.length },
+    { label: "Assigned projects", value: projects.length },
   ];
 
   return (
@@ -478,7 +375,6 @@ export default function Studio() {
         firstName={firstName}
         stats={heroStats}
         loading={loading}
-        onCreate={handleCreateProject}
       />
 
       {/* Division 2: your projects */}
@@ -486,26 +382,6 @@ export default function Studio() {
         {/* Controls */}
         {!loading && !error && hasAnything && (
           <div className="mb-8 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap items-center gap-2">
-              <Tab active={filter === "all"} count={items.length} onClick={() => setFilter("all")}>
-                All
-              </Tab>
-              <Tab
-                active={filter === "projects"}
-                count={projects.length}
-                onClick={() => setFilter("projects")}
-              >
-                Projects
-              </Tab>
-              <Tab
-                active={filter === "drafts"}
-                count={drafts.length}
-                onClick={() => setFilter("drafts")}
-              >
-                Drafts
-              </Tab>
-            </div>
-
             <div className="flex flex-col gap-3 sm:flex-row">
               <label className="relative block sm:w-[240px]" aria-label="Search projects">
                 <Search
@@ -550,40 +426,30 @@ export default function Studio() {
           </div>
         )}
 
-        {/* First-run empty state */}
+        {/* No assigned projects */}
         {!loading && !error && !hasAnything && (
           <div className="flex min-h-[360px] flex-col items-center justify-center gap-5 rounded-xl border border-dashed border-black/20 px-6 py-16 text-center">
             <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/[0.05] text-black/40">
               <FolderOpen className="h-5 w-5" strokeWidth={1.25} />
             </span>
             <div>
-              <p className="text-[15px] font-medium">Nothing here yet</p>
+              <p className="text-[15px] font-medium">No floor-plan project has been assigned yet</p>
               <p className="mt-1.5 max-w-[360px] text-[13px] leading-relaxed text-black/50">
-                Build your first room, place some furniture, and see the estimated
-                cost update as you go.
+                Your project administrator will make your floor-plan project available here once it has been published.
               </p>
             </div>
-            <button type="button" className={PRIMARY_BUTTON} onClick={handleCreateProject}>
-              <Plus className="h-3.5 w-3.5" strokeWidth={2} />
-              Create your first project
-            </button>
           </div>
         )}
 
         {/* Grid */}
         {!loading && !error && hasAnything && (
           <>
-            {visible.length === 0 && !showNewTile ? (
+            {visible.length === 0 ? (
               <div className="flex min-h-[240px] items-center justify-center rounded-xl bg-black/[0.05] px-6 text-center text-[13px] text-black/45">
-                {isSearching
-                  ? "No projects match your search."
-                  : filter === "drafts"
-                    ? "You have no saved drafts."
-                    : "Nothing to show."}
+                {isSearching ? "No projects match your search." : "Nothing to show."}
               </div>
             ) : (
               <div className={GRID}>
-                {showNewTile && <NewProjectCard onClick={handleCreateProject} />}
                 {visible.map((item) => (
                   <ProjectCard key={item.key} item={item} />
                 ))}

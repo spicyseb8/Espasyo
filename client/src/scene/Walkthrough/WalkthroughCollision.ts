@@ -2,6 +2,16 @@ import {
     Vector3
 } from "three";
 
+import {
+    calculateStaircaseGeometry,
+    validateStaircaseDimensions,
+    type StaircaseGeometryBox
+} from "../../../../shared/staircaseGeometry.ts";
+
+import type {
+    SavedStaircase
+} from "../../context/editor/ProjectTypes";
+
 import type {
     WallPiece
 } from "../../engine/walls/WallPiece";
@@ -29,6 +39,130 @@ export const PLAYER_RADIUS =
 
 export const SPAWN_SAFETY_MARGIN =
     0.08;
+
+export interface WalkthroughStairCollider {
+    position: Vector3;
+    width: number;
+    depth: number;
+    height: number;
+    rotationY: number;
+}
+
+const STAIR_RAIL_THICKNESS = 0.05;
+const STAIR_POST_WIDTH = 0.05;
+const STAIR_POST_HEIGHT = 0.9;
+
+function transformStairPosition(
+    stair: SavedStaircase,
+    localX: number,
+    localY: number,
+    localZ: number
+): Vector3 {
+    const cos = Math.cos(stair.rotationY);
+    const sin = Math.sin(stair.rotationY);
+    return new Vector3(
+        stair.position.x + localX * cos + localZ * sin,
+        stair.position.y + localY,
+        stair.position.z - localX * sin + localZ * cos
+    );
+}
+
+function boxCollider(
+    stair: SavedStaircase,
+    box: StaircaseGeometryBox
+): WalkthroughStairCollider {
+    return {
+        position: transformStairPosition(
+            stair,
+            box.position.x,
+            box.position.y,
+            box.position.z
+        ),
+        width: box.size.x,
+        depth: box.size.z,
+        height: box.size.y,
+        rotationY: stair.rotationY
+    };
+}
+
+export function buildWalkthroughStairColliders(
+    stairs: SavedStaircase[],
+    activeFloorId: string
+): WalkthroughStairCollider[] {
+    const colliders: WalkthroughStairCollider[] = [];
+
+    for (const stair of stairs) {
+        if (stair.floorId !== activeFloorId) continue;
+
+        if (
+            !stair.position ||
+            ![
+                stair.position.x,
+                stair.position.y,
+                stair.position.z,
+                stair.rotationY
+            ].every(Number.isFinite) ||
+            validateStaircaseDimensions(stair)
+        ) {
+            continue;
+        }
+
+        const geometry = calculateStaircaseGeometry(stair);
+        const boxes = [
+            ...geometry.flights.flatMap(flight => [
+                ...flight.treads,
+                ...flight.risers
+            ]),
+            ...geometry.landings.map(landing => ({
+                position: landing.center,
+                size: landing.size
+            }))
+        ];
+
+        colliders.push(...boxes.map(box => boxCollider(stair, box)));
+
+        if (stair.railings === false) continue;
+
+        for (const railing of geometry.railings) {
+            const dx = railing.end.x - railing.start.x;
+            const dy = railing.end.y - railing.start.y;
+            const dz = railing.end.z - railing.start.z;
+            const centerX = (railing.start.x + railing.end.x) / 2;
+            const centerY = (railing.start.y + railing.end.y) / 2;
+            const centerZ = (railing.start.z + railing.end.z) / 2;
+
+            colliders.push({
+                position: transformStairPosition(
+                    stair,
+                    centerX,
+                    centerY,
+                    centerZ
+                ),
+                width: Math.hypot(dx, dz),
+                depth: STAIR_RAIL_THICKNESS,
+                height: Math.abs(dy) + STAIR_RAIL_THICKNESS,
+                rotationY: stair.rotationY + Math.atan2(dz, dx)
+            });
+
+            for (const post of railing.posts) {
+                colliders.push({
+                    position: transformStairPosition(
+                        stair,
+                        post.position.x,
+                        post.position.y,
+                        post.position.z
+                    ),
+                    width: STAIR_POST_WIDTH,
+                    depth: STAIR_POST_WIDTH,
+                    height: STAIR_POST_HEIGHT,
+                    rotationY: stair.rotationY
+                });
+            }
+        }
+    }
+
+    return colliders;
+}
 
 
 //==================================================
@@ -384,6 +518,32 @@ function collidesWithFurniture(
     );
 }
 
+function collidesWithStair(
+    position: Vector3,
+    stair: WalkthroughStairCollider,
+    radius: number
+): boolean {
+    const playerBottom = position.y - PLAYER_HEIGHT;
+    const playerTop = position.y;
+    const stairBottom = stair.position.y - stair.height / 2;
+    const stairTop = stair.position.y + stair.height / 2;
+
+    if (playerTop <= stairBottom || playerBottom >= stairTop) {
+        return false;
+    }
+
+    return circleIntersectsOBB(
+        position,
+        radius,
+        createOBB(
+            stair.position.x,
+            stair.position.z,
+            stair.width,
+            stair.depth,
+            stair.rotationY
+        )
+    );
+}
 
 //==================================================
 // WALKING COLLISION TEST
@@ -398,7 +558,10 @@ export function canWalkTo(
         WallPiece[],
 
     furniture:
-        any[] = []
+        any[] = [],
+
+    stairColliders:
+        WalkthroughStairCollider[] = []
 
 ):
     boolean {
@@ -444,6 +607,12 @@ export function canWalkTo(
         }
     }
 
+    for (const stair of stairColliders) {
+        if (collidesWithStair(position, stair, PLAYER_RADIUS)) {
+            return false;
+        }
+    }
+
 
     return true;
 }
@@ -468,7 +637,10 @@ export function canSpawnAt(
         WallPiece[],
 
     furniture:
-        any[] = []
+        any[] = [],
+
+    stairColliders:
+        WalkthroughStairCollider[] = []
 
 ):
     boolean {
@@ -515,6 +687,12 @@ export function canSpawnAt(
             )
         ) {
 
+            return false;
+        }
+    }
+
+    for (const stair of stairColliders) {
+        if (collidesWithStair(position, stair, spawnRadius)) {
             return false;
         }
     }

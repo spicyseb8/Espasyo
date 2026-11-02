@@ -335,7 +335,11 @@ export default function Scene({
                 <ModelErrorBoundary assetId="walkthrough-roof-assets">
                     <RoofAssetGate />
                 </ModelErrorBoundary>
-                <Lights />
+                <Lights
+                    walkthroughSpawnConfirmed={
+                        walkthroughSpawnConfirmed
+                    }
+                />
 
                 <Grid />
 

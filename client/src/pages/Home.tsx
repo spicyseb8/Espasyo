@@ -218,7 +218,7 @@ export default function Home() {
                 </p>
 
                 <div className="home__cta-row">
-                  <Link to="/signup" className="home__cta" tabIndex={heroOn ? 0 : -1}>
+                  <Link to="/studio" className="home__cta" tabIndex={heroOn ? 0 : -1}>
                     Start designing
                     <ArrowRight className="home__cta-icon" strokeWidth={2} />
                   </Link>
@@ -287,7 +287,7 @@ export default function Home() {
                         </ul>
 
                         <Link
-                          to="/signup"
+                          to="/studio"
                           className="home__cta home__cta--light"
                           tabIndex={footerOn ? 0 : -1}
                         >

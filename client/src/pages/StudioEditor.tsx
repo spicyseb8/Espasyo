@@ -1,21 +1,7 @@
-import EditorProvider
-    from "../context/EditorProvider";
-
-import Editor
-    from "../Studio/Editor/Editor";
-
-function StudioEditorContent() {
-    return (
-        <div className="relative min-h-screen">
-            <Editor />
-        </div>
-    );
-}
+import { Navigate } from "react-router-dom";
 
 export default function StudioEditor() {
     return (
-        <EditorProvider>
-            <StudioEditorContent />
-        </EditorProvider>
+        <Navigate to="/studio" replace />
     );
 }
