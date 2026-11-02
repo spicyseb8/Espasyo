@@ -48,7 +48,7 @@ function App() {
       />
 
       <Route
-        path="/projects/new/:ownerId"
+        path="/projects/draft/:draftId"
         element={
           <RequireAdmin>
             <AdminStructuralEditor />

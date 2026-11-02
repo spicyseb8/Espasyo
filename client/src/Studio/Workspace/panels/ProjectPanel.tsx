@@ -41,11 +41,7 @@ import {
     createProjectData
 } from "../../../services/projectSerializer";
 
-import {
-    getClientDesignLifecycleUpdate,
-    hasMeaningfulManagedInteriorChanges,
-    saveManagedInteriorData
-} from "../../../services/managedProjectData";
+import { projectApi } from "../../../services/projectApi";
 
 import {
     captureSceneThumbnail
@@ -654,54 +650,19 @@ export default function ProjectPanel() {
                     currentProjectId,
                     user.uid
                 );
-                await saveManagedInteriorData({
-                    projectId: currentProjectId,
-                    ownerId: user.uid,
-                    projectName: trimmedName,
-                    estimatedCost,
-                    interiorData,
-                    hasMeaningfulChanges: hasMeaningfulManagedInteriorChanges(interiorData),
-                    updatedAt: serverTimestamp(),
-                    createdAt: isNewProject ? serverTimestamp() : undefined,
-                    uploadJson: async (path, json) => {
-                        const storageRef = ref(storage, path);
-                        await uploadString(storageRef, json, "raw", {
-                            contentType: "application/json"
-                        });
-                        return getDownloadURL(storageRef);
-                    },
-                    uploadThumbnail,
-                    updateMetadata: async metadata => {
-                        const projectRef = doc(db, "projects", currentProjectId);
-                        await runTransaction(db, async transaction => {
-                            const snapshot = await transaction.get(projectRef);
-                            if (!snapshot.exists()) {
-                                throw new Error("The designated client project no longer exists.");
-                            }
-                            const currentMetadata = snapshot.data();
-                            if (
-                                currentMetadata.projectId !== currentProjectId ||
-                                currentMetadata.ownerId !== user.uid ||
-                                currentMetadata.workflowType !== "admin-managed" ||
-                                currentMetadata.structuralStatus !== "published" ||
-                                typeof currentMetadata.publishedStructuralRevision !== "number"
-                            ) {
-                                throw new Error(
-                                    "Project ownership or published structure changed. Interior changes were not marked as saved."
-                                );
-                            }
-                            const lifecycle = getClientDesignLifecycleUpdate(
-                                currentMetadata,
-                                metadata.clientDesignStarted === true,
-                                serverTimestamp()
-                            );
-                            transaction.set(projectRef, {
-                                ...metadata,
-                                ...lifecycle
-                            }, { merge: true });
-                        });
+                const thumbnail = await uploadThumbnail?.();
+                await projectApi(
+                    `/projects/${encodeURIComponent(currentProjectId)}/managed-interior`,
+                    {
+                        method: "PUT",
+                        body: JSON.stringify({
+                            interiorData,
+                            estimatedCost,
+                            thumbnailPath: thumbnail?.thumbnailPath,
+                            thumbnailUrl: thumbnail?.thumbnailUrl
+                        })
                     }
-                });
+                );
             } else {
                 const json = JSON.stringify(projectData, null, 2);
                 const storagePath = `projects/${user.uid}/${currentProjectId}.json`;
@@ -844,6 +805,8 @@ export default function ProjectPanel() {
                                 event.target.value
                             )
                         }
+                        readOnly={state.workflowType === "admin-managed"}
+                        aria-readonly={state.workflowType === "admin-managed"}
                         disabled={
                             saving ||
                             deadlineLocked

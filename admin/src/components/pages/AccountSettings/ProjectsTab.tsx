@@ -1,13 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import {
-  collection,
-  onSnapshot,
-  query,
-  where,
-} from "firebase/firestore";
-
 import { onAuthStateChanged } from "firebase/auth";
 
 import {
@@ -19,7 +12,8 @@ import {
   Eye,
 } from "lucide-react";
 
-import { db, auth } from "@/firebase/firebase";
+import { auth } from "@/firebase/firebase";
+import { getProjectsForUserAccount } from "@/services/assets/projectService";
 
 import {
   Card,
@@ -138,6 +132,7 @@ export default function ProjectsTab({ ownerId }: ProjectsTabProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
+  const [authenticated, setAuthenticated] = useState(false);
 
   //==================================================
   // AUTH CHECK
@@ -149,6 +144,7 @@ export default function ProjectsTab({ ownerId }: ProjectsTabProps) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setAuthenticated(Boolean(user));
       if (!user) {
         setProjects([]);
         setError("Please log in to view projects.");
@@ -169,6 +165,7 @@ export default function ProjectsTab({ ownerId }: ProjectsTabProps) {
     // Wait for auth to be resolved
     //--------------------------------------------------
     if (!authChecked) return;
+    if (!authenticated) return;
 
     //--------------------------------------------------
     // No owner ID
@@ -183,93 +180,43 @@ export default function ProjectsTab({ ownerId }: ProjectsTabProps) {
     setLoading(true);
     setError(null);
 
-    //--------------------------------------------------
-    // Query projects belonging to this user
-    //--------------------------------------------------
-    const projectsQuery = query(
-      collection(db, "projects"),
-      where("ownerId", "==", ownerId)
-    );
-
-    //--------------------------------------------------
-    // Listen for project changes
-    //--------------------------------------------------
-    const unsubscribe = onSnapshot(
-      projectsQuery,
-
-      (snapshot) => {
-        const loadedProjects: UserProject[] = [];
-
-        snapshot.docs.forEach((projectDocument) => {
-          const data = projectDocument.data();
-
-          loadedProjects.push({
-            projectId:
-              typeof data.projectId === "string"
-                ? data.projectId
-                : projectDocument.id,
-
-            projectName:
-              typeof data.projectName === "string"
-                ? data.projectName
-                : "Unnamed Project",
-
-            ownerId:
-              typeof data.ownerId === "string"
-                ? data.ownerId
-                : ownerId,
-
-            jsonPath:
-              typeof data.jsonPath === "string"
-                ? data.jsonPath
-                : "",
-
-            jsonUrl:
-              typeof data.jsonUrl === "string"
-                ? data.jsonUrl
-                : "",
-
-            schemaVersion:
-              typeof data.schemaVersion === "number"
-                ? data.schemaVersion
-                : 1,
-
-            createdAt: data.createdAt,
-            updatedAt: data.updatedAt,
-          });
-        });
-
-        //--------------------------------------------------
-        // Newest projects first
-        //--------------------------------------------------
-        loadedProjects.sort(
+    let cancelled = false;
+    getProjectsForUserAccount(ownerId)
+      .then(loadedProjects => {
+        if (cancelled) return;
+        const projects: UserProject[] = loadedProjects.map(project => ({
+          projectId: project.projectId,
+          projectName: project.projectName,
+          ownerId: project.ownerId,
+          jsonPath: project.jsonPath,
+          jsonUrl: project.jsonUrl,
+          schemaVersion: project.schemaVersion,
+          createdAt: project.createdAt,
+          updatedAt: project.updatedAt
+        }));
+        projects.sort(
           (first, second) =>
             getProjectTime(second.updatedAt) -
             getProjectTime(first.updatedAt)
         );
-
-        setProjects(loadedProjects);
-        setLoading(false);
+        setProjects(projects);
         setError(null);
-      },
+      })
+      .catch(loadError => {
+        console.error("Failed to load user projects:", loadError);
+        if (!cancelled) {
+          setError(loadError instanceof Error ? loadError.message : "Failed to load projects.");
+          setProjects([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
 
-      //--------------------------------------------------
-      // FIRESTORE ERROR
-      //--------------------------------------------------
-      (snapshotError) => {
-        console.error(
-          "Failed to load user projects:",
-          snapshotError
-        );
-
-        setError(snapshotError.message);
-        setProjects([]);
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [ownerId, authChecked]);
+    return () => {
+      cancelled = true;
+    };
+  }, [ownerId, authChecked, authenticated]);
 
   //==================================================
   // VIEW PROJECT

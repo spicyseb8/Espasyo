@@ -29,6 +29,7 @@ const OPENING_ASSETS: Asset[] = [
 
 interface AdminBuildPanelProps {
     structure: ManagedStructure;
+    readOnly: boolean;
     doors: Asset[];
     windows: Asset[];
     loading: boolean;
@@ -55,6 +56,7 @@ function assetTool(asset: Asset): AdminStructuralTool | null {
 
 export default function AdminBuildPanel({
     structure,
+    readOnly,
     doors,
     windows,
     loading,
@@ -91,7 +93,11 @@ export default function AdminBuildPanel({
         : "Move over a wall in the scene, then click to place the selected asset.";
 
     return (
-        <div className="admin-build-panel">
+        <div
+            className="admin-build-panel"
+            aria-disabled={readOnly}
+            style={readOnly ? { pointerEvents: "none", opacity: 0.6 } : undefined}
+        >
             {!structure.layoutConfirmed && (
                 <p className="admin-build-lock-notice">
                     Confirm the floor plan before placing doors, windows, or openings.

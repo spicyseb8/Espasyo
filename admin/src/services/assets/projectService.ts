@@ -1,18 +1,7 @@
 
-import {
-    collection,
-    doc,
-    getDoc,
-    getDocs,
-    query,
-    where
-} from "firebase/firestore";
-
-import { auth, db } from "@/firebase/firebase";
-import {
-    classifyProjectLifecycle,
-    isProjectAssignedToOwner
-} from "./projectLifecycle";
+import { auth } from "@/firebase/firebase";
+import { classifyProjectLifecycle } from "./projectLifecycle";
+import { projectApi } from "./projectApi";
 
 export interface AdminProject {
     projectId: string;
@@ -24,6 +13,12 @@ export interface AdminProject {
     structuralRevision?: number;
     publishedStructuralRevision?: number;
     structureInitialized?: boolean;
+    createdBy?: string;
+    creatorName?: string;
+    intendedClientId?: string;
+    intendedClientEmail?: string;
+    recordType?: "project" | "draft";
+    lifecycleAssignmentId?: string | null;
     ownerName?: string;
     jsonPath: string;
     jsonUrl: string;
@@ -162,149 +157,6 @@ export async function updateProjectDeadline(
 }
 
 //==================================================
-// MAP PROJECT
-//==================================================
-
-function mapProject(
-    projectDocument: {
-        id: string;
-        data(): Record<string, unknown>;
-    }
-): AdminProject {
-    const data = projectDocument.data();
-
-    const totalCost = Number(data.totalCost);
-    const estimatedCost = Number(data.estimatedCost);
-
-    return {
-        projectId:
-            typeof data.projectId === "string"
-                ? data.projectId
-                : projectDocument.id,
-
-        projectName:
-            typeof data.projectName === "string"
-                ? data.projectName
-                : "Unnamed Project",
-
-        ownerId:
-            typeof data.ownerId === "string"
-                ? data.ownerId
-                : "",
-
-        workflowType:
-            data.workflowType === "admin-managed"
-                ? "admin-managed"
-                : data.workflowType === "legacy"
-                    ? "legacy"
-                    : undefined,
-
-        structuralOwner:
-            data.structuralOwner === "admin"
-                ? "admin"
-                : undefined,
-
-        structuralStatus:
-            data.structuralStatus === "draft" || data.structuralStatus === "published"
-                ? data.structuralStatus
-                : undefined,
-
-        structuralRevision:
-            typeof data.structuralRevision === "number"
-                ? data.structuralRevision
-                : undefined,
-
-        publishedStructuralRevision:
-            typeof data.publishedStructuralRevision === "number"
-                ? data.publishedStructuralRevision
-                : undefined,
-
-        structureInitialized:
-            typeof data.structureInitialized === "boolean"
-                ? data.structureInitialized
-                : undefined,
-
-        ownerName:
-            typeof data.ownerName === "string"
-                ? data.ownerName
-                : undefined,
-
-        jsonPath:
-            typeof data.jsonPath === "string"
-                ? data.jsonPath
-                : "",
-
-        jsonUrl:
-            typeof data.jsonUrl === "string"
-                ? data.jsonUrl
-                : "",
-
-        draftJsonPath:
-            typeof data.draftJsonPath === "string"
-                ? data.draftJsonPath
-                : undefined,
-
-        draftJsonUrl:
-            typeof data.draftJsonUrl === "string"
-                ? data.draftJsonUrl
-                : undefined,
-
-        interiorJsonPath:
-            typeof data.interiorJsonPath === "string"
-                ? data.interiorJsonPath
-                : undefined,
-
-        interiorJsonUrl:
-            typeof data.interiorJsonUrl === "string"
-                ? data.interiorJsonUrl
-                : undefined,
-
-        clientDesignStarted:
-            data.clientDesignStarted === true
-                ? true
-                : data.clientDesignStarted === false
-                    ? false
-                    : undefined,
-
-        clientDesignStartedAt: data.clientDesignStartedAt,
-
-        thumbnailPath:
-            typeof data.thumbnailPath === "string"
-                ? data.thumbnailPath
-                : undefined,
-
-        thumbnailUrl:
-            typeof data.thumbnailUrl === "string"
-                ? data.thumbnailUrl
-                : undefined,
-
-        schemaVersion:
-            typeof data.schemaVersion === "number"
-                ? data.schemaVersion
-                : 1,
-
-        createdAt: data.createdAt,
-        updatedAt: data.updatedAt,
-
-        deadline:
-            typeof data.deadline === "string" &&
-            /^\d{4}-\d{2}-\d{2}$/.test(data.deadline)
-                ? data.deadline
-                : null,
-
-        totalCost:
-            Number.isFinite(totalCost)
-                ? totalCost
-                : undefined,
-
-        estimatedCost:
-            Number.isFinite(estimatedCost)
-                ? estimatedCost
-                : undefined
-    };
-}
-
-//==================================================
 // GET ALL PROJECTS
 //==================================================
 
@@ -315,115 +167,31 @@ export interface AdminClient {
     email?: string;
 }
 
+export interface AdminClientSearchResult {
+    clients: AdminClient[];
+    hasIneligibleMatches: boolean;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
     return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
 
-export async function getAdminClients(): Promise<AdminClient[]> {
-    const snapshot = await getDocs(collection(db, "users"));
-
-    return snapshot.docs.map(document => {
-        const data = document.data();
-        const uid = typeof data.uid === "string" && data.uid.trim() !== ""
-            ? data.uid.trim()
-            : document.id;
-
-        return {
-            id: document.id,
-            uid,
-            name: typeof data.full_name === "string"
-                ? data.full_name
-                : typeof data.name === "string"
-                    ? data.name
-                    : "Unknown User",
-            email: typeof data.email === "string" ? data.email : undefined
-        };
-    });
+export async function getAdminClients(search = ""): Promise<AdminClientSearchResult> {
+    const response = await projectApi<AdminClientSearchResult>(
+        `/admin/floor-plan-clients?search=${encodeURIComponent(search.trim())}`
+    );
+    return {
+        clients: response.clients,
+        hasIneligibleMatches: response.hasIneligibleMatches
+    };
 }
 
-export async function getAdminProjects():
-    Promise<AdminProject[]> {
-    const [
-        projectsSnapshot,
-        usersSnapshot,
-        employeesSnapshot,
-        assignmentsSnapshot
-    ] = await Promise.all([
-        getDocs(collection(db, "projects")),
-        getDocs(collection(db, "users")),
-        getDocs(collection(db, "adminEmployees")),
-        getDocs(collection(db, "adminManagedProjectAssignments"))
-    ]);
-
-    const owners = new Map<string, string>();
-    const assignments = new Map(
-        assignmentsSnapshot.docs.map(document => [document.id, document.data()])
-    );
-
-    usersSnapshot.docs.forEach(document => {
-        const data = document.data();
-
-        const uid =
-            typeof data.uid === "string" &&
-            data.uid.trim() !== ""
-                ? data.uid.trim()
-                : document.id;
-
-        const name =
-            typeof data.full_name === "string" &&
-            data.full_name.trim() !== ""
-                ? data.full_name.trim()
-                : typeof data.name === "string" &&
-                    data.name.trim() !== ""
-                    ? data.name.trim()
-                    : typeof data.email === "string" &&
-                        data.email.trim() !== ""
-                        ? data.email.trim()
-                        : "Unknown User";
-
-        owners.set(uid, name);
-    });
-
-    employeesSnapshot.docs.forEach(document => {
-        const data = document.data();
-
-        const uid =
-            typeof data.uid === "string" &&
-            data.uid.trim() !== ""
-                ? data.uid.trim()
-                : document.id;
-
-        const name =
-            typeof data.name === "string" &&
-            data.name.trim() !== ""
-                ? data.name.trim()
-                : typeof data.full_name === "string" &&
-                    data.full_name.trim() !== ""
-                    ? data.full_name.trim()
-                    : typeof data.email === "string" &&
-                        data.email.trim() !== ""
-                        ? data.email.trim()
-                        : "Unknown Employee";
-
-        owners.set(uid, name);
-    });
-
-    const projects: AdminProject[] = [];
-
-    projectsSnapshot.docs.forEach(projectDocument => {
-        const project = mapProject(projectDocument);
-
-        projects.push({
-            ...project,
-            ownerName:
-                owners.get(project.ownerId) ??
-                project.ownerName ??
-                "Unknown User"
-        });
-    });
-
+async function finalizeManagedProjectLifecycle(projects: AdminProject[]): Promise<AdminProject[]> {
     await Promise.all(projects.map(async project => {
-        const assignment = assignments.get(encodeURIComponent(project.ownerId));
+        if (project.recordType === "draft") {
+            project.lifecycleStatus = "unverified";
+            return;
+        }
         if (project.workflowType !== "admin-managed") {
             project.lifecycleStatus = "legacy";
             return;
@@ -436,10 +204,7 @@ export async function getAdminProjects():
                 (project.interiorJsonPath || project.interiorJsonUrl)
             ) {
                 const expectedPath = `projects/${project.ownerId}/${project.projectId}.interior.json`;
-                if (
-                    project.interiorJsonPath &&
-                    project.interiorJsonPath !== expectedPath
-                ) {
+                if (project.interiorJsonPath && project.interiorJsonPath !== expectedPath) {
                     throw new Error("Interior design path does not match the designated project.");
                 }
                 if (!project.interiorJsonUrl?.trim()) {
@@ -457,16 +222,10 @@ export async function getAdminProjects():
                     if (!isRecord(interiorData)) {
                         throw new Error("Interior design JSON is invalid.");
                     }
-                    if (
-                        interiorData.projectId !== undefined &&
-                        interiorData.projectId !== project.projectId
-                    ) {
+                    if (interiorData.projectId !== undefined && interiorData.projectId !== project.projectId) {
                         throw new Error("Interior design project ID does not match.");
                     }
-                    if (
-                        interiorData.ownerId !== undefined &&
-                        interiorData.ownerId !== project.ownerId
-                    ) {
+                    if (interiorData.ownerId !== undefined && interiorData.ownerId !== project.ownerId) {
                         throw new Error("Interior design owner UID does not match.");
                     }
                 }
@@ -474,13 +233,7 @@ export async function getAdminProjects():
 
             project.lifecycleStatus = classifyProjectLifecycle(
                 project,
-                isProjectAssignedToOwner(
-                    project.ownerId,
-                    project.projectId,
-                    assignment
-                )
-                    ? project.projectId
-                    : null,
+                project.lifecycleAssignmentId === project.projectId ? project.projectId : null,
                 interiorData
             );
         } catch (error) {
@@ -488,20 +241,29 @@ export async function getAdminProjects():
             project.lifecycleError = error instanceof Error
                 ? error.message
                 : "Unable to verify saved client design data.";
-            console.error(
-                `Unable to classify managed project ${project.projectId}:`,
-                error
-            );
+            console.error(`Unable to classify managed project ${project.projectId}:`, error);
         }
     }));
 
-    projects.sort(
+    return projects.sort(
         (first, second) =>
-            getProjectTime(second.updatedAt) -
-            getProjectTime(first.updatedAt)
+            getProjectTime(second.updatedAt) - getProjectTime(first.updatedAt)
     );
+}
 
-    return projects;
+export async function getAdminProjects(): Promise<AdminProject[]> {
+    const response = await projectApi<{ projects: AdminProject[] }>("/admin/projects");
+    return finalizeManagedProjectLifecycle(response.projects);
+}
+
+export async function getAdminFloorPlans(): Promise<AdminProject[]> {
+    const response = await projectApi<{ projects: AdminProject[] }>("/admin/floor-plans");
+    return response.projects
+        .filter(project => project.structuralStatus === "draft")
+        .sort(
+            (first, second) =>
+                getProjectTime(second.updatedAt) - getProjectTime(first.updatedAt)
+        );
 }
 
 //==================================================
@@ -516,25 +278,10 @@ export async function getUserProjects(
     if (!normalizedOwnerId) {
         return [];
     }
-
-    const projectsQuery = query(
-        collection(db, "projects"),
-        where("ownerId", "==", normalizedOwnerId)
+    const response = await projectApi<{ projects: AdminProject[] }>(
+        `/admin/users/${encodeURIComponent(normalizedOwnerId)}/projects`
     );
-
-    const snapshot = await getDocs(projectsQuery);
-
-    const projects = snapshot.docs.map(
-        projectDocument => mapProject(projectDocument)
-    );
-
-    projects.sort(
-        (first, second) =>
-            getProjectTime(second.updatedAt) -
-            getProjectTime(first.updatedAt)
-    );
-
-    return projects;
+    return response.projects;
 }
 
 //==================================================
@@ -550,28 +297,7 @@ export async function getProjectsForUserAccount(
         return [];
     }
 
-    const userReference = doc(
-        db,
-        "users",
-        normalizedAccountId
-    );
-
-    const userSnapshot = await getDoc(userReference);
-
-    let ownerId = normalizedAccountId;
-
-    if (userSnapshot.exists()) {
-        const userData = userSnapshot.data();
-
-        if (
-            typeof userData.uid === "string" &&
-            userData.uid.trim() !== ""
-        ) {
-            ownerId = userData.uid.trim();
-        }
-    }
-
-    return getUserProjects(ownerId);
+    return getUserProjects(normalizedAccountId);
 }
 
 //==================================================
@@ -587,19 +313,10 @@ export async function getAdminProject(
         throw new Error("Project ID is required.");
     }
 
-    const projectReference = doc(
-        db,
-        "projects",
-        normalizedProjectId
+    const response = await projectApi<{ project: AdminProject }>(
+        `/admin/projects/${encodeURIComponent(normalizedProjectId)}`
     );
-
-    const snapshot = await getDoc(projectReference);
-
-    if (!snapshot.exists()) {
-        throw new Error("Project does not exist.");
-    }
-
-    return mapProject(snapshot);
+    return response.project;
 }
 
 //==================================================

@@ -269,7 +269,6 @@ export async function saveManagedInteriorData(
     const thumbnail = await input.uploadThumbnail?.();
     const metadata: Record<string, unknown> = {
         projectId,
-        projectName: input.projectName,
         ownerId,
         schemaVersion: 1,
         estimatedCost: input.estimatedCost,

@@ -21,16 +21,17 @@ import { pointInPolygon } from "@/components/project-loader/engine/regions/Polyg
 import { solveRegions } from "@/components/project-loader/engine/regions/RegionSolver";
 import { getAdminProject } from "@/services/assets/projectService";
 import {
-    claimExistingManagedProject,
-    publishLocalManagedStructure,
+    getManagedFloorPlanDraft,
+    publishManagedFloorPlanDraft,
+    saveManagedFloorPlanDraft,
     saveManagedStructure
 } from "@/services/assets/projectStructureService";
 import { validateStructuralProjectData } from "@/services/assets/projectStructureContract";
 import {
     loadLocalManagedProjectDraft,
-    removeLocalManagedProjectDraft,
-    saveLocalManagedProjectDraft
+    removeLocalManagedProjectDraft
 } from "@/services/assets/localManagedProjectDraft";
+import { useAuth } from "@/context/AuthContext";
 import { getDoorAssets, getWindowAssets } from "@/services/assets/FirebaseDoorWindowLibrary";
 import AdminBuildPanel from "./AdminBuildPanel";
 import AdminFloorPlanPanel from "./AdminFloorPlanPanel";
@@ -236,21 +237,34 @@ function getManagedFloorRegions(structure: ManagedStructure) {
 }
 
 export default function AdminStructuralEditor() {
-    const { ownerId, projectId } = useParams();
+    const { projectId, draftId } = useParams();
+    const { user } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
     const ownerName = typeof (location.state as { ownerName?: unknown } | null)?.ownerName === "string"
         ? (location.state as { ownerName: string }).ownerName
         : null;
+    const [clientDisplayName, setClientDisplayName] = useState(ownerName ?? "");
+    const [creatorDisplayName, setCreatorDisplayName] = useState("");
     const showInitializationLoading = !projectId ||
         (location.state as { showInitializationLoading?: unknown } | null)?.showInitializationLoading === true;
+    const focusProjectName =
+        (location.state as { focusProjectName?: unknown } | null)?.focusProjectName === true;
+    const projectNameInputRef = useRef<HTMLInputElement>(null);
     const [initializationState, setInitializationState] = useState<"loading" | "ready" | "error">(
         showInitializationLoading ? "loading" : "ready"
     );
-    const [isLocalDraft, setIsLocalDraft] = useState(!projectId);
+    const [isDraftRecord, setIsDraftRecord] = useState(Boolean(draftId));
+    const [isReadOnly, setIsReadOnly] = useState(false);
     const [floorPlans, setFloorPlans] = useState<ManagedEditorFloor[]>([]);
     const [activeFloorId, setActiveFloorId] = useState<string | null>(null);
     const structure = floorPlans.find(floor => floor.floorId === activeFloorId)?.structure ?? null;
+    useEffect(() => {
+        if (focusProjectName && initializationState === "ready" && !isReadOnly) {
+            projectNameInputRef.current?.focus();
+            projectNameInputRef.current?.select();
+        }
+    }, [focusProjectName, initializationState, isReadOnly]);
     const [tool, setTool] = useState<AdminStructuralTool>("wall");
     const [pendingWallStart, setPendingWallStart] = useState<StructureCorner | null>(null);
     const [wallChainStart, setWallChainStart] = useState<StructureCorner | null>(null);
@@ -364,7 +378,7 @@ export default function AdminStructuralEditor() {
     const setBlueprintWidth = (width: number) => updateActiveBlueprint({ width });
     const setBlueprintAspectRatio = (aspectRatio: number) => updateActiveBlueprint({ aspectRatio });
     const setActiveFloorStructure = (next: ManagedStructure) => {
-        if (!activeFloorId) return;
+        if (isReadOnly || !activeFloorId) return;
         setFloorPlans(current => current.map(floor =>
             floor.floorId === activeFloorId ? { ...floor, structure: next } : floor
         ));
@@ -425,7 +439,7 @@ export default function AdminStructuralEditor() {
 
     useEffect(() => {
         let cancelled = false;
-        async function loadManagedProject(nextProjectId: string, expectedOwnerId?: string) {
+        async function loadManagedProject(nextProjectId: string) {
             const metadata = await getAdminProject(nextProjectId);
             if (!metadata.projectId.trim() || !metadata.ownerId.trim()) {
                 throw new Error("Project metadata is missing its project ID or client owner UID.");
@@ -433,10 +447,6 @@ export default function AdminStructuralEditor() {
             if (metadata.workflowType !== "admin-managed") {
                 throw new Error("This is a legacy project. Open it in the project viewer instead.");
             }
-            if (expectedOwnerId && metadata.ownerId !== expectedOwnerId) {
-                throw new Error("The designated project belongs to a different client.");
-            }
-            await claimExistingManagedProject(metadata.ownerId, metadata.projectId);
 
             const jsonUrl = metadata.draftJsonUrl?.trim()
                 || (metadata.structuralStatus === "published" ? metadata.jsonUrl.trim() : "");
@@ -455,7 +465,8 @@ export default function AdminStructuralEditor() {
                     floors: [firstFloor],
                     activeFloorId: firstFloor.floorId,
                     projectName: metadata.projectName,
-                    revision: metadata.structuralRevision ?? 0
+                    revision: metadata.structuralRevision ?? 0,
+                    metadata
                 };
             }
 
@@ -474,8 +485,9 @@ export default function AdminStructuralEditor() {
             if (loaded.ownerId !== metadata.ownerId) throw new Error("Project owner metadata does not match saved JSON.");
             return {
                 ...loadManagedEditorFloors(loaded),
-                projectName: loaded.projectName,
-                revision: loaded.structuralRevision ?? metadata.structuralRevision ?? 1
+                projectName: metadata.projectName,
+                revision: loaded.structuralRevision ?? metadata.structuralRevision ?? 1,
+                metadata
             };
         }
 
@@ -488,37 +500,79 @@ export default function AdminStructuralEditor() {
                     setActiveFloorId(initialized.activeFloorId);
                     setProjectName(initialized.projectName);
                     setRevision(initialized.revision);
-                    setIsLocalDraft(false);
+                    setClientDisplayName(initialized.metadata.ownerName ?? ownerName ?? "");
+                    setCreatorDisplayName(initialized.metadata.creatorName ?? "");
+                    setIsDraftRecord(false);
+                    setIsReadOnly(initialized.metadata.createdBy !== user?.uid);
+                    if (initialized.metadata.createdBy !== user?.uid) {
+                        setStatus("Read-only view. Only the administrator who created this floor plan can edit or publish it.");
+                    }
                     setInitializationState("ready");
                 }
-            } else {
-                const expectedOwnerId = ownerId?.trim();
-                if (!expectedOwnerId) {
-                    throw new Error("A client account is required. Return to Projects and select a client.");
+            } else if (draftId) {
+                const draft = await getManagedFloorPlanDraft(draftId);
+                let projectData: unknown = draft.projectData;
+                let restoredLocalDraft = false;
+                if (!projectData) {
+                    const savedDraft = loadLocalManagedProjectDraft(draft.intendedClientId);
+                    if (savedDraft) {
+                        projectData = {
+                            ...savedDraft.structure,
+                            projectId: draft.draftId,
+                            projectName: draft.projectName,
+                            ownerId: draft.intendedClientId
+                        };
+                        restoredLocalDraft = true;
+                    }
                 }
-                const savedDraft = loadLocalManagedProjectDraft(expectedOwnerId);
-                const draftId = savedDraft?.draftId ?? `local-${crypto.randomUUID()}`;
-                const initializedFloors = savedDraft
-                    ? loadManagedEditorFloors(savedDraft.structure)
-                    : (() => {
-                        const firstFloor = createManagedEditorFloor(
-                            createManagedStructure(draftId, "Untitled floor plan", expectedOwnerId),
-                            0
-                        );
-                        return { floors: [firstFloor], activeFloorId: firstFloor.floorId };
-                    })();
-                const initializedProjectName = savedDraft?.projectName ?? "Untitled floor plan";
+                let initializedFloors: ReturnType<typeof loadManagedEditorFloors> & {
+                    projectName: string;
+                    revision: number;
+                };
+                if (projectData) {
+                    const validationErrors = validateStructuralProjectData(projectData);
+                    if (validationErrors.length) {
+                        throw new Error(`Saved draft JSON is invalid: ${validationErrors.join(" ")}`);
+                    }
+                    const loaded = projectData as ManagedStructure;
+                    if (loaded.projectId !== draft.draftId || loaded.ownerId !== draft.intendedClientId) {
+                        throw new Error("Saved draft IDs do not match the selected draft.");
+                    }
+                    initializedFloors = {
+                        ...loadManagedEditorFloors(loaded),
+                        projectName: draft.projectName,
+                        revision: draft.structuralRevision || 0
+                    };
+                } else {
+                    const firstFloor = createManagedEditorFloor(
+                        createManagedStructure(draft.draftId, draft.projectName, draft.intendedClientId),
+                        0
+                    );
+                    initializedFloors = {
+                        floors: [firstFloor],
+                        activeFloorId: firstFloor.floorId,
+                        projectName: draft.projectName,
+                        revision: 0
+                    };
+                }
                 if (!cancelled) {
                     setFloorPlans(initializedFloors.floors);
                     setActiveFloorId(initializedFloors.activeFloorId);
-                    setProjectName(initializedProjectName);
-                    setRevision(savedDraft?.revision ?? 0);
-                    setIsLocalDraft(true);
-                    setStatus(savedDraft
-                        ? "Restored this client's local unpublished draft."
-                        : "Local unpublished draft created. Save Draft stores it in this browser; Publish shares it with the client.");
+                    setProjectName(initializedFloors.projectName);
+                    setRevision(initializedFloors.revision);
+                    setClientDisplayName(draft.intendedClientName ?? ownerName ?? "");
+                    setCreatorDisplayName(draft.creatorName ?? "");
+                    setIsDraftRecord(true);
+                    setIsReadOnly(draft.createdBy !== user?.uid);
+                    setStatus(draft.createdBy !== user?.uid
+                        ? "Read-only view. Only the administrator who created this draft can edit or publish it."
+                        : restoredLocalDraft
+                            ? "Restored this browser's previous local draft. Save Draft to store it in the shared admin workspace."
+                            : "Unpublished database draft. The client cannot access it until it is published.");
                     setInitializationState("ready");
                 }
+            } else {
+                throw new Error("A saved draft or project must be selected.");
             }
         }
         initialize().catch(error => {
@@ -533,30 +587,7 @@ export default function AdminStructuralEditor() {
         return () => {
             cancelled = true;
         };
-    }, [ownerId, projectId, showInitializationLoading]);
-
-    useEffect(() => {
-        if (!isLocalDraft || !structure || floorPlans.length === 0) return;
-        try {
-            const projectData = serializeManagedStructureProject(
-                floorPlans,
-                activeFloorId ?? floorPlans[0].floorId,
-                projectName,
-                new Date().toISOString()
-            );
-            saveLocalManagedProjectDraft({
-                schemaVersion: 1,
-                draftId: structure.projectId,
-                ownerId: structure.ownerId,
-                projectName,
-                structure: projectData,
-                revision,
-                updatedAt: new Date().toISOString()
-            });
-        } catch (error) {
-            console.error("Unable to autosave the local floor-plan draft.", error);
-        }
-    }, [activeFloorId, floorPlans, isLocalDraft, projectName, revision, structure]);
+    }, [draftId, ownerName, projectId, showInitializationLoading, user?.uid]);
 
     const structureCorners = structure?.corners;
     const structureWalls = structure?.walls;
@@ -805,7 +836,7 @@ export default function AdminStructuralEditor() {
             : null;
 
     const commit = (next: ManagedStructure) => {
-        if (!structure || !activeFloorId) return;
+        if (isReadOnly || !structure || !activeFloorId) return;
         setHistoryByFloor(current => ({
             ...current,
             [activeFloorId]: [...(current[activeFloorId] ?? []).slice(-49), { structure }]
@@ -815,6 +846,7 @@ export default function AdminStructuralEditor() {
     };
 
     const commitFloors = (nextFloors: ManagedEditorFloor[], touchedFloorIds: string[]) => {
+        if (isReadOnly) return;
         const entry = createGroupedStructureHistoryEntry(
             floorPlans,
             nextFloors,
@@ -837,7 +869,7 @@ export default function AdminStructuralEditor() {
     };
 
     const undo = () => {
-        if (!structure || !activeFloorId) return;
+        if (isReadOnly || !structure || !activeFloorId) return;
         const transition = undoStructureHistory(
             floorPlans,
             historyByFloor,
@@ -876,7 +908,7 @@ export default function AdminStructuralEditor() {
     };
 
     const redo = () => {
-        if (!structure || !activeFloorId) return;
+        if (isReadOnly || !structure || !activeFloorId) return;
         const transition = redoStructureHistory(
             floorPlans,
             historyByFloor,
@@ -2110,7 +2142,7 @@ export default function AdminStructuralEditor() {
     };
 
     const addFloor = () => {
-        if (!structure || isCreatingFloor) return;
+        if (isReadOnly || !structure || isCreatingFloor) return;
         setIsCreatingFloor(true);
         try {
             const newStructure = createManagedStructure(
@@ -2256,15 +2288,21 @@ export default function AdminStructuralEditor() {
 
     const save = async (published: boolean) => {
         if (!structure || savingAction) return;
+        if (isReadOnly) {
+            setStatus("This floor plan is read-only. Only its creator can save or publish it.");
+            return;
+        }
         if (!structure.projectId.trim() || !structure.ownerId.trim()) {
             setStatus("Project ID and client owner UID are required before saving.");
             return;
         }
+        if (!projectName.trim()) {
+            setStatus("A floor-plan name is required before saving.");
+            return;
+        }
         setSavingAction(published ? "publish" : "draft");
         try {
-            setStatus(isLocalDraft
-                ? published ? "Publishing local draft..." : "Saving local draft..."
-                : published ? "Publishing..." : "Saving draft...");
+            setStatus(published ? "Publishing..." : "Saving draft...");
             const savedAt = new Date().toISOString();
             const nextStructure = { ...structure, projectName, savedAt, blueprint: null };
             const projectData = serializeManagedStructureProject(
@@ -2273,56 +2311,47 @@ export default function AdminStructuralEditor() {
                 projectName,
                 savedAt
             );
-            if (isLocalDraft && !published) {
-                saveLocalManagedProjectDraft({
-                    schemaVersion: 1,
-                    draftId: structure.projectId,
-                    ownerId: structure.ownerId,
-                    projectName,
-                    structure: projectData,
-                    revision,
-                    updatedAt: savedAt
-                });
-                setStatus("Local draft saved in this browser. It has not been shared with the client.");
-                return;
-            }
-
-            if (isLocalDraft) {
-                const result = await publishLocalManagedStructure({
-                    projectName,
-                    ownerId: structure.ownerId,
-                    projectData: { ...projectData }
-                });
-                setFloorPlans(current => current.map(floor => ({
-                    ...floor,
-                    structure: {
-                        ...floor.structure,
-                        projectId: result.projectId,
+            if (draftId) {
+                if (published) {
+                    const result = await publishManagedFloorPlanDraft({
+                        draftId,
                         projectName,
-                        savedAt
+                        projectData: { ...projectData }
+                    });
+                    setRevision(Math.max(revision, 0) + 1);
+                    setHistoryByFloor({});
+                    setFutureByFloor({});
+                    try {
+                        removeLocalManagedProjectDraft(structure.ownerId);
+                    } catch (error) {
+                        console.error("Published project but could not remove its prior browser draft.", error);
                     }
-                })));
-                setRevision(result.revision);
-                setHistoryByFloor({});
-                setFutureByFloor({});
-                setIsLocalDraft(false);
-                let localDraftCleanupFailed = false;
+                    navigate(`/projects/edit/${encodeURIComponent(result.projectId)}`, {
+                        replace: true,
+                        state: { ownerName }
+                    });
+                    setStatus("Project published successfully.");
+                    return;
+                }
+
+                const nextRevision = Math.max(revision, 0) + 1;
+                await saveManagedFloorPlanDraft({
+                    draftId,
+                    projectName,
+                    projectData: { ...projectData },
+                    revision: nextRevision
+                });
+                setRevision(nextRevision);
                 try {
                     removeLocalManagedProjectDraft(structure.ownerId);
                 } catch (error) {
-                    console.error("Published project but could not remove its local draft.", error);
-                    localDraftCleanupFailed = true;
+                    console.error("Draft saved but its prior browser copy could not be removed.", error);
                 }
-                navigate(`/projects/edit/${result.projectId}`, {
-                    replace: true,
-                    state: { ownerName }
-                });
-                setStatus(localDraftCleanupFailed
-                    ? "Project published, but its local draft could not be removed from this browser."
-                    : "Project published successfully.");
+                setStatus("Draft saved to the admin workspace. It has not been shared with the client.");
                 return;
             }
 
+            if (!projectId) throw new Error("A saved project or draft must be selected.");
             const nextRevision = published
                 ? Math.max(revision, 0) + 1
                 : Math.max(revision, 1);
@@ -2344,7 +2373,12 @@ export default function AdminStructuralEditor() {
         }
     };
 
-    const canSave = Boolean(structure?.projectId.trim() && structure.ownerId.trim());
+    const canSave = !isReadOnly && Boolean(
+        (projectId || draftId) &&
+        structure?.projectId.trim() &&
+        structure.ownerId.trim() &&
+        projectName.trim()
+    );
 
     const handleWorkspaceTabChange = (nextView: "floorplan" | "build") => {
         if (nextView === workspaceView) {
@@ -2355,11 +2389,7 @@ export default function AdminStructuralEditor() {
         setWorkspacePanelOpen(true);
     };
 
-    if (
-        showInitializationLoading &&
-        initializationState !== "error" &&
-        (initializationState === "loading" || !isLocalDraft || structure?.ownerId !== ownerId)
-    ) {
+    if (showInitializationLoading && initializationState === "loading") {
         return <LoadingScreen label="Preparing Floor Plan" />;
     }
 
@@ -2390,13 +2420,16 @@ export default function AdminStructuralEditor() {
                     </button>
                 </div>
                 <div className="admin-editor-project">
-                    <span className="admin-editor-owner" title={ownerName?.trim() || "Unknown client"}>
-                        {ownerName?.trim() || "Unknown client"}
+                    <span className="admin-editor-owner" title={clientDisplayName.trim() || "Unknown client"}>
+                        {clientDisplayName.trim() || "Unknown client"}
                     </span>
                     <input
+                        ref={projectNameInputRef}
                         value={projectName}
                         onChange={event => setProjectName(event.target.value)}
                         aria-label="Project name"
+                        disabled={isReadOnly || savingAction !== null}
+                        readOnly={isReadOnly}
                         style={{ textAlign: "center", fontSize: "14px" }}
                     />
                 </div>
@@ -2419,26 +2452,31 @@ export default function AdminStructuralEditor() {
                         type="button"
                         className="admin-editor-add-floor"
                         onClick={() => setIsAddFloorDialogOpen(true)}
-                        disabled={!structure || savingAction !== null}
+                        disabled={!structure || isReadOnly || savingAction !== null}
                     >
                         <Plus size={14} />
                         <span>Add Floor</span>
                     </button>
                 </div>
                 <div className="admin-editor-header-actions">
-                {isLocalDraft && (
+                {isDraftRecord && (
                     <span className="admin-editor-status" role="status">
-                        Unpublished local draft — stored in this browser only
+                        Unpublished database draft — not shared with the client
+                    </span>
+                )}
+                {isReadOnly && (
+                    <span className="admin-editor-status" role="status">
+                        Read-only — created by {creatorDisplayName || "another administrator"}
                     </span>
                 )}
                 <div className="admin-editor-history-actions" aria-label="Structure history">
-                        <button type="button" onClick={undo} disabled={!history.length} title="Undo" aria-label="Undo">
+                        <button type="button" onClick={undo} disabled={isReadOnly || !history.length} title="Undo" aria-label="Undo">
                             <Undo2 size={16} />
                         </button>
-                        <button type="button" onClick={redo} disabled={!future.length} title="Redo" aria-label="Redo">
+                        <button type="button" onClick={redo} disabled={isReadOnly || !future.length} title="Redo" aria-label="Redo">
                             <Redo2 size={16} />
                         </button>
-                        <button type="button" onClick={removeSelectedWall} disabled={!selectedWallId || structure?.layoutConfirmed} title="Delete selected wall" aria-label="Delete selected wall">
+                        <button type="button" onClick={removeSelectedWall} disabled={isReadOnly || !selectedWallId || structure?.layoutConfirmed} title="Delete selected wall" aria-label="Delete selected wall">
                             <Trash2 size={16} />
                         </button>
                     </div>
@@ -2448,8 +2486,8 @@ export default function AdminStructuralEditor() {
                         </span>
                     )}
                     <div className="admin-editor-actions">
-                        <button type="button" onClick={() => void save(false)} disabled={!canSave || savingAction !== null} title={isLocalDraft ? "Save draft locally" : "Save draft"} aria-label={isLocalDraft ? "Save draft locally" : "Save draft"}>
-                            <Save size={16} /><span>{savingAction === "draft" ? "Saving..." : isLocalDraft ? "Save draft locally" : "Save draft"}</span>
+                        <button type="button" onClick={() => void save(false)} disabled={!canSave || savingAction !== null} title={isDraftRecord ? "Save draft to admin workspace" : "Save draft"} aria-label={isDraftRecord ? "Save draft" : "Save draft"}>
+                            <Save size={16} /><span>{savingAction === "draft" ? "Saving..." : "Save draft"}</span>
                         </button>
                         <button type="button" className="primary" onClick={() => void save(true)} disabled={!canSave || savingAction !== null} title="Publish" aria-label="Publish">
                             <Send size={16} /><span>{savingAction === "publish" ? "Publishing..." : "Publish"}</span>
@@ -2550,6 +2588,7 @@ export default function AdminStructuralEditor() {
                         <div className={`admin-editor-panel-view ${workspacePanelOpen && workspaceView === "floorplan" ? "active" : ""}`}>
                             <AdminFloorPlanPanel
                                 structure={structure}
+                                readOnly={isReadOnly}
                                 tool={tool}
                                 blueprintUrl={blueprintUrl}
                                 blueprintName={blueprintName}
@@ -2624,6 +2663,7 @@ export default function AdminStructuralEditor() {
                         <div className={`admin-editor-panel-view ${workspacePanelOpen && workspaceView === "build" ? "active" : ""}`}>
                             <AdminBuildPanel
                                 structure={structure}
+                                readOnly={isReadOnly}
                                 doors={doors}
                                 windows={windows}
                                 loading={assetsLoading}

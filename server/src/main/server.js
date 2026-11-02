@@ -6,6 +6,7 @@ import accountActionRoutes from "./account-actions.js";
 import assetRoutes from "./create-asset.js";
 import projectCommentRoutes from "./project-comments.js";
 import projectDeadlineRoutes from "./project-deadlines.js";
+import managedProjectRoutes from "./managed-projects.js";
 
 const app = express();
 
@@ -28,7 +29,7 @@ app.use(
 );
 
 app.use(
-  express.json()
+  express.json({ limit: "15mb" })
 );
 
 // --------------------------------------------------
@@ -72,6 +73,11 @@ app.use(
 app.use(
   "/api",
   projectDeadlineRoutes
+);
+
+app.use(
+  "/api",
+  managedProjectRoutes
 );
 
 // --------------------------------------------------

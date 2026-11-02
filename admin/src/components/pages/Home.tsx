@@ -5,20 +5,17 @@ import {
   ChevronRight,
   FolderOpen,
   Search,
-  ArrowDownAZ,
-  ArrowUpAZ,
-  LayoutGrid,
-  List,
+  Ellipsis,
+  ExternalLink,
+  Info,
+  Pencil,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   getAdminProjects,
+  getAdminFloorPlans,
   type AdminProject,
 } from "@/services/assets/projectService";
-import {
-  getAvailableFloorPlanProjects,
-  getUnverifiedManagedProjects,
-} from "@/services/assets/projectLifecycle";
 
 import { useAuth } from "@/context/AuthContext";
 
@@ -34,6 +31,19 @@ import {
 } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Table,
   TableBody,
   TableCell,
@@ -42,10 +52,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import NewFloorPlanProjectButton from "@/components/project-editor/NewFloorPlanProjectButton";
-import {
-  formatCost,
-  formatProjectDate,
-} from "./ProjectManagement/ProjectManagement";
 
 /* ------------------------------------------------------------------ */
 /* Shared line styles (same as UserTable)                              */
@@ -96,6 +102,7 @@ export default function Dashboard() {
   const userName = user?.displayName || user?.email?.split("@")[0] || "Admin";
 
   const [projects, setProjects] = useState<AdminProject[]>([]);
+  const [floorPlans, setFloorPlans] = useState<AdminProject[]>([]);
   const [deadlinesLoading, setDeadlinesLoading] = useState(true);
   const [deadlinesError, setDeadlinesError] = useState("");
 
@@ -104,6 +111,7 @@ export default function Dashboard() {
 
     if (!user) {
       setProjects([]);
+      setFloorPlans([]);
       setDeadlinesLoading(false);
       setDeadlinesError("");
       return () => {
@@ -114,17 +122,19 @@ export default function Dashboard() {
     setDeadlinesLoading(true);
     setDeadlinesError("");
 
-    getAdminProjects()
-      .then((projects) => {
+    Promise.all([getAdminProjects(), getAdminFloorPlans()])
+      .then(([projects, floorPlans]) => {
         if (cancelled) return;
 
         setProjects(projects);
+        setFloorPlans(floorPlans);
       })
       .catch((error: unknown) => {
         console.error("Failed to load project deadlines:", error);
 
         if (!cancelled) {
           setProjects([]);
+          setFloorPlans([]);
           setDeadlinesError("Unable to load project deadlines.");
         }
       })
@@ -137,15 +147,6 @@ export default function Dashboard() {
     };
   }, [user]);
 
-  const availableProjects = useMemo(
-    () => getAvailableFloorPlanProjects(projects),
-    [projects],
-  );
-  const unverifiedProjects = useMemo(
-    () => getUnverifiedManagedProjects(projects),
-    [projects],
-  );
-
   return (
     <div className="space-y-4">
       <div className="grid items-stretch gap-4 lg:grid-cols-3">
@@ -157,13 +158,25 @@ export default function Dashboard() {
           onOpenProject={(projectId) => navigate(`/projects/view/${projectId}`)}
         />
         <AvailableFloorPlanProjectsCard
-          projects={availableProjects}
-          unverifiedProjects={unverifiedProjects}
+          projects={floorPlans}
+          currentUserId={user?.uid ?? ""}
           loading={deadlinesLoading}
           error={deadlinesError}
-          onOpenProject={project => navigate(`/projects/edit/${project.projectId}`, {
-            state: { ownerName: project.ownerName },
-          })}
+          onOpenProject={(project, focusName) => {
+            if (project.recordType === "draft") {
+              navigate(`/projects/draft/${encodeURIComponent(project.projectId)}`, {
+                state: {
+                  ownerName: project.ownerName,
+                  showInitializationLoading: true,
+                  focusProjectName: focusName === true,
+                },
+              });
+              return;
+            }
+            navigate(`/projects/edit/${encodeURIComponent(project.projectId)}`, {
+              state: { ownerName: project.ownerName, focusProjectName: focusName === true },
+            });
+          }}
         />
       </div>
     </div>
@@ -172,55 +185,80 @@ export default function Dashboard() {
 
 function AvailableFloorPlanProjectsCard({
   projects,
-  unverifiedProjects,
+  currentUserId,
   loading,
   error,
   onOpenProject,
 }: {
   projects: AdminProject[];
-  unverifiedProjects: AdminProject[];
+  currentUserId: string;
   loading: boolean;
   error: string;
-  onOpenProject: (project: AdminProject) => void;
+  onOpenProject: (project: AdminProject, focusName?: boolean) => void;
 }) {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"modified" | "created" | "name">("modified");
-  const [ascending, setAscending] = useState(false);
-  const [view, setView] = useState<"list" | "grid">("list");
+  const [tab, setTab] = useState<"all" | "mine">("all");
+  const [detailsProject, setDetailsProject] = useState<AdminProject | null>(null);
+
+  const visibleProjects = useMemo(
+    () => tab === "all"
+      ? projects.filter(project => project.structuralStatus === "draft")
+      : projects.filter(project => project.createdBy === currentUserId),
+    [projects, tab, currentUserId],
+  );
 
   const filteredProjects = useMemo(() => {
     const query = search.trim().toLowerCase();
-    const filtered = projects.filter(project =>
+    const filtered = visibleProjects.filter(project =>
       !query ||
       project.projectName.toLowerCase().includes(query) ||
-      project.projectId.toLowerCase().includes(query) ||
       (project.ownerName ?? "").toLowerCase().includes(query) ||
-      project.ownerId.toLowerCase().includes(query)
+      (project.intendedClientEmail ?? "").toLowerCase().includes(query) ||
+      (project.creatorName ?? "").toLowerCase().includes(query)
     );
     return filtered.sort((first, second) => {
-      let difference: number;
       if (sortBy === "name") {
-        difference = first.projectName.localeCompare(second.projectName);
-      } else {
-        difference = projectTimestamp(first[sortBy === "created" ? "createdAt" : "updatedAt"]) -
-          projectTimestamp(second[sortBy === "created" ? "createdAt" : "updatedAt"]);
+        return first.projectName.localeCompare(second.projectName);
       }
+      let difference = projectTimestamp(first[sortBy === "created" ? "createdAt" : "updatedAt"]) -
+        projectTimestamp(second[sortBy === "created" ? "createdAt" : "updatedAt"]);
       if (difference === 0) difference = first.projectId.localeCompare(second.projectId);
-      return ascending ? difference : -difference;
+      return -difference;
     });
-  }, [projects, search, sortBy, ascending]);
+  }, [visibleProjects, search, sortBy]);
 
   return (
     <Card className={`${CARD} min-w-0 lg:col-span-2`}>
-      <CardHeader className="gap-3 px-4">
+      <CardHeader className="gap-3 px-4 pb-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <CardTitle className="text-base">Available Floor-Plan Projects</CardTitle>
+            <CardTitle className="text-base">Floor-Plan Drafts</CardTitle>
             <CardDescription className="text-xs">
-              Published floor plans waiting for their client to begin designing.
+              Unpublished plans stay here until they are published from the editor.
             </CardDescription>
           </div>
           <NewFloorPlanProjectButton />
+        </div>
+        <div className="flex items-center gap-1 border-b border-border" role="tablist" aria-label="Floor-plan drafts">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "all"}
+            className={`border-b-2 px-3 py-2 text-sm transition-colors ${tab === "all" ? "border-primary font-medium text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+            onClick={() => setTab("all")}
+          >
+            All Drafts
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "mine"}
+            className={`border-b-2 px-3 py-2 text-sm transition-colors ${tab === "mine" ? "border-primary font-medium text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+            onClick={() => setTab("mine")}
+          >
+            Mine
+          </button>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-[180px] flex-1">
@@ -228,159 +266,181 @@ function AvailableFloorPlanProjectsCard({
             <Input
               value={search}
               onChange={event => setSearch(event.target.value)}
-              placeholder="Search projects..."
-              className="border-border/60 pl-9"
-              aria-label="Search available floor-plan projects"
+              placeholder="Search drafts, creators, or clients..."
+              className="h-9 border-border/60 pl-9"
+              aria-label="Search floor-plan drafts"
             />
           </div>
           <select
             className="h-9 rounded-md border border-border/60 bg-background px-3 text-sm"
             value={sortBy}
             onChange={event => setSortBy(event.target.value as typeof sortBy)}
-            aria-label="Sort available projects"
+            aria-label="Sort floor-plan drafts"
           >
-            <option value="modified">Date Modified</option>
-            <option value="created">Date Created</option>
-            <option value="name">Project Name</option>
+            <option value="modified">Recently Modified</option>
+            <option value="created">Recently Created</option>
+            <option value="name">Name A–Z</option>
           </select>
-          <button
-            type="button"
-            onClick={() => setAscending(current => !current)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border/60 bg-background text-muted-foreground hover:bg-muted"
-            aria-label={ascending ? "Sort descending" : "Sort ascending"}
-            title={ascending ? "Ascending" : "Descending"}
-          >
-            {ascending ? <ArrowUpAZ size={16} /> : <ArrowDownAZ size={16} />}
-          </button>
-          <div className="flex items-center rounded-md border border-border/60 bg-background p-0.5" role="group" aria-label="Available project view">
-            <button
-              type="button"
-              onClick={() => setView("list")}
-              className={`inline-flex h-8 w-8 items-center justify-center rounded-sm ${view === "list" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/60"}`}
-              aria-label="List view"
-              aria-pressed={view === "list"}
-            >
-              <List size={16} />
-            </button>
-            <button
-              type="button"
-              onClick={() => setView("grid")}
-              className={`inline-flex h-8 w-8 items-center justify-center rounded-sm ${view === "grid" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/60"}`}
-              aria-label="Grid view"
-              aria-pressed={view === "grid"}
-            >
-              <LayoutGrid size={16} />
-            </button>
-          </div>
         </div>
       </CardHeader>
-      <CardContent className="min-h-[460px] p-0">
+      <CardContent className="min-h-[300px] px-4 pb-4 pt-0">
         {loading ? (
-          <p className="py-16 text-center text-sm text-muted-foreground">Loading available floor plans...</p>
+          <p className="py-12 text-center text-sm text-muted-foreground">Loading drafts...</p>
         ) : error ? (
-          <p className="py-16 text-center text-sm text-destructive" role="alert">{error}</p>
+          <p className="py-12 text-center text-sm text-destructive" role="alert">{error}</p>
         ) : filteredProjects.length === 0 ? (
-          <div className="flex min-h-[420px] flex-col items-center justify-center gap-3 p-6 text-center">
+          <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 p-6 text-center">
             <div className="rounded-full bg-muted p-3">
-              <FolderOpen size={24} className="text-muted-foreground" />
+              <FolderOpen size={20} className="text-muted-foreground" />
             </div>
             <div>
               <p className="text-sm font-medium">
-                {search ? "No matching floor plans" : "No available floor plans"}
+                {search ? "No matching drafts" : tab === "mine" ? "You have no drafts yet" : "No floor-plan drafts"}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
                 {search
                   ? "Try a different search."
-                  : "There are no unused floor plans currently waiting for a client."}
+                  : tab === "mine"
+                    ? "Drafts you create will appear here."
+                    : "Create a floor plan to get started."}
               </p>
             </div>
-            {!search && <NewFloorPlanProjectButton />}
+            {!search && tab === "all" && <NewFloorPlanProjectButton />}
           </div>
-        ) : view === "list" ? (
-          <div className="max-h-[520px] overflow-auto">
+        ) : (
+          <div className="overflow-x-auto">
             <Table>
-              <TableHeader>
-                <TableRow className="border-border/60 hover:bg-transparent">
-                  <TableHead>Project</TableHead>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead>Last Updated</TableHead>
-                  <TableHead>Estimated Cost</TableHead>
-                  <TableHead>Status</TableHead>
+              <TableHeader className="[&_tr]:border-border/60">
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="min-w-[220px] px-3 text-xs">Floor Plan</TableHead>
+                  <TableHead className="min-w-[130px] px-3 text-xs">Created By</TableHead>
+                  <TableHead className="min-w-[130px] px-3 text-xs">Client</TableHead>
+                  <TableHead className="min-w-[130px] px-3 text-xs">Last Modified</TableHead>
+                  <TableHead className="w-[150px] px-3 text-right text-xs">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredProjects.map(project => (
-                  <TableRow
-                    key={project.projectId}
-                    className="cursor-pointer border-border/60 hover:bg-muted/30"
-                    onClick={() => onOpenProject(project)}
-                  >
-                    <TableCell>
+                  <TableRow key={project.projectId} className="border-border/60">
+                    <TableCell className="px-3 py-2.5">
                       <div className="flex items-center gap-3">
-                        <ProjectPreview project={project} className="h-12 w-16 rounded-md" />
+                        <ProjectPreview project={project} className="h-10 w-14 rounded-md" />
                         <div className="min-w-0">
-                          <p className="truncate font-medium">{project.projectName}</p>
-                          <p className="truncate text-xs text-muted-foreground">ID: {project.projectId}</p>
+                          <p className="truncate text-sm font-medium">{project.projectName}</p>
+                          <Badge variant="outline" className="mt-1 h-4 rounded px-1.5 py-0 text-[10px] font-normal text-muted-foreground">
+                            Draft
+                          </Badge>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <p className="font-medium">{project.ownerName || "Unknown User"}</p>
-                      <p className="text-xs text-muted-foreground">{project.ownerId}</p>
+                    <TableCell className="px-3 py-2.5 text-sm">
+                      <span className={!project.creatorName ? "text-muted-foreground" : ""}>
+                        {project.creatorName || "Unknown creator"}
+                      </span>
                     </TableCell>
-                    <TableCell>{formatProjectDate(project.createdAt)}</TableCell>
-                    <TableCell>{formatProjectDate(project.updatedAt)}</TableCell>
-                    <TableCell>{formatCost(project)}</TableCell>
-                    <TableCell><Badge variant="outline">Available for Client</Badge></TableCell>
+                    <TableCell className="px-3 py-2.5 text-sm">
+                      {project.intendedClientId
+                        ? project.ownerName || "Unknown client"
+                        : "Unassigned"}
+                    </TableCell>
+                    <TableCell className="px-3 py-2.5 text-sm text-muted-foreground">
+                      {formatDraftDate(project.updatedAt)}
+                    </TableCell>
+                    <TableCell className="px-3 py-2.5">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 gap-1.5 px-2.5 text-xs"
+                          onClick={() => onOpenProject(project)}
+                        >
+                          <ExternalLink size={14} />
+                          Open
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            aria-label={`More actions for ${project.projectName}`}
+                          >
+                            <Ellipsis size={16} />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-40">
+                            {project.createdBy === currentUserId && (
+                              <DropdownMenuItem onClick={() => onOpenProject(project, true)}>
+                                <Pencil size={14} />
+                                Rename
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem onClick={() => setDetailsProject(project)}>
+                              <Info size={14} />
+                              Details
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </div>
-        ) : (
-          <ScrollArea className="max-h-[520px] px-4 pb-4">
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {filteredProjects.map(project => (
-                <button
-                  key={project.projectId}
-                  type="button"
-                  className="rounded-lg border border-border/60 p-3 text-left transition-colors hover:bg-muted/30"
-                  onClick={() => onOpenProject(project)}
-                >
-                  <ProjectPreview project={project} className="mb-3 h-32 w-full rounded-md" />
-                  <p className="truncate text-sm font-medium">{project.projectName}</p>
-                  <p className="text-xs text-muted-foreground">ID: {project.projectId}</p>
-                  <p className="mt-2 truncate text-xs">{project.ownerName || "Unknown User"}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Modified {formatProjectDate(project.updatedAt)}
-                  </p>
-                  <div className="mt-2 flex items-center justify-between gap-2">
-                    <span className="text-xs">{formatCost(project)}</span>
-                    <Badge variant="outline">Available</Badge>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </ScrollArea>
-        )}
-        {!loading && !error && unverifiedProjects.length > 0 && (
-          <div className="mx-4 mb-4 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950">
-            <p className="font-medium">
-              {unverifiedProjects.length} project(s) need lifecycle verification and are excluded from both lists.
-            </p>
-            <ul className="mt-1 list-inside list-disc">
-              {unverifiedProjects.map(project => (
-                <li key={project.projectId}>
-                  {project.projectName} ({project.projectId}) — {project.lifecycleError || "Project assignment or publication metadata could not be verified."}
-                </li>
-              ))}
-            </ul>
-          </div>
         )}
       </CardContent>
+      <Dialog open={Boolean(detailsProject)} onOpenChange={open => {
+        if (!open) setDetailsProject(null);
+      }}>
+        <DialogContent>
+          {detailsProject && (
+            <>
+              <DialogHeader>
+                <DialogTitle>{detailsProject.projectName}</DialogTitle>
+                <DialogDescription>Draft details and technical identifiers.</DialogDescription>
+              </DialogHeader>
+              <dl className="grid gap-3 text-sm">
+                <DraftDetail label="Draft ID" value={detailsProject.projectId} />
+                <DraftDetail label="Creator" value={detailsProject.creatorName || "Unknown creator"} />
+                <DraftDetail label="Creator ID" value={detailsProject.createdBy || "Unavailable"} />
+                <DraftDetail
+                  label="Client"
+                  value={detailsProject.intendedClientId
+                    ? detailsProject.ownerName === "Unknown User"
+                      ? "Unknown client"
+                      : detailsProject.ownerName || "Unknown client"
+                    : "Unassigned"}
+                />
+                <DraftDetail label="Client ID" value={detailsProject.intendedClientId || "Unassigned"} />
+                <DraftDetail label="Client email" value={detailsProject.intendedClientEmail || "Unavailable"} />
+                <DraftDetail label="Created" value={formatDraftDate(detailsProject.createdAt)} />
+                <DraftDetail label="Last modified" value={formatDraftDate(detailsProject.updatedAt)} />
+              </dl>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
+}
+
+function DraftDetail({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="grid grid-cols-[110px_minmax(0,1fr)] gap-3 border-b border-border/60 pb-2 last:border-0 last:pb-0">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="break-all font-medium">{value}</dd>
+    </div>
+  );
+}
+
+function formatDraftDate(value: unknown): string {
+  const timestamp = projectTimestamp(value);
+  if (!timestamp) return "Unknown date";
+  return new Date(timestamp).toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 function ProjectPreview({

@@ -203,6 +203,7 @@ test("managed save uploads to the designated path and updates interior metadata 
             operationOrder.push("metadata");
             assert.equal(metadata.ownerId, "client-uid");
             assert.equal(metadata.projectId, "PRJ-00126");
+            assert.equal("projectName" in metadata, false);
             assert.equal(metadata.interiorJsonPath, "projects/client-uid/PRJ-00126.interior.json");
             assert.equal(metadata.interiorJsonUrl, "https://example.test/interior.json");
             assert.equal(metadata.clientDesignStarted, true);

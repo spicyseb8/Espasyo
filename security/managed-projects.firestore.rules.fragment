@@ -1,0 +1,30 @@
+// Merge these scoped matches into the existing Firestore ruleset.
+// Do not deploy this fragment as a complete ruleset; unrelated collections are omitted.
+function managedProjectSignedIn() {
+  return request.auth != null;
+}
+
+match /projects/{projectId} {
+  allow read: if managedProjectSignedIn() && resource.data.ownerId == request.auth.uid;
+
+  // Client-created legacy projects remain supported. Managed floor plans are
+  // created and changed through the authenticated server API.
+  allow create: if managedProjectSignedIn()
+    && request.resource.data.ownerId == request.auth.uid
+    && request.resource.data.get("workflowType", "legacy") != "admin-managed";
+  allow update: if managedProjectSignedIn()
+    && resource.data.ownerId == request.auth.uid
+    && resource.data.get("workflowType", "legacy") != "admin-managed"
+    && request.resource.data.ownerId == resource.data.ownerId
+    && request.resource.data.get("workflowType", "legacy")
+      == resource.data.get("workflowType", "legacy");
+  allow delete: if false;
+}
+
+match /adminManagedFloorPlanDrafts/{draftId} {
+  allow read, write: if false;
+}
+
+match /adminManagedProjectAssignments/{assignmentId} {
+  allow read, write: if false;
+}

@@ -33,6 +33,7 @@ type CalibrationStep =
 
 interface AdminFloorPlanPanelProps {
     structure: ManagedStructure;
+    readOnly: boolean;
     tool: AdminStructuralTool;
     blueprintUrl: string | null;
     blueprintName: string;
@@ -78,6 +79,7 @@ const TOOLS = [
 
 export default function AdminFloorPlanPanel({
     structure,
+    readOnly,
     tool,
     blueprintUrl,
     blueprintName,
@@ -123,7 +125,12 @@ export default function AdminFloorPlanPanel({
     };
 
     return (
-        <div className="admin-floor-plan-panel" data-tool={tool}>
+        <div
+            className="admin-floor-plan-panel"
+            data-tool={tool}
+            aria-disabled={readOnly}
+            style={readOnly ? { pointerEvents: "none", opacity: 0.6 } : undefined}
+        >
             <div className="admin-floor-plan-scroll">
             <section className={`admin-floor-group ${layoutLocked ? "is-locked" : ""}`}>
                 <h3>Tools</h3>

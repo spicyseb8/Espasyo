@@ -1,0 +1,34 @@
+// Merge these scoped matches into the existing Storage ruleset.
+// Do not deploy this fragment as a complete ruleset; unrelated paths are omitted.
+function managedProjectStorageSignedIn() {
+  return request.auth != null;
+}
+
+function isManagedFloorPlan(ownerId, projectId) {
+  let projectPath = /databases/(default)/documents/projects/$(projectId);
+  return firestore.exists(projectPath)
+    && firestore.get(projectPath).data.get("workflowType", "legacy") == "admin-managed"
+    && firestore.get(projectPath).data.get("ownerId", "") == ownerId;
+}
+
+match /projects/{ownerId}/{fileName} {
+  allow read: if managedProjectStorageSignedIn() && request.auth.uid == ownerId;
+  allow write: if managedProjectStorageSignedIn()
+    && request.auth.uid == ownerId
+    && (
+      (
+        fileName.matches(".*\\.jpg")
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches("image/.*")
+      )
+      || (
+        fileName.matches(".*\\.json")
+        && !isManagedFloorPlan(ownerId, fileName.split(".")[0])
+      )
+    );
+}
+
+match /projects/{ownerId}/{projectId}/{fileName=**} {
+  allow read: if managedProjectStorageSignedIn() && request.auth.uid == ownerId;
+  allow write: if false;
+}
