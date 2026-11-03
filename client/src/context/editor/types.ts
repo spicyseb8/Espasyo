@@ -47,6 +47,7 @@ export interface EditorState {
     publishedStructuralRevision?: number;
     floors: EditorFloorData[];
     activeFloorId: string;
+    projectBudget: number | null;
     activeTab: string;
     activeTool: Tool;
     walkthroughMode: boolean;

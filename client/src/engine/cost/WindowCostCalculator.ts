@@ -54,6 +54,14 @@ export function calculateWindowCosts(
             continue;
         }
 
+        if (
+            typeof asset.price !== "number" ||
+            !Number.isFinite(asset.price) ||
+            asset.price < 0
+        ) {
+            continue;
+        }
+
 
         const existing =
             grouped.get(
@@ -89,10 +97,10 @@ export function calculateWindowCosts(
                         "item",
 
                     rate:
-                        asset.price ?? 0,
+                        asset.price,
 
                     subtotal:
-                        asset.price ?? 0
+                        asset.price
                 }
             );
 

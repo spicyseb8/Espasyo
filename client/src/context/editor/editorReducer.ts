@@ -11,6 +11,7 @@ import type { Opening } from "../../engine/openings/OpeningTypes";
 import type { SavedProjectData, SavedProjectFloor } from "./ProjectTypes";
 import type { EditorFloorData } from "./types";
 import { getStaircaseFloorData } from "./staircaseData.ts";
+import { isValidProjectBudget } from "../../engine/cost/ProjectBudget";
 import {
     getWallFinishSideKey,
     WALL_SIDE_FINISH_BUCKET
@@ -20,6 +21,14 @@ function reduceEditorAction(
     action: EditorAction
 ): EditorState {
     switch (action.type) {
+        case "SET_PROJECT_BUDGET":
+            if (action.payload !== null && !isValidProjectBudget(action.payload)) {
+                return state;
+            }
+            return {
+                ...state,
+                projectBudget: action.payload
+            };
         case "SET_ACTIVE_TAB":
             if (state.walkthroughMode) return state;
             return {
@@ -1064,6 +1073,10 @@ function reduceEditorAction(
                     project.structuralRevision,
                 publishedStructuralRevision:
                     project.publishedStructuralRevision,
+                projectBudget:
+                    isValidProjectBudget(project.maximumBudget)
+                        ? project.maximumBudget
+                        : null,
                 walls:
                     restoredWalls,
                 corners:

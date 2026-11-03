@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import AccountSettings from "@/components/pages/AccountSettings/AccountSettings";
+import AdminAccountSettings from "@/components/pages/AdminAccountSettings";
 import AssetLibrary from "@/components/pages/AssetLibrary/AssetLibrary";
 import ModelSizeChecker from "@/components/pages/loader";
 import ProjectManagement from "@/components/pages/ProjectManagement/ProjectManagement";
@@ -91,6 +92,17 @@ function App() {
           <RequireAdmin>
             <DashboardLayout>
               {() => <AccountSettings type="employee" />}
+            </DashboardLayout>
+          </RequireAdmin>
+        }
+      />
+
+      <Route
+        path="/account-settings"
+        element={
+          <RequireAdmin>
+            <DashboardLayout>
+              {() => <AdminAccountSettings />}
             </DashboardLayout>
           </RequireAdmin>
         }

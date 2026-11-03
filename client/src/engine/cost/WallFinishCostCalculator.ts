@@ -380,6 +380,10 @@ export function calculateWallFinishCosts(
                 continue;
             }
 
+            if (material.priceConfigured === false) {
+                continue;
+            }
+
             const paintPricePerLiter = Number(
                 material.pricePerLiter ??
                 material.pricePerSquareMeter

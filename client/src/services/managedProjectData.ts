@@ -1,3 +1,5 @@
+import { isValidProjectBudget } from "../engine/cost/ProjectBudget.ts";
+
 export interface ManagedInteriorPayload {
     projectId?: string;
     ownerId?: string;
@@ -6,6 +8,7 @@ export interface ManagedInteriorPayload {
     wallFinishes?: Record<string, Record<string, string>>;
     floors?: ManagedInteriorFloor[];
     costEstimate?: unknown;
+    maximumBudget?: number | null;
 }
 
 export interface ManagedInteriorFloor {
@@ -58,7 +61,8 @@ export function hasMeaningfulManagedInteriorChanges(
         isNonEmptyStringRecord(floor.floorFinishes) ||
         Object.values(floor.wallFinishes).some(isNonEmptyStringRecord)
     );
-    return hasFurniture || hasFloorFinishes || hasWallFinishes || hasFloorData;
+    return hasFurniture || hasFloorFinishes || hasWallFinishes || hasFloorData ||
+        isValidProjectBudget(payload.maximumBudget);
 }
 
 export function getClientDesignLifecycleUpdate(
@@ -77,6 +81,7 @@ export function getClientDesignLifecycleUpdate(
 }
 
 export interface ManagedInteriorState {
+    projectBudget?: number | null;
     furniture: Array<{
         id: string;
         assetId: string;
@@ -141,7 +146,10 @@ export function serializeManagedInteriorData(
                 )
             }))
         } : {}),
-        costEstimate
+        costEstimate,
+        ...(isValidProjectBudget(state.projectBudget)
+            ? { maximumBudget: state.projectBudget }
+            : {})
     };
 }
 
@@ -200,6 +208,13 @@ export function validateManagedInteriorPayload(
         )
     )) {
         throw new Error("Interior design floor data is invalid.");
+    }
+    if (
+        payload.maximumBudget !== undefined &&
+        payload.maximumBudget !== null &&
+        !isValidProjectBudget(payload.maximumBudget)
+    ) {
+        throw new Error("Interior design project budget is invalid.");
     }
 
     return payload;
@@ -328,7 +343,10 @@ export function mergeManagedInteriorData<T extends object>(
             ? interiorPayload.furniture
             : firstInteriorFloor?.furniture ?? [],
         floorFinishes: interiorPayload?.floorFinishes ?? firstInteriorFloor?.floorFinishes ?? {},
-        wallFinishes: interiorPayload?.wallFinishes ?? firstInteriorFloor?.wallFinishes ?? {}
+        wallFinishes: interiorPayload?.wallFinishes ?? firstInteriorFloor?.wallFinishes ?? {},
+        maximumBudget: isValidProjectBudget(interiorPayload?.maximumBudget)
+            ? interiorPayload.maximumBudget
+            : null
     };
 }
 

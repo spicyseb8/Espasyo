@@ -20,6 +20,7 @@ export interface Material {
 
     // Flooring price for one individual tile.
     pricePerPiece?: number;
+    priceConfigured?: boolean;
 
     length?: number;
 

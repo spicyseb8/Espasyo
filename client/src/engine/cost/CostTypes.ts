@@ -33,6 +33,7 @@ export interface CostEstimate {
 
     total: number;
     floors: CostFloorEstimate[];
+    incompleteItems?: string[];
 }
 
 export interface CostFloorEstimate {

@@ -23,6 +23,8 @@ import InstructionModal
 
 import WalkthroughUI
     from "../../scene/Walkthrough/WalkthroughUI";
+import BudgetWarning
+    from "../../scene/BudgetWarning";
 
 import DraftLoader
     from "./DraftLoader";
@@ -82,6 +84,8 @@ export default function Editor() {
                                 handleSceneReady
                             }
                         />
+
+                        <BudgetWarning />
 
                         <InstructionModal />
 

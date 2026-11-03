@@ -168,6 +168,7 @@ export default function EditorExitGuard() {
                 0 ||
             currentState.furniture.length >
                 0 ||
+            currentState.projectBudget !== null ||
             currentState.openings.length >
                 0 ||
             Object.keys(
@@ -208,14 +209,16 @@ export default function EditorExitGuard() {
                 if (
                     user
                 ) {
-                    const currentProjectData =
-                        createProjectData(
+                    const currentProjectData = {
+                        ...createProjectData(
                             stateRef.current,
                             savedProjectId,
                             getProjectName() ||
                                 "Untitled Project",
                             user.uid
-                        );
+                        ),
+                        maximumBudget: stateRef.current.projectBudget
+                    };
 
                     return (
                         getProjectFingerprint(
@@ -461,13 +464,15 @@ export default function EditorExitGuard() {
                 existingDraft?.projectName ||
                 "Untitled Project";
 
-            const projectData =
-                createProjectData(
+            const projectData = {
+                ...createProjectData(
                     stateRef.current,
                     draftProjectId,
                     name,
                     user.uid
-                );
+                ),
+                maximumBudget: stateRef.current.projectBudget
+            };
 
             const thumbnail =
                 captureSceneThumbnail();

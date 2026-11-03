@@ -21,6 +21,7 @@ export type FloorPlanSnapshot = Pick<
 export type EditorSnapshot = Pick<
     EditorState,
     | "activeFloorId"
+    | "projectBudget"
     | "furniture"
     | "doors"
     | "windows"
@@ -63,6 +64,7 @@ export function createEditorSnapshot(
 ): EditorSnapshot {
     return {
         activeFloorId: state.activeFloorId,
+        projectBudget: state.projectBudget,
         furniture: cloneValue(state.furniture),
         doors: cloneValue(state.doors),
         windows: cloneValue(state.windows),
@@ -100,6 +102,9 @@ export function restoreEditorSnapshot(
     return {
 
         ...current,
+
+        projectBudget:
+            snapshot.projectBudget,
 
         furniture:
             cloneValue(

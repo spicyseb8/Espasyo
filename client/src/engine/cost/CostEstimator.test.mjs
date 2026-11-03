@@ -11,12 +11,13 @@ const vite = await createServer({
     server: { middlewareMode: true, hmr: false }
 });
 
-const [costEstimator, { solveRegions }, wallFinishUtils, costPdf] =
+const [costEstimator, { solveRegions }, wallFinishUtils, costPdf, projectBudget] =
     await Promise.all([
         vite.ssrLoadModule("/src/engine/cost/CostEstimator.ts"),
         vite.ssrLoadModule("/src/engine/regions/RegionSolver.ts"),
         vite.ssrLoadModule("/src/engine/walls/WallFinishUtils.ts"),
-        vite.ssrLoadModule("/src/engine/cost/CostBreakdownPDF.ts")
+        vite.ssrLoadModule("/src/engine/cost/CostBreakdownPDF.ts"),
+        vite.ssrLoadModule("/src/engine/cost/ProjectBudget.ts")
     ]);
 
 after(async () => {
@@ -166,6 +167,78 @@ test("switching the active floor does not change the project total", () => {
     assert.equal(firstActiveEstimate.total, 7945);
     assert.equal(secondActiveEstimate.total, 7945);
     assert.deepEqual(secondActiveEstimate.items, firstActiveEstimate.items);
+    assert.equal(
+        projectBudget.getProjectBudgetSummary(8000, firstActiveEstimate.total).status,
+        "near"
+    );
+    assert.equal(
+        projectBudget.getProjectBudgetSummary(8000, secondActiveEstimate.total).status,
+        "near"
+    );
+});
+
+test("missing and invalid prices are excluded and reported as incomplete", () => {
+    const floor = {
+        ...floors[0],
+        furniture: [{ assetId: "unpriced-furniture" }],
+        doors: [{
+            id: "unpriced-door",
+            assetId: "unpriced-door",
+            wallId: floors[0].walls[0].id,
+            position: new Vector3(),
+            rotationY: 0,
+            width: 1,
+            height: 2,
+            depth: 0.1
+        }],
+        windows: [{
+            id: "unpriced-window",
+            assetId: "unpriced-window",
+            wallId: floors[0].walls[0].id,
+            position: new Vector3(),
+            rotationY: 0,
+            width: 1,
+            height: 1,
+            depth: 0.1
+        }],
+        floorFinishes: { room: "unpriced-floor" },
+        wallFinishes: { room: { wall: "unpriced-wall" } }
+    };
+
+    const estimate = costEstimator.calculateCostEstimateForFloors([floor], {
+        findDoorAsset: () => ({ id: "unpriced-door", name: "Door", price: -1 }),
+        findWindowAsset: () => ({ id: "unpriced-window", name: "Window", price: Infinity })
+    });
+    assert.equal(estimate.total, 0);
+    assert.deepEqual(
+        estimate.incompleteItems.sort(),
+        ["doors", "flooring", "furniture", "wall finishes", "windows"]
+    );
+    assert.equal(estimate.items.some(item =>
+        item.category === "doors" || item.category === "windows"
+    ), false);
+});
+
+test("missing prices for appliances and decorations do not mark the estimate incomplete", () => {
+    const floor = {
+        ...floors[0],
+        furniture: [
+            { assetId: "unpriced-appliance" },
+            { assetId: "unpriced-decoration" }
+        ]
+    };
+    const estimate = costEstimator.calculateCostEstimateForFloors([floor], {
+        findFurnitureAsset: assetId => ({
+            id: assetId,
+            name: assetId,
+            furnitureCategory: assetId === "unpriced-appliance"
+                ? "appliances"
+                : "decorations"
+        })
+    });
+
+    assert.equal(estimate.incompleteItems.includes("furniture"), false);
+    assert.equal(estimate.items.some(item => item.category === "furniture"), false);
 });
 
 test("supports a legacy single-floor project", () => {

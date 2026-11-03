@@ -121,6 +121,9 @@ export function calculateFlooringCosts(
         const firebaseMaterial =
             options.findFloorMaterial?.(materialId) ??
             findCachedFloorMaterial(materialId);
+        if (firebaseMaterial?.priceConfigured === false) {
+            continue;
+        }
 
         //--------------------------------------------------
         // Legacy material-library fallback

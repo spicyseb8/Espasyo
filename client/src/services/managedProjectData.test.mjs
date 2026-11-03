@@ -10,6 +10,20 @@ import {
     saveManagedInteriorData,
     serializeManagedInteriorData
 } from "./managedProjectData.ts";
+import { getProjectFingerprint } from "./projectEditSessionService.ts";
+
+test("budget edits remain detectable without adding budget to structural data", () => {
+    const project = { projectId: "PRJ-00126", walls: [] };
+    const baseline = { ...project, maximumBudget: 425000 };
+    assert.notEqual(
+        getProjectFingerprint(baseline),
+        getProjectFingerprint({ ...project, maximumBudget: 500000 })
+    );
+    assert.equal(
+        getProjectFingerprint({ ...project, maximumBudget: null }),
+        getProjectFingerprint(project)
+    );
+});
 
 test("managed interior merge preserves published structure", () => {
     const published = {
@@ -126,6 +140,61 @@ test("managed serializer stores furniture references, placement, finishes, and c
     assert.equal(interior.furniture[0].rotationY, 1.2);
     assert.equal("stairs" in interior, false);
     assert.equal("stairLandings" in interior, false);
+});
+
+test("project budget persists in interior JSON and restores without changing structure", async () => {
+    const structure = {
+        projectId: "PRJ-00126",
+        walls: [{ id: "published-wall" }],
+        furniture: [],
+        structuralRevision: 7
+    };
+    const interior = serializeManagedInteriorData({
+        furniture: [],
+        floorFinishes: {},
+        wallFinishes: {},
+        projectBudget: 425000
+    }, "PRJ-00126", "client-uid", { total: 0 });
+
+    assert.equal(interior.maximumBudget, 425000);
+    const merged = mergeManagedInteriorData(structure, interior);
+    assert.equal(merged.maximumBudget, 425000);
+    assert.deepEqual(merged.walls, structure.walls);
+    assert.equal(merged.structuralRevision, 7);
+
+    let savedJson;
+    await saveManagedInteriorData({
+        projectId: "PRJ-00126",
+        ownerId: "client-uid",
+        projectName: "Client plan",
+        estimatedCost: 0,
+        hasMeaningfulChanges: true,
+        interiorData: interior,
+        updatedAt: "timestamp",
+        uploadJson: async (_path, json) => {
+            savedJson = json;
+            return "https://example.test/interior.json";
+        },
+        updateMetadata: async () => {}
+    });
+
+    const restored = await loadManagedInteriorData({
+        projectId: "PRJ-00126",
+        ownerId: "client-uid",
+        interiorJsonPath: "projects/client-uid/PRJ-00126.interior.json",
+        interiorJsonUrl: "https://example.test/interior.json"
+    }, async () => new Response(savedJson, { status: 200 }));
+    assert.equal(restored.maximumBudget, 425000);
+    const removedBudget = serializeManagedInteriorData({
+        furniture: [],
+        floorFinishes: {},
+        wallFinishes: {},
+        projectBudget: null
+    }, "PRJ-00126", "client-uid", { total: 0 });
+    assert.equal("maximumBudget" in removedBudget, false);
+
+    const legacy = mergeManagedInteriorData(structure, null);
+    assert.equal(legacy.maximumBudget, null);
 });
 
 test("managed interior serializer saves all floors and retains legacy first-floor fields", () => {

@@ -392,6 +392,9 @@ export async function loadProjectData(
             projectData,
             interiorPayload
         ) as SavedProjectData;
+    } else if (project.interiorJsonUrl || project.interiorJsonPath) {
+        const interiorPayload = await loadManagedInteriorData(project);
+        projectData.maximumBudget = interiorPayload?.maximumBudget ?? null;
     }
 
     //--------------------------------------------------

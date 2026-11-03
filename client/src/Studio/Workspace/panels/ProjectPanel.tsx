@@ -724,6 +724,25 @@ export default function ProjectPanel() {
                     jsonPath: storagePath,
                     jsonUrl: downloadUrl
                 };
+                const interiorJsonPath =
+                    `projects/${user.uid}/${currentProjectId}.interior.json`;
+                const interiorJsonRef = ref(storage, interiorJsonPath);
+                const interiorData = {
+                    projectId: currentProjectId,
+                    ownerId: user.uid,
+                    ...(state.projectBudget !== null
+                        ? { maximumBudget: state.projectBudget }
+                        : {})
+                };
+                await uploadString(
+                    interiorJsonRef,
+                    JSON.stringify(interiorData, null, 2),
+                    "raw",
+                    { contentType: "application/json" }
+                );
+                projectMetadata.interiorJsonPath = interiorJsonPath;
+                projectMetadata.interiorJsonUrl =
+                    await getDownloadURL(interiorJsonRef);
                 if (thumbnail) {
                     projectMetadata.thumbnailPath = thumbnail.thumbnailPath;
                     projectMetadata.thumbnailUrl = thumbnail.thumbnailUrl;
@@ -743,7 +762,10 @@ export default function ProjectPanel() {
 
             saveProjectBaseline(
                 currentProjectId,
-                projectData
+                {
+                    ...projectData,
+                    maximumBudget: state.projectBudget
+                }
             );
 
             localStorage.setItem(

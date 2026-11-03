@@ -232,6 +232,7 @@ export interface SavedProjectData {
     publishedStructuralRevision?: number;
     floors?: SavedProjectFloor[];
     activeFloorId?: string;
+    maximumBudget?: number | null;
 
     schemaVersion: number;
 

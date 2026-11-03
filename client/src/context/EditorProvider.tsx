@@ -27,6 +27,9 @@ import {
 import type {
     EditorAction
 } from "./editor/editorActions";
+import {
+    PROJECT_BUDGET_ACTION_EVENT
+} from "../engine/cost/ProjectBudget";
 
 import {
     createFloorPlanSnapshot,
@@ -40,6 +43,46 @@ import type {
     FloorPlanSnapshot,
     EditorSnapshot
 } from "./editor/EditorHistory";
+
+function publishBudgetAction(isRelevant: boolean): void {
+    if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent(
+            PROJECT_BUDGET_ACTION_EVENT,
+            { detail: isRelevant }
+        ));
+    }
+}
+
+function isBudgetRelevantAction(action: EditorAction): boolean {
+    switch (action.type) {
+        case "SET_PROJECT_BUDGET":
+        case "ADD_FURNITURE":
+        case "UPDATE_FURNITURE":
+        case "REMOVE_FURNITURE":
+        case "ADD_DOOR":
+        case "UPDATE_DOOR":
+        case "REMOVE_DOOR":
+        case "ADD_WINDOW":
+        case "UPDATE_WINDOW":
+        case "REMOVE_WINDOW":
+        case "ADD_OPENING":
+        case "SET_OPENING_WIDTH":
+        case "SET_OPENING_HEIGHT":
+        case "SET_ARCH_RISE":
+        case "SET_FLOOR_FINISH":
+        case "SET_FLOOR_FINISH_ALL":
+        case "SET_WALL_FINISH":
+        case "SET_WALL_FINISHES":
+        case "ADD_WALL":
+        case "REMOVE_WALL":
+        case "SET_WALLS":
+        case "SET_CORNERS":
+        case "SET_WALL_HEIGHT":
+            return true;
+        default:
+            return false;
+    }
+}
 
 //==================================================
 // HISTORY ACTION CLASSIFICATION
@@ -76,46 +119,25 @@ function isFloorPlanAction(
 // Global editor actions
 //--------------------------------------------------
 
-function isGlobalEditorAction(
-    action: EditorAction
-): boolean {
+const GLOBAL_EDITOR_ACTIONS = new Set<EditorAction["type"]>([
+    "ADD_FURNITURE",
+    "UPDATE_FURNITURE",
+    "REMOVE_FURNITURE",
+    "SET_PROJECT_BUDGET",
+    "ADD_DOOR",
+    "UPDATE_DOOR",
+    "REMOVE_DOOR",
+    "ADD_WINDOW",
+    "UPDATE_WINDOW",
+    "REMOVE_WINDOW",
+    "ADD_OPENING",
+    "SET_FLOOR_FINISH",
+    "SET_WALL_FINISH",
+    "SET_WALL_FINISHES"
+]);
 
-    switch (
-        action.type
-    ) {
-
-        case "ADD_FURNITURE":
-
-        case "UPDATE_FURNITURE":
-
-        case "REMOVE_FURNITURE":
-
-        case "ADD_DOOR":
-
-        case "UPDATE_DOOR":
-
-        case "REMOVE_DOOR":
-
-        case "ADD_WINDOW":
-
-        case "UPDATE_WINDOW":
-
-        case "REMOVE_WINDOW":
-
-        case "ADD_OPENING":
-
-        case "SET_FLOOR_FINISH":
-
-        case "SET_WALL_FINISH":
-
-        case "SET_WALL_FINISHES":
-
-            return true;
-
-        default:
-
-            return false;
-    }
+function isGlobalEditorAction(action: EditorAction): boolean {
+    return GLOBAL_EDITOR_ACTIONS.has(action.type);
 }
 //--------------------------------------------------
 // Material actions can be dispatched multiple
@@ -505,6 +527,8 @@ export default function EditorProvider({
             ) {
                 return;
             }
+
+            publishBudgetAction(isBudgetRelevantAction(action));
 
             if (action.type === "SWITCH_FLOOR") {
                 flushPendingFloorHistory();
@@ -1026,6 +1050,7 @@ if (
                 stateRef.current =
                     restored;
 
+                publishBudgetAction(true);
                 setState(
                     restored
                 );
@@ -1090,6 +1115,7 @@ if (
             stateRef.current =
                 restored;
 
+            publishBudgetAction(true);
             setState(
                 restored
             );
@@ -1191,6 +1217,7 @@ if (
                 stateRef.current =
                     restored;
 
+                publishBudgetAction(true);
                 setState(
                     restored
                 );
@@ -1255,6 +1282,7 @@ if (
             stateRef.current =
                 restored;
 
+            publishBudgetAction(true);
             setState(
                 restored
             );

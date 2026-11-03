@@ -46,7 +46,10 @@ export function placeFurniture(
             bounds.depth,
 
         height:
-            bounds.height
+            bounds.height,
+
+        scale:
+            asset.scale ?? 1
 
     };
 }

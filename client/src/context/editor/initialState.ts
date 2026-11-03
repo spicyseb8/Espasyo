@@ -10,6 +10,7 @@ export const initialState: EditorState = {
     publishedStructuralRevision: undefined,
     floors: [],
     activeFloorId: "first-floor",
+    projectBudget: null,
     activeTab: "furniture",
     activeTool: Tool.None,
     walls: [],

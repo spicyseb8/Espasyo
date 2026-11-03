@@ -356,7 +356,7 @@
     right: 0;
     z-index: 1001;
 
-    width: 360px;
+    width: min(360px, calc(100vw - 24px));
     max-height: 560px;
 
     display: flex;
@@ -408,6 +408,203 @@
 .cost-estimator-list::-webkit-scrollbar-thumb {
     background: var(--tb-line-strong);
     border-radius: 999px;
+}
+
+.project-budget-section {
+    padding: 2px 0 10px;
+    border-bottom: 1px solid var(--tb-line-soft);
+}
+
+.project-budget-header {
+    display: flex;
+    width: 100%;
+    min-height: 38px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 5px 0;
+    border: 0;
+    background: transparent;
+    color: var(--tb-ink);
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+}
+
+.project-budget-heading {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: var(--tb-t-body);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.project-budget-heading svg {
+    color: var(--tb-ink-muted);
+    transition: transform 0.15s ease;
+}
+
+.project-budget-heading svg.open {
+    transform: rotate(180deg);
+}
+
+.project-budget-compact {
+    overflow: hidden;
+    color: var(--tb-ink-muted);
+    font-size: var(--tb-t-micro);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.project-budget-compact.within {
+    color: var(--tb-green-ink);
+}
+
+.project-budget-compact.near {
+    color: #805c12;
+}
+
+.project-budget-compact.over {
+    color: #8d3934;
+}
+
+.project-budget-details {
+    padding: 0 0 2px 20px;
+}
+
+.project-budget-status-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: var(--tb-t-label);
+}
+
+.project-budget-status-row strong {
+    font-variant-numeric: tabular-nums;
+}
+
+.project-budget-status {
+    margin-top: 7px;
+    padding: 8px;
+    border-radius: var(--tb-radius-sm);
+    background: var(--tb-green-tint);
+    color: var(--tb-green-ink);
+}
+
+.project-budget-status.near {
+    background: #fff5df;
+    color: #805c12;
+}
+
+.project-budget-status.over {
+    background: #fff0ed;
+    color: #8d3934;
+}
+
+.project-budget-meter {
+    height: 5px;
+    margin: 7px 0 5px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.project-budget-meter span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: currentColor;
+}
+
+.project-budget-status p,
+.project-budget-empty,
+.project-budget-incomplete,
+.project-budget-message {
+    margin: 3px 0 0;
+    font-size: var(--tb-t-micro);
+    line-height: 1.4;
+}
+
+.project-budget-empty {
+    color: var(--tb-ink-muted);
+}
+
+.project-budget-incomplete,
+.project-budget-message {
+    color: #8d3934;
+}
+
+.project-budget-form label {
+    display: block;
+    margin: 4px 0;
+    color: var(--tb-ink-muted);
+    font-size: var(--tb-t-micro);
+}
+
+.project-budget-entry {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.project-budget-entry > span {
+    color: var(--tb-ink-muted);
+    font-size: var(--tb-t-body);
+}
+
+.project-budget-entry input {
+    min-width: 0;
+    flex: 1;
+    height: 32px;
+    padding: 0 9px;
+    border: 1px solid var(--tb-line-strong);
+    border-radius: 7px;
+    background: var(--tb-surface);
+    color: var(--tb-ink);
+    font: inherit;
+    font-size: var(--tb-t-label);
+}
+
+.project-budget-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 7px;
+}
+
+.project-budget-actions button,
+.project-budget-set {
+    min-height: 28px;
+    padding: 0 10px;
+    border: 1px solid var(--tb-line-strong);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--tb-ink);
+    font: inherit;
+    font-size: var(--tb-t-micro);
+    cursor: pointer;
+}
+
+.project-budget-actions button.primary,
+.project-budget-set {
+    border-color: var(--tb-green);
+    background: var(--tb-green);
+    color: #fff;
+}
+
+.project-budget-actions button.remove {
+    border-color: transparent;
+    color: #8d3934;
+}
+
+.project-budget-header:focus-visible,
+.project-budget-actions button:focus-visible,
+.project-budget-set:focus-visible,
+.project-budget-entry input:focus-visible {
+    outline: none;
+    box-shadow: var(--tb-ring);
 }
 
 .cost-floor {

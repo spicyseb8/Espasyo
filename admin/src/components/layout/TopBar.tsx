@@ -8,7 +8,7 @@ import {
   where,
 } from "firebase/firestore";
 
-import { Home, User, Activity, Box } from "lucide-react";
+import { Home, User, Activity, Box, Settings } from "lucide-react";
 
 import {
   Avatar,
@@ -45,6 +45,11 @@ const menuItems = [
   {
     icon: User,
     label: "Profile",
+  },
+  {
+    icon: Settings,
+    label: "Account Settings",
+    path: "/account-settings",
   },
   {
     icon: Activity,
