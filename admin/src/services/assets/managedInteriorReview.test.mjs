@@ -134,6 +134,28 @@ test("admin review keeps legacy client designs and other placements when an asse
     });
 
     test("admin review merges interior data into matching floors without changing structure", () => {
+        const firstFloorSeparators = {
+            "wall-1::side:1": {
+                separators: [
+                    { id: "vertical-1", orientation: "vertical", position: 0.4 }
+                ],
+                sectionMaterials: {
+                    "section:left": "blue-paint",
+                    "section:right": "white-paint"
+                }
+            }
+        };
+        const secondFloorSeparators = {
+            "wall-2::side:-1": {
+                separators: [
+                    { id: "horizontal-2", orientation: "horizontal", position: 0.6 }
+                ],
+                sectionMaterials: {
+                    "section:lower": "gray-paint",
+                    "section:upper": "white-paint"
+                }
+            }
+        };
         const structure = {
             ...createStructure(),
             floors: [
@@ -156,13 +178,15 @@ test("admin review keeps legacy client designs and other placements when an asse
                     floorId: "floor-1",
                     furniture: [furniturePlacement],
                     floorFinishes: { "room-1": "floor-asset" },
-                    wallFinishes: {}
+                    wallFinishes: {},
+                    wallPaintSeparators: firstFloorSeparators
                 },
                 {
                     floorId: "floor-2",
                     furniture: [],
                     floorFinishes: {},
-                    wallFinishes: { "room-2": { "wall-2:1": "wall-asset" } }
+                    wallFinishes: { "room-2": { "wall-2:1": "wall-asset" } },
+                    wallPaintSeparators: secondFloorSeparators
                 }
             ]
         });
@@ -172,6 +196,9 @@ test("admin review keeps legacy client designs and other placements when an asse
         assert.deepEqual(merged.floors[1].wallFinishes, {
             "room-2": { "wall-2:1": "wall-asset" }
         });
+        assert.deepEqual(merged.floors[0].wallPaintSeparators, firstFloorSeparators);
+        assert.deepEqual(merged.floors[1].wallPaintSeparators, secondFloorSeparators);
+        assert.deepEqual(merged.wallPaintSeparators, firstFloorSeparators);
         assert.deepEqual(merged.floors[1].structure, structure.floors[1].structure);
         assert.deepEqual(merged.walls, structure.walls);
         assert.equal(merged.structuralRevision, structure.structuralRevision);

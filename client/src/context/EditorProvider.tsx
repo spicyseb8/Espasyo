@@ -71,8 +71,12 @@ function isBudgetRelevantAction(action: EditorAction): boolean {
         case "SET_ARCH_RISE":
         case "SET_FLOOR_FINISH":
         case "SET_FLOOR_FINISH_ALL":
+        case "SET_FLOOR_PAINT_FACE":
+        case "SET_FLOOR_SECTION_MATERIAL":
         case "SET_WALL_FINISH":
         case "SET_WALL_FINISHES":
+        case "SET_WALL_PAINT_FACE":
+        case "SET_WALL_SECTION_MATERIAL":
         case "ADD_WALL":
         case "REMOVE_WALL":
         case "SET_WALLS":
@@ -132,8 +136,12 @@ const GLOBAL_EDITOR_ACTIONS = new Set<EditorAction["type"]>([
     "REMOVE_WINDOW",
     "ADD_OPENING",
     "SET_FLOOR_FINISH",
+    "SET_FLOOR_PAINT_FACE",
+    "SET_FLOOR_SECTION_MATERIAL",
     "SET_WALL_FINISH",
-    "SET_WALL_FINISHES"
+    "SET_WALL_FINISHES",
+    "SET_WALL_PAINT_FACE",
+    "SET_WALL_SECTION_MATERIAL"
 ]);
 
 function isGlobalEditorAction(action: EditorAction): boolean {
@@ -159,8 +167,12 @@ function isMaterialAction(
     ) {
 
         case "SET_FLOOR_FINISH":
+        case "SET_FLOOR_PAINT_FACE":
+        case "SET_FLOOR_SECTION_MATERIAL":
         case "SET_WALL_FINISH":
         case "SET_WALL_FINISHES":
+        case "SET_WALL_PAINT_FACE":
+        case "SET_WALL_SECTION_MATERIAL":
 
             return true;
 
@@ -283,8 +295,8 @@ export default function EditorProvider({
     // PENDING FLOOR GROUP
     //==================================================
     //
-    // WallDrawer currently creates one wall by
-    // dispatching:
+    // Structural wall/corner actions are grouped when
+    // they are dispatched as one editor operation:
     //
     // SET_CORNERS
     // SET_WALLS

@@ -395,6 +395,8 @@ export async function loadProjectData(
     } else if (project.interiorJsonUrl || project.interiorJsonPath) {
         const interiorPayload = await loadManagedInteriorData(project);
         projectData.maximumBudget = interiorPayload?.maximumBudget ?? null;
+        projectData.wallPaintSeparators =
+            interiorPayload?.wallPaintSeparators ?? {};
     }
 
     //--------------------------------------------------

@@ -10,6 +10,10 @@ import type { Opening } from "../../engine/openings/OpeningTypes";
 import type { BlueprintState } from "../../engine/blueprint/BlueprintTypes";
 import type { BlueprintCalibrationPoint } from "./types";
 import type { SavedProjectData } from "./ProjectTypes";
+import type {
+    WallPaintFace,
+    WallPaintSeparatorOrientation
+} from "../../../../shared/wallPaintSeparators";
 
 export type EditorAction =
     | { type: "SWITCH_FLOOR"; payload: string; }
@@ -26,6 +30,11 @@ export type EditorAction =
     | { type: "SET_CORNERS"; payload: Corner[]; }
     | { type: "REMOVE_CORNER"; payload: string; }
     | { type: "SELECT_WALL"; payload: string | null; }
+    | { type: "SELECT_WALL_SECTION"; payload: { wallId: string; side: 1 | -1; sectionId: string; regionId?: string | null; }; }
+    | { type: "SELECT_WALL_SEPARATOR"; payload: { wallId: string; side: 1 | -1; separatorId: string; regionId?: string | null; }; }
+    | { type: "SELECT_FLOOR_SECTION"; payload: { regionId: string; sectionId: string; }; }
+    | { type: "SELECT_FLOOR_SEPARATOR"; payload: { regionId: string; separatorId: string; }; }
+    | { type: "SET_WALL_SEPARATOR_PLACEMENT"; payload: WallPaintSeparatorOrientation | null; }
     | { type: "SELECT_REGION"; payload: string | null; }
     | { type: "SELECT_CORNER"; payload: string | null; }
     | { type: "SELECT_OPENING"; payload: string | null; }
@@ -43,6 +52,10 @@ export type EditorAction =
     | { type: "SET_FLOOR_FINISH"; payload: { regionId: string; materialId: string; }; }
     | { type: "SET_FLOOR_FINISH_ALL"; payload: string; }
     |{ type: "SET_WALL_FINISH"; payload: {regionId: string | null; wallId: string; materialId: string; side?: 1 | -1;};}
+    | { type: "SET_WALL_PAINT_FACE"; payload: { faceKey: string; face: WallPaintFace | null; }; }
+    | { type: "SET_WALL_SECTION_MATERIAL"; payload: { faceKey: string; sectionId: string; materialId: string; }; }
+    | { type: "SET_FLOOR_PAINT_FACE"; payload: { regionId: string; face: WallPaintFace | null; }; }
+    | { type: "SET_FLOOR_SECTION_MATERIAL"; payload: { regionId: string; sectionId: string; materialId: string; }; }
     | {
         type: "SET_WALL_FINISHES";
         payload: Array<{

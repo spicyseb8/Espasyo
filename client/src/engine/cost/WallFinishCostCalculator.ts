@@ -7,8 +7,9 @@ import type { Opening } from "../openings/OpeningTypes";
 import { solveRegions } from "../regions/RegionSolver";
 import { findCachedWallMaterial } from "../materials/walls";
 import type { Material } from "../materials/MaterialTypes";
-import { getWallFinishSides } from "../walls/WallFinishUtils";
+import { getWallFinishSections } from "../walls/WallFinishUtils";
 import type { CostItem } from "./CostTypes";
+import type { WallPaintSeparatorMap } from "../../../../shared/wallPaintSeparators";
 
 export interface WallFinishCostOptions {
     corners: Corner[];
@@ -18,6 +19,7 @@ export interface WallFinishCostOptions {
     windows: Window[];
     openings: Opening[];
     wallFinishes: Record<string, Record<string, string>>;
+    wallPaintSeparators?: WallPaintSeparatorMap;
     findWallMaterial?: (
         materialId: string
     ) => Material | undefined;
@@ -147,30 +149,56 @@ function calculateRectangleUnionArea(
     return area;
 }
 
-function calculateArchArea(
-    width: number,
-    height: number,
+function calculateArchIntersectionArea(
+    arch: WallCutout,
+    startX: number,
+    endX: number,
     bottomY: number,
+    topY: number,
     wallHeight: number
 ): number {
-    const availableHeight = Math.min(
-        height,
-        wallHeight - bottomY
-    );
-
-    if (availableHeight <= 0 || width <= 0) {
+    const openingWidth = arch.endX - arch.startX;
+    const availableHeight = Math.min(arch.topY - arch.bottomY, wallHeight);
+    if (openingWidth <= 0 || availableHeight <= 0) {
         return 0;
     }
 
-    const radius = width * 0.5;
-    const springHeight = Math.max(
-        0,
-        availableHeight - radius
-    );
-    const rectangleArea = width * springHeight;
-    const archArea = Math.PI * radius * radius * 0.5;
+    const radius = openingWidth * 0.5;
+    const springHeight = Math.max(0, availableHeight - radius);
+    const left = Math.max(startX, arch.startX);
+    const right = Math.min(endX, arch.endX);
+    const lower = Math.max(bottomY, arch.bottomY);
+    const upper = Math.min(topY, arch.bottomY + availableHeight);
+    if (right <= left || upper <= lower) {
+        return 0;
+    }
 
-    return rectangleArea + archArea;
+    const sliceCount = 128;
+    const sliceWidth = (right - left) / sliceCount;
+    let area = 0;
+
+    for (let index = 0; index < sliceCount; index++) {
+        const x = left + (index + 0.5) * sliceWidth - arch.startX - radius;
+        const arcHeight = Math.sqrt(Math.max(0, radius * radius - x * x));
+        const openingTop = arch.bottomY + springHeight + arcHeight;
+        const lowerTop = Math.min(
+            upper,
+            arch.bottomY + springHeight
+        );
+        const lowerBottom = Math.max(lower, arch.bottomY);
+        const rectangleHeight = Math.max(0, lowerTop - lowerBottom);
+        const arcBottom = Math.max(
+            lower,
+            arch.bottomY + springHeight
+        );
+        const arcTop = Math.min(upper, openingTop);
+        area += (
+            rectangleHeight +
+            Math.max(0, arcTop - arcBottom)
+        ) * sliceWidth;
+    }
+
+    return area;
 }
 
 export function calculateWallFinishCosts(
@@ -185,7 +213,8 @@ export function calculateWallFinishCosts(
         doors,
         windows,
         openings,
-        wallFinishes
+        wallFinishes,
+        wallPaintSeparators = {}
     } = options;
 
     const regions = solveRegions(corners, walls);
@@ -193,10 +222,11 @@ export function calculateWallFinishCosts(
     let totalPaintArea = 0;
 
     for (const wall of walls) {
-        const finishes = getWallFinishSides(
+        const finishes = getWallFinishSections(
             wall,
             regions,
-            wallFinishes
+            wallFinishes,
+            wallPaintSeparators
         );
 
         if (finishes.length === 0) {
@@ -210,7 +240,6 @@ export function calculateWallFinishCosts(
             continue;
         }
 
-        const totalWallArea = wallLength * wallHeight;
         const rectangularCutouts: CutoutRect[] = [];
 
         for (const door of doors) {
@@ -335,39 +364,54 @@ export function calculateWallFinishCosts(
             }
         }
 
-        const rectangularCutoutArea =
-            calculateRectangleUnionArea(
-                rectangularCutouts
+        for (const finish of finishes) {
+            const section = finish.section;
+            const sectionStartX = section
+                ? section.xStart * wallLength
+                : 0;
+            const sectionEndX = section
+                ? section.xEnd * wallLength
+                : wallLength;
+            const sectionBottomY = section
+                ? section.yStart * wallHeight
+                : 0;
+            const sectionTopY = section
+                ? section.yEnd * wallHeight
+                : wallHeight;
+            const sectionArea = Math.max(0, sectionEndX - sectionStartX) *
+                Math.max(0, sectionTopY - sectionBottomY);
+            const clippedRectangles = rectangularCutouts
+                .map(rect => ({
+                    startX: Math.max(sectionStartX, rect.startX),
+                    endX: Math.min(sectionEndX, rect.endX),
+                    bottomY: Math.max(sectionBottomY, rect.bottomY),
+                    topY: Math.min(sectionTopY, rect.topY)
+                }))
+                .filter(rect =>
+                    rect.endX > rect.startX &&
+                    rect.topY > rect.bottomY
+                );
+            const rectangularCutoutArea =
+                calculateRectangleUnionArea(clippedRectangles);
+            const archCutoutArea = archCutouts.reduce(
+                (area, arch) => area + calculateArchIntersectionArea(
+                    arch,
+                    sectionStartX,
+                    sectionEndX,
+                    sectionBottomY,
+                    sectionTopY,
+                    wallHeight
+                ),
+                0
             );
-        let archCutoutArea = 0;
-
-        for (const arch of archCutouts) {
-            const width = arch.endX - arch.startX;
-
-            if (width <= 0) {
+            const finishArea = Math.max(
+                0,
+                sectionArea - rectangularCutoutArea - archCutoutArea
+            );
+            if (finishArea <= 0.0001) {
                 continue;
             }
 
-            archCutoutArea += calculateArchArea(
-                width,
-                arch.topY - arch.bottomY,
-                arch.bottomY,
-                wallHeight
-            );
-        }
-
-        const cutoutArea =
-            rectangularCutoutArea + archCutoutArea;
-        const finishArea = Math.max(
-            0,
-            totalWallArea - cutoutArea
-        );
-
-        if (finishArea <= 0.0001) {
-            continue;
-        }
-
-        for (const finish of finishes) {
             const material = findMaterial(
                 finish.materialId
             );

@@ -28,6 +28,8 @@ export type EditorSnapshot = Pick<
     | "openings"
     | "floorFinishes"
     | "wallFinishes"
+    | "wallPaintSeparators"
+    | "floorPaintSeparators"
 >;
 
 function cloneValue<T>(value: T): T {
@@ -70,7 +72,9 @@ export function createEditorSnapshot(
         windows: cloneValue(state.windows),
         openings: cloneValue(state.openings),
         floorFinishes: cloneValue(state.floorFinishes),
-        wallFinishes: cloneValue(state.wallFinishes)
+        wallFinishes: cloneValue(state.wallFinishes),
+        wallPaintSeparators: cloneValue(state.wallPaintSeparators),
+        floorPaintSeparators: cloneValue(state.floorPaintSeparators)
     };
 }
 
@@ -134,6 +138,15 @@ export function restoreEditorSnapshot(
         wallFinishes:
             cloneValue(
                 snapshot.wallFinishes
+            ),
+
+        wallPaintSeparators:
+            cloneValue(
+                snapshot.wallPaintSeparators
+            ),
+        floorPaintSeparators:
+            cloneValue(
+                snapshot.floorPaintSeparators
             ),
 
         selectedFurnitureId:

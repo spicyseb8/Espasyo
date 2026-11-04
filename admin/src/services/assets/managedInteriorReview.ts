@@ -1,14 +1,24 @@
+import {
+    isWallPaintSeparatorMap,
+    type FloorPaintSeparatorMap,
+    type WallPaintSeparatorMap
+} from "../../../../shared/wallPaintSeparators.ts";
+
 export interface AdminManagedInteriorPayload {
     projectId?: string;
     ownerId?: string;
     furniture?: unknown[];
     floorFinishes?: Record<string, string>;
     wallFinishes?: Record<string, Record<string, string>>;
+    wallPaintSeparators?: WallPaintSeparatorMap;
+    floorPaintSeparators?: FloorPaintSeparatorMap;
     floors?: Array<{
         floorId: string;
-        furniture: unknown[];
-        floorFinishes: Record<string, string>;
-        wallFinishes: Record<string, Record<string, string>>;
+        furniture?: unknown[];
+        floorFinishes?: Record<string, string>;
+        wallFinishes?: Record<string, Record<string, string>>;
+        wallPaintSeparators?: WallPaintSeparatorMap;
+        floorPaintSeparators?: FloorPaintSeparatorMap;
     }>;
     costEstimate?: unknown;
 }
@@ -43,6 +53,7 @@ export function mergeManagedInteriorData<T extends Record<string, unknown>>(
     publishedStructure: T,
     interiorPayload: AdminManagedInteriorPayload | null
 ): T & Omit<AdminManagedInteriorPayload, "floors"> {
+    const publishedInteriorFields = publishedStructure as T & Partial<AdminManagedInteriorPayload>;
     const projectFloors = Array.isArray(publishedStructure.floors)
         ? publishedStructure.floors as Array<Record<string, unknown> & { floorId?: string; id?: string }>
         : undefined;
@@ -56,9 +67,21 @@ export function mergeManagedInteriorData<T extends Record<string, unknown>>(
             ? {
                 ...floor,
                 floorId,
-                furniture: interiorFloor.furniture,
-                floorFinishes: interiorFloor.floorFinishes,
-                wallFinishes: interiorFloor.wallFinishes
+                ...(interiorFloor.furniture !== undefined
+                    ? { furniture: interiorFloor.furniture }
+                    : {}),
+                ...(interiorFloor.floorFinishes !== undefined
+                    ? { floorFinishes: interiorFloor.floorFinishes }
+                    : {}),
+                ...(interiorFloor.wallFinishes !== undefined
+                    ? { wallFinishes: interiorFloor.wallFinishes }
+                    : {}),
+                ...(interiorFloor.wallPaintSeparators !== undefined
+                    ? { wallPaintSeparators: interiorFloor.wallPaintSeparators }
+                    : {}),
+                ...(interiorFloor.floorPaintSeparators !== undefined
+                    ? { floorPaintSeparators: interiorFloor.floorPaintSeparators }
+                    : {})
             }
             : floor;
     });
@@ -69,9 +92,28 @@ export function mergeManagedInteriorData<T extends Record<string, unknown>>(
     return {
         ...publishedStructure,
         ...(floors ? { floors } : {}),
-        furniture: interiorPayload?.furniture ?? firstInteriorFloor?.furniture ?? [],
-        floorFinishes: interiorPayload?.floorFinishes ?? firstInteriorFloor?.floorFinishes ?? {},
-        wallFinishes: interiorPayload?.wallFinishes ?? firstInteriorFloor?.wallFinishes ?? {},
+        furniture: interiorPayload?.furniture ??
+            firstInteriorFloor?.furniture ??
+            publishedInteriorFields.furniture ??
+            [],
+        floorFinishes: interiorPayload?.floorFinishes ??
+            firstInteriorFloor?.floorFinishes ??
+            publishedInteriorFields.floorFinishes ??
+            {},
+        wallFinishes: interiorPayload?.wallFinishes ??
+            firstInteriorFloor?.wallFinishes ??
+            publishedInteriorFields.wallFinishes ??
+            {},
+        wallPaintSeparators:
+            interiorPayload?.wallPaintSeparators ??
+            firstInteriorFloor?.wallPaintSeparators ??
+            publishedInteriorFields.wallPaintSeparators ??
+            {},
+        floorPaintSeparators:
+            interiorPayload?.floorPaintSeparators ??
+            firstInteriorFloor?.floorPaintSeparators ??
+            publishedInteriorFields.floorPaintSeparators ??
+            {},
         costEstimate: interiorPayload
             ? interiorPayload.costEstimate
             : publishedStructure.costEstimate
@@ -217,16 +259,35 @@ async function loadInteriorPayload(
     ) {
         throw new Error("Interior design wall finishes are invalid.");
     }
+    if (
+        value.wallPaintSeparators !== undefined &&
+        !isWallPaintSeparatorMap(value.wallPaintSeparators)
+    ) {
+        throw new Error("Interior design wall paint separators are invalid.");
+    }
+    if (
+        value.floorPaintSeparators !== undefined &&
+        !isWallPaintSeparatorMap(value.floorPaintSeparators)
+    ) {
+        throw new Error("Interior design floor separators are invalid.");
+    }
     if (value.floors !== undefined && (
         !Array.isArray(value.floors) ||
         !value.floors.every(floor =>
             isRecord(floor) &&
             typeof floor.floorId === "string" &&
             floor.floorId.trim() !== "" &&
-            Array.isArray(floor.furniture) &&
-            floor.furniture.every(isSavedFurniture) &&
-            isStringRecord(floor.floorFinishes) &&
-            isStringRecordOfStringRecords(floor.wallFinishes)
+            (floor.furniture === undefined ||
+                Array.isArray(floor.furniture) &&
+                floor.furniture.every(isSavedFurniture)) &&
+            (floor.floorFinishes === undefined ||
+                isStringRecord(floor.floorFinishes)) &&
+            (floor.wallFinishes === undefined ||
+                isStringRecordOfStringRecords(floor.wallFinishes)) &&
+            (floor.wallPaintSeparators === undefined ||
+                isWallPaintSeparatorMap(floor.wallPaintSeparators)) &&
+            (floor.floorPaintSeparators === undefined ||
+                isWallPaintSeparatorMap(floor.floorPaintSeparators))
         )
     )) {
         throw new Error("Interior design floor data is invalid.");

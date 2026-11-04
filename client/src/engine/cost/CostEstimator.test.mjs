@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test, { after } from "node:test";
 import { Vector3 } from "three";
 import { createServer } from "vite";
+import { getWallPaintSections } from "../../../../shared/wallPaintSeparators.ts";
 
 const vite = await createServer({
     appType: "custom",
@@ -11,13 +12,21 @@ const vite = await createServer({
     server: { middlewareMode: true, hmr: false }
 });
 
-const [costEstimator, { solveRegions }, wallFinishUtils, costPdf, projectBudget] =
+const [
+    costEstimator,
+    { solveRegions },
+    wallFinishUtils,
+    costPdf,
+    projectBudget,
+    { calculateFlooringCosts }
+] =
     await Promise.all([
         vite.ssrLoadModule("/src/engine/cost/CostEstimator.ts"),
         vite.ssrLoadModule("/src/engine/regions/RegionSolver.ts"),
         vite.ssrLoadModule("/src/engine/walls/WallFinishUtils.ts"),
         vite.ssrLoadModule("/src/engine/cost/CostBreakdownPDF.ts"),
-        vite.ssrLoadModule("/src/engine/cost/ProjectBudget.ts")
+        vite.ssrLoadModule("/src/engine/cost/ProjectBudget.ts"),
+        vite.ssrLoadModule("/src/engine/cost/FlooringCostCalculator.ts")
     ]);
 
 after(async () => {
@@ -150,6 +159,39 @@ test("keeps flooring piece pricing and liter-based paint coverage rules", () => 
     assert.deepEqual(
         [firstPrimer.quantity, firstPrimer.unit, firstPrimer.rate, firstPrimer.subtotal, firstPrimer.coats],
         [5, "L", 160, 800, 1]
+    );
+});
+
+test("floor separator cost uses each clipped section area and groups by material", () => {
+    const floor = floors[0];
+    const region = solveRegions(floor.corners, floor.walls)[0];
+    const face = {
+        separators: [
+            { id: "middle", orientation: "vertical", position: 0.5 }
+        ],
+        sectionMaterials: {}
+    };
+    const sections = getWallPaintSections(face);
+    face.sectionMaterials = {
+        [sections[0].id]: "tile-a",
+        [sections[1].id]: "tile-b"
+    };
+    const items = calculateFlooringCosts({
+        corners: floor.corners,
+        walls: floor.walls,
+        floorFinishes: floor.floorFinishes,
+        floorPaintSeparators: { [region.id]: face },
+        findFloorMaterial: materialId => ({
+            id: materialId,
+            name: materialId === "tile-a" ? "Tile A" : "Tile B",
+            category: "flooring",
+            pricePerSquareMeter: materialId === "tile-a" ? 10 : 20
+        })
+    });
+
+    assert.deepEqual(
+        items.map(item => [item.name, item.quantity, item.subtotal]),
+        [["Tile A", 1.5, 15], ["Tile B", 4.5, 90]]
     );
 });
 

@@ -36,6 +36,10 @@ import {
 import {
     calculateWindowCosts
 } from "./WindowCostCalculator";
+import type {
+    FloorPaintSeparatorMap,
+    WallPaintSeparatorMap
+} from "../../../../shared/wallPaintSeparators";
 
 export interface CostPoint {
     x: number;
@@ -85,7 +89,9 @@ export interface CostFloorInput {
         archRise?: number;
     }>;
     floorFinishes: Record<string, string>;
+    floorPaintSeparators?: FloorPaintSeparatorMap;
     wallFinishes: Record<string, Record<string, string>>;
+    wallPaintSeparators?: WallPaintSeparatorMap;
     wallHeight: number;
 }
 
@@ -169,10 +175,26 @@ function getIncompletePriceCategories(
             if (!hasValidFloorPrice(material)) {
                 incomplete.add("flooring");
             }
+            for (const materialId of new Set(
+                Object.values(floor.floorPaintSeparators ?? {})
+                    .flatMap(face => Object.values(face.sectionMaterials))
+            )) {
+                const material =
+                    lookups.findFloorMaterial?.(materialId) ??
+                    findCachedFloorMaterial(materialId) ??
+                    MaterialLibrary.find(item => item.id === materialId);
+                if (!hasValidFloorPrice(material)) {
+                    incomplete.add("flooring");
+                }
+            }
         }
 
-        const wallMaterialIds = Object.values(floor.wallFinishes)
-            .flatMap(assignments => Object.values(assignments));
+        const wallMaterialIds = [
+            ...Object.values(floor.wallFinishes)
+                .flatMap(assignments => Object.values(assignments)),
+            ...Object.values(floor.wallPaintSeparators ?? {})
+                .flatMap(face => Object.values(face.sectionMaterials))
+        ];
         for (const materialId of new Set(wallMaterialIds)) {
             const material =
                 lookups.findWallMaterial?.(materialId) ??
@@ -269,6 +291,7 @@ function calculateFloorItems(
             corners,
             walls,
             floorFinishes: floor.floorFinishes,
+            floorPaintSeparators: floor.floorPaintSeparators,
             findFloorMaterial: lookups.findFloorMaterial
         }),
         ...calculateWallFinishCosts({
@@ -279,6 +302,7 @@ function calculateFloorItems(
             windows,
             openings,
             wallFinishes: floor.wallFinishes,
+            wallPaintSeparators: floor.wallPaintSeparators,
             findWallMaterial: lookups.findWallMaterial
         }),
         ...calculateDoorCosts(doors, lookups.findDoorAsset),
@@ -342,7 +366,9 @@ export function calculateCostEstimate(
             windows: state.windows,
             openings: state.openings,
             floorFinishes: state.floorFinishes,
+            floorPaintSeparators: state.floorPaintSeparators,
             wallFinishes: state.wallFinishes,
+            wallPaintSeparators: state.wallPaintSeparators,
             wallHeight: state.wallHeight
         }];
 

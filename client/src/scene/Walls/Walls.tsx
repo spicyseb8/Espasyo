@@ -19,7 +19,7 @@ import {
     solveRegions
 } from "../../engine/regions/RegionSolver";
 import {
-    getWallFinishSides
+    getWallFinishSections
 } from "../../engine/walls/WallFinishUtils";
 interface WallOutlineProps {
     start: Vector3;
@@ -390,10 +390,15 @@ function Walls() {
                                 state.windows
                             );
                         const finishSides =
-                            getWallFinishSides(
+                            getWallFinishSections(
+
                                 wall,
+
                                 regions,
-                                state.wallFinishes
+
+                                state.wallFinishes,
+
+                                state.wallPaintSeparators
                             );
                         const wallStart =
                             wall.start.position;

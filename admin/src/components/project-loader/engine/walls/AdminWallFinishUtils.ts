@@ -2,12 +2,19 @@
 import { Vector3 } from "three";
 import type { Wall } from "./WallTypes";
 import type { Region } from "../regions/Polygon";
+import {
+    getWallPaintFaceKey,
+    getWallPaintSections,
+    type WallPaintSection,
+    type WallPaintSeparatorMap
+} from "../../../../../../shared/wallPaintSeparators.ts";
 
 export interface AdminWallFinishSide {
     regionId: string;
     wallId: string;
     materialId: string;
     side: 1 | -1;
+    section?: WallPaintSection;
 }
 
 const WALL_SIDE_FINISH_BUCKET = "__wall_side_finishes__";
@@ -156,4 +163,44 @@ export function getWallFinishSides(
     }
 
     return Array.from(finishesBySide.values());
+}
+
+export function getWallFinishSections(
+    wall: Wall,
+    regions: Region[],
+    wallFinishes: Record<string, Record<string, string>>,
+    wallPaintSeparators: WallPaintSeparatorMap
+): AdminWallFinishSide[] {
+    const baseFinishes = getWallFinishSides(wall, regions, wallFinishes);
+    const finishes: AdminWallFinishSide[] = [];
+
+    for (const side of [1, -1] as const) {
+        const faceKey = getWallPaintFaceKey(wall.id, side);
+        const face = wallPaintSeparators[faceKey];
+        const baseFinish = baseFinishes.find(item => item.side === side);
+        if (!face || face.separators.length === 0) {
+            if (baseFinish) {
+                finishes.push(baseFinish);
+            }
+            continue;
+        }
+
+        for (const section of getWallPaintSections(face)) {
+            const materialId =
+                face.sectionMaterials[section.id] ??
+                baseFinish?.materialId;
+            if (!materialId) {
+                continue;
+            }
+            finishes.push({
+                regionId: faceKey,
+                wallId: wall.id,
+                materialId,
+                side,
+                section
+            });
+        }
+    }
+
+    return finishes;
 }

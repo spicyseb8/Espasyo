@@ -29,6 +29,7 @@ import type {
 
 import AdminFloor
     from "./AdminFloor";
+import type { FloorPaintSeparatorMap } from "../../../../../shared/wallPaintSeparators";
 
 
 interface AdminFloorsProps {
@@ -42,6 +43,8 @@ interface AdminFloorsProps {
 
     floorFinishes:
         Record<string, string>;
+
+    floorPaintSeparators?: FloorPaintSeparatorMap;
 
     selectedRegionId?: string | null;
 
@@ -59,6 +62,7 @@ export default function AdminFloors({
     corners,
     walls,
     floorFinishes,
+    floorPaintSeparators = {},
     selectedRegionId = null,
     onSelectRegion,
     allowInteractionPropagation = false,
@@ -257,6 +261,10 @@ export default function AdminFloors({
 
                             floorFinishes={
                                 floorFinishes
+                            }
+
+                            floorPaintSeparators={
+                                floorPaintSeparators
                             }
 
                             selected={

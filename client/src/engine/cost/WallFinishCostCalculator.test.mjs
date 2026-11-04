@@ -2,6 +2,10 @@ import assert from "node:assert/strict";
 import test, { after } from "node:test";
 import { Vector3 } from "three";
 import { createServer } from "vite";
+import {
+    getWallPaintFaceKey,
+    getWallPaintSections
+} from "../../../../shared/wallPaintSeparators.ts";
 
 const vite = await createServer({
     appType: "custom",
@@ -245,4 +249,48 @@ test("replacing room finishes updates both shared-face material totals", () => {
     assert.equal(paint?.unit, "L");
     assert.equal(paint?.subtotal, 360);
     assert.equal(items.some(item => item.name === "Warm white"), false);
+});
+
+test("section paints receive their own area and openings are deducted from the affected section", () => {
+    const { corners, walls } = createTwoRoomPlan();
+    const wall = walls.find(item => item.id === "ab");
+    const faceKey = getWallPaintFaceKey("ab", 1);
+    const face = {
+        separators: [
+            { id: "middle", orientation: "vertical", position: 0.5 }
+        ],
+        sectionMaterials: {}
+    };
+    const sections = getWallPaintSections(face);
+    face.sectionMaterials = {
+        [sections[0].id]: "paint-a",
+        [sections[1].id]: "paint-b"
+    };
+
+    const items = calculateWallFinishCosts({
+        corners,
+        walls: [wall],
+        wallHeight: 3,
+        doors: [{
+            id: "door-left",
+            wallId: "ab",
+            width: 1,
+            height: 2,
+            position: new Vector3(1, 0, 1.5)
+        }],
+        windows: [],
+        openings: [],
+        wallFinishes: {
+            [WALL_SIDE_FINISH_BUCKET]: {
+                [getWallFinishSideKey("ab", 1)]: "paint-a"
+            }
+        },
+        wallPaintSeparators: {
+            [faceKey]: face
+        }
+    }, materialLookup);
+
+    assert.equal(items.find(item => item.name === "Warm white")?.quantity, 1);
+    assert.equal(items.find(item => item.name === "Soft gray")?.quantity, 1.5);
+    assert.equal(items.find(item => item.name === "Primer")?.quantity, 1);
 });

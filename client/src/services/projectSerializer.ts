@@ -159,6 +159,8 @@ export function createProjectData(
                 ]
             )
         ),
+        wallPaintSeparators: state.wallPaintSeparators,
+        floorPaintSeparators: state.floorPaintSeparators,
         archRise: state.archRise,
         openingWidth: state.openingWidth,
         openingHeight: state.openingHeight,

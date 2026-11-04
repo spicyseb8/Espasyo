@@ -69,13 +69,40 @@ test("managed interior merge preserves published structure", () => {
                     floorId: "floor-1",
                     furniture: [{ id: "chair-1", assetId: "chair" }],
                     floorFinishes: { "room-1": "tile" },
-                    wallFinishes: {}
+                    wallFinishes: {},
+                    wallPaintSeparators: {
+                        "wall-1::side:1": {
+                            separators: [
+                                { id: "v1", orientation: "vertical", position: 0.5 }
+                            ],
+                            sectionMaterials: { left: "blue", right: "white" }
+                        }
+                    },
+                    floorPaintSeparators: {
+                        "room-1": {
+                            floorId: "floor-1",
+                            surfaceType: "floor",
+                            surfaceId: "room-1",
+                            separators: [
+                                { id: "floor-cut", orientation: "horizontal", position: 0.4 }
+                            ],
+                            sectionMaterials: { lower: "tile-a", upper: "tile-b" }
+                        }
+                    }
                 },
                 {
                     floorId: "floor-2",
                     furniture: [{ id: "chair-2", assetId: "chair" }],
                     floorFinishes: {},
-                    wallFinishes: { "room-2": { "wall-2:1": "paint" } }
+                    wallFinishes: { "room-2": { "wall-2:1": "paint" } },
+                    wallPaintSeparators: {
+                        "wall-2::side:-1": {
+                            separators: [
+                                { id: "h1", orientation: "horizontal", position: 0.6 }
+                            ],
+                            sectionMaterials: { lower: "gray", upper: "white" }
+                        }
+                    }
                 }
             ]
         };
@@ -85,6 +112,14 @@ test("managed interior merge preserves published structure", () => {
         assert.deepEqual(merged.floors[0].floorFinishes, payload.floors[0].floorFinishes);
         assert.deepEqual(merged.floors[1].furniture, payload.floors[1].furniture);
         assert.deepEqual(merged.floors[1].wallFinishes, payload.floors[1].wallFinishes);
+        assert.deepEqual(
+            merged.floors[0].wallPaintSeparators,
+            payload.floors[0].wallPaintSeparators
+        );
+        assert.deepEqual(
+            merged.floors[1].wallPaintSeparators,
+            payload.floors[1].wallPaintSeparators
+        );
         assert.deepEqual(merged.floors[0].structure, published.floors[0].structure);
         assert.deepEqual(merged.walls, published.walls);
         assert.equal(merged.structuralRevision, 7);
@@ -99,6 +134,69 @@ test("managed interior merge preserves published structure", () => {
     assert.deepEqual(merged.wallFinishes, { room: { "wall-1": "paint" } });
     assert.equal(merged.structuralRevision, 7);
     assert.equal(merged.publishedStructuralRevision, 7);
+});
+
+test("separator-only legacy interior data merges per floor without replacing other design data", () => {
+    const published = {
+        walls: [{ id: "first-wall" }],
+        furniture: [{ id: "legacy-furniture" }],
+        floorFinishes: { "room-1": "legacy-floor" },
+        wallFinishes: { "room-1": { "first-wall": "legacy-paint" } },
+        floors: [
+            {
+                floorId: "floor-1",
+                name: "1st Floor",
+                furniture: [{ id: "legacy-furniture" }],
+                floorFinishes: { "room-1": "legacy-floor" },
+                wallFinishes: { "room-1": { "first-wall": "legacy-paint" } },
+                structure: { walls: [{ id: "first-wall" }] }
+            },
+            {
+                floorId: "floor-2",
+                name: "2nd Floor",
+                furniture: [],
+                floorFinishes: {},
+                wallFinishes: {},
+                structure: { walls: [{ id: "second-wall" }] }
+            }
+        ]
+    };
+    const firstFace = {
+        separators: [
+            { id: "separator-1", orientation: "vertical", position: 0.5 }
+        ],
+        sectionMaterials: { left: "blue", right: "white" }
+    };
+    const secondFace = {
+        separators: [
+            { id: "separator-2", orientation: "horizontal", position: 0.6 }
+        ],
+        sectionMaterials: { lower: "gray", upper: "white" }
+    };
+    const merged = mergeManagedInteriorData(published, {
+        wallPaintSeparators: { "first-wall::side:1": firstFace },
+        floors: [
+            {
+                floorId: "floor-1",
+                wallPaintSeparators: { "first-wall::side:1": firstFace }
+            },
+            {
+                floorId: "floor-2",
+                wallPaintSeparators: { "second-wall::side:-1": secondFace }
+            }
+        ]
+    });
+
+    assert.deepEqual(merged.floors[0].wallPaintSeparators, {
+        "first-wall::side:1": firstFace
+    });
+    assert.deepEqual(merged.floors[1].wallPaintSeparators, {
+        "second-wall::side:-1": secondFace
+    });
+    assert.deepEqual(merged.floors[0].furniture, published.floors[0].furniture);
+    assert.deepEqual(merged.floors[0].wallFinishes, published.floors[0].wallFinishes);
+    assert.deepEqual(merged.furniture, published.furniture);
+    assert.deepEqual(merged.wallFinishes, published.wallFinishes);
 });
 
 test("managed serializer stores furniture references, placement, finishes, and client identity", () => {
@@ -218,13 +316,34 @@ test("managed interior serializer saves all floors and retains legacy first-floo
                 floorId: "floor-1",
                 furniture: [firstItem],
                 floorFinishes: { "room-1": "tile" },
-                wallFinishes: {}
+                wallFinishes: {},
+                wallPaintSeparators: {
+                    "wall-1::side:1": {
+                        separators: [
+                            { id: "separator", orientation: "vertical", position: 0.5 }
+                        ],
+                        sectionMaterials: { left: "blue", right: "white" }
+                    }
+                },
+                floorPaintSeparators: {
+                    "room-1": {
+                        floorId: "floor-1",
+                        surfaceType: "floor",
+                        surfaceId: "room-1",
+                        separators: [
+                            { id: "floor-cut", orientation: "horizontal", position: 0.4 }
+                        ],
+                        sectionMaterials: { lower: "tile-a", upper: "tile-b" }
+                    }
+                }
             },
             {
                 floorId: "floor-2",
                 furniture: [secondItem],
                 floorFinishes: {},
-                wallFinishes: { "room-2": { "wall-2:1": "paint" } }
+                wallFinishes: { "room-2": { "wall-2:1": "paint" } },
+                wallPaintSeparators: {},
+                floorPaintSeparators: {}
             }
         ]
     }, "PRJ-00126", "client-uid", { total: 0 });
@@ -235,6 +354,29 @@ test("managed interior serializer saves all floors and retains legacy first-floo
     assert.deepEqual(interior.floors[1].furniture, [secondItem]);
     assert.deepEqual(interior.floors[0].floorFinishes, { "room-1": "tile" });
     assert.deepEqual(interior.floors[1].wallFinishes, { "room-2": { "wall-2:1": "paint" } });
+    assert.deepEqual(
+        interior.floors[0].wallPaintSeparators,
+        {
+            "wall-1::side:1": {
+                separators: [
+                    { id: "separator", orientation: "vertical", position: 0.5 }
+                ],
+                sectionMaterials: { left: "blue", right: "white" }
+            }
+        }
+    );
+    assert.deepEqual(
+        interior.floors[0].floorPaintSeparators["room-1"],
+        {
+            floorId: "floor-1",
+            surfaceType: "floor",
+            surfaceId: "room-1",
+            separators: [
+                { id: "floor-cut", orientation: "horizontal", position: 0.4 }
+            ],
+            sectionMaterials: { lower: "tile-a", upper: "tile-b" }
+        }
+    );
 });
 
 test("managed save uploads to the designated path and updates interior metadata only", async () => {

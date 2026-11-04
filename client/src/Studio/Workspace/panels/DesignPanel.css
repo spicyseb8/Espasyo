@@ -1,309 +1,142 @@
 /* ==========================================================
-   DESIGN PANEL
-   Matches Build / Floor Plan visual style
+   DESIGN PANEL TOOLBAR LAYOUT
+   Separator controls on top, search bar underneath
    ========================================================== */
 
-/* ==========================================================
-   DESIGN PANEL
-   The outer floating background is provided by Workspace.
-   Inner MaterialSection cards stay white.
-   ========================================================== */
+.design-panel-tools {
+    position: relative;
+    z-index: 30;
 
-.design-panel {
+    display: grid !important;
+    grid-template-columns: 36px minmax(0, 1fr);
+    grid-template-rows: 36px 38px;
 
-    display:
-        flex;
+    align-items: center;
+    column-gap: 8px;
+    row-gap: 8px;
 
-    flex-direction:
-        column;
-
-    gap:
-        12px;
-
-    padding:
-        20px;
-
-    box-sizing:
-        border-box;
-
-    width:
-        100%;
-
-    /* IMPORTANT:
-       Do not create another outer card here.
-    */
-
-    background:
-        transparent;
-
-    border:
-        0;
-
-    border-radius:
-        0;
-
-    box-shadow:
-        none;
+    width: 100%;
+    min-width: 0;
+    margin-bottom: 12px;
 }
 
+/* Add Separator button */
+.wall-separator-menu {
+    grid-column: 1;
+    grid-row: 1;
 
-/* ==========================================================
-   DESIGN TABS
-   ========================================================== */
+    position: relative;
+    display: flex;
+    align-items: center;
 
-.design-panel-tabs {
-
-    display:
-        flex;
-
-    gap:
-        8px;
-
-    width:
-        100%;
+    width: 36px;
+    z-index: 2;
 }
 
-.design-panel-tabs button {
-
-    flex:
-        1;
-
-    min-height:
-        38px;
-
-    padding:
-        8px 12px;
-
-    border:
-        1px solid
-        var(--ws-border);
-
-    border-radius:
-        10px;
-
-    background:
-        var(--ws-input-bg);
-
-    color:
-        var(--ws-text-muted);
-
-    font-size:
-        12px;
-
-    font-weight:
-        600;
-
-    cursor:
-        pointer;
-
-    transition:
-        border-color .15s ease,
-        color .15s ease,
-        background .15s ease;
+/* Allow separator options and search to occupy separate grid cells */
+.design-panel-tool-row {
+    display: contents !important;
 }
 
-.design-panel-tabs button:hover {
+/* Horizontal and Vertical icons stay side by side */
+.wall-separator-orientations {
+    grid-column: 2;
+    grid-row: 1;
 
-    background:
-        #f5f5f5;
+    position: relative;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center;
+    justify-content: flex-start;
 
-    color:
-        var(--ws-text);
+    gap: 4px;
+    width: fit-content;
+    min-width: 0;
+    padding: 3px;
+
+    border: 1px solid var(--ws-border);
+    border-radius: 10px;
+    background: #ffffff;
+    box-shadow: var(--ws-shadow-sm);
 }
 
-.design-panel-tabs button.active {
+/* Individual orientation buttons */
+.wall-separator-option {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 
-    border-color:
-        var(--ws-accent);
+    width: 32px;
+    height: 30px;
+    min-height: 30px;
+    padding: 0;
 
-    color:
-        var(--ws-accent);
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
 
-    background:
-        var(--ws-accent-soft);
+    color: var(--ws-text);
+    cursor: pointer;
 }
 
-
-/* ==========================================================
-   DESIGN GROUP / CARD
-   ========================================================== */
-
-.design-panel-group {
-
-    width:
-        100%;
-
-    box-sizing:
-        border-box;
-
-    padding:
-        14px;
-
-    border:
-        1px solid
-        var(--ws-border);
-
-    border-radius:
-        12px;
-
-    background:
-        #ffffff;
-
-    box-shadow:
-        var(--ws-shadow-sm);
+.wall-separator-option:hover {
+    background: var(--ws-accent-soft);
+    color: var(--ws-accent);
 }
 
+/* Search bar ALWAYS underneath the toolbar */
+.material-search {
+    grid-column: 1 / -1 !important;
+    grid-row: 2 !important;
 
-/* ==========================================================
-   DESIGN SECTION TITLE
-   ========================================================== */
+    display: flex;
+    align-items: center;
+    justify-self: stretch;
 
-.design-panel-group h3 {
+    width: 100% !important;
+    min-width: 0;
+    height: 38px;
+    box-sizing: border-box;
 
-    margin:
-        0 0 12px;
+    gap: 9px;
+    padding: 0 13px;
 
-    font-size:
-        12px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: #f2f3f4;
 
-    font-weight:
-        700;
-
-    text-transform:
-        uppercase;
-
-    letter-spacing:
-        .07em;
-
-    color:
-        var(--ws-text-muted);
+    color: var(--ws-text-muted);
 }
 
-
-/* ==========================================================
-   APPLY ALL
-   ========================================================== */
-
-.design-panel-apply-all {
-
-    display:
-        flex;
-
-    align-items:
-        center;
-
-    gap:
-        8px;
-
-    padding:
-        4px 0;
-
-    font-size:
-        12px;
-
-    color:
-        var(--ws-text-muted);
-
-    cursor:
-        pointer;
+.material-search:focus-within {
+    border-color: var(--ws-accent);
+    background: #ffffff;
+    box-shadow: 0 0 0 2px var(--ws-accent-soft);
 }
 
-.design-panel-apply-all:hover {
-
-    color:
-        var(--ws-text);
+.material-search > svg {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
 }
 
+.material-search input {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+    height: 100%;
 
-/* ==========================================================
-   APPLY BUTTON
-   ========================================================== */
+    padding: 0;
+    border: 0;
+    outline: none;
+    background: transparent;
 
-.design-panel-apply-btn {
-
-    width:
-        100%;
-
-    min-height:
-        40px;
-
-    display:
-        flex;
-
-    align-items:
-        center;
-
-    justify-content:
-        center;
-
-    padding:
-        0 14px;
-
-    border:
-        0;
-
-    border-radius:
-        10px;
-
-    background:
-        var(--ws-accent);
-
-    color:
-        #ffffff;
-
-    font-size:
-        12px;
-
-    font-weight:
-        700;
-
-    cursor:
-        pointer;
-
-    box-shadow:
-        var(--ws-shadow-sm);
-
-    transition:
-        background .15s ease,
-        opacity .15s ease,
-        transform .05s ease;
+    color: var(--ws-text);
+    font: inherit;
+    font-size: 13px;
 }
 
-.design-panel-apply-btn:hover:not(:disabled) {
-
-    background:
-        #f58a30;
-}
-
-.design-panel-apply-btn:active:not(:disabled) {
-
-    transform:
-        translateY(1px);
-}
-
-.design-panel-apply-btn:disabled {
-
-    opacity:
-        .5;
-
-    cursor:
-        not-allowed;
-}
-
-
-/* ==========================================================
-   DISABLED DESIGN CONTENT
-   ========================================================== */
-
-.design-panel input:disabled,
-.design-panel button:disabled {
-
-    cursor:
-        not-allowed;
-}
-
-.design-panel input:disabled {
-
-    opacity:
-        .55;
+.material-search input::placeholder {
+    color: #999999;
+    opacity: 1;
 }

@@ -217,7 +217,14 @@ export default function EditorExitGuard() {
                                 "Untitled Project",
                             user.uid
                         ),
-                        maximumBudget: stateRef.current.projectBudget
+                        maximumBudget: stateRef.current.projectBudget,
+                        wallPaintSeparators: stateRef.current.wallPaintSeparators,
+                        wallPaintSeparatorsByFloor: stateRef.current.floors.map(
+                            floor => ({
+                                floorId: floor.floorId,
+                                wallPaintSeparators: floor.wallPaintSeparators
+                            })
+                        )
                     };
 
                     return (
@@ -471,7 +478,8 @@ export default function EditorExitGuard() {
                     name,
                     user.uid
                 ),
-                maximumBudget: stateRef.current.projectBudget
+                maximumBudget: stateRef.current.projectBudget,
+                wallPaintSeparators: stateRef.current.wallPaintSeparators
             };
 
             const thumbnail =

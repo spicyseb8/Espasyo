@@ -29,9 +29,6 @@ import Walls
 import WallMeasurements
     from "./Walls/WallMeasurement";
 
-import WallDrawer
-    from "./WallDrawer/WallDrawer";
-
 import ClearSelection
     from "./ClearSelection";
 
@@ -202,6 +199,23 @@ export default function Scene({
         comments,
         setComments
     ] = useState<AdminComment[]>([]);
+    const [showSeparatorReminder, setShowSeparatorReminder] = useState(false);
+
+    useEffect(() => {
+        if (!state.wallSeparatorPlacement) {
+            setShowSeparatorReminder(false);
+            return;
+        }
+        setShowSeparatorReminder(true);
+        const timer = window.setTimeout(
+            () => setShowSeparatorReminder(false),
+            4500
+        );
+        return () => window.clearTimeout(timer);
+    }, [
+        state.wallSeparatorPlacement,
+        state.wallSeparatorPlacementVersion
+    ]);
 
     //==================================================
     // PROJECT DEADLINE
@@ -402,8 +416,6 @@ export default function Scene({
 
                             <AssetPreview />
 
-                            <WallDrawer />
-
                             <FurniturePreview />
 
                             <FurnitureInteractionEvents />
@@ -434,6 +446,31 @@ export default function Scene({
                 />
                 </Suspense>
             </Canvas>
+
+            {showSeparatorReminder && (
+                <div
+                    role="status"
+                    style={{
+                        position: "fixed",
+                        top: "74px",
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        zIndex: 10000,
+                        pointerEvents: "none",
+                        padding: "8px 14px",
+                        background: "rgba(255, 255, 255, 0.96)",
+                        border: "1px solid #D9DEE8",
+                        borderRadius: "8px",
+                        color: "#252B36",
+                        boxShadow: "0 3px 10px rgba(0, 0, 0, 0.12)",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        whiteSpace: "nowrap"
+                    }}
+                >
+                    Place where you want the separator.
+                </div>
+            )}
 
             {/*==================================================
                 PROJECT DEADLINE REMINDER

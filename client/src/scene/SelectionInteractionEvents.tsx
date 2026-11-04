@@ -156,8 +156,27 @@ export default function SelectionInteractionEvents() {
                 return;
             }
 
+            if (state.wallSeparatorPlacement) {
+                event.preventDefault();
+                dispatch({
+                    type: "SET_WALL_SEPARATOR_PLACEMENT",
+                    payload: null
+                });
+                return;
+            }
+
             dispatch({
                 type: "CLEAR_SELECTION"
+            });
+        }
+
+        function onKeyDown(event: KeyboardEvent) {
+            if (event.key !== "Escape" || !state.wallSeparatorPlacement) {
+                return;
+            }
+            dispatch({
+                type: "SET_WALL_SEPARATOR_PLACEMENT",
+                payload: null
             });
         }
 
@@ -175,6 +194,10 @@ export default function SelectionInteractionEvents() {
             }
 
             if (state.walkthroughMode) {
+                return;
+            }
+
+            if (state.wallSeparatorPlacement) {
                 return;
             }
 
@@ -303,6 +326,7 @@ export default function SelectionInteractionEvents() {
             onRightPointerDown,
             true
         );
+        window.addEventListener("keydown", onKeyDown);
 
         window.addEventListener(
             "click",
@@ -322,6 +346,7 @@ export default function SelectionInteractionEvents() {
                 onRightPointerDown,
                 true
             );
+            window.removeEventListener("keydown", onKeyDown);
 
             window.removeEventListener(
                 "click",
@@ -340,6 +365,7 @@ export default function SelectionInteractionEvents() {
         camera,
         scene,
         state.walkthroughMode,
+        state.wallSeparatorPlacement,
         state.buildTool,
         dispatch,
         raycaster,

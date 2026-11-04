@@ -29,11 +29,18 @@ import type {
 import {
     calculateFlooringPieceCost
 } from "./FlooringPieceCalculation";
+import {
+    calculateFloorSectionArea,
+    getWallPaintSections,
+    type FloorPaintSeparatorMap
+} from "../../../../shared/wallPaintSeparators";
+import { Path, Shape, ShapeGeometry } from "three";
 
 export interface FlooringCostOptions {
     corners: Corner[];
     walls: Wall[];
     floorFinishes: Record<string, string>;
+    floorPaintSeparators?: FloorPaintSeparatorMap;
     findFloorMaterial?: (
         materialId: string
     ) => ReturnType<typeof findCachedFloorMaterial>;
@@ -94,7 +101,8 @@ export function calculateFlooringCosts(
     const {
         corners,
         walls,
-        floorFinishes
+        floorFinishes,
+        floorPaintSeparators = {}
     } = options;
 
     const regions =
@@ -103,16 +111,92 @@ export function calculateFlooringCosts(
             walls
         );
 
-    const items: CostItem[] = [];
+    const materialAreas = new Map<string, number>();
 
     for (const region of regions) {
-        const materialId =
-            floorFinishes[region.id];
-
-        // No flooring assigned to this room yet.
-        if (!materialId) {
+        const face = floorPaintSeparators[region.id];
+        const assignedSections = face
+            ? getWallPaintSections(face)
+            : [];
+        if (assignedSections.length > 1) {
+            const loops = region.boundaryLoops ?? [];
+            const outer = loops[0]?.corners.filter(Boolean) ?? [];
+            if (outer.length < 3) {
+                const materialId = floorFinishes[region.id];
+                if (materialId) {
+                    materialAreas.set(
+                        materialId,
+                        (materialAreas.get(materialId) ?? 0) +
+                            calculateRegionFloorArea(region)
+                    );
+                }
+                continue;
+            }
+            const bounds = {
+                minX: Math.min(...outer.map(point => point.x)),
+                maxX: Math.max(...outer.map(point => point.x)),
+                minY: Math.min(...outer.map(point => -point.z)),
+                maxY: Math.max(...outer.map(point => -point.z))
+            };
+            const shape = new Shape();
+            shape.moveTo(outer[0].x, -outer[0].z);
+            for (const point of outer.slice(1)) {
+                shape.lineTo(point.x, -point.z);
+            }
+            shape.closePath();
+            shape.holes = loops.slice(1).map(loop => {
+                const points = loop.corners.filter(Boolean);
+                if (points.length < 3) return null;
+                const hole = new Path();
+                hole.moveTo(points[0].x, -points[0].z);
+                for (const point of points.slice(1)) {
+                    hole.lineTo(point.x, -point.z);
+                }
+                hole.closePath();
+                return hole;
+            }).filter((hole): hole is Path => hole !== null);
+            const geometry = new ShapeGeometry(shape);
+            const positions = geometry.getAttribute("position").array;
+            for (const section of assignedSections) {
+                const xStart = bounds.minX +
+                    (bounds.maxX - bounds.minX) * section.xStart;
+                const xEnd = bounds.minX +
+                    (bounds.maxX - bounds.minX) * section.xEnd;
+                const yStart = bounds.minY +
+                    (bounds.maxY - bounds.minY) * section.yStart;
+                const yEnd = bounds.minY +
+                    (bounds.maxY - bounds.minY) * section.yEnd;
+                const area = calculateFloorSectionArea(positions, {
+                    ...section,
+                    xStart,
+                    xEnd,
+                    yStart,
+                    yEnd
+                });
+                const materialId = face.sectionMaterials[section.id] ??
+                    floorFinishes[region.id];
+                if (materialId && area > 0) {
+                    materialAreas.set(
+                        materialId,
+                        (materialAreas.get(materialId) ?? 0) + area
+                    );
+                }
+            }
+            geometry.dispose();
             continue;
         }
+
+        const materialId = floorFinishes[region.id];
+        if (!materialId) continue;
+        const area = calculateRegionFloorArea(region);
+        materialAreas.set(
+            materialId,
+            (materialAreas.get(materialId) ?? 0) + area
+        );
+    }
+
+    const items: CostItem[] = [];
+    for (const [materialId, area] of materialAreas) {
 
         //--------------------------------------------------
         // Firebase floor material
@@ -145,16 +229,13 @@ export function calculateFlooringCosts(
         // ROOM AREA
         //--------------------------------------------------
 
-        const area =
-            calculateRegionFloorArea(region);
-
         if (
             !Number.isFinite(area) ||
             area <= 0
         ) {
             console.warn(
-                "Skipping flooring cost because the room area is invalid:",
-                region.id,
+                "Skipping flooring cost because the floor area is invalid:",
+                materialId,
                 area
             );
 

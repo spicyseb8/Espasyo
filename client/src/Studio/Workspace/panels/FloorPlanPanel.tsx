@@ -2,8 +2,6 @@ import "./FloorPlanPanel.css";
 
 import {
     MousePointer2,
-    PenLine,
-    Square,
     ChevronDown,
     Upload,
     Trash2,
@@ -53,20 +51,7 @@ const TOOLS = [
         tool: Tool.Select,
         label: "Select",
         icon: MousePointer2
-    },
-
-    {
-        tool: Tool.Wall,
-        label: "Walls",
-        icon: PenLine
-    },
-
-    {
-        tool: Tool.Room,
-        label: "Rooms",
-        icon: Square
     }
-
 ] as const;
 
 //==========================================================
@@ -884,35 +869,6 @@ export default function FloorPlanPanel() {
     };
 
     //======================================================
-    // CONFIRM LAYOUT
-    //======================================================
-
-    const handleConfirmLayout = () => {
-
-        const confirmed =
-            window.confirm(
-                "Once you confirm the layout, walls and rooms can no longer be edited.\n\nContinue?"
-            );
-
-        if (!confirmed) {
-            return;
-        }
-
-        dispatch({
-            type:
-                "CONFIRM_LAYOUT"
-        });
-
-        dispatch({
-            type:
-                "SET_ACTIVE_TOOL",
-
-            payload:
-                Tool.None
-        });
-    };
-
-    //======================================================
     // CALIBRATION TEXT
     //======================================================
 
@@ -1632,7 +1588,7 @@ export default function FloorPlanPanel() {
             </div>
 
             {/* ==================================================
-                WALL SETTINGS
+                WALL DISPLAY
                ================================================== */}
 
             <div
@@ -1646,120 +1602,8 @@ export default function FloorPlanPanel() {
             >
 
                 <h3>
-                    Wall Settings
+                    Wall Measurements
                 </h3>
-
-                <div className="field-grid">
-
-                    <div className="field">
-
-                        <label
-                            htmlFor="wall-height"
-                        >
-                            Height
-                        </label>
-
-                        <div
-                            className="field-input"
-                        >
-
-                            <input
-                                id="wall-height"
-
-                                disabled={
-                                    layoutConfirmed
-                                }
-
-                                type="number"
-
-                                value={
-                                    state.wallHeight
-                                }
-
-                                step="0.1"
-
-                                onChange={
-                                    e =>
-                                        dispatch({
-                                            type:
-                                                "SET_WALL_HEIGHT",
-
-                                            payload:
-                                                Number(
-                                                    e.target.value
-                                                )
-                                        })
-                                }
-                            />
-
-                            <span
-                                className=
-                                    "field-unit"
-                            >
-                                m
-                            </span>
-
-                        </div>
-
-                    </div>
-
-                    <div className="field">
-
-                        <label
-                            htmlFor="wall-thickness"
-                        >
-                            Thickness
-                        </label>
-
-                        <div
-                            className="field-input"
-                        >
-
-                            <input
-                                id="wall-thickness"
-
-                                disabled={
-                                    layoutConfirmed
-                                }
-
-                                type="number"
-
-                                value={
-                                    state.wallThickness
-                                }
-
-                                step="0.05"
-
-                                onChange={
-                                    e =>
-                                        dispatch({
-                                            type:
-                                                "SET_WALL_THICKNESS",
-
-                                            payload:
-                                                Number(
-                                                    e.target.value
-                                                )
-                                        })
-                                }
-                            />
-
-                            <span
-                                className=
-                                    "field-unit"
-                            >
-                                m
-                            </span>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-                {/* ----------------------------------------------
-                    Wall measurements
-                   ---------------------------------------------- */}
 
                 <div className="toggle-row">
 
@@ -1803,9 +1647,6 @@ export default function FloorPlanPanel() {
                             })
                         }
 
-                        disabled={
-                            layoutConfirmed
-                        }
                     />
 
                 </div>
@@ -1883,7 +1724,7 @@ export default function FloorPlanPanel() {
                                 {
                                     layoutConfirmed
                                         ? "Layout confirmed"
-                                        : "Draw a wall or select a wall/floor"
+                                        : "Select a wall or floor to view measurements"
                                 }
 
                             </div>
@@ -1891,28 +1732,6 @@ export default function FloorPlanPanel() {
                 }
 
             </div>
-
-            {/* ==================================================
-                CONFIRM LAYOUT
-               ================================================== */}
-
-            {
-                !layoutConfirmed && (
-
-                    <button
-                        type="button"
-
-                        className=
-                            "start-button"
-
-                        onClick={
-                            handleConfirmLayout
-                        }
-                    >
-                        Confirm Layout
-                    </button>
-                )
-            }
 
         </div>
     );

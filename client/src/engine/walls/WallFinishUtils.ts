@@ -5,6 +5,12 @@ import type { Wall } from "./WallTypes";
 import type { Region } from "../regions/Polygon";
 
 import { pointInPolygon } from "../regions/Polygon";
+import {
+    getWallPaintFaceKey,
+    getWallPaintSections,
+    type WallPaintSection,
+    type WallPaintSeparatorMap
+} from "../../../../shared/wallPaintSeparators";
 
 export const WALL_SIDE_FINISH_BUCKET = "__wall_side_finishes__";
 
@@ -13,6 +19,7 @@ export interface WallFinishSide {
     wallId: string;
     materialId: string;
     side: 1 | -1;
+    section?: WallPaintSection;
 }
 
 export type WallSide = 1 | -1;
@@ -307,4 +314,45 @@ export function getWallFinishSides(
     }
 
     return Array.from(result.values());
+}
+
+export function getWallFinishSections(
+    wall: Wall,
+    regions: Region[],
+    wallFinishes: Record<string, Record<string, string>>,
+    wallPaintSeparators: WallPaintSeparatorMap
+): WallFinishSide[] {
+    const baseFinishes = getWallFinishSides(wall, regions, wallFinishes);
+    const result: WallFinishSide[] = [];
+
+    for (const side of [1, -1] as const) {
+        const faceKey = getWallPaintFaceKey(wall.id, side);
+        const face = wallPaintSeparators[faceKey];
+        const baseFinish = baseFinishes.find(finish => finish.side === side);
+
+        if (!face || face.separators.length === 0) {
+            if (baseFinish) {
+                result.push(baseFinish);
+            }
+            continue;
+        }
+
+        for (const section of getWallPaintSections(face)) {
+            const materialId =
+                face.sectionMaterials[section.id] ??
+                baseFinish?.materialId;
+            if (!materialId) {
+                continue;
+            }
+            result.push({
+                regionId: faceKey,
+                wallId: wall.id,
+                materialId,
+                side,
+                section
+            });
+        }
+    }
+
+    return result;
 }

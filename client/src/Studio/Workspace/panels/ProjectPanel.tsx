@@ -730,6 +730,17 @@ export default function ProjectPanel() {
                 const interiorData = {
                     projectId: currentProjectId,
                     ownerId: user.uid,
+                    wallPaintSeparators:
+                        state.floors[0]?.wallPaintSeparators ??
+                        state.wallPaintSeparators,
+                    ...(state.floors.length > 0
+                        ? {
+                            floors: state.floors.map(floor => ({
+                                floorId: floor.floorId,
+                                wallPaintSeparators: floor.wallPaintSeparators
+                            }))
+                        }
+                        : {}),
                     ...(state.projectBudget !== null
                         ? { maximumBudget: state.projectBudget }
                         : {})
@@ -764,7 +775,12 @@ export default function ProjectPanel() {
                 currentProjectId,
                 {
                     ...projectData,
-                    maximumBudget: state.projectBudget
+                    maximumBudget: state.projectBudget,
+                    wallPaintSeparators: state.wallPaintSeparators,
+                    wallPaintSeparatorsByFloor: state.floors.map(floor => ({
+                        floorId: floor.floorId,
+                        wallPaintSeparators: floor.wallPaintSeparators
+                    }))
                 }
             );
 

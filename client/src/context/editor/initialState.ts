@@ -17,6 +17,12 @@ export const initialState: EditorState = {
     corners: [],
     selectedWallId: null,
     selectedWallRegionId: null,
+    selectedWallSectionId: null,
+    selectedWallSeparatorId: null,
+    selectedFloorSectionId: null,
+    selectedFloorSeparatorId: null,
+    wallSeparatorPlacement: null,
+    wallSeparatorPlacementVersion: 0,
     selectedRegionId: null,
     selectedCornerId: null,
     selectedWallSide: null,
@@ -53,5 +59,7 @@ export const initialState: EditorState = {
     draftWallLength: null,
     showWallMeasurements: false,
     wallFinishes: {},
+    wallPaintSeparators: {},
+    floorPaintSeparators: {},
     blueprint: null
 };
