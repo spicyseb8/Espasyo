@@ -2,6 +2,45 @@
    ASSET CARD
    ========================================================== */
 
+.asset-card-container {
+    position: relative;
+    min-width: 0;
+}
+
+.asset-card-favorite {
+    position: absolute;
+    z-index: 2;
+    top: 14px;
+    left: 14px;
+    width: 25px;
+    height: 25px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.94);
+    color: #777777;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.14);
+    cursor: pointer;
+    transition: color .15s ease, background .15s ease;
+}
+
+.asset-card-favorite:hover {
+    background: #ffffff;
+    color: #d7a928;
+}
+
+.asset-card-favorite.is-favorite {
+    color: #e3b52f;
+}
+
+.asset-card-favorite:focus-visible {
+    outline: 2px solid var(--ws-accent);
+    outline-offset: 2px;
+}
+
 .asset-card {
     position:
         relative;

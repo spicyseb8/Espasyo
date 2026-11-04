@@ -2,6 +2,45 @@
    MATERIAL CARD
    ========================================================== */
 
+.material-card-container {
+    position: relative;
+    min-width: 0;
+}
+
+.material-card-favorite {
+    position: absolute;
+    z-index: 2;
+    top: 5px;
+    right: 5px;
+    width: 23px;
+    height: 23px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.94);
+    color: #777777;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.13);
+    cursor: pointer;
+    transition: color .15s ease, background .15s ease;
+}
+
+.material-card-favorite:hover {
+    background: #ffffff;
+    color: #d7a928;
+}
+
+.material-card-favorite.is-favorite {
+    color: #e3b52f;
+}
+
+.material-card-favorite:focus-visible {
+    outline: 2px solid var(--ws-accent);
+    outline-offset: 2px;
+}
+
 .material-card {
     width:
         100%;

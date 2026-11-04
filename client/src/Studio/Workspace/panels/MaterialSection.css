@@ -77,6 +77,63 @@
         var(--ws-text);
 }
 
+.material-favorites-toggle {
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--ws-text-muted);
+    cursor: pointer;
+    transition: color .15s ease, background .15s ease;
+}
+
+.material-favorites-toggle:hover {
+    background: var(--ws-surface-hover);
+    color: #d7a928;
+}
+
+.material-favorites-toggle.is-active {
+    color: #e3b52f;
+}
+
+.material-favorites-toggle:focus-visible {
+    outline: 2px solid var(--ws-accent);
+    outline-offset: 1px;
+}
+
+.material-group-label,
+.material-group-divider {
+    color: var(--ws-text-muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.material-group-label {
+    margin: 3px 1px 7px;
+    color: #b08a22;
+}
+
+.material-group-divider {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 1px 8px;
+}
+
+.material-group-divider::before {
+    width: 14px;
+    height: 1px;
+    background: var(--ws-border);
+    content: "";
+}
+
 
 /* ==========================================================
    COUNT

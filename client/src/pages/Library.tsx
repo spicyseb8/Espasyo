@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronLeft, ChevronRight, Info, Search } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Info, Search, Star } from "lucide-react";
 
 import { getFurnitureAssets } from "../engine/furniture/FirebaseFurnitureLibrary";
 import { getFloorMaterials } from "../engine/materials/floors";
@@ -11,6 +11,8 @@ import type { Material } from "../engine/materials/MaterialTypes";
 import {
   FURNITURE_CATEGORY_SECTIONS,
 } from "../engine/furniture/FurnitureCategory";
+import { type AssetFavoriteType } from "../context/AssetFavoritesContext";
+import { useAssetFavorites } from "../context/useAssetFavorites";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -306,6 +308,14 @@ function CollectionCard({ item }: { item: LibraryItem }) {
   const [imgError, setImgError] = useState(false);
   const hasImage = Boolean(item.image?.trim()) && !imgError;
   const isFurniture = item.type === "furniture";
+  const favoriteType: AssetFavoriteType =
+    item.type === "floors"
+      ? "flooring"
+      : item.type === "walls"
+        ? "wallPaint"
+        : "furniture";
+  const { isFavorite, toggleFavorite } = useAssetFavorites();
+  const favorite = isFavorite(favoriteType, item.id);
 
   return (
     <article className="flex aspect-[4/5] flex-col rounded-xl bg-black/[0.05] p-3.5 transition-colors duration-200 hover:bg-black/[0.08]">
@@ -319,12 +329,35 @@ function CollectionCard({ item }: { item: LibraryItem }) {
             {item.price}
           </p>
         </div>
-        <span
-          className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-black/5 text-black/60"
-          aria-hidden
-        >
-          <Info className="h-2.5 w-2.5" strokeWidth={2} />
-        </span>
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            aria-label={favorite ? "Remove from Favorites" : "Add to Favorites"}
+            title={favorite ? "Remove from Favorites" : "Add to Favorites"}
+            aria-pressed={favorite}
+            onClick={(event) => {
+              event.stopPropagation();
+              void toggleFavorite(favoriteType, item.id);
+            }}
+            className={`flex h-6 w-6 items-center justify-center rounded-full transition-colors ${
+              favorite
+                ? "text-amber-400 hover:bg-amber-400/10"
+                : "text-black/35 hover:bg-black/5 hover:text-black/65"
+            }`}
+          >
+            <Star
+              className="h-3 w-3"
+              strokeWidth={2}
+              fill={favorite ? "currentColor" : "none"}
+            />
+          </button>
+          <span
+            className="flex h-4 w-4 items-center justify-center rounded-full bg-black/5 text-black/60"
+            aria-hidden
+          >
+            <Info className="h-2.5 w-2.5" strokeWidth={2} />
+          </span>
+        </div>
       </div>
 
       {/* swatch */}
@@ -516,14 +549,10 @@ export default function LibraryPage() {
     };
   }, []);
 
-  // Reset to the first page whenever the visible set changes
-  useEffect(() => {
-    setPage(1);
-  }, [division, category, sort, query]);
-
   const switchDivision = (next: Division) => {
     setDivision(next);
     setCategory("all");
+    setPage(1);
   };
 
   const source =
@@ -599,14 +628,20 @@ export default function LibraryPage() {
             label="Category"
             value={category}
             options={CATEGORY_OPTIONS[division]}
-            onChange={setCategory}
+            onChange={(value) => {
+              setCategory(value);
+              setPage(1);
+            }}
             disabled={division === "walls"}
           />
           <FilterSelect
             label="Sort by"
             value={sort}
             options={SORT_OPTIONS}
-            onChange={(v) => setSort(v as SortKey)}
+            onChange={(value) => {
+              setSort(value as SortKey);
+              setPage(1);
+            }}
           />
           <label className="relative block" aria-label="Search">
             <span className="pointer-events-none absolute left-3 top-1.5 text-[8px] font-medium uppercase tracking-[0.12em] text-black/50">
@@ -615,7 +650,10 @@ export default function LibraryPage() {
             <input
               type="search"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(1);
+              }}
               placeholder={`Search ${title.toLowerCase()}`}
               className="h-[38px] w-full rounded-md border border-black/15 bg-white px-3 pb-0 pr-9 pt-3.5 text-[11px] font-medium text-[#1b1b1b] outline-none transition placeholder:text-black/30 hover:border-black/35 focus:border-black/60"
             />

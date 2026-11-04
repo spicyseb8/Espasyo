@@ -1,7 +1,8 @@
 import "./MaterialSection.css";
 
 import {
-    Check
+    Check,
+    Star
 } from "lucide-react";
 
 import type {
@@ -10,12 +11,22 @@ import type {
 
 import MaterialCard
     from "./MaterialCard";
+import type {
+    AssetFavoriteType
+} from "../../../context/AssetFavoritesContext";
+import { useAssetFavorites } from "../../../context/useAssetFavorites";
 
 interface Props {
 
     title: string;
 
     materials: Material[];
+
+    favoriteType: AssetFavoriteType;
+
+    favoritesFirst: boolean;
+
+    onToggleFavoritesFirst: () => void;
 
     selectedMaterialId:
         string | null;
@@ -52,6 +63,12 @@ export default function MaterialSection({
 
     materials,
 
+    favoriteType,
+
+    favoritesFirst,
+
+    onToggleFavoritesFirst,
+
     selectedMaterialId,
 
     onSelect,
@@ -77,6 +94,31 @@ export default function MaterialSection({
     applyToAllLabel = "Apply to All"
 
 }: Props) {
+    const { isFavorite } = useAssetFavorites();
+    const favoriteMaterials = favoritesFirst
+        ? materials.filter(material =>
+            isFavorite(favoriteType, material.id)
+        )
+        : [];
+    const otherMaterials = favoritesFirst
+        ? materials.filter(material =>
+            !isFavorite(favoriteType, material.id)
+        )
+        : materials;
+
+    const renderMaterialGrid = (items: Material[]) => (
+        <div className="material-grid">
+            {items.map(material => (
+                <MaterialCard
+                    key={material.id}
+                    material={material}
+                    selected={selectedMaterialId === material.id}
+                    onClick={() => onSelect(material.id)}
+                    favoriteType={favoriteType}
+                />
+            ))}
+        </div>
+    );
 
     return (
 
@@ -108,6 +150,29 @@ export default function MaterialSection({
 
                 </span>
 
+                <button
+                    type="button"
+                    className={`material-favorites-toggle ${favoritesFirst ? "is-active" : ""}`}
+                    aria-label={
+                        favoritesFirst
+                            ? "Show original material order"
+                            : "Show favorites first"
+                    }
+                    title={
+                        favoritesFirst
+                            ? "Show original order"
+                            : "Show favorites first"
+                    }
+                    aria-pressed={favoritesFirst}
+                    onClick={onToggleFavoritesFirst}
+                >
+                    <Star
+                        size={15}
+                        strokeWidth={2}
+                        fill={favoritesFirst ? "currentColor" : "none"}
+                    />
+                </button>
+
             </div>
 
             {/* =========================================
@@ -120,47 +185,28 @@ export default function MaterialSection({
 
                 {
                     materials.length > 0
-
-                        ? (
-
-                            <div
-                                className="material-grid"
-                            >
-
-                                {
-                                    materials.map(
-                                        material => (
-
-                                            <MaterialCard
-
-                                                key={
-                                                    material.id
-                                                }
-
-                                                material={
-                                                    material
-                                                }
-
-                                                selected={
-                                                    selectedMaterialId ===
-                                                    material.id
-                                                }
-
-                                                onClick={() =>
-                                                    onSelect(
-                                                        material.id
-                                                    )
-                                                }
-
-                                            />
-
-                                        )
-                                    )
-                                }
-
-                            </div>
-
-                        )
+                        ? favoritesFirst
+                            ? (
+                                <>
+                                    {favoriteMaterials.length > 0 && (
+                                        <>
+                                            <div className="material-group-label">
+                                                Favorites
+                                            </div>
+                                            {renderMaterialGrid(favoriteMaterials)}
+                                        </>
+                                    )}
+                                    {favoriteMaterials.length > 0 &&
+                                        otherMaterials.length > 0 && (
+                                            <div className="material-group-divider">
+                                                All materials
+                                            </div>
+                                        )}
+                                    {otherMaterials.length > 0 &&
+                                        renderMaterialGrid(otherMaterials)}
+                                </>
+                            )
+                            : renderMaterialGrid(materials)
 
                         : (
 

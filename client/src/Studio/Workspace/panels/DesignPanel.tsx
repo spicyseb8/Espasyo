@@ -72,6 +72,8 @@ export default function DesignPanel() {
     const [showSeparatorOrientations, setShowSeparatorOrientations] =
         useState(false);
     const [materialSearch, setMaterialSearch] = useState("");
+    const [floorFavoritesFirst, setFloorFavoritesFirst] = useState(false);
+    const [wallFavoritesFirst, setWallFavoritesFirst] = useState(false);
     const separatorMenuRef = useRef<HTMLDivElement | null>(null);
     const [pendingMerge, setPendingMerge] = useState<{
         faceKey: string;
@@ -826,6 +828,11 @@ export default function DesignPanel() {
             <MaterialSection
                 title="Floor"
                 materials={filteredFlooringMaterials}
+                favoriteType="flooring"
+                favoritesFirst={floorFavoritesFirst}
+                onToggleFavoritesFirst={() =>
+                    setFloorFavoritesFirst(value => !value)
+                }
                 selectedMaterialId={selectedFloorMaterialId}
                 onSelect={handleSelectFloorMaterial}
                 onApply={handleApplyFloor}
@@ -852,6 +859,11 @@ export default function DesignPanel() {
             <MaterialSection
                 title="Walls"
                 materials={filteredWallMaterials}
+                favoriteType="wallPaint"
+                favoritesFirst={wallFavoritesFirst}
+                onToggleFavoritesFirst={() =>
+                    setWallFavoritesFirst(value => !value)
+                }
                 selectedMaterialId={selectedWallMaterialId}
                 onSelect={handleSelectWallMaterial}
                 onApply={handleApplyWall}

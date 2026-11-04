@@ -3,10 +3,17 @@ import "./MaterialCard.css";
 import {
     useState
 } from "react";
+import {
+    Star
+} from "lucide-react";
 
 import type {
     Material
 } from "../../../engine/materials/MaterialTypes";
+import type {
+    AssetFavoriteType
+} from "../../../context/AssetFavoritesContext";
+import { useAssetFavorites } from "../../../context/useAssetFavorites";
 
 interface Props {
 
@@ -15,12 +22,15 @@ interface Props {
     selected: boolean;
 
     onClick: () => void;
+
+    favoriteType: AssetFavoriteType;
 }
 
 export default function MaterialCard({
     material,
     selected,
-    onClick
+    onClick,
+    favoriteType
 }: Props) {
 
     const [
@@ -33,20 +43,24 @@ export default function MaterialCard({
             material.thumbnail
         ) &&
         !imageFailed;
+    const {
+        isFavorite,
+        toggleFavorite
+    } = useAssetFavorites();
+    const favorite = isFavorite(favoriteType, material.id);
 
     return (
+        <div className="material-card-container">
+            <button
+                type="button"
 
-        <button
-
-            type="button"
-
-            className={
-                `material-card ${
-                    selected
-                        ? "selected"
-                        : ""
-                }`
-            }
+                className={
+                    `material-card ${
+                        selected
+                            ? "selected"
+                            : ""
+                    }`
+                }
 
             onClick={
                 onClick
@@ -56,7 +70,7 @@ export default function MaterialCard({
                 selected
             }
 
-        >
+            >
 
             <div
                 className="material-card-thumbnail"
@@ -139,6 +153,25 @@ export default function MaterialCard({
 
             </div>
 
-        </button>
+            </button>
+            <button
+                type="button"
+                className={`material-card-favorite ${favorite ? "is-favorite" : ""}`}
+                aria-label={favorite ? "Remove from Favorites" : "Add to Favorites"}
+                title={favorite ? "Remove from Favorites" : "Add to Favorites"}
+                aria-pressed={favorite}
+                onClick={event => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    void toggleFavorite(favoriteType, material.id);
+                }}
+            >
+                <Star
+                    size={12}
+                    strokeWidth={2}
+                    fill={favorite ? "currentColor" : "none"}
+                />
+            </button>
+        </div>
     );
 }

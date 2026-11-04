@@ -5,7 +5,8 @@ import {
 } from "react";
 
 import {
-    Check
+    Check,
+    Star
 } from "lucide-react";
 
 import useEditor
@@ -18,6 +19,9 @@ import type {
 import {
     BuildTool
 } from "../../../context/BuildTool";
+import {
+    useAssetFavorites
+} from "../../../context/useAssetFavorites";
 
 interface Props {
     asset: Asset;
@@ -37,8 +41,15 @@ export default function AssetCard({
         thumbnailError,
         setThumbnailError
     ] = useState(false);
+    const {
+        isFavorite,
+        toggleFavorite
+    } = useAssetFavorites();
 
-
+    const isFurniture = asset.type === BuildTool.Furniture;
+    const favorite =
+        isFurniture &&
+        isFavorite("furniture", asset.id);
     const selected =
         state.selectedAsset?.id ===
         asset.id;
@@ -51,14 +62,16 @@ export default function AssetCard({
 
     return (
 
-        <button
-            className={
-                `asset-card ${
-                    selected
-                        ? "selected"
-                        : ""
-                }`
-            }
+        <div className="asset-card-container">
+            <button
+                type="button"
+                className={
+                    `asset-card ${
+                        selected
+                            ? "selected"
+                            : ""
+                    }`
+                }
 
             aria-pressed={
                 selected
@@ -95,7 +108,7 @@ export default function AssetCard({
                 });
 
             }}
-        >
+            >
 
             <div
                 className="asset-thumb"
@@ -168,6 +181,27 @@ export default function AssetCard({
 
             </div>
 
-        </button>
+            </button>
+            {isFurniture && (
+                <button
+                    type="button"
+                    className={`asset-card-favorite ${favorite ? "is-favorite" : ""}`}
+                    aria-label={favorite ? "Remove from Favorites" : "Add to Favorites"}
+                    title={favorite ? "Remove from Favorites" : "Add to Favorites"}
+                    aria-pressed={favorite}
+                    onClick={event => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        void toggleFavorite("furniture", asset.id);
+                    }}
+                >
+                    <Star
+                        size={13}
+                        strokeWidth={2}
+                        fill={favorite ? "currentColor" : "none"}
+                    />
+                </button>
+            )}
+        </div>
     );
 }
