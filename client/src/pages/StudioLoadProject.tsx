@@ -311,6 +311,24 @@ function LoadProjectContent() {
                         projectData,
                         interiorData
                     ));
+                } else if (
+                    typeof projectMetadata.interiorJsonUrl === "string" ||
+                    typeof projectMetadata.interiorJsonPath === "string"
+                ) {
+                    const interiorData = await loadManagedInteriorData({
+                        projectId,
+                        ownerId: user.uid,
+                        interiorJsonPath: typeof projectMetadata.interiorJsonPath === "string"
+                            ? projectMetadata.interiorJsonPath
+                            : undefined,
+                        interiorJsonUrl: typeof projectMetadata.interiorJsonUrl === "string"
+                            ? projectMetadata.interiorJsonUrl
+                            : undefined
+                    }, (input, init) => fetch(input, {
+                        ...init,
+                        signal: controller.signal
+                    }));
+                    projectData.maximumBudget = interiorData?.maximumBudget ?? null;
                 }
 
                 if (cancelled) {

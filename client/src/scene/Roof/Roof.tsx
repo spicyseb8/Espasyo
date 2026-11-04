@@ -16,8 +16,12 @@ import {
 } from "three";
 import useEditor from "../../context/editor/useEditor";
 import { solveRegions } from "../../engine/regions/RegionSolver";
-import { getRegionCenter } from "../../engine/regions/RegionCenter";
 import type { Region } from "../../engine/regions/Polygon";
+import {
+    getRoomCornerPlacements,
+    getUniqueRoomRegions,
+    WALKTHROUGH_GLB_SCALE
+} from "../Walkthrough/WalkthroughRoomPlacement";
 
 const CEILING_BASE_COLOR_URL =
     "/ceiling/concrete/Poliigon_ConcreteWorn_8690_BaseColor.jpg";
@@ -108,18 +112,17 @@ function createCeilingGeometry(
 }
 
 function CeilingLightFixture({
-    region,
+    roomId,
+    cornerIndex,
+    position,
     height
 }: {
-    region: Region;
+    roomId: string;
+    cornerIndex: number;
+    position: { x: number; z: number };
     height: number;
 }) {
     const { scene } = useGLTF(CEILING_LIGHT_MODEL_URL);
-
-    const center = useMemo(
-        () => getRegionCenter(region),
-        [region]
-    );
 
     const model = useMemo(() => {
         const clone = scene.clone(true);
@@ -132,8 +135,8 @@ function CeilingLightFixture({
         const horizontalSize = Math.max(size.x, size.z);
 
         const scale = horizontalSize > 0.0001
-            ? CEILING_LIGHT_TARGET_WIDTH / horizontalSize
-            : 1;
+            ? CEILING_LIGHT_TARGET_WIDTH * WALKTHROUGH_GLB_SCALE / horizontalSize
+            : WALKTHROUGH_GLB_SCALE;
 
         clone.scale.multiplyScalar(scale);
 
@@ -158,11 +161,11 @@ function CeilingLightFixture({
 
     return (
         <group
-            name={`CeilingLight-${region.id}`}
+            name={`CeilingLight-${roomId}-${cornerIndex}`}
             position={[
-                center.x,
+                position.x,
                 Math.max(height - CEILING_LIGHT_GAP, 0.05),
-                center.z
+                position.z
             ]}
         >
             <primitive object={model} />
@@ -300,18 +303,23 @@ export default function Roof() {
     const { state } = useEditor();
 
     const regions = useMemo(
-        () => solveRegions(
+        () => getUniqueRoomRegions(solveRegions(
             state.corners,
             state.walls
         ).filter(
             region =>
                 region.corners.length >= 3 &&
                 Math.abs(region.area) > 0.01
-        ),
+        )),
         [
             state.corners,
             state.walls
         ]
+    );
+
+    const cornerPlacements = useMemo(
+        () => getRoomCornerPlacements(regions),
+        [regions]
     );
 
     const ceilingHeight = Math.max(
@@ -326,16 +334,22 @@ export default function Roof() {
     return (
         <group name="WalkthroughCeiling">
             {regions.map(region => (
-                <group key={`ceiling-${region.id}`}>
+                <group key={`ceiling-${state.activeFloorId}-${region.id}`}>
                     <RoomCeiling
                         region={region}
                         height={ceilingHeight}
                     />
-
-                    <CeilingLightFixture
-                        region={region}
-                        height={ceilingHeight}
-                    />
+                    {cornerPlacements
+                        .filter(placement => placement.roomId === region.id)
+                        .map(placement => (
+                            <CeilingLightFixture
+                                key={`${state.activeFloorId}-${region.id}-${placement.cornerIndex}`}
+                                roomId={region.id}
+                                cornerIndex={placement.cornerIndex}
+                                position={placement.position}
+                                height={ceilingHeight}
+                            />
+                        ))}
                 </group>
             ))}
         </group>

@@ -163,6 +163,9 @@ async function loadWallMaterials(): Promise<Material[]> {
                 sourceCategory: data.category,
                 pricePerSquareMeter: Number(data.price ?? 0),
                 pricePerLiter: Number(data.price ?? 0),
+                priceConfigured: typeof data.price === "number" &&
+                    Number.isFinite(data.price) &&
+                    data.price >= 0,
                 thumbnail,
                 texture,
                 color: data.color,

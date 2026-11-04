@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { Html } from "@react-three/drei";
+import { Html, Line } from "@react-three/drei";
 import {
     CanvasTexture,
+    BufferGeometry,
     DoubleSide,
     Float32BufferAttribute,
     Path,
@@ -27,12 +28,19 @@ import {
     preloadFloorTexture
 } from "../../../services/assets/floorsload";
 import { emitAdminCommentTarget } from "../../../services/assets/adminCommentEvents";
+import {
+    clipFloorTriangleToSection,
+    getWallPaintSections,
+    type FloorPaintSeparatorMap,
+    type WallPaintSection
+} from "../../../../../shared/wallPaintSeparators";
 
 interface AdminFloorProps {
     region: Region;
     floorId?: string;
     materials: Material[];
     floorFinishes: Record<string, string>;
+    floorPaintSeparators?: FloorPaintSeparatorMap;
     selected: boolean;
     onSelect?: (regionId: string) => void;
     allowInteractionPropagation?: boolean;
@@ -108,6 +116,189 @@ function useFloorTexture(
             : getCachedFloorTexture(url)) ??
         (loadedTexture?.key === requestKey ? loadedTexture.texture : null)
     );
+}
+
+interface FloorGeometryBounds {
+    minX: number;
+    maxX: number;
+    minY: number;
+    maxY: number;
+}
+
+function getGeometryBounds(geometry: BufferGeometry): FloorGeometryBounds {
+    const position = geometry.getAttribute("position");
+    const bounds = {
+        minX: Infinity,
+        maxX: -Infinity,
+        minY: Infinity,
+        maxY: -Infinity
+    };
+    for (let index = 0; index < position.count; index += 1) {
+        bounds.minX = Math.min(bounds.minX, position.getX(index));
+        bounds.maxX = Math.max(bounds.maxX, position.getX(index));
+        bounds.minY = Math.min(bounds.minY, position.getY(index));
+        bounds.maxY = Math.max(bounds.maxY, position.getY(index));
+    }
+    return bounds;
+}
+
+function getSectionGeometry(
+    source: BufferGeometry,
+    section: WallPaintSection,
+    bounds: FloorGeometryBounds,
+    material: Material
+): BufferGeometry {
+    const sectionBounds = {
+        xStart: bounds.minX + (bounds.maxX - bounds.minX) * section.xStart,
+        xEnd: bounds.minX + (bounds.maxX - bounds.minX) * section.xEnd,
+        yStart: bounds.minY + (bounds.maxY - bounds.minY) * section.yStart,
+        yEnd: bounds.minY + (bounds.maxY - bounds.minY) * section.yEnd
+    };
+    const positions = source.getAttribute("position");
+    const index = source.getIndex();
+    const triangleCount = index ? index.count / 3 : positions.count / 3;
+    const outputPositions: number[] = [];
+    const outputUvs: number[] = [];
+    const layout = material.floorMaterialMode === "single-tile" &&
+        isFloorPattern(material.floorPattern) &&
+        typeof material.length === "number" &&
+        typeof material.width === "number"
+        ? createFloorPatternLayout(material.floorPattern, material.length, material.width)
+        : null;
+
+    for (let triangle = 0; triangle < triangleCount; triangle += 1) {
+        const vertices = [0, 1, 2].map(offset => {
+            const vertex = triangle * 3 + offset;
+            return index ? index.getX(vertex) : vertex;
+        });
+        const clipped = clipFloorTriangleToSection([
+            { x: positions.getX(vertices[0]), y: positions.getY(vertices[0]) },
+            { x: positions.getX(vertices[1]), y: positions.getY(vertices[1]) },
+            { x: positions.getX(vertices[2]), y: positions.getY(vertices[2]) }
+        ], sectionBounds);
+        for (let pointIndex = 1; pointIndex < clipped.length - 1; pointIndex += 1) {
+            for (const point of [clipped[0], clipped[pointIndex], clipped[pointIndex + 1]]) {
+                outputPositions.push(point.x, point.y, 0);
+                const uv = layout
+                    ? getFloorPatternUV(point.x, point.y, layout)
+                    : { x: point.x, y: point.y };
+                outputUvs.push(uv.x, uv.y);
+            }
+        }
+    }
+
+    const result = new BufferGeometry();
+    result.setAttribute("position", new Float32BufferAttribute(outputPositions, 3));
+    result.setAttribute("uv", new Float32BufferAttribute(outputUvs, 2));
+    result.computeVertexNormals();
+    return result;
+}
+
+function AdminFloorSection({
+    sourceGeometry,
+    section,
+    bounds,
+    material,
+    floorY,
+    floorId,
+    regionId,
+    onClick,
+    onPointerOver,
+    onPointerOut
+}: {
+    sourceGeometry: BufferGeometry;
+    section: WallPaintSection;
+    bounds: FloorGeometryBounds;
+    material: Material;
+    floorY: number;
+    floorId: string;
+    regionId: string;
+    onClick: (event: ThreeEvent<MouseEvent>) => void;
+    onPointerOver: (event: ThreeEvent<PointerEvent>) => void;
+    onPointerOut: () => void;
+}) {
+    const geometry = useMemo(
+        () => getSectionGeometry(sourceGeometry, section, bounds, material),
+        [sourceGeometry, section, bounds, material]
+    );
+    const texture = useFloorTexture(material.texture, material);
+    useEffect(() => () => geometry.dispose(), [geometry]);
+    if (geometry.getAttribute("position").count === 0) return null;
+    return (
+        <mesh
+            geometry={geometry}
+            position={[0, floorY + 0.004, 0]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            receiveShadow
+            onClick={onClick}
+            onPointerOver={onPointerOver}
+            onPointerOut={onPointerOut}
+            userData={{
+                floorId,
+                regionId,
+                staircaseRaycastSurface: true
+            }}
+        >
+            <meshStandardMaterial
+                map={texture}
+                color={material.color ?? (texture ? "#ffffff" : "#d9dde3")}
+                roughness={material.roughness ?? 0.8}
+                metalness={material.metalness ?? 0}
+                side={DoubleSide}
+            />
+        </mesh>
+    );
+}
+
+function getSeparatorLinePoints(
+    geometry: BufferGeometry,
+    orientation: "vertical" | "horizontal",
+    positionValue: number,
+    bounds: FloorGeometryBounds,
+    floorY: number
+): Vector3[] {
+    const position = geometry.getAttribute("position");
+    const index = geometry.getIndex();
+    const triangleCount = index ? index.count / 3 : position.count / 3;
+    const axis = orientation === "vertical" ? "x" : "y";
+    const minimum = orientation === "vertical" ? bounds.minX : bounds.minY;
+    const maximum = orientation === "vertical" ? bounds.maxX : bounds.maxY;
+    const coordinate = minimum + (maximum - minimum) * positionValue;
+    const points: Vector3[] = [];
+
+    for (let triangle = 0; triangle < triangleCount; triangle += 1) {
+        const vertices = [0, 1, 2].map(offset => {
+            const vertex = triangle * 3 + offset;
+            const sourceIndex = index ? index.getX(vertex) : vertex;
+            return new Vector3(
+                position.getX(sourceIndex),
+                position.getY(sourceIndex),
+                0
+            );
+        });
+        const intersections: Vector3[] = [];
+        for (let edge = 0; edge < 3; edge += 1) {
+            const start = vertices[edge];
+            const end = vertices[(edge + 1) % 3];
+            const startDelta = start[axis] - coordinate;
+            const endDelta = end[axis] - coordinate;
+            if (startDelta * endDelta > 0 || Math.abs(startDelta - endDelta) < 1e-10) {
+                continue;
+            }
+            const point = start.clone().lerp(
+                end,
+                startDelta / (startDelta - endDelta)
+            );
+            if (!intersections.some(existing => existing.distanceTo(point) < 1e-5)) {
+                intersections.push(point);
+            }
+        }
+        for (const point of intersections.slice(0, 2)) {
+            points.push(new Vector3(point.x, floorY + 0.008, -point.y));
+        }
+    }
+
+    return points;
 }
 
 function distanceToSegment(point: Vector3, start: Vector3, end: Vector3): number {
@@ -194,12 +385,17 @@ export default function AdminFloor({
     floorId,
     materials,
     floorFinishes,
+    floorPaintSeparators = {},
     selected,
     onSelect,
     allowInteractionPropagation = false,
     showAreaLabel = true
 }: AdminFloorProps) {
+    const [hoveredSeparatorId, setHoveredSeparatorId] = useState<string | null>(null);
+    const [hoveredSectionId, setHoveredSectionId] = useState<string | null>(null);
     const selectedMaterialId = floorFinishes[region.id];
+    const face = floorPaintSeparators[region.id];
+    const sections = getWallPaintSections(face);
 
     const selectedMaterial = materials.find(
         material => material.id === selectedMaterialId
@@ -402,6 +598,10 @@ export default function AdminFloor({
     const floorY = region.parentRegionId
         ? 0.02
         : 0;
+    const geometryBounds = useMemo(
+        () => geometry ? getGeometryBounds(geometry) : null,
+        [geometry]
+    );
     const selectedAreaAnchor = useMemo(
         () => selected ? computeLabelAnchor(region) : null,
         [region, selected]
@@ -428,33 +628,102 @@ export default function AdminFloor({
 
     return (
         <group>
-            <mesh
-                geometry={floorGeometry ?? geometry}
-                position={[0, floorY, 0]}
-                rotation={[-Math.PI / 2, 0, 0]}
-                receiveShadow
-                onClick={handleClick}
-                userData={{
-                    floorId: floorId ?? region.id,
-                    regionId: region.id,
-                    staircaseRaycastSurface: true
-                }}
-            >
-                <meshStandardMaterial
-                    map={floorTexture}
-                    color={
-                        displayMaterial.color ??
-                        (
-                            floorTexture
-                                ? "#ffffff"
-                                : "#d9dde3"
-                        )
-                    }
-                    roughness={displayMaterial.roughness ?? 0.8}
-                    metalness={displayMaterial.metalness ?? 0}
-                    side={DoubleSide}
-                />
-            </mesh>
+            {face?.separators.length && geometryBounds ? (
+                sections.map(section => {
+                    const sectionMaterial = materials.find(
+                        material => material.id === face.sectionMaterials[section.id]
+                    ) ?? displayMaterial;
+                    return (
+                        <AdminFloorSection
+                            key={section.id}
+                            sourceGeometry={geometry}
+                            section={section}
+                            bounds={geometryBounds}
+                            material={sectionMaterial}
+                            floorY={floorY}
+                            floorId={floorId ?? region.id}
+                            regionId={region.id}
+                            onClick={handleClick}
+                            onPointerOver={event => {
+                                if (event.intersections[0]?.object !== event.object) return;
+                                event.stopPropagation();
+                                setHoveredSectionId(section.id);
+                            }}
+                            onPointerOut={() => {
+                                setHoveredSectionId(current =>
+                                    current === section.id ? null : current
+                                );
+                            }}
+                        />
+                    );
+                })
+            ) : (
+                <mesh
+                    geometry={floorGeometry ?? geometry}
+                    position={[0, floorY, 0]}
+                    rotation={[-Math.PI / 2, 0, 0]}
+                    receiveShadow
+                    onClick={handleClick}
+                    userData={{
+                        floorId: floorId ?? region.id,
+                        regionId: region.id,
+                        staircaseRaycastSurface: true
+                    }}
+                >
+                    <meshStandardMaterial
+                        map={floorTexture}
+                        color={displayMaterial.color ?? (floorTexture ? "#ffffff" : "#d9dde3")}
+                        roughness={displayMaterial.roughness ?? 0.8}
+                        metalness={displayMaterial.metalness ?? 0}
+                        side={DoubleSide}
+                    />
+                </mesh>
+            )}
+            {face?.separators.map(separator => {
+                if (!geometryBounds) return null;
+                const points = getSeparatorLinePoints(
+                    geometry,
+                    separator.orientation,
+                    separator.position,
+                    geometryBounds,
+                    floorY
+                );
+                const visible = selected || hoveredSeparatorId === separator.id;
+                const hoveredSection = sections.find(
+                    section => section.id === hoveredSectionId
+                );
+                const boundsHoveredSection = hoveredSection &&
+                    (separator.orientation === "vertical"
+                        ? Math.abs(hoveredSection.xStart - separator.position) < 1e-6 ||
+                            Math.abs(hoveredSection.xEnd - separator.position) < 1e-6
+                        : Math.abs(hoveredSection.yStart - separator.position) < 1e-6 ||
+                            Math.abs(hoveredSection.yEnd - separator.position) < 1e-6);
+                const guideVisible = visible || Boolean(boundsHoveredSection);
+                return points.length > 0 ? (
+                    <Line
+                        key={separator.id}
+                        points={points}
+                        segments
+                        color={selected || boundsHoveredSection ? "#2563EB" : "#374151"}
+                        lineWidth={guideVisible ? 2.5 : 8}
+                        transparent
+                        opacity={guideVisible ? 0.95 : 0}
+                        depthTest
+                        depthWrite={false}
+                        renderOrder={13}
+                        onPointerOver={event => {
+                            if (event.intersections[0]?.object !== event.object) return;
+                            event.stopPropagation();
+                            setHoveredSeparatorId(separator.id);
+                        }}
+                        onPointerOut={() => {
+                            setHoveredSeparatorId(current =>
+                                current === separator.id ? null : current
+                            );
+                        }}
+                    />
+                ) : null;
+            })}
             {showAreaLabel && labelTexture && labelAnchor && (
                 <mesh
                     position={[

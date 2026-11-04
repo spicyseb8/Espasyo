@@ -178,7 +178,10 @@ export async function preloadAdminProjectAssets(projectData: unknown): Promise<v
 
   const project = asRecord(projectData);
   const floorIds = collectIds(project?.floorFinishes);
-  const wallIds = collectIds(project?.wallFinishes);
+  const wallIds = collectIds([
+    project?.wallFinishes,
+    project?.wallPaintSeparators
+  ]);
   const floorUrls = floors
     .filter((material) => floorIds.has(material.id))
     .map((material) => material.texture)

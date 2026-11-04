@@ -20,6 +20,17 @@ import {
     getRegionCenter
 } from "../engine/regions/RegionCenter";
 
+import {
+    getRoomCornerPlacements,
+    getUniqueRoomRegions,
+    shouldShowWalkthroughCornerLights,
+    WALKTHROUGH_ROOM_LIGHT_MULTIPLIER
+} from "./Walkthrough/WalkthroughRoomPlacement";
+
+interface LightsProps {
+    walkthroughSpawnConfirmed: boolean;
+}
+
 //==================================================
 // LIGHTING SETTINGS
 //==================================================
@@ -203,7 +214,9 @@ function fitShadow(
     };
 }
 
-export default function Lights() {
+export default function Lights({
+    walkthroughSpawnConfirmed
+}: LightsProps) {
     const {
         state
     } = useEditor();
@@ -258,19 +271,28 @@ export default function Lights() {
     //==================================================
 
     const roomLights = useMemo(() => {
-        const regions = solveRegions(
+        const walkthroughLightsActive =
+            shouldShowWalkthroughCornerLights(
+                state.walkthroughMode,
+                walkthroughSpawnConfirmed
+            );
+
+        if (state.walkthroughMode && !walkthroughLightsActive) {
+            return [];
+        }
+
+        const regions = getUniqueRoomRegions(solveRegions(
             state.corners,
             state.walls
         ).filter(
             region =>
                 region.corners.length >= 3 &&
                 Math.abs(region.area) > 0.01
-        );
+        ));
 
-        return regions.map(region => {
-            const center =
-                getRegionCenter(region);
-
+        const getDistance = (regionId: string) => {
+            const region = regions.find(item => item.id === regionId);
+            if (!region) return 6;
             const outer =
                 region.boundaryLoops[0]?.corners ?? [];
 
@@ -307,20 +329,49 @@ export default function Lights() {
                     ROOM_LIGHT_DISTANCE_MULTIPLIER
             );
 
-            return {
+            return distance;
+        };
+
+        const height = Math.max(
+            state.wallHeight - 0.15,
+            0.05
+        );
+
+        if (!state.walkthroughMode) {
+            return regions.map(region => ({
                 id: region.id,
-                center,
-                height: Math.max(
-                    state.wallHeight - 0.15,
-                    0.05
-                ),
-                distance
-            };
-        });
+                position: getRegionCenter(region),
+                height,
+                distance: getDistance(region.id),
+                intensity: ROOM_LIGHT_INTENSITY
+            }));
+        }
+
+        const placements = getRoomCornerPlacements(regions);
+        const cornerCounts = new Map<string, number>();
+        for (const placement of placements) {
+            cornerCounts.set(
+                placement.roomId,
+                (cornerCounts.get(placement.roomId) ?? 0) + 1
+            );
+        }
+
+        return placements.map(placement => ({
+            id: `${placement.roomId}-${placement.cornerIndex}`,
+            position: placement.position,
+            height,
+            distance: getDistance(placement.roomId),
+            intensity:
+                ROOM_LIGHT_INTENSITY *
+                WALKTHROUGH_ROOM_LIGHT_MULTIPLIER /
+                (cornerCounts.get(placement.roomId) ?? 1)
+        }));
     }, [
         state.corners,
         state.walls,
-        state.wallHeight
+        state.wallHeight,
+        state.walkthroughMode,
+        walkthroughSpawnConfirmed
     ]);
 
     //==================================================
@@ -389,15 +440,15 @@ export default function Lights() {
 
             {roomLights.map(roomLight => (
                 <pointLight
-                    key={`room-light-${roomLight.id}`}
-                    name={`RoomLight-${roomLight.id}`}
+                    key={`room-light-${state.activeFloorId}-${roomLight.id}`}
+                    name={`RoomLight-${state.activeFloorId}-${roomLight.id}`}
                     position={[
-                        roomLight.center.x,
+                        roomLight.position.x,
                         roomLight.height,
-                        roomLight.center.z
+                        roomLight.position.z
                     ]}
                     color="#fff1d6"
-                    intensity={ROOM_LIGHT_INTENSITY}
+                    intensity={roomLight.intensity}
                     distance={roomLight.distance}
                     decay={2}
                     castShadow={false}

@@ -315,6 +315,8 @@ export default function Camera({
 
     const walkthroughMode =
         state.walkthroughMode;
+    const separatorPlacementActive =
+        state.wallSeparatorPlacement !== null;
 
     const controlsRef =
         useRef<any>(null);
@@ -1110,16 +1112,17 @@ export default function Camera({
             }
             makeDefault
             enablePan={
-                !walkthroughMode
+                !walkthroughMode && !separatorPlacementActive
             }
             enableZoom={
-                !walkthroughMode
+                !walkthroughMode && !separatorPlacementActive
             }
             enableRotate={
-                !walkthroughMode
+                !walkthroughMode && !separatorPlacementActive
             }
             enabled={
                 !walkthroughMode &&
+                !separatorPlacementActive &&
                 !transition.current.active &&
                 !focusActive.current
             }

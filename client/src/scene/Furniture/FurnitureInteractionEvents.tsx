@@ -47,6 +47,9 @@ export default function FurnitureInteractionEvents() {
         function onPointerMove(
             e: PointerEvent
         ) {
+            if (state.wallSeparatorPlacement) {
+                return;
+            }
 
             //--------------------------------------------------
             // Existing furniture move
@@ -184,6 +187,9 @@ export default function FurnitureInteractionEvents() {
         function onPointerDown(
             e: PointerEvent
         ) {
+            if (state.wallSeparatorPlacement) {
+                return;
+            }
 
             //--------------------------------------------------
             // Left click only
@@ -491,6 +497,10 @@ export default function FurnitureInteractionEvents() {
         function onContextMenu(
             e: MouseEvent
         ) {
+            if (state.wallSeparatorPlacement) {
+                e.preventDefault();
+                return;
+            }
 
             //==================================================
             // CANCEL EXISTING MOVE
@@ -684,7 +694,7 @@ export default function FurnitureInteractionEvents() {
         state.selectedAsset,
 
         state.movingFurnitureId,
-
+        state.wallSeparatorPlacement,
         dispatch
 
     ]);

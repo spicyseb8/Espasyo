@@ -3,6 +3,10 @@
 //==================================================
 
 import type { StaircaseFlightParameters } from "../../../../shared/staircaseGeometry.ts";
+import type {
+    FloorPaintSeparatorMap,
+    WallPaintSeparatorMap
+} from "../../../../shared/wallPaintSeparators.ts";
 
 export interface SavedVector3 {
 
@@ -227,6 +231,8 @@ export interface SavedProjectFloor {
     stairLandings?: SavedStaircaseLanding[];
     floorFinishes?: Record<string, string>;
     wallFinishes?: Record<string, Record<string, string>>;
+    wallPaintSeparators?: WallPaintSeparatorMap;
+    floorPaintSeparators?: FloorPaintSeparatorMap;
 }
 
 //==================================================
@@ -307,6 +313,9 @@ export interface SavedProjectData {
             string,
             Record<string, string>
         >;
+
+    wallPaintSeparators?: WallPaintSeparatorMap;
+    floorPaintSeparators?: FloorPaintSeparatorMap;
 
 
     //==================================================

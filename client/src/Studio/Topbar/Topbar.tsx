@@ -8,6 +8,10 @@ import { Link, useParams } from "react-router-dom";
 import useEditor from "../../context/editor/useEditor";
 import { calculateCostEstimate } from "../../engine/cost/CostEstimator";
 import { downloadCostBreakdownPdf } from "../../engine/cost/CostBreakdownPDF";
+import {
+    getProjectBudgetSummary,
+    parseProjectBudget
+} from "../../engine/cost/ProjectBudget";
 import type { CostCategory } from "../../engine/cost/CostTypes";
 import AdminComments from "../../scene/Comment/AdminComments";
 
@@ -42,6 +46,10 @@ export default function Topbar() {
 
     const [open, setOpen] = useState(false);
     const [expandedFloorIds, setExpandedFloorIds] = useState<string[]>([]);
+    const [budgetExpanded, setBudgetExpanded] = useState(true);
+    const [budgetEditing, setBudgetEditing] = useState(false);
+    const [budgetDraft, setBudgetDraft] = useState("");
+    const [budgetError, setBudgetError] = useState("");
     const dropdownRef = useRef<HTMLDivElement | null>(null);
 
     const [projectName, setProjectName] = useState<string>(() => {
@@ -58,6 +66,18 @@ export default function Topbar() {
     };
 
     const estimate = useMemo(() => calculateCostEstimate(state), [state]);
+    const budgetSummary = useMemo(
+        () => getProjectBudgetSummary(state.projectBudget, estimate.total),
+        [state.projectBudget, estimate.total]
+    );
+    const hasIncompleteEstimate = (estimate.incompleteItems?.length ?? 0) > 0;
+    const budgetStatusLabel = budgetSummary
+        ? budgetSummary.status === "over"
+            ? "Over Budget"
+            : budgetSummary.status === "near"
+                ? "Near Budget"
+                : "Within Budget"
+        : "No budget set";
 
     const furnitureCount = state.floors.length > 0
         ? state.floors.reduce((count, floor) => count + floor.furniture.length, 0)
@@ -106,6 +126,38 @@ export default function Topbar() {
                 ? current.filter(id => id !== floorId)
                 : [...current, floorId]
         );
+    };
+
+    const startBudgetEdit = () => {
+        setBudgetDraft(
+            state.projectBudget === null
+                ? ""
+                : String(state.projectBudget)
+        );
+        setBudgetError("");
+        setBudgetEditing(true);
+    };
+
+    const saveBudget = () => {
+        const maximumBudget = parseProjectBudget(budgetDraft);
+        if (maximumBudget === null) {
+            setBudgetError("Enter a valid budget greater than ₱0.");
+            return;
+        }
+        dispatch({ type: "SET_PROJECT_BUDGET", payload: maximumBudget });
+        setBudgetEditing(false);
+        setBudgetError("");
+    };
+
+    const cancelBudgetEdit = () => {
+        setBudgetEditing(false);
+        setBudgetDraft("");
+        setBudgetError("");
+    };
+
+    const removeBudget = () => {
+        dispatch({ type: "SET_PROJECT_BUDGET", payload: null });
+        cancelBudgetEdit();
     };
 
     return (
@@ -217,6 +269,141 @@ export default function Topbar() {
                             </div>
 
                             <div className="cost-estimator-list">
+                                <section className="project-budget-section">
+                                    <button
+                                        type="button"
+                                        className="project-budget-header"
+                                        aria-expanded={budgetExpanded}
+                                        aria-controls="project-budget-details"
+                                        onClick={() => setBudgetExpanded(value => !value)}
+                                    >
+                                        <span className="project-budget-heading">
+                                            <ChevronDown
+                                                size={13}
+                                                className={budgetExpanded ? "open" : ""}
+                                            />
+                                            Project Budget
+                                        </span>
+                                        <span
+                                            className={`project-budget-compact${budgetSummary ? ` ${budgetSummary.status}` : ""}`}
+                                            title={hasIncompleteEstimate
+                                                ? "The estimate has missing or invalid prices."
+                                                : undefined}
+                                        >
+                                            {budgetSummary
+                                                ? `${budgetStatusLabel} · ${formatCurrency(state.projectBudget ?? 0)}${hasIncompleteEstimate ? " · incomplete" : ""}`
+                                                : budgetStatusLabel}
+                                        </span>
+                                    </button>
+                                    {budgetExpanded && (
+                                        <div
+                                            className="project-budget-details"
+                                            id="project-budget-details"
+                                        >
+                                            {budgetEditing ? (
+                                                <div className="project-budget-form">
+                                                    <label htmlFor="project-budget-input">
+                                                        Maximum budget
+                                                    </label>
+                                                    <div className="project-budget-entry">
+                                                        <span>₱</span>
+                                                        <input
+                                                            id="project-budget-input"
+                                                            type="text"
+                                                            inputMode="decimal"
+                                                            value={budgetDraft}
+                                                            onChange={event => {
+                                                                setBudgetDraft(event.target.value);
+                                                                setBudgetError("");
+                                                            }}
+                                                            placeholder="e.g. 500,000"
+                                                        />
+                                                    </div>
+                                                    {budgetError && (
+                                                        <p className="project-budget-message" role="alert">
+                                                            {budgetError}
+                                                        </p>
+                                                    )}
+                                                    <div className="project-budget-actions">
+                                                        <button
+                                                            type="button"
+                                                            className="primary"
+                                                            onClick={saveBudget}
+                                                        >
+                                                            Save Budget
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={cancelBudgetEdit}
+                                                        >
+                                                            Cancel
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : budgetSummary ? (
+                                                <>
+                                                    <div className="project-budget-status-row">
+                                                        <span>Maximum budget</span>
+                                                        <strong>{formatCurrency(budgetSummary.maximumBudget)}</strong>
+                                                    </div>
+                                                    <div className={`project-budget-status ${budgetSummary.status}`}>
+                                                        <div className="project-budget-status-row">
+                                                            <strong>{budgetStatusLabel}</strong>
+                                                            <span>{formatCurrency(estimate.total)} estimated</span>
+                                                        </div>
+                                                        <div
+                                                            className="project-budget-meter"
+                                                            role="progressbar"
+                                                            aria-label="Budget usage"
+                                                            aria-valuemin={0}
+                                                            aria-valuemax={100}
+                                                            aria-valuenow={Math.min(100, Math.round(budgetSummary.usagePercent))}
+                                                        >
+                                                            <span
+                                                                style={{
+                                                                    width: `${Math.min(100, Math.max(0, budgetSummary.usagePercent))}%`
+                                                                }}
+                                                            />
+                                                        </div>
+                                                        <p>
+                                                            {budgetSummary.status === "over"
+                                                                ? `${formatCurrency(Math.abs(budgetSummary.remainingAmount))} over budget`
+                                                                : `${formatCurrency(budgetSummary.remainingAmount)} remaining`}
+                                                        </p>
+                                                    </div>
+                                                    {hasIncompleteEstimate && (
+                                                        <p className="project-budget-incomplete" role="status">
+                                                            Estimate incomplete: missing or invalid prices for{" "}
+                                                            {estimate.incompleteItems?.join(", ")}. Actual costs may be higher.
+                                                        </p>
+                                                    )}
+                                                    <div className="project-budget-actions">
+                                                        <button type="button" className="primary" onClick={startBudgetEdit}>
+                                                            Edit Budget
+                                                        </button>
+                                                        <button type="button" className="remove" onClick={removeBudget}>
+                                                            Remove Budget
+                                                        </button>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <p className="project-budget-empty">
+                                                        Set one budget for the entire project.
+                                                    </p>
+                                                    <button
+                                                        type="button"
+                                                        className="project-budget-set"
+                                                        onClick={startBudgetEdit}
+                                                    >
+                                                        Set Budget
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
+                                </section>
+
                                 {estimate.floors.length === 0 ? (
                                     <div className="cost-empty">
                                         No cost items yet. Add furniture or finishes to see your

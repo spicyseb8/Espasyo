@@ -9,6 +9,11 @@ import type { Window } from "../../engine/windows/WindowTypes";
 import type { Opening } from "../../engine/openings/OpeningTypes";
 import type { BlueprintState } from "../../engine/blueprint/BlueprintTypes";
 import type { SavedStaircase, SavedStaircaseLanding } from "./ProjectTypes";
+import type {
+    WallPaintSeparatorMap,
+    FloorPaintSeparatorMap,
+    WallPaintSeparatorOrientation
+} from "../../../../shared/wallPaintSeparators";
 
 export interface EditorFloorData {
     floorId: string;
@@ -23,6 +28,8 @@ export interface EditorFloorData {
     stairLandings: SavedStaircaseLanding[];
     floorFinishes: Record<string, string>;
     wallFinishes: Record<string, Record<string, string>>;
+    wallPaintSeparators: WallPaintSeparatorMap;
+    floorPaintSeparators: FloorPaintSeparatorMap;
     wallHeight: number;
     wallThickness: number;
     snapEnabled: boolean;
@@ -47,6 +54,7 @@ export interface EditorState {
     publishedStructuralRevision?: number;
     floors: EditorFloorData[];
     activeFloorId: string;
+    projectBudget: number | null;
     activeTab: string;
     activeTool: Tool;
     walkthroughMode: boolean;
@@ -58,6 +66,12 @@ export interface EditorState {
     selectedWallSide: 1 | -1 | null;
     selectedWallId: string | null;
     selectedWallRegionId: string | null;
+    selectedWallSectionId: string | null;
+    selectedWallSeparatorId: string | null;
+    selectedFloorSectionId: string | null;
+    selectedFloorSeparatorId: string | null;
+    wallSeparatorPlacement: WallPaintSeparatorOrientation | null;
+    wallSeparatorPlacementVersion: number;
     selectedRegionId: string | null;
     selectedCornerId: string | null;
     selectedOpeningId: string | null;
@@ -84,6 +98,8 @@ export interface EditorState {
     stairLandings: SavedStaircaseLanding[];
     floorFinishes: Record<string, string>;
     wallFinishes: Record<string, Record<string, string>>;
+    wallPaintSeparators: WallPaintSeparatorMap;
+    floorPaintSeparators: FloorPaintSeparatorMap;
     draftWallLength: number | null;
     showWallMeasurements: boolean;
     archRise: number;

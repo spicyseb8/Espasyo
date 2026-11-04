@@ -165,7 +165,13 @@ export default function AdminProjectViewer({
             (activeFloorIndex === 0 ? projectData.floorFinishes : {}),
         wallFinishes: activeFloor.wallFinishes ??
             activeFloor.structure.wallFinishes ??
-            (activeFloorIndex === 0 ? projectData.wallFinishes : {})
+            (activeFloorIndex === 0 ? projectData.wallFinishes : {}),
+        wallPaintSeparators: activeFloor.wallPaintSeparators ??
+            activeFloor.structure.wallPaintSeparators ??
+            (activeFloorIndex === 0 ? projectData.wallPaintSeparators : {}),
+        floorPaintSeparators: activeFloor.floorPaintSeparators ??
+            activeFloor.structure.floorPaintSeparators ??
+            (activeFloorIndex === 0 ? projectData.floorPaintSeparators : {})
     }), [activeFloor, activeFloorIndex, projectData]);
     const [sceneReady, setSceneReady] = useState(false);
     const [runtimeAssetFailures, setRuntimeAssetFailures] = useState<string[]>([]);

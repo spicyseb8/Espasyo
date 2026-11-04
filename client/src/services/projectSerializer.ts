@@ -2,6 +2,16 @@ import type { EditorState } from "../context/editor/types";
 import { calculateCostEstimate } from "../engine/cost/CostEstimator";
 import { serializeManagedInteriorData } from "./managedProjectData";
 
+function getSerializableCostEstimate(state: EditorState) {
+    const estimate = calculateCostEstimate(state);
+    return {
+        items: estimate.items,
+        floors: estimate.floors,
+        subtotal: estimate.subtotal,
+        total: estimate.total
+    };
+}
+
 export interface ProjectStructureMetadata {
     workflowType?: "legacy" | "admin-managed";
     structuralOwner?: "admin";
@@ -149,6 +159,8 @@ export function createProjectData(
                 ]
             )
         ),
+        wallPaintSeparators: state.wallPaintSeparators,
+        floorPaintSeparators: state.floorPaintSeparators,
         archRise: state.archRise,
         openingWidth: state.openingWidth,
         openingHeight: state.openingHeight,
@@ -159,7 +171,7 @@ export function createProjectData(
                     ...state.blueprint
                 }
                 : null,
-        costEstimate: calculateCostEstimate(state)
+        costEstimate: getSerializableCostEstimate(state)
     };
 }
 
@@ -169,10 +181,13 @@ export function createManagedInteriorData(
     ownerId: string
 ) {
     return serializeManagedInteriorData(
-        state,
+        {
+            ...state,
+            projectBudget: state.projectBudget
+        },
         projectId,
         ownerId,
-        calculateCostEstimate(state)
+        getSerializableCostEstimate(state)
     );
 }
 

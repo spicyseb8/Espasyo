@@ -11,6 +11,10 @@
 //==================================================
 
 import type { StaircaseFlightParameters } from "../../../../shared/staircaseGeometry.ts";
+import type {
+    FloorPaintSeparatorMap,
+    WallPaintSeparatorMap
+} from "../../../../shared/wallPaintSeparators.ts";
 
 
 //==================================================
@@ -208,6 +212,8 @@ export interface SavedProjectFloor {
     furniture?: SavedFurniture[];
     floorFinishes?: Record<string, string>;
     wallFinishes?: Record<string, Record<string, string>>;
+    wallPaintSeparators?: WallPaintSeparatorMap;
+    floorPaintSeparators?: FloorPaintSeparatorMap;
     stairs?: SavedStaircase[];
     stairLandings?: SavedStaircaseLanding[];
 }
@@ -232,6 +238,7 @@ export interface SavedProjectData {
     publishedStructuralRevision?: number;
     floors?: SavedProjectFloor[];
     activeFloorId?: string;
+    maximumBudget?: number | null;
 
     schemaVersion: number;
 
@@ -291,6 +298,9 @@ export interface SavedProjectData {
             string,
             Record<string, string>
         >;
+
+    wallPaintSeparators?: WallPaintSeparatorMap;
+    floorPaintSeparators?: FloorPaintSeparatorMap;
 
 
     //==================================================

@@ -34,6 +34,7 @@ import {
 import {
     canWalkTo,
     canSpawnAt,
+    buildWalkthroughStairColliders,
     PLAYER_HEIGHT,
     PLAYER_RADIUS
 } from "./WalkthroughCollision";
@@ -285,6 +286,17 @@ export default function WalkthroughController({
             state.doors,
             state.openings,
             state.windows
+        ]
+    );
+
+    const stairColliders = useMemo(
+        () => buildWalkthroughStairColliders(
+            state.stairs,
+            state.activeFloorId
+        ),
+        [
+            state.activeFloorId,
+            state.stairs
         ]
     );
 
@@ -788,7 +800,8 @@ export default function WalkthroughController({
         const valid = canSpawnAt(
             candidate,
             wallPieces,
-            furniture
+            furniture,
+            stairColliders
         );
 
         spawnPosition.current = candidate;
@@ -932,7 +945,8 @@ export default function WalkthroughController({
                     canWalkTo(
                         full,
                         wallPieces,
-                        furniture
+                        furniture,
+                        stairColliders
                     )
                 ) {
                     camera.position.copy(full);
@@ -948,7 +962,8 @@ export default function WalkthroughController({
                     canWalkTo(
                         xOnly,
                         wallPieces,
-                        furniture
+                        furniture,
+                        stairColliders
                     )
                 ) {
                     camera.position.x = xOnly.x;
@@ -963,7 +978,8 @@ export default function WalkthroughController({
                     canWalkTo(
                         zOnly,
                         wallPieces,
-                        furniture
+                        furniture,
+                        stairColliders
                     )
                 ) {
                     camera.position.z = zOnly.z;

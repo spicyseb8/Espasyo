@@ -148,6 +148,8 @@ function createLocalDefaultFloorMaterial(
             firebaseMaterial?.pricePerSquareMeter ?? 0,
         pricePerPiece:
             firebaseMaterial?.pricePerPiece,
+        priceConfigured:
+            firebaseMaterial?.priceConfigured,
         thumbnail:
             firebaseMaterial?.thumbnail ??
             LOCAL_DEFAULT_FLOOR_TEXTURE,
@@ -290,6 +292,11 @@ async function buildFloorMaterial(
     id: materialId,
     name: data.name,
     category: "flooring",
+    priceConfigured: hasPiecePrice
+        ? pricePerPiece !== undefined && Boolean(length && width)
+        : typeof data.price === "number" &&
+            Number.isFinite(data.price) &&
+            data.price >= 0,
 
     sourceCategory:
         typeof data.category === "string"

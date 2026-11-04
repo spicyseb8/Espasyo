@@ -11,15 +11,29 @@ import type { Opening } from "../../engine/openings/OpeningTypes";
 import type { SavedProjectData, SavedProjectFloor } from "./ProjectTypes";
 import type { EditorFloorData } from "./types";
 import { getStaircaseFloorData } from "./staircaseData.ts";
+import { isValidProjectBudget } from "../../engine/cost/ProjectBudget";
 import {
     getWallFinishSideKey,
     WALL_SIDE_FINISH_BUCKET
 } from "../../engine/walls/WallFinishUtils";
+import {
+    getWallPaintFaceKey,
+    getWallPaintSections
+} from "../../../../shared/wallPaintSeparators";
+import { Tool } from "./tools";
 function reduceEditorAction(
     state: EditorState,
     action: EditorAction
 ): EditorState {
     switch (action.type) {
+        case "SET_PROJECT_BUDGET":
+            if (action.payload !== null && !isValidProjectBudget(action.payload)) {
+                return state;
+            }
+            return {
+                ...state,
+                projectBudget: action.payload
+            };
         case "SET_ACTIVE_TAB":
             if (state.walkthroughMode) return state;
             return {
@@ -30,7 +44,10 @@ function reduceEditorAction(
             if (state.walkthroughMode) return state;
             return {
                 ...state,
-                activeTool: action.payload
+                activeTool: action.payload === Tool.Wall ||
+                    action.payload === Tool.Room
+                    ? Tool.None
+                    : action.payload
             };
         case "ADD_WALL":
             if (state.walkthroughMode) return state;
@@ -82,6 +99,8 @@ function reduceEditorAction(
 
             if (side !== undefined) {
                 const sideKey = getWallFinishSideKey(wallId, side);
+                const faceKey = getWallPaintFaceKey(wallId, side);
+                const face = state.wallPaintSeparators[faceKey];
 
                 return {
                     ...state,
@@ -91,7 +110,21 @@ function reduceEditorAction(
                             ...(state.wallFinishes[WALL_SIDE_FINISH_BUCKET] ?? {}),
                             [sideKey]: materialId
                         }
-                    }
+                    },
+                    wallPaintSeparators: face
+                        ? {
+                            ...state.wallPaintSeparators,
+                            [faceKey]: {
+                                ...face,
+                                sectionMaterials: Object.fromEntries(
+                                    getWallPaintSections(face).map(section => [
+                                        section.id,
+                                        materialId
+                                    ])
+                                )
+                            }
+                        }
+                        : state.wallPaintSeparators
                 };
             }
 
@@ -115,11 +148,27 @@ function reduceEditorAction(
             const sideFinishes = {
                 ...(state.wallFinishes[WALL_SIDE_FINISH_BUCKET] ?? {})
             };
+            const wallPaintSeparators = {
+                ...state.wallPaintSeparators
+            };
 
             for (const finish of action.payload) {
                 sideFinishes[
                     getWallFinishSideKey(finish.wallId, finish.side)
                 ] = finish.materialId;
+                const faceKey = getWallPaintFaceKey(finish.wallId, finish.side);
+                const face = wallPaintSeparators[faceKey];
+                if (face) {
+                    wallPaintSeparators[faceKey] = {
+                        ...face,
+                        sectionMaterials: Object.fromEntries(
+                            getWallPaintSections(face).map(section => [
+                                section.id,
+                                finish.materialId
+                            ])
+                        )
+                    };
+                }
             }
 
             return {
@@ -127,6 +176,55 @@ function reduceEditorAction(
                 wallFinishes: {
                     ...state.wallFinishes,
                     [WALL_SIDE_FINISH_BUCKET]: sideFinishes
+                },
+                wallPaintSeparators
+            };
+        }
+        case "SET_WALL_PAINT_FACE": {
+            if (state.walkthroughMode) return state;
+            const wallPaintSeparators = { ...state.wallPaintSeparators };
+            if (action.payload.face === null) {
+                delete wallPaintSeparators[action.payload.faceKey];
+            } else {
+                wallPaintSeparators[action.payload.faceKey] = action.payload.face;
+            }
+            const selectedFaceKey = state.selectedWallId &&
+                state.selectedWallSide !== null
+                ? getWallPaintFaceKey(
+                    state.selectedWallId,
+                    state.selectedWallSide
+                )
+                : null;
+            return {
+                ...state,
+                wallPaintSeparators,
+                ...(selectedFaceKey === action.payload.faceKey
+                    ? {
+                        selectedWallSectionId: null,
+                        selectedWallSeparatorId: null
+                    }
+                    : {})
+            };
+        }
+        case "SET_WALL_SECTION_MATERIAL": {
+            if (state.walkthroughMode) return state;
+            const face = state.wallPaintSeparators[action.payload.faceKey];
+            if (!face || !getWallPaintSections(face).some(
+                section => section.id === action.payload.sectionId
+            )) {
+                return state;
+            }
+            return {
+                ...state,
+                wallPaintSeparators: {
+                    ...state.wallPaintSeparators,
+                    [action.payload.faceKey]: {
+                        ...face,
+                        sectionMaterials: {
+                            ...face.sectionMaterials,
+                            [action.payload.sectionId]: action.payload.materialId
+                        }
+                    }
                 }
             };
         }
@@ -237,6 +335,11 @@ function reduceEditorAction(
                 selectedRegionId: null,
                 selectedCornerId: null,
                 selectedWallSide: null,
+                selectedWallSectionId: null,
+                selectedWallSeparatorId: null,
+                selectedFloorSectionId: null,
+                selectedFloorSeparatorId: null,
+                wallSeparatorPlacement: null,
                 selectedOpeningId: null,
                 selectedFurnitureId: null,
                 selectedDoorId: null,
@@ -248,9 +351,88 @@ function reduceEditorAction(
                 ...state,
                 selectedWallId:
                     action.payload,
-                    selectedWallSide: null,
-                selectedWallRegionId: null
-
+                selectedWallSide: null,
+                selectedWallRegionId: null,
+                selectedWallSectionId: null,
+                selectedWallSeparatorId: null,
+                selectedFloorSectionId: null,
+                selectedFloorSeparatorId: null
+            };
+        case "SELECT_WALL_SECTION": {
+            if (state.walkthroughMode) return state;
+            const wallSectionFace = state.wallPaintSeparators[
+                getWallPaintFaceKey(action.payload.wallId, action.payload.side)
+            ];
+            return {
+                ...state,
+                selectedWallId: action.payload.wallId,
+                selectedWallSide: action.payload.side,
+                selectedWallRegionId: action.payload.regionId ?? null,
+                selectedWallSectionId: action.payload.sectionId,
+                selectedWallSeparatorId: null,
+                selectedFloorSectionId: null,
+                selectedFloorSeparatorId: null,
+                activeWallMaterialId:
+                    wallSectionFace?.sectionMaterials[action.payload.sectionId] ??
+                    state.wallFinishes[WALL_SIDE_FINISH_BUCKET]?.[
+                        getWallFinishSideKey(action.payload.wallId, action.payload.side)
+                    ] ??
+                    state.activeWallMaterialId
+            };
+        }
+        case "SELECT_WALL_SEPARATOR":
+            if (state.walkthroughMode) return state;
+            return {
+                ...state,
+                selectedWallId: action.payload.wallId,
+                selectedWallSide: action.payload.side,
+                selectedWallRegionId: action.payload.regionId ?? null,
+                selectedWallSectionId: null,
+                selectedWallSeparatorId: action.payload.separatorId,
+                selectedFloorSectionId: null,
+                selectedFloorSeparatorId: null
+            };
+        case "SELECT_FLOOR_SECTION": {
+            if (state.walkthroughMode) return state;
+            const floorSectionFace = state.floorPaintSeparators[action.payload.regionId];
+            return {
+                ...state,
+                selectedRegionId: action.payload.regionId,
+                selectedWallId: null,
+                selectedWallRegionId: null,
+                selectedWallSide: null,
+                selectedWallSectionId: null,
+                selectedWallSeparatorId: null,
+                selectedFloorSectionId: action.payload.sectionId,
+                selectedFloorSeparatorId: null,
+                activeFloorMaterialId:
+                    floorSectionFace?.sectionMaterials[action.payload.sectionId] ??
+                    state.floorFinishes[action.payload.regionId] ??
+                    state.activeFloorMaterialId
+            };
+        }
+        case "SELECT_FLOOR_SEPARATOR":
+            if (state.walkthroughMode) return state;
+            return {
+                ...state,
+                selectedRegionId: action.payload.regionId,
+                selectedWallId: null,
+                selectedWallRegionId: null,
+                selectedWallSide: null,
+                selectedWallSectionId: null,
+                selectedWallSeparatorId: null,
+                selectedFloorSectionId: null,
+                selectedFloorSeparatorId: action.payload.separatorId
+            };
+        case "SET_WALL_SEPARATOR_PLACEMENT":
+            if (state.walkthroughMode) return state;
+            return {
+                ...state,
+                wallSeparatorPlacement: action.payload,
+                wallSeparatorPlacementVersion: action.payload
+                    ? state.wallSeparatorPlacementVersion + 1
+                    : state.wallSeparatorPlacementVersion,
+                selectedWallSeparatorId: null
             };
        case "SELECT_WALL_SIDE":
     if (state.walkthroughMode) return state;
@@ -273,6 +455,11 @@ function reduceEditorAction(
                 ...state,
                 selectedWallId: null,
                 selectedWallRegionId: null,
+                selectedWallSectionId: null,
+                selectedWallSeparatorId: null,
+                selectedFloorSectionId: null,
+                selectedFloorSeparatorId: null,
+                wallSeparatorPlacement: null,
                 selectedRegionId:
                     action.payload,
                 selectedCornerId: null,
@@ -342,8 +529,65 @@ function reduceEditorAction(
                     ...state.floorFinishes,
                     [action.payload.regionId]:
                         action.payload.materialId
+                },
+                floorPaintSeparators: state.floorPaintSeparators[action.payload.regionId]
+                    ? {
+                        ...state.floorPaintSeparators,
+                        [action.payload.regionId]: {
+                            ...state.floorPaintSeparators[action.payload.regionId],
+                            sectionMaterials: Object.fromEntries(
+                                getWallPaintSections(
+                                    state.floorPaintSeparators[action.payload.regionId]
+                                ).map(section => [
+                                    section.id,
+                                    action.payload.materialId
+                                ])
+                            )
+                        }
+                    }
+                    : state.floorPaintSeparators
+            };
+        case "SET_FLOOR_PAINT_FACE": {
+            if (state.walkthroughMode) return state;
+            const floorPaintSeparators = { ...state.floorPaintSeparators };
+            if (action.payload.face === null) {
+                delete floorPaintSeparators[action.payload.regionId];
+            } else {
+                floorPaintSeparators[action.payload.regionId] = action.payload.face;
+            }
+            return {
+                ...state,
+                floorPaintSeparators,
+                ...(state.selectedRegionId === action.payload.regionId
+                    ? {
+                        selectedFloorSectionId: null,
+                        selectedFloorSeparatorId: null
+                    }
+                    : {})
+            };
+        }
+        case "SET_FLOOR_SECTION_MATERIAL": {
+            if (state.walkthroughMode) return state;
+            const face = state.floorPaintSeparators[action.payload.regionId];
+            if (!face || !getWallPaintSections(face).some(
+                section => section.id === action.payload.sectionId
+            )) {
+                return state;
+            }
+            return {
+                ...state,
+                floorPaintSeparators: {
+                    ...state.floorPaintSeparators,
+                    [action.payload.regionId]: {
+                        ...face,
+                        sectionMaterials: {
+                            ...face.sectionMaterials,
+                            [action.payload.sectionId]: action.payload.materialId
+                        }
+                    }
                 }
             };
+        }
         case "SET_FLOOR_FINISH_ALL":
             if (state.walkthroughMode) return state;
             return {
@@ -1064,6 +1308,10 @@ function reduceEditorAction(
                     project.structuralRevision,
                 publishedStructuralRevision:
                     project.publishedStructuralRevision,
+                projectBudget:
+                    isValidProjectBudget(project.maximumBudget)
+                        ? project.maximumBudget
+                        : null,
                 walls:
                     restoredWalls,
                 corners:
@@ -1111,6 +1359,8 @@ function reduceEditorAction(
                             ]
                         )
                     ),
+                wallPaintSeparators: project.wallPaintSeparators ?? {},
+                floorPaintSeparators: project.floorPaintSeparators ?? {},
                 archRise:
                     project.archRise,
                 openingWidth:
@@ -1161,6 +1411,8 @@ function captureFloor(
         stairLandings: state.stairLandings,
         floorFinishes: state.floorFinishes,
         wallFinishes: state.wallFinishes,
+        wallPaintSeparators: state.wallPaintSeparators,
+        floorPaintSeparators: state.floorPaintSeparators,
         wallHeight: state.wallHeight,
         wallThickness: state.wallThickness,
         snapEnabled: state.snapEnabled,
@@ -1193,6 +1445,11 @@ function showFloor(state: EditorState, floor: EditorFloorData): EditorState {
         selectedWallSide: null,
         selectedWallId: null,
         selectedWallRegionId: null,
+        selectedWallSectionId: null,
+        selectedWallSeparatorId: null,
+        selectedFloorSectionId: null,
+        selectedFloorSeparatorId: null,
+        wallSeparatorPlacement: null,
         selectedRegionId: null,
         selectedCornerId: null,
         selectedOpeningId: null,
@@ -1254,6 +1511,12 @@ export function editorReducer(
                     (index === 0 ? project.floorFinishes : {}),
                 wallFinishes: floor.wallFinishes ?? floor.structure.wallFinishes ??
                     (index === 0 ? project.wallFinishes : {}),
+                wallPaintSeparators: floor.wallPaintSeparators ??
+                    floor.structure.wallPaintSeparators ??
+                    (index === 0 ? project.wallPaintSeparators : {}) ?? {},
+                floorPaintSeparators: floor.floorPaintSeparators ??
+                    floor.structure.floorPaintSeparators ??
+                    (index === 0 ? project.floorPaintSeparators : {}) ?? {},
                 stairs: staircaseData.stairs,
                 stairLandings: staircaseData.stairLandings,
                 floors: undefined,

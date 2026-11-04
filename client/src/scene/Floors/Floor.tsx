@@ -12,6 +12,7 @@ import {
     Path,
     ShapeGeometry,
     DoubleSide,
+    BufferGeometry,
     Vector3,
     SRGBColorSpace
 } from "three";
@@ -19,6 +20,7 @@ import {
 import {
     Line
 } from "@react-three/drei";
+import type { ThreeEvent } from "@react-three/fiber";
 
 import type {
     Texture
@@ -53,6 +55,14 @@ import {
     preloadFloorPatternTexture,
     preloadFloorTexture
 } from "../../engine/materials/floors";
+import {
+    addWallPaintSeparator,
+    clipFloorTriangleToSection,
+    getWallPaintSections,
+    isValidWallPaintSeparatorPosition,
+    type WallPaintSection,
+    type WallPaintSeparator
+} from "../../../../shared/wallPaintSeparators";
 
 interface FloorProps {
     region: Region;
@@ -375,6 +385,214 @@ function useFloorTexture(
     );
 }
 
+interface FloorGeometryBounds {
+    minX: number;
+    maxX: number;
+    minY: number;
+    maxY: number;
+}
+
+function getFloorGeometryBounds(geometry: BufferGeometry): FloorGeometryBounds {
+    const position = geometry.getAttribute("position");
+    const bounds = {
+        minX: Infinity,
+        maxX: -Infinity,
+        minY: Infinity,
+        maxY: -Infinity
+    };
+    for (let index = 0; index < position.count; index += 1) {
+        const x = position.getX(index);
+        const y = position.getY(index);
+        bounds.minX = Math.min(bounds.minX, x);
+        bounds.maxX = Math.max(bounds.maxX, x);
+        bounds.minY = Math.min(bounds.minY, y);
+        bounds.maxY = Math.max(bounds.maxY, y);
+    }
+    return bounds;
+}
+
+function getSectionGeometry(
+    source: BufferGeometry,
+    section: WallPaintSection,
+    bounds: FloorGeometryBounds,
+    material: Material
+): BufferGeometry {
+    const sectionBounds = {
+        xStart: bounds.minX + (bounds.maxX - bounds.minX) * section.xStart,
+        xEnd: bounds.minX + (bounds.maxX - bounds.minX) * section.xEnd,
+        yStart: bounds.minY + (bounds.maxY - bounds.minY) * section.yStart,
+        yEnd: bounds.minY + (bounds.maxY - bounds.minY) * section.yEnd
+    };
+    const position = source.getAttribute("position");
+    const index = source.getIndex();
+    const triangleCount = index ? index.count / 3 : position.count / 3;
+    const points: number[] = [];
+    const uvs: number[] = [];
+    const layout = material.floorMaterialMode === "single-tile" &&
+        isFloorPattern(material.floorPattern) &&
+        typeof material.length === "number" &&
+        typeof material.width === "number"
+        ? createFloorPatternLayout(material.floorPattern, material.length, material.width)
+        : null;
+
+    for (let triangle = 0; triangle < triangleCount; triangle += 1) {
+        const indices = [0, 1, 2].map(offset => {
+            const vertex = triangle * 3 + offset;
+            return index ? index.getX(vertex) : vertex;
+        });
+        const clipped = clipFloorTriangleToSection(
+            indices.map(vertex => ({
+                x: position.getX(vertex),
+                y: position.getY(vertex)
+            })) as [ { x: number; y: number }, { x: number; y: number }, { x: number; y: number } ],
+            sectionBounds
+        );
+        if (clipped.length < 3) continue;
+        for (let pointIndex = 1; pointIndex < clipped.length - 1; pointIndex += 1) {
+            for (const point of [clipped[0], clipped[pointIndex], clipped[pointIndex + 1]]) {
+                points.push(point.x, point.y, 0);
+                const uv = layout
+                    ? getFloorPatternUV(point.x, point.y, layout)
+                    : { x: point.x, y: point.y };
+                uvs.push(uv.x, uv.y);
+            }
+        }
+    }
+
+    const result = new BufferGeometry();
+    result.setAttribute("position", new Float32BufferAttribute(points, 3));
+    result.setAttribute("uv", new Float32BufferAttribute(uvs, 2));
+    result.computeVertexNormals();
+    return result;
+}
+
+function getSeparatorLinePoints(
+    geometry: BufferGeometry,
+    separator: WallPaintSeparator,
+    bounds: FloorGeometryBounds,
+    floorY: number
+): Vector3[] {
+    const position = geometry.getAttribute("position");
+    const index = geometry.getIndex();
+    const triangleCount = index ? index.count / 3 : position.count / 3;
+    const coordinate = separator.position * (
+        separator.orientation === "vertical"
+            ? bounds.maxX - bounds.minX
+            : bounds.maxY - bounds.minY
+    ) + (
+        separator.orientation === "vertical"
+            ? bounds.minX
+            : bounds.minY
+    );
+    const points: Vector3[] = [];
+    for (let triangle = 0; triangle < triangleCount; triangle += 1) {
+        const vertices = [0, 1, 2].map(offset => {
+            const vertex = triangle * 3 + offset;
+            const sourceIndex = index ? index.getX(vertex) : vertex;
+            return new Vector3(
+                position.getX(sourceIndex),
+                position.getY(sourceIndex),
+                0
+            );
+        });
+        const axis = separator.orientation === "vertical" ? "x" : "y";
+        const intersections: Vector3[] = [];
+        for (let edge = 0; edge < 3; edge += 1) {
+            const start = vertices[edge];
+            const end = vertices[(edge + 1) % 3];
+            const startDelta = start[axis] - coordinate;
+            const endDelta = end[axis] - coordinate;
+            if (startDelta * endDelta > 0 || Math.abs(startDelta - endDelta) < 1e-10) {
+                continue;
+            }
+            const amount = startDelta / (startDelta - endDelta);
+            const point = start.clone().lerp(end, amount);
+            if (!intersections.some(existing => existing.distanceTo(point) < 1e-5)) {
+                intersections.push(point);
+            }
+        }
+        if (intersections.length >= 2) {
+            for (const point of intersections.slice(0, 2)) {
+                points.push(new Vector3(
+                    point.x,
+                    floorY + 0.008,
+                    -point.y
+                ));
+            }
+        }
+    }
+    return points;
+}
+
+function FloorSectionSurface({
+    sourceGeometry,
+    bounds,
+    section,
+    material,
+    floorY,
+    selected,
+    onClick,
+    onPointerMove,
+    onPointerOut
+}: {
+    sourceGeometry: BufferGeometry;
+    bounds: FloorGeometryBounds;
+    section: WallPaintSection;
+    material: Material;
+    floorY: number;
+    selected: boolean;
+    onClick: (event: ThreeEvent<MouseEvent>) => void;
+    onPointerMove: (event: ThreeEvent<PointerEvent>) => void;
+    onPointerOut: () => void;
+}) {
+    const geometry = useMemo(
+        () => getSectionGeometry(sourceGeometry, section, bounds, material),
+        [sourceGeometry, section, bounds, material]
+    );
+    const texture = useFloorTexture(material.texture, material);
+    useEffect(() => () => geometry.dispose(), [geometry]);
+    if (geometry.getAttribute("position").count === 0) return null;
+    return (
+        <group>
+            <mesh
+                geometry={geometry}
+                position={[0, floorY + 0.004, 0]}
+                rotation={[-Math.PI / 2, 0, 0]}
+                userData={{ isFloor: true }}
+                receiveShadow
+                onClick={onClick}
+                onPointerMove={onPointerMove}
+                onPointerOut={onPointerOut}
+            >
+                <meshStandardMaterial
+                    map={texture}
+                    color={material.color ?? (texture ? "#ffffff" : "#d9dde3")}
+                    metalness={material.metalness ?? 0}
+                    roughness={material.roughness ?? 0.8}
+                    side={DoubleSide}
+                />
+            </mesh>
+            {selected && (
+                <mesh
+                    geometry={geometry}
+                    position={[0, floorY + 0.01, 0]}
+                    rotation={[-Math.PI / 2, 0, 0]}
+                    raycast={() => {}}
+                    renderOrder={12}
+                >
+                    <meshBasicMaterial
+                        color="#2563EB"
+                        transparent
+                        opacity={0.28}
+                        depthWrite={false}
+                        side={DoubleSide}
+                    />
+                </mesh>
+            )}
+        </group>
+    );
+}
+
 function useFloorOutlineLoops(
     region: Region,
     floorY: number,
@@ -446,14 +664,24 @@ export default function Floor({
     materials
 }: FloorProps) {
     const { state, dispatch } = useEditor();
+    const [previewPosition, setPreviewPosition] = useState<number | null>(null);
+    const [hoveredSeparatorId, setHoveredSeparatorId] = useState<string | null>(null);
 
     const isChildRegion = Boolean(region.parentRegionId);
 
-    const isSelected =
-        state.selectedRegionId === region.id;
-
     const selectedMaterialId =
         state.floorFinishes[region.id];
+    const face = state.floorPaintSeparators[region.id];
+    const sections = useMemo(
+        () => getWallPaintSections(face),
+        [face]
+    );
+    const selectedSection = sections.find(
+        section => section.id === state.selectedFloorSectionId &&
+            state.selectedRegionId === region.id
+    );
+    const isSelected =
+        state.selectedRegionId === region.id && !selectedSection;
 
     const selectedMaterial = materials.find(
         material => material.id === selectedMaterialId
@@ -668,6 +896,10 @@ export default function Floor({
     }, [measurementTexture]);
 
     const floorY = isChildRegion ? 0.02 : 0;
+    const geometryBounds = useMemo(
+        () => geometry ? getFloorGeometryBounds(geometry) : null,
+        [geometry]
+    );
 
     const floorOutlineLoops = useFloorOutlineLoops(
         region,
@@ -679,62 +911,243 @@ export default function Floor({
         return null;
     }
 
+    const getNormalizedPosition = (
+        point: Vector3,
+        orientation: "vertical" | "horizontal"
+    ) => {
+        if (!geometryBounds) return null;
+        const range = orientation === "vertical"
+            ? geometryBounds.maxX - geometryBounds.minX
+            : geometryBounds.maxY - geometryBounds.minY;
+        if (range <= 0.000001) return null;
+        const coordinate = orientation === "vertical"
+            ? point.x
+            : -point.z;
+        const minimum = orientation === "vertical"
+            ? geometryBounds.minX
+            : geometryBounds.minY;
+        return Math.max(0, Math.min(1, (coordinate - minimum) / range));
+    };
+
+    const handleFloorPointerMove = (event: ThreeEvent<PointerEvent>) => {
+        const orientation = state.wallSeparatorPlacement;
+        if (!orientation) {
+            setPreviewPosition(null);
+            return;
+        }
+        event.stopPropagation();
+        setPreviewPosition(getNormalizedPosition(event.point, orientation));
+    };
+
+    const placeFloorSeparator = (point: Vector3) => {
+        const orientation = state.wallSeparatorPlacement;
+        if (!orientation || !geometryBounds) return;
+        const position = getNormalizedPosition(point, orientation);
+        if (
+            position === null ||
+            !isValidWallPaintSeparatorPosition(
+                face?.separators ?? [],
+                orientation,
+                position
+            )
+        ) {
+            return;
+        }
+        const nextFace = addWallPaintSeparator(
+            face,
+            {
+                id: crypto.randomUUID(),
+                orientation,
+                position
+            },
+            selectedMaterialId
+        );
+        if (!nextFace) return;
+        dispatch({
+            type: "SET_FLOOR_PAINT_FACE",
+            payload: {
+                regionId: region.id,
+                face: {
+                    ...nextFace,
+                    floorId: state.activeFloorId,
+                    surfaceType: "floor",
+                    surfaceId: region.id
+                }
+            }
+        });
+        dispatch({
+            type: "SET_WALL_SEPARATOR_PLACEMENT",
+            payload: null
+        });
+    };
+
+    const handleFloorSurfaceClick = (
+        event: ThreeEvent<MouseEvent>,
+        sectionId?: string
+    ) => {
+        event.stopPropagation();
+        if (state.wallSeparatorPlacement) {
+            placeFloorSeparator(event.point);
+            return;
+        }
+        if (sectionId) {
+            dispatch({
+                type: "SELECT_FLOOR_SECTION",
+                payload: { regionId: region.id, sectionId }
+            });
+        } else {
+            dispatch({
+                type: "SELECT_REGION",
+                payload: region.id
+            });
+        }
+    };
+
+    const selectedMaterialForSection = (
+        sectionId: string
+    ) => materials.find(
+        material => material.id === face?.sectionMaterials[sectionId]
+    ) ?? displayMaterial;
+
     return (
         <group>
             {/* Actual floor and its applied material */}
-            <mesh
-                geometry={floorGeometry ?? geometry}
-                userData={{
-                    isFloor: true
-                }}
-                position={[
-                    0,
-                    floorY,
-                    0
-                ]}
-                rotation={[
-                    -Math.PI / 2,
-                    0,
-                    0
-                ]}
-                receiveShadow
-                onClick={e => {
-                    e.stopPropagation();
+            {geometryBounds && face?.separators.length ? (
+                sections.map(section => (
+                    <FloorSectionSurface
+                        key={section.id}
+                        sourceGeometry={geometry}
+                        bounds={geometryBounds}
+                        section={section}
+                        material={selectedMaterialForSection(section.id)}
+                        floorY={floorY}
+                        selected={selectedSection?.id === section.id}
+                        onPointerMove={handleFloorPointerMove}
+                        onPointerOut={() => setPreviewPosition(null)}
+                        onClick={event => handleFloorSurfaceClick(event, section.id)}
+                    />
+                ))
+            ) : (
+                <mesh
+                    geometry={floorGeometry ?? geometry}
+                    userData={{ isFloor: true }}
+                    position={[0, floorY, 0]}
+                    rotation={[-Math.PI / 2, 0, 0]}
+                    receiveShadow
+                    onPointerMove={handleFloorPointerMove}
+                    onPointerOut={() => setPreviewPosition(null)}
+                    onClick={event => handleFloorSurfaceClick(event)}
+                >
+                    <meshStandardMaterial
+                        key={floorTexture ? "textured" : "untextured"}
+                        map={floorTexture}
+                        color={displayMaterial?.color ?? (floorTexture ? "#ffffff" : "#d9dde3")}
+                        metalness={displayMaterial?.metalness ?? 0}
+                        roughness={displayMaterial?.roughness ?? 0.8}
+                        side={DoubleSide}
+                    />
+                </mesh>
+            )}
 
-                    dispatch({
-                        type: "SELECT_REGION",
-                        payload: region.id
-                    });
-                }}
-            >
-                <meshStandardMaterial
-                    key={
-                        floorTexture
-                            ? "textured"
-                            : "untextured"
-                    }
-                    map={floorTexture}
-                    color={
-                        displayMaterial?.color ??
-                        (
-                            floorTexture
-                                ? "#ffffff"
-                                : "#d9dde3"
-                        )
-                    }
-                    metalness={
-                        displayMaterial?.metalness ?? 0
-                    }
-                    roughness={
-                        displayMaterial?.roughness ?? 0.8
-                    }
-                    side={DoubleSide}
-                    transparent={false}
-                    opacity={1}
-                    emissive="#000000"
-                    emissiveIntensity={0}
-                />
-            </mesh>
+            {geometryBounds && (face?.separators ?? []).map(separator => {
+                const points = getSeparatorLinePoints(
+                    geometry,
+                    separator,
+                    geometryBounds,
+                    floorY
+                );
+                if (points.length === 0) return null;
+                const selected = state.selectedRegionId === region.id &&
+                    state.selectedFloorSeparatorId === separator.id;
+                const boundsSelectedSection = selectedSection &&
+                    (separator.orientation === "vertical"
+                        ? Math.abs(selectedSection.xStart - separator.position) < 1e-6 ||
+                            Math.abs(selectedSection.xEnd - separator.position) < 1e-6
+                        : Math.abs(selectedSection.yStart - separator.position) < 1e-6 ||
+                            Math.abs(selectedSection.yEnd - separator.position) < 1e-6);
+                const guideVisible = selected || Boolean(boundsSelectedSection) ||
+                    hoveredSeparatorId === separator.id;
+                return (
+                    <Line
+                        key={separator.id}
+                        points={points}
+                        segments
+                        color={selected || boundsSelectedSection ? "#2563EB" : "#374151"}
+                        lineWidth={guideVisible
+                            ? selected || boundsSelectedSection ? 3.5 : 2.5
+                            : 8}
+                        transparent
+                        opacity={guideVisible ? 0.95 : 0}
+                        depthTest
+                        depthWrite={false}
+                        renderOrder={13}
+                        raycast={state.wallSeparatorPlacement ? () => {} : undefined}
+                        onPointerOver={event => {
+                            if (event.intersections[0]?.object !== event.object) return;
+                            event.stopPropagation();
+                            setHoveredSeparatorId(separator.id);
+                        }}
+                        onPointerOut={() => {
+                            setHoveredSeparatorId(current =>
+                                current === separator.id ? null : current
+                            );
+                        }}
+                        onClick={event => {
+                            if (event.intersections[0]?.object !== event.object) return;
+                            event.stopPropagation();
+                            if (state.wallSeparatorPlacement) {
+                                placeFloorSeparator(event.point);
+                                return;
+                            }
+                            dispatch({
+                                type: "SELECT_FLOOR_SEPARATOR",
+                                payload: {
+                                    regionId: region.id,
+                                    separatorId: separator.id
+                                }
+                            });
+                        }}
+                    />
+                );
+            })}
+
+            {geometryBounds &&
+                state.wallSeparatorPlacement &&
+                previewPosition !== null &&
+                getSeparatorLinePoints(
+                    geometry,
+                    {
+                        id: "preview",
+                        orientation: state.wallSeparatorPlacement,
+                        position: previewPosition
+                    },
+                    geometryBounds,
+                    floorY
+                ).length > 0 && (
+                    <Line
+                        points={getSeparatorLinePoints(
+                            geometry,
+                            {
+                                id: "preview",
+                                orientation: state.wallSeparatorPlacement,
+                                position: previewPosition
+                            },
+                            geometryBounds,
+                            floorY
+                        )}
+                        segments
+                        color={isValidWallPaintSeparatorPosition(
+                            face?.separators ?? [],
+                            state.wallSeparatorPlacement,
+                            previewPosition
+                        ) ? "#F59E0B" : "#DC2626"}
+                        lineWidth={3}
+                        depthTest
+                        depthWrite={false}
+                        renderOrder={13}
+                        raycast={() => {}}
+                    />
+                )}
 
             {/* Selection tint */}
             {isSelected && (

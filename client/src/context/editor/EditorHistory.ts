@@ -21,12 +21,15 @@ export type FloorPlanSnapshot = Pick<
 export type EditorSnapshot = Pick<
     EditorState,
     | "activeFloorId"
+    | "projectBudget"
     | "furniture"
     | "doors"
     | "windows"
     | "openings"
     | "floorFinishes"
     | "wallFinishes"
+    | "wallPaintSeparators"
+    | "floorPaintSeparators"
 >;
 
 function cloneValue<T>(value: T): T {
@@ -63,12 +66,15 @@ export function createEditorSnapshot(
 ): EditorSnapshot {
     return {
         activeFloorId: state.activeFloorId,
+        projectBudget: state.projectBudget,
         furniture: cloneValue(state.furniture),
         doors: cloneValue(state.doors),
         windows: cloneValue(state.windows),
         openings: cloneValue(state.openings),
         floorFinishes: cloneValue(state.floorFinishes),
-        wallFinishes: cloneValue(state.wallFinishes)
+        wallFinishes: cloneValue(state.wallFinishes),
+        wallPaintSeparators: cloneValue(state.wallPaintSeparators),
+        floorPaintSeparators: cloneValue(state.floorPaintSeparators)
     };
 }
 
@@ -101,6 +107,9 @@ export function restoreEditorSnapshot(
 
         ...current,
 
+        projectBudget:
+            snapshot.projectBudget,
+
         furniture:
             cloneValue(
                 snapshot.furniture
@@ -129,6 +138,15 @@ export function restoreEditorSnapshot(
         wallFinishes:
             cloneValue(
                 snapshot.wallFinishes
+            ),
+
+        wallPaintSeparators:
+            cloneValue(
+                snapshot.wallPaintSeparators
+            ),
+        floorPaintSeparators:
+            cloneValue(
+                snapshot.floorPaintSeparators
             ),
 
         selectedFurnitureId:

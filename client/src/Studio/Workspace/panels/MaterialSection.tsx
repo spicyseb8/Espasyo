@@ -58,11 +58,13 @@ export default function MaterialSection({
 
     onApply,
 
+
     onApplyToRoom,
 
     onApplyToAll,
 
     canApply = false,
+
 
     canApplyToRoom = false,
 

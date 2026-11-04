@@ -195,6 +195,7 @@ export default function AdminProjectScene({
                     corners={corners}
                     walls={walls}
                     floorFinishes={projectData.floorFinishes}
+                    floorPaintSeparators={projectData.floorPaintSeparators ?? {}}
                 />
 
                 <AdminWalls
@@ -206,6 +207,7 @@ export default function AdminProjectScene({
                     wallHeight={projectData.wallHeight}
                     wallThickness={projectData.wallThickness}
                     wallFinishes={projectData.wallFinishes}
+                    wallPaintSeparators={projectData.wallPaintSeparators ?? {}}
                 />
 
                 <AdminDoors

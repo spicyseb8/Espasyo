@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { Line } from "@react-three/drei";
 import { ExtrudeGeometry, Shape } from "three";
 import type { Wall } from "./WallTypes";
 import type { Region } from "../regions/Polygon";
@@ -11,9 +12,15 @@ import type {
 import AdminWallFinishSurface from "./AdminWallFinishSurface";
 import type { AdminWallPieceData } from "./AdminWallMeshBuilder";
 import { emitAdminCommentTarget } from "../../../../services/assets/adminCommentEvents";
-import type { Vector3 } from "three";
-import { DoubleSide } from "three";
+import { DoubleSide, Vector3 } from "three";
 import type { ThreeEvent } from "@react-three/fiber";
+import {
+    getWallPaintFaceKey,
+    getWallPaintSectionAt,
+    getWallPaintSections,
+    type WallPaintSection,
+    type WallPaintSeparatorMap
+} from "../../../../../../shared/wallPaintSeparators.ts";
 
 interface AdminWallPieceProps {
     wallId: string;
@@ -21,6 +28,8 @@ interface AdminWallPieceProps {
     piece: AdminWallPieceData;
     regions: Region[];
     finishSides: AdminWallFinishSide[];
+    wallHeight: number;
+    wallPaintSeparators: WallPaintSeparatorMap;
     onWallClick?: (wallId: string, position: Vector3, event: ThreeEvent<MouseEvent>) => void;
     onWallPointerMove?: (wallId: string, position: Vector3, event: ThreeEvent<PointerEvent>) => void;
     selected: boolean;
@@ -32,6 +41,49 @@ const WALL_TRIM_CAP_HEIGHT = 0.018;
 const WALL_TRIM_CAP_DEPTH = 0.012;
 const WALL_TRIM_COLOR = "#E9E5DE";
 const WALL_FINISH_OUTER_OFFSET = 0.007;
+
+function getSectionPiece(
+    piece: AdminWallPieceData,
+    section: WallPaintSection,
+    wallStart: Vector3,
+    wallLength: number,
+    wallHeight: number
+): AdminWallPieceData | null {
+    const direction = new Vector3(
+        Math.cos(piece.rotationY),
+        0,
+        Math.sin(piece.rotationY)
+    );
+    const centerDistance = piece.position.clone().sub(wallStart).dot(direction);
+    const left = Math.max(
+        centerDistance - piece.width * 0.5,
+        section.xStart * wallLength
+    );
+    const right = Math.min(
+        centerDistance + piece.width * 0.5,
+        section.xEnd * wallLength
+    );
+    const bottom = Math.max(
+        piece.position.y - piece.height * 0.5,
+        section.yStart * wallHeight
+    );
+    const top = Math.min(
+        piece.position.y + piece.height * 0.5,
+        section.yEnd * wallHeight
+    );
+    if (right <= left || top <= bottom) {
+        return null;
+    }
+
+    return {
+        ...piece,
+        width: right - left,
+        height: top - bottom,
+        position: piece.position.clone()
+            .add(direction.multiplyScalar((left + right) * 0.5 - centerDistance))
+            .add(new Vector3(0, (bottom + top) * 0.5 - piece.position.y, 0))
+    };
+}
 
 function WallTrim({
     piece,
@@ -147,10 +199,17 @@ export default function AdminWallPiece({
     piece,
     regions,
     finishSides,
+    wallHeight,
+    wallPaintSeparators,
     onWallClick,
     onWallPointerMove,
     selected
 }: AdminWallPieceProps) {
+    const [hoveredSeparatorKey, setHoveredSeparatorKey] = useState<string | null>(null);
+    const [hoveredSection, setHoveredSection] = useState<{
+        side: 1 | -1;
+        sectionId: string;
+    } | null>(null);
     const pieceBottom =
         piece.position.y -
         piece.height * 0.5;
@@ -268,6 +327,124 @@ export default function AdminWallPiece({
         () => selected && archGeometry ? archGeometry.clone() : null,
         [archGeometry, selected]
     );
+    const wallLength = physicalWall.start.position.distanceTo(
+        physicalWall.end.position
+    );
+    const renderFinishes = () => finishSides.map(finish => {
+        const surfacePiece = finish.section
+            ? getSectionPiece(
+                piece,
+                finish.section,
+                physicalWall.start.position,
+                wallLength,
+                wallHeight
+            )
+            : piece;
+        if (!surfacePiece) {
+            return null;
+        }
+        return (
+            <AdminWallFinishSurface
+                key={`${finish.regionId}-${finish.wallId}-${finish.side}-${finish.section?.id ?? "whole"}`}
+                piece={surfacePiece}
+                finish={finish}
+            />
+        );
+    });
+    const renderSeparators = () => {
+        if (wallLength <= 0.001) {
+            return null;
+        }
+        const direction = new Vector3(
+            Math.cos(piece.rotationY),
+            0,
+            Math.sin(piece.rotationY)
+        );
+        const normal = new Vector3(-direction.z, 0, direction.x);
+        const centerDistance = piece.position.clone()
+            .sub(physicalWall.start.position)
+            .dot(direction);
+        const left = centerDistance - piece.width * 0.5;
+        const right = centerDistance + piece.width * 0.5;
+        const bottom = piece.position.y - piece.height * 0.5;
+        const top = piece.position.y + piece.height * 0.5;
+        return ([1, -1] as const).flatMap(side => {
+            const face = wallPaintSeparators[
+                getWallPaintFaceKey(wallId, side)
+            ];
+            return (face?.separators ?? []).map(separator => {
+                const coordinate = separator.position *
+                    (separator.orientation === "vertical" ? wallLength : wallHeight);
+                const intersectsPiece = separator.orientation === "vertical"
+                    ? coordinate >= left && coordinate < right
+                    : coordinate >= bottom && coordinate < top;
+                if (!intersectsPiece) {
+                    return null;
+                }
+                const surfaceOffset = normal.clone().multiplyScalar(
+                    side * (piece.thickness * 0.5 + WALL_FINISH_OUTER_OFFSET + 0.006)
+                );
+                const points = separator.orientation === "vertical"
+                    ? [
+                        physicalWall.start.position.clone()
+                            .add(direction.clone().multiplyScalar(coordinate))
+                            .add(new Vector3(0, bottom, 0))
+                            .add(surfaceOffset),
+                        physicalWall.start.position.clone()
+                            .add(direction.clone().multiplyScalar(coordinate))
+                            .add(new Vector3(0, top, 0))
+                            .add(surfaceOffset)
+                    ]
+                    : [
+                        piece.position.clone()
+                            .add(direction.clone().multiplyScalar(-piece.width * 0.5))
+                            .add(new Vector3(0, coordinate - piece.position.y, 0))
+                            .add(surfaceOffset),
+                        piece.position.clone()
+                            .add(direction.clone().multiplyScalar(piece.width * 0.5))
+                            .add(new Vector3(0, coordinate - piece.position.y, 0))
+                            .add(surfaceOffset)
+                    ];
+                const separatorKey = `${side}:${separator.id}`;
+                const hoveredSectionForSide = hoveredSection?.side === side
+                    ? getWallPaintSections(face).find(
+                        section => section.id === hoveredSection.sectionId
+                    )
+                    : undefined;
+                const sectionTouchesSeparator = hoveredSectionForSide &&
+                    (separator.orientation === "vertical"
+                        ? Math.abs(hoveredSectionForSide.xStart - separator.position) < 1e-6 ||
+                            Math.abs(hoveredSectionForSide.xEnd - separator.position) < 1e-6
+                        : Math.abs(hoveredSectionForSide.yStart - separator.position) < 1e-6 ||
+                            Math.abs(hoveredSectionForSide.yEnd - separator.position) < 1e-6);
+                const guideSelected = selected || Boolean(sectionTouchesSeparator);
+                const guideVisible = guideSelected || hoveredSeparatorKey === separatorKey;
+                return (
+                    <Line
+                        key={`${wallId}-${side}-${separator.id}-${piece.position.x}-${piece.position.y}-${piece.position.z}`}
+                        points={points}
+                        lineWidth={guideVisible ? 2.5 : 8}
+                        color={guideSelected ? "#2563EB" : "#374151"}
+                        transparent
+                        opacity={guideVisible ? 0.95 : 0}
+                        depthTest
+                        depthWrite={false}
+                        renderOrder={13}
+                        onPointerOver={event => {
+                            if (event.intersections[0]?.object !== event.object) return;
+                            event.stopPropagation();
+                            setHoveredSeparatorKey(separatorKey);
+                        }}
+                        onPointerOut={() => {
+                            setHoveredSeparatorKey(current =>
+                                current === separatorKey ? null : current
+                            );
+                        }}
+                    />
+                );
+            });
+        });
+    };
 
     const handleWallClick = (event: ThreeEvent<MouseEvent>) => {
         event.stopPropagation();
@@ -286,8 +463,33 @@ export default function AdminWallPiece({
 
     const handleWallPointerMove = (event: ThreeEvent<PointerEvent>) => {
         event.stopPropagation();
+        const direction = physicalWall.end.position.clone()
+            .sub(physicalWall.start.position)
+            .normalize();
+        const normal = new Vector3(-direction.z, 0, direction.x);
+        const center = physicalWall.start.position.clone()
+            .add(physicalWall.end.position)
+            .multiplyScalar(0.5);
+        const side: 1 | -1 = event.point.clone().sub(center).dot(normal) >= 0
+            ? 1
+            : -1;
+        const horizontalPosition = Math.max(0, Math.min(
+            1,
+            event.point.clone().sub(physicalWall.start.position).dot(direction) /
+                Math.max(wallLength, 1e-6)
+        ));
+        const verticalPosition = Math.max(0, Math.min(1, event.point.y / wallHeight));
+        const face = wallPaintSeparators[getWallPaintFaceKey(wallId, side)];
+        const section = getWallPaintSectionAt(
+            getWallPaintSections(face),
+            horizontalPosition,
+            verticalPosition
+        );
+        setHoveredSection(section ? { side, sectionId: section.id } : null);
         onWallPointerMove?.(wallId, event.point, event);
     };
+
+    const clearHoveredSection = () => setHoveredSection(null);
 
     if (
         piece.kind === "arch" &&
@@ -303,6 +505,7 @@ export default function AdminWallPiece({
                     receiveShadow
                     onClick={handleWallClick}
                     onPointerMove={handleWallPointerMove}
+                    onPointerOut={clearHoveredSection}
                     userData={{
                         wallId
                     }}
@@ -335,13 +538,8 @@ export default function AdminWallPiece({
                     </mesh>
                 )}
 
-                {finishSides.map(finish => (
-                    <AdminWallFinishSurface
-                        key={`${finish.regionId}-${finish.wallId}-${finish.side}`}
-                        piece={piece}
-                        finish={finish}
-                    />
-                ))}
+                {renderFinishes()}
+                {renderSeparators()}
             </group>
         );
     }
@@ -355,6 +553,7 @@ export default function AdminWallPiece({
                 receiveShadow
                 onClick={handleWallClick}
                 onPointerMove={handleWallPointerMove}
+                onPointerOut={clearHoveredSection}
                 userData={{
                     wallId
                 }}
@@ -408,13 +607,8 @@ export default function AdminWallPiece({
                     />
                 ))}
 
-            {finishSides.map(finish => (
-                <AdminWallFinishSurface
-                    key={`${finish.regionId}-${finish.wallId}-${finish.side}`}
-                    piece={piece}
-                    finish={finish}
-                />
-            ))}
+            {renderFinishes()}
+            {renderSeparators()}
         </group>
     );
 }

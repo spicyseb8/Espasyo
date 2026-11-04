@@ -32,6 +32,9 @@ function normalizeProjectData(
 
     delete copy.savedAt;
     delete copy.costEstimate;
+    if (copy.maximumBudget == null) {
+        delete copy.maximumBudget;
+    }
 
     return copy;
 }

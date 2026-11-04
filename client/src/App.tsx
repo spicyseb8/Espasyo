@@ -23,6 +23,9 @@ import AuthPage
 import StudioLoadProject
     from "./pages/StudioLoadProject";
 
+import SettingsPage
+    from "./pages/Settings";
+
 import AssetStartupGate
     from "./engine/AssetStartupGate";
 
@@ -66,6 +69,15 @@ function App() {
                     path="/library"
                     element={
                         <LibraryPage />
+                    }
+                />
+
+                {/* ACCOUNT SETTINGS */}
+
+                <Route
+                    path="/settings"
+                    element={
+                        <SettingsPage />
                     }
                 />
 

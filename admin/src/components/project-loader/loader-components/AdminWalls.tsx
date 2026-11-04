@@ -32,8 +32,9 @@ import {
 } from "../engine/walls/AdminWallMeshBuilder";
 
 import {
-    getWallFinishSides
+    getWallFinishSections
 } from "../engine/walls/AdminWallFinishUtils";
+import type { WallPaintSeparatorMap } from "../../../../../shared/wallPaintSeparators.ts";
 
 import AdminWallPiece
     from "../engine/walls/AdminWallPiece";
@@ -70,6 +71,8 @@ interface AdminWallsProps {
             string,
             Record<string, string>
         >;
+
+    wallPaintSeparators?: WallPaintSeparatorMap;
 
     onWallClick?:
         (wallId: string, position: Vector3, event: ThreeEvent<MouseEvent>) => void;
@@ -430,6 +433,7 @@ function AdminWalls({
     wallHeight,
     wallThickness,
     wallFinishes,
+    wallPaintSeparators = {},
     onWallClick,
     onWallPointerMove,
     selectedWallId,
@@ -466,10 +470,11 @@ function AdminWalls({
                             );
 
                         const finishSides =
-                            getWallFinishSides(
+                            getWallFinishSections(
                                 wall,
                                 regions,
-                                wallFinishes
+                                wallFinishes,
+                                wallPaintSeparators
                             );
 
                         const connectedStart =
@@ -517,6 +522,8 @@ function AdminWalls({
                                                 finishSides={
                                                     finishSides
                                                 }
+                                                wallHeight={wallHeight}
+                                                wallPaintSeparators={wallPaintSeparators}
                                                 onWallClick={
                                                     onWallClick
                                                 }

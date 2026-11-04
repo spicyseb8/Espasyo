@@ -9,4 +9,5 @@ export interface Furniture {
     width: number;
     depth: number;
     height: number;
+    scale?: number;
 }

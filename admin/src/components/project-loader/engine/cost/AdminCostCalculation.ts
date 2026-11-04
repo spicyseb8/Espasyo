@@ -79,6 +79,14 @@ function toCostFloor(
             (floorIndex === 0
                 ? projectData.wallFinishes ?? structure.wallFinishes ?? {}
                 : structure.wallFinishes ?? {}),
+        wallPaintSeparators: savedFloor?.wallPaintSeparators ??
+            (floorIndex === 0
+                ? projectData.wallPaintSeparators ?? structure.wallPaintSeparators ?? {}
+                : structure.wallPaintSeparators ?? {}),
+        floorPaintSeparators: savedFloor?.floorPaintSeparators ??
+            (floorIndex === 0
+                ? projectData.floorPaintSeparators ?? structure.floorPaintSeparators ?? {}
+                : structure.floorPaintSeparators ?? {}),
         wallHeight: structure.wallHeight ?? projectData.wallHeight ?? 2.8
     };
 }
@@ -94,7 +102,21 @@ export async function calculateAdminCostEstimate(
     ]);
 
     const lookups: CostAssetLookups = {
-        findFurnitureAsset: getCachedFurnitureAsset,
+        findFurnitureAsset: assetId => {
+            const asset = getCachedFurnitureAsset(assetId);
+            if (!asset) {
+                return undefined;
+            }
+            return {
+                id: asset.id,
+                name: asset.name,
+                price: asset.price,
+                ...(asset.furnitureCategory === "appliances" ||
+                    asset.furnitureCategory === "decorations"
+                    ? { furnitureCategory: asset.furnitureCategory }
+                    : {})
+            };
+        },
         findDoorAsset: getCachedDoorAsset,
         findWindowAsset: getCachedWindowAsset,
         findFloorMaterial: findCachedFloorMaterial,

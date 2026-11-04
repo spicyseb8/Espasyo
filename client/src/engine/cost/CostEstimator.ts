@@ -4,6 +4,23 @@ import { Vector3 } from "three";
 import type { Asset } from "../../assets/Asset";
 import type { Material } from "../materials/MaterialTypes";
 import type { FloorMaterial } from "../materials/floors";
+import { findAsset } from "../../assets/AssetLibrary";
+import {
+    getCachedFurnitureAsset
+} from "../furniture/FirebaseFurnitureLibrary";
+import {
+    getCachedDoorAsset,
+    getCachedWindowAsset
+} from "../build/FirebaseDoorWindowLibrary";
+import {
+    findCachedFloorMaterial
+} from "../materials/floors";
+import {
+    findCachedWallMaterial
+} from "../materials/walls";
+import {
+    MaterialLibrary
+} from "../materials/MaterialLibrary";
 import {
     calculateFurnitureCosts
 } from "./FurnitureCostCalculator";
@@ -19,6 +36,10 @@ import {
 import {
     calculateWindowCosts
 } from "./WindowCostCalculator";
+import type {
+    FloorPaintSeparatorMap,
+    WallPaintSeparatorMap
+} from "../../../../shared/wallPaintSeparators";
 
 export interface CostPoint {
     x: number;
@@ -68,16 +89,128 @@ export interface CostFloorInput {
         archRise?: number;
     }>;
     floorFinishes: Record<string, string>;
+    floorPaintSeparators?: FloorPaintSeparatorMap;
     wallFinishes: Record<string, Record<string, string>>;
+    wallPaintSeparators?: WallPaintSeparatorMap;
     wallHeight: number;
 }
 
 export interface CostAssetLookups {
-    findFurnitureAsset?: (assetId: string) => Pick<Asset, "id" | "name" | "price"> | undefined;
+    findFurnitureAsset?: (assetId: string) => Pick<Asset, "id" | "name" | "price" | "furnitureCategory"> | undefined;
     findDoorAsset?: (assetId: string) => Pick<Asset, "id" | "name" | "price"> | undefined;
     findWindowAsset?: (assetId: string) => Pick<Asset, "id" | "name" | "price"> | undefined;
     findFloorMaterial?: (materialId: string) => FloorMaterial | undefined;
     findWallMaterial?: (materialId: string) => Material | undefined;
+}
+
+function hasValidPrice(value: unknown): value is number {
+    return typeof value === "number" &&
+        Number.isFinite(value) &&
+        value >= 0;
+}
+
+function hasValidFloorPrice(material: FloorMaterial | undefined): boolean {
+    if (!material || material.priceConfigured === false) {
+        return false;
+    }
+    if (material.pricePerPiece !== undefined) {
+        return hasValidPrice(material.pricePerPiece) &&
+            typeof material.length === "number" &&
+            Number.isFinite(material.length) &&
+            material.length > 0 &&
+            typeof material.width === "number" &&
+            Number.isFinite(material.width) &&
+            material.width > 0;
+    }
+    return hasValidPrice(material.pricePerSquareMeter);
+}
+
+function getIncompletePriceCategories(
+    floors: CostFloorInput[],
+    lookups: CostAssetLookups
+): string[] {
+    const incomplete = new Set<string>();
+
+    for (const floor of floors) {
+        for (const item of floor.furniture) {
+            const asset =
+                lookups.findFurnitureAsset?.(item.assetId) ??
+                getCachedFurnitureAsset(item.assetId) ??
+                findAsset(item.assetId);
+            const priceNotExpected =
+                asset != null &&
+                asset.price == null &&
+                (asset.furnitureCategory === "appliances" ||
+                    asset.furnitureCategory === "decorations");
+            if (!asset || (!priceNotExpected && !hasValidPrice(asset.price))) {
+                incomplete.add("furniture");
+            }
+        }
+
+        for (const item of floor.doors) {
+            const asset =
+                lookups.findDoorAsset?.(item.assetId) ??
+                getCachedDoorAsset(item.assetId) ??
+                findAsset(item.assetId);
+            if (!asset || !hasValidPrice(asset.price)) {
+                incomplete.add("doors");
+            }
+        }
+
+        for (const item of floor.windows) {
+            const asset =
+                lookups.findWindowAsset?.(item.assetId) ??
+                getCachedWindowAsset(item.assetId) ??
+                findAsset(item.assetId);
+            if (!asset || !hasValidPrice(asset.price)) {
+                incomplete.add("windows");
+            }
+        }
+
+        for (const materialId of new Set(Object.values(floor.floorFinishes))) {
+            const material =
+                lookups.findFloorMaterial?.(materialId) ??
+                findCachedFloorMaterial(materialId) ??
+                MaterialLibrary.find(item => item.id === materialId);
+            if (!hasValidFloorPrice(material)) {
+                incomplete.add("flooring");
+            }
+            for (const materialId of new Set(
+                Object.values(floor.floorPaintSeparators ?? {})
+                    .flatMap(face => Object.values(face.sectionMaterials))
+            )) {
+                const material =
+                    lookups.findFloorMaterial?.(materialId) ??
+                    findCachedFloorMaterial(materialId) ??
+                    MaterialLibrary.find(item => item.id === materialId);
+                if (!hasValidFloorPrice(material)) {
+                    incomplete.add("flooring");
+                }
+            }
+        }
+
+        const wallMaterialIds = [
+            ...Object.values(floor.wallFinishes)
+                .flatMap(assignments => Object.values(assignments)),
+            ...Object.values(floor.wallPaintSeparators ?? {})
+                .flatMap(face => Object.values(face.sectionMaterials))
+        ];
+        for (const materialId of new Set(wallMaterialIds)) {
+            const material =
+                lookups.findWallMaterial?.(materialId) ??
+                findCachedWallMaterial(materialId) ??
+                MaterialLibrary.find(item => item.id === materialId);
+            if (
+                !material ||
+                material.priceConfigured === false ||
+                !hasValidPrice(material.pricePerLiter ?? material.pricePerSquareMeter)
+            ) {
+                incomplete.add("wall finishes");
+            }
+        }
+    }
+
+    return Array.from(incomplete);
 }
 
 function ordinalFloorName(index: number): string {
@@ -158,6 +291,7 @@ function calculateFloorItems(
             corners,
             walls,
             floorFinishes: floor.floorFinishes,
+            floorPaintSeparators: floor.floorPaintSeparators,
             findFloorMaterial: lookups.findFloorMaterial
         }),
         ...calculateWallFinishCosts({
@@ -168,6 +302,7 @@ function calculateFloorItems(
             windows,
             openings,
             wallFinishes: floor.wallFinishes,
+            wallPaintSeparators: floor.wallPaintSeparators,
             findWallMaterial: lookups.findWallMaterial
         }),
         ...calculateDoorCosts(doors, lookups.findDoorAsset),
@@ -202,7 +337,8 @@ export function calculateCostEstimateForFloors(
         items,
         floors: floorEstimates,
         subtotal: total,
-        total
+        total,
+        incompleteItems: getIncompletePriceCategories(floors, lookups)
     };
 }
 
@@ -230,7 +366,9 @@ export function calculateCostEstimate(
             windows: state.windows,
             openings: state.openings,
             floorFinishes: state.floorFinishes,
+            floorPaintSeparators: state.floorPaintSeparators,
             wallFinishes: state.wallFinishes,
+            wallPaintSeparators: state.wallPaintSeparators,
             wallHeight: state.wallHeight
         }];
 
