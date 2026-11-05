@@ -127,7 +127,7 @@ export default function NewFloorPlanProjectButton() {
                         <div className="mb-4">
                             <h2 id="create-floor-plan-title" className="font-medium">Create floor-plan project</h2>
                             <p className="mt-1 text-sm text-muted-foreground">
-                                Name the project and choose an eligible client. Saving a draft will not assign it to the client.
+                                Choose an eligible client. A draft reserves their one floor-plan slot but is not available to them until published.
                             </p>
                         </div>
                         <label className="mb-4 grid gap-2 text-sm">
@@ -201,7 +201,7 @@ export default function NewFloorPlanProjectButton() {
                         </div>
                         {hasIneligibleMatches && (
                             <p className="mt-2 text-xs text-amber-700" role="status">
-                                Some matching accounts are inactive, are not client accounts, or already have a project, so they cannot be selected.
+                                Some matching accounts are admin or employee accounts, or already have a floorplan, so they cannot be selected.
                             </p>
                         )}
                         {error && <p className="mt-3 text-sm text-destructive" role="alert">{error}</p>}

@@ -144,6 +144,14 @@ self.addEventListener("fetch", (event) => {
 
   const requestURL = new URL(request.url);
   if (
+    request.headers.has("Authorization") ||
+    requestURL.pathname === "/api" ||
+    requestURL.pathname.startsWith("/api/")
+  ) {
+    return;
+  }
+
+  if (
     request.mode === "navigate" ||
     request.destination === "document" ||
     (requestURL.origin === self.location.origin &&

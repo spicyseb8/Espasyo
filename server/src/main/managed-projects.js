@@ -8,7 +8,16 @@ import {
   adminStorage,
 } from "../firebase-admin.js";
 import { requireRole } from "./authorization.js";
+import { findClientAccountByIdentifier } from "./client-account.js";
 import { createReservedFloorPlanDraft } from "./floorplan-reservation.js";
+import {
+  commitPublishedFloorPlan,
+  createPublishedFloorPlanRecord,
+} from "./floorplan-publishing.js";
+import {
+  findExistingFloorPlan,
+  isFloorPlanClientAccount,
+} from "./floorplan-client-eligibility.js";
 import {
   ACCESS_AGREEMENT_VERSION,
   SUBMISSION_AGREEMENT_VERSION,
@@ -176,20 +185,6 @@ function getInteriorStoragePath(project, ownerId, projectId) {
   return path;
 }
 
-async function findClientAccount(ownerId) {
-  const [usersSnapshot, employeeSnapshot] = await Promise.all([
-    adminDb.collection(USERS).where("uid", "==", ownerId).limit(1).get(),
-    adminDb.collection(EMPLOYEES).where("uid", "==", ownerId).limit(1).get(),
-  ]);
-  const userDocument = usersSnapshot.docs[0];
-  if (!userDocument || employeeSnapshot.docs.length > 0) return null;
-  const user = userDocument.data();
-  if (user.account_status !== "active" || ["admin", "superadmin"].includes(user.role)) {
-    return null;
-  }
-  return { id: userDocument.id, document: userDocument, data: user };
-}
-
 async function reserveNextProjectId(transaction, year) {
   const counterReference = adminDb.collection("idCounters").doc(`projects-${year}`);
   const counterSnapshot = await transaction.get(counterReference);
@@ -242,7 +237,7 @@ async function authenticateClient(req, res, next) {
 
   try {
     const token = await adminAuth.verifyIdToken(match[1], true);
-    const account = await findClientAccount(token.uid);
+    const account = await findClientAccountByIdentifier(adminDb, token.uid);
     if (!account) {
       return res.status(403).json({ success: false, message: "An active client account is required." });
     }
@@ -256,13 +251,18 @@ async function authenticateClient(req, res, next) {
 
 async function createDraft(req, res) {
   try {
-    const ownerId = normalizedString(req.body?.ownerId);
+    const requestedOwnerId = normalizedString(req.body?.ownerId);
     const projectName = validateName(req.body?.projectName);
-    if (!ownerId) throw httpError(400, "A client account is required.");
-    const clientAccount = await findClientAccount(ownerId);
+    if (!requestedOwnerId) throw httpError(400, "A client account is required.");
+    const clientAccount = await findClientAccountByIdentifier(
+      adminDb,
+      requestedOwnerId,
+      { requireActive: false },
+    );
     if (!clientAccount) {
       throw httpError(409, "This client account is not eligible for a floor plan.");
     }
+    const ownerId = clientAccount.uid;
     const draftId = randomUUID();
     const record = {
       draftId,
@@ -306,34 +306,23 @@ async function searchClients(req, res) {
       adminDb.collection(DRAFTS).get(),
     ]);
 
-    const projectsByOwner = new Map();
-    for (const document of projectsSnapshot.docs) {
-      const ownerId = normalizedString(document.data().ownerId);
-      if (ownerId && !projectsByOwner.has(ownerId)) projectsByOwner.set(ownerId, document.id);
-    }
-    const draftsByOwner = new Map();
-    for (const document of draftsSnapshot.docs) {
-      const ownerId = normalizedString(document.data().intendedClientId);
-      if (
-        ownerId &&
-        !document.data().publishedProjectId &&
-        document.data().deleting !== true &&
-        !draftsByOwner.has(ownerId)
-      ) {
-        draftsByOwner.set(ownerId, document.id);
-      }
-    }
-    const assignmentsByOwner = new Map();
-    for (const document of assignmentSnapshot.docs) {
-      const assignment = document.data();
-      const ownerId = normalizedString(assignment.ownerId);
-      if (ownerId) assignmentsByOwner.set(ownerId, assignment);
-    }
+    const projectRecords = projectsSnapshot.docs.map(document => ({
+      id: document.id,
+      ...document.data(),
+    }));
+    const draftRecords = draftsSnapshot.docs.map(document => ({
+      id: document.id,
+      ...document.data(),
+    }));
     const employeeUids = new Set(
       employeesSnapshot.docs
-        .map(document => document.data().uid)
-        .filter(value => typeof value === "string")
+        .flatMap(document => [
+          document.id,
+          normalizedString(document.data().uid),
+        ])
+        .filter(Boolean)
     );
+    const assignmentRecords = assignmentSnapshot.docs.map(document => document.data());
     const clients = [];
     let hasIneligibleMatches = false;
 
@@ -345,22 +334,20 @@ async function searchClients(req, res) {
       if (search && !`${name} ${email}`.toLocaleLowerCase().includes(search)) continue;
 
       const ownerIdentifiers = [...new Set([uid, document.id])];
-      const projectId = ownerIdentifiers.map(id => projectsByOwner.get(id)).find(Boolean) ??
-        ownerIdentifiers.map(id => assignmentsByOwner.get(id)?.projectId).find(Boolean) ??
-        null;
-      const existingDraftId = ownerIdentifiers.map(id => draftsByOwner.get(id)).find(Boolean) ??
-        ownerIdentifiers.map(id => assignmentsByOwner.get(id)?.draftId).find(Boolean) ??
-        null;
-      const hasFloorPlan = Boolean(projectId || existingDraftId);
-      const isEligible = data.account_status === "active"
-        && !["admin", "superadmin"].includes(data.role)
-        && !employeeUids.has(uid)
-        && !hasFloorPlan
-        && !ownerIdentifiers.some(id => assignmentsByOwner.has(id));
-      if (!isEligible && !hasFloorPlan) {
+      const existing = findExistingFloorPlan({
+        identifiers: ownerIdentifiers,
+        projects: projectRecords,
+        drafts: draftRecords,
+        assignments: assignmentRecords,
+      });
+      if (!isFloorPlanClientAccount(data, ownerIdentifiers, employeeUids)) {
         hasIneligibleMatches = true;
         continue;
       }
+      const projectId = existing.projectId;
+      const existingDraftId = existing.draftId;
+      const hasFloorPlan = Boolean(projectId || existingDraftId);
+      const isEligible = !hasFloorPlan;
       if (!isEligible) hasIneligibleMatches = true;
       clients.push({
         id: document.id,
@@ -376,7 +363,7 @@ async function searchClients(req, res) {
     clients.sort((first, second) => first.name.localeCompare(second.name));
     return res.json({
       success: true,
-      clients: clients.slice(0, 50),
+      clients,
       hasIneligibleMatches,
     });
   } catch (error) {
@@ -626,7 +613,11 @@ async function getDraft(req, res) {
     const projectData = draft.draftJsonPath
       ? stripManagedFileUrlFields(await loadJson(draft.draftJsonPath))
       : null;
-    const clientAccount = await findClientAccount(draft.intendedClientId);
+    const clientAccount = await findClientAccountByIdentifier(
+      adminDb,
+      draft.intendedClientId,
+      { requireActive: false },
+    );
     const clientData = clientAccount?.data;
     const {
       draftJsonPath: _draftJsonPath,
@@ -769,7 +760,11 @@ async function publishDraft(req, res) {
     await uploadJson(uploadedPath, finalJson);
     const destinationReference = adminDb.collection(PROJECTS).doc(reservedId);
     const lockReference = assignmentReference(ownerId);
-    const ownerAccount = await findClientAccount(ownerId);
+    const ownerAccount = await findClientAccountByIdentifier(
+      adminDb,
+      ownerId,
+      { requireActive: false },
+    );
     const ownerIdentifiers = [...new Set([
       ownerId,
       normalizedString(initial.intendedClientAccountId) || ownerAccount?.id || ownerId,
@@ -823,47 +818,32 @@ async function publishDraft(req, res) {
       if (destinationSnapshot.exists) {
         throw httpError(409, "The generated project ID is already in use.");
       }
-      const projectRecord = {
+      const projectRecord = createPublishedFloorPlanRecord({
         projectId: reservedId,
         projectName,
         ownerId,
-        schemaVersion: 1,
-        workflowType: "admin-managed",
-        structuralOwner: "admin",
-        structuralStatus: "published",
-        projectStatus: "available",
-        structuralRevision: revision,
-        publishedStructuralRevision: revision,
         deadline,
-        clientDesignStarted: false,
-        structureInitialized: true,
+        revision,
         jsonPath: uploadedPath,
-        jsonUrl: FieldValue.delete(),
         createdBy: req.adminUser.uid,
         creatorName: req.adminUser.name,
-        createdAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-      };
-      transaction.set(lockReference, {
-        ownerId,
+        timestamp: FieldValue.serverTimestamp(),
+      });
+      commitPublishedFloorPlan(transaction, {
+        projectReference: destinationReference,
+        assignmentReference: lockReference,
+        draftReference: reference,
+        projectRecord,
         projectId: reservedId,
-        status: "published",
-        draftId: FieldValue.delete(),
-        updatedAt: FieldValue.serverTimestamp(),
-      }, { merge: true });
-      transaction.create(destinationReference, projectRecord);
-      recordProjectActivity(transaction, reservedId, req.adminUser, "floor-plan-published", {
-        newValue: { projectName, deadline, ownerId, structuralRevision: revision },
-      });
-      recordProjectActivity(transaction, reservedId, req.adminUser, "project-assigned", {
-        newValue: { ownerId, projectId: reservedId },
-      });
-      transaction.set(reference, {
+        ownerId,
         projectName,
-        publishedProjectId: reservedId,
-        publishedAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-      }, { merge: true });
+        deadline,
+        revision,
+        actor: req.adminUser,
+        timestamp: FieldValue.serverTimestamp(),
+        deleteField: FieldValue.delete(),
+        recordActivity: recordProjectActivity,
+      });
       return { projectId: reservedId, alreadyPublished: false };
     });
 

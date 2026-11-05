@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   reload,
+  sendEmailVerification,
   signInWithEmailAndPassword,
   signOut,
 } from "firebase/auth";
@@ -41,6 +42,8 @@ import { Input } from "@/components/ui/input";
 import { isAdminRole } from "@/lib/adminRole";
 import { auth, db } from "@/firebase/firebase";
 import { validateAdminLoginForm } from "@/utils/validators";
+import { ensureEmailVerified } from "../../../../shared/auth/loginVerification.mjs";
+import { getLoginErrorMessage } from "../../../../shared/auth/loginErrors.mjs";
 
 // Served from admin/public/images/white-brackground.jpg
 const BACKGROUND_IMAGE = "/images/white-brackground.jpg";
@@ -89,7 +92,8 @@ function LoginForm({ className, ...props }: LoginFormProps) {
         )
       );
       const isAuthorized = employeeSnapshot.docs.some((document) =>
-        isAdminRole(document.data().role)
+        isAdminRole(document.data().role) &&
+        document.data().account_status === "active"
       );
 
       if (!isAuthorized) {
@@ -117,10 +121,22 @@ function LoginForm({ className, ...props }: LoginFormProps) {
       }
 
       if (!currentUser.emailVerified) {
-        await signOut(auth);
+        const verification = await ensureEmailVerified(
+          user,
+          sendEmailVerification,
+          () => signOut(auth),
+        );
+        if (verification.verificationError) {
+          console.error(
+            "Unable to send admin email verification:",
+            verification.verificationError,
+          );
+        }
 
         setError(
-          "Please verify your email before signing in."
+          verification.verificationSent
+            ? "A verification email has been sent. Verify your email, then sign in again."
+            : "Your email is not verified, and a verification email could not be sent. Please try again or contact support."
         );
 
         return;
@@ -137,45 +153,14 @@ function LoginForm({ className, ...props }: LoginFormProps) {
         "code" in error
       ) {
         const errorCode = (error as { code: string }).code;
-
-        switch (errorCode) {
-          case "auth/invalid-credential":
-            setError("Invalid email or password.");
-            break;
-
-          case "auth/user-not-found":
-            setError("Invalid email or password.");
-            break;
-
-          case "auth/wrong-password":
-            setError("Invalid email or password.");
-            break;
-
-          case "auth/invalid-email":
-            setError("Please enter a valid email address.");
-            break;
-
-          case "auth/too-many-requests":
-            setError(
-              "Too many login attempts. Please try again later."
-            );
-            break;
-
-          case "auth/user-disabled":
-            setError("This account has been disabled.");
-            break;
-
-          case "auth/network-request-failed":
-            setError(
-              "Network error. Please check your internet connection."
-            );
-            break;
-
-          default:
-            setError(
-              "Unable to sign in. Please check your credentials and try again."
-            );
-        }
+        setError(
+          errorCode === "auth/user-disabled"
+            ? "This account has been disabled."
+            : getLoginErrorMessage(
+                errorCode,
+                "Unable to sign in. Please check your credentials and try again.",
+              )
+        );
       } else {
         setError(
           "Unable to sign in. Please try again."
@@ -290,7 +275,7 @@ function LoginForm({ className, ...props }: LoginFormProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Access denied</AlertDialogTitle>
             <AlertDialogDescription>
-              youre not authorized to access this page
+              This Firebase account is not linked to an active admin employee profile.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

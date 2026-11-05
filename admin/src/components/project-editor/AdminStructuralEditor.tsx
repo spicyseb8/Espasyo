@@ -3,6 +3,7 @@ import type { ChangeEvent } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
     ArrowLeft,
+    CalendarClock,
     DraftingCompass,
     Hammer,
     Plus,
@@ -10,7 +11,8 @@ import {
     Save,
     Send,
     Trash2,
-    Undo2
+    Undo2,
+    X
 } from "lucide-react";
 import { Vector3 } from "three";
 import LoadingScreen from "@/components/LoadingScreen";
@@ -357,6 +359,7 @@ export default function AdminStructuralEditor() {
     const [isAddFloorDialogOpen, setIsAddFloorDialogOpen] = useState(false);
     const [newFloorMode, setNewFloorMode] = useState<"blank" | "outline">("blank");
     const [isCreatingFloor, setIsCreatingFloor] = useState(false);
+    const [deadlineOpen, setDeadlineOpen] = useState(false);
     const updateActiveBlueprint = (updates: Partial<BlueprintSession>) => {
         if (!activeFloorId) return;
         setBlueprintSessions(current => ({
@@ -2311,6 +2314,7 @@ export default function AdminStructuralEditor() {
         }
         if (published && !isPublished) {
             if (!isValidProjectDeadline(deadline) || deadline <= getTodayLocalDate()) {
+                setDeadlineOpen(true);
                 setStatus("Choose a valid project deadline after today before publishing.");
                 return;
             }
@@ -2436,24 +2440,39 @@ export default function AdminStructuralEditor() {
     return (
         <div className="admin-editor">
             <header className="admin-editor-header">
-                <div className="admin-editor-header-back">
-                    <button type="button" onClick={() => navigate(-1)} aria-label="Back" title="Back">
+                <div className="admin-editor-header-left">
+                    <button
+                        type="button"
+                        className="ae-btn ae-icon-btn"
+                        onClick={() => navigate(-1)}
+                        aria-label="Back"
+                        title="Back"
+                    >
                         <ArrowLeft size={16} />
                     </button>
-                </div>
-                <div className="admin-editor-project">
-                    <span className="admin-editor-owner" title={clientDisplayName.trim() || "Unknown client"}>
-                        {clientDisplayName.trim() || "Unknown client"}
-                    </span>
-                    <input
-                        ref={projectNameInputRef}
-                        value={projectName}
-                        onChange={event => setProjectName(event.target.value)}
-                        aria-label="Project name"
-                        disabled={isReadOnly || savingAction !== null}
-                        readOnly={isReadOnly}
-                        style={{ textAlign: "center", fontSize: "14px" }}
-                    />
+                    <div className="admin-editor-project">
+                        <input
+                            ref={projectNameInputRef}
+                            value={projectName}
+                            onChange={event => setProjectName(event.target.value)}
+                            aria-label="Project name"
+                            disabled={isReadOnly || savingAction !== null}
+                            readOnly={isReadOnly}
+                        />
+                        <span className="admin-editor-owner" title={clientDisplayName.trim() || "Unknown client"}>
+                            {clientDisplayName.trim() || "Unknown client"}
+                        </span>
+                    </div>
+                    {isDraftRecord && (
+                        <span className="admin-editor-badge" role="status" title="Unpublished database draft — not shared with the client">
+                            Draft
+                        </span>
+                    )}
+                    {isReadOnly && (
+                        <span className="admin-editor-badge warn" role="status">
+                            Read-only — created by {creatorDisplayName || "another administrator"}
+                        </span>
+                    )}
                 </div>
                 <div className="admin-editor-floor-switcher">
                     <div className="admin-editor-floor-tabs" role="tablist" aria-label="Project floors">
@@ -2480,59 +2499,79 @@ export default function AdminStructuralEditor() {
                         <span>Add Floor</span>
                     </button>
                 </div>
-                <div className="admin-editor-header-actions">
-                {!isPublished && (
-                    <label className="admin-editor-status">
-                        Publish deadline (Philippine time)
-                        <input
-                            type="datetime-local"
-                            value={deadline}
-                            min={getTomorrowLocalDateTime()}
-                            onChange={event => setDeadline(event.target.value)}
-                            disabled={isReadOnly || savingAction !== null}
-                            aria-label="Required project deadline date and time before publishing, Philippine time"
-                        />
-                    </label>
-                )}
-                {isPublished && deadline && (
-                    <span className="admin-editor-status" role="status">
-                        Deadline (Philippine time): {deadline.replace("T", " ")}
-                    </span>
-                )}
-                {isDraftRecord && (
-                    <span className="admin-editor-status" role="status">
-                        Unpublished database draft — not shared with the client
-                    </span>
-                )}
-                {isReadOnly && (
-                    <span className="admin-editor-status" role="status">
-                        Read-only — created by {creatorDisplayName || "another administrator"}
-                    </span>
-                )}
-                <div className="admin-editor-history-actions" aria-label="Structure history">
-                        <button type="button" onClick={undo} disabled={isReadOnly || !history.length} title="Undo" aria-label="Undo">
-                            <Undo2 size={16} />
-                        </button>
-                        <button type="button" onClick={redo} disabled={isReadOnly || !future.length} title="Redo" aria-label="Redo">
-                            <Redo2 size={16} />
-                        </button>
-                        <button type="button" onClick={removeSelectedWall} disabled={isReadOnly || !selectedWallId || structure?.layoutConfirmed} title="Delete selected wall" aria-label="Delete selected wall">
-                            <Trash2 size={16} />
-                        </button>
-                    </div>
-                    {!status.startsWith("Blueprint calibrated to") && (
-                        <span className={`admin-editor-status ${status.toLowerCase().includes("unable") || status.toLowerCase().includes("error") ? "error" : ""}`} role="status">
-                            {status}
+                <div className="admin-editor-header-right">
+                    {isPublished && deadline && (
+                        <span className="admin-editor-badge" role="status">
+                            Deadline (Philippine time): {deadline.replace("T", " ")}
                         </span>
                     )}
-                    <div className="admin-editor-actions">
-                        <button type="button" onClick={() => void save(false)} disabled={!canSave || savingAction !== null} title={isDraftRecord ? "Save draft to admin workspace" : "Save draft"} aria-label={isDraftRecord ? "Save draft" : "Save draft"}>
-                            <Save size={16} /><span>{savingAction === "draft" ? "Saving..." : "Save draft"}</span>
-                        </button>
-                        <button type="button" className="primary" onClick={() => void save(true)} disabled={!canSave || savingAction !== null} title="Publish" aria-label="Publish">
-                            <Send size={16} /><span>{savingAction === "publish" ? "Publishing..." : "Publish"}</span>
-                        </button>
-                    </div>
+                    {!isPublished && (
+                        <div className="admin-editor-deadline">
+                            <button
+                                type="button"
+                                className={`ae-btn ${deadline ? "" : "needs-attention"}`}
+                                aria-expanded={deadlineOpen}
+                                aria-haspopup="dialog"
+                                title="Set publish deadline"
+                                onClick={() => setDeadlineOpen(open => !open)}
+                                disabled={isReadOnly || savingAction !== null}
+                            >
+                                <CalendarClock size={15} />
+                                <span className="ae-label">
+                                    {deadline ? deadline.replace("T", " ") : "Set deadline"}
+                                </span>
+                            </button>
+                            {deadlineOpen && (
+                                <div
+                                    className="admin-editor-popover"
+                                    role="dialog"
+                                    aria-label="Publish deadline"
+                                    onKeyDown={event => {
+                                        if (event.key === "Escape") setDeadlineOpen(false);
+                                    }}
+                                >
+                                    <label>
+                                        Publish deadline (Philippine time)
+                                        <input
+                                            type="datetime-local"
+                                            value={deadline}
+                                            min={getTomorrowLocalDateTime()}
+                                            onChange={event => setDeadline(event.target.value)}
+                                            disabled={isReadOnly || savingAction !== null}
+                                            aria-label="Required project deadline date and time before publishing, Philippine time"
+                                            autoFocus
+                                        />
+                                    </label>
+                                    <p>Required before the project can be published to the client.</p>
+                                    <button type="button" className="ae-btn" onClick={() => setDeadlineOpen(false)}>
+                                        Done
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                    <button
+                        type="button"
+                        className="ae-btn"
+                        onClick={() => void save(false)}
+                        disabled={!canSave || savingAction !== null}
+                        title={isDraftRecord ? "Save draft to admin workspace" : "Save draft"}
+                        aria-label="Save draft"
+                    >
+                        <Save size={15} />
+                        <span className="ae-label">{savingAction === "draft" ? "Saving..." : "Save draft"}</span>
+                    </button>
+                    <button
+                        type="button"
+                        className="ae-btn primary"
+                        onClick={() => void save(true)}
+                        disabled={!canSave || savingAction !== null}
+                        title="Publish"
+                        aria-label="Publish"
+                    >
+                        <Send size={15} />
+                        <span className="ae-label">{savingAction === "publish" ? "Publishing..." : "Publish"}</span>
+                    </button>
                 </div>
             </header>
             {isAddFloorDialogOpen && (
@@ -2851,6 +2890,38 @@ export default function AdminStructuralEditor() {
                     />
                 )}
             </main>
+            {structure && (
+                <div className="admin-editor-canvas-tools" role="toolbar" aria-label="Structure history">
+                    <button type="button" onClick={undo} disabled={isReadOnly || !history.length} title="Undo" aria-label="Undo">
+                        <Undo2 size={16} />
+                    </button>
+                    <button type="button" onClick={redo} disabled={isReadOnly || !future.length} title="Redo" aria-label="Redo">
+                        <Redo2 size={16} />
+                    </button>
+                    <span className="admin-editor-tools-divider" aria-hidden="true" />
+                    <button
+                        type="button"
+                        className="danger"
+                        onClick={removeSelectedWall}
+                        disabled={isReadOnly || !selectedWallId || structure.layoutConfirmed}
+                        title="Delete selected wall"
+                        aria-label="Delete selected wall"
+                    >
+                        <Trash2 size={16} />
+                    </button>
+                </div>
+            )}
+            {status && !status.startsWith("Blueprint calibrated to") && (
+                <div
+                    className={`admin-editor-toast ${status.toLowerCase().includes("unable") || status.toLowerCase().includes("error") ? "error" : ""}`}
+                    role="status"
+                >
+                    <span>{status}</span>
+                    <button type="button" onClick={() => setStatus("")} aria-label="Dismiss message" title="Dismiss">
+                        <X size={14} />
+                    </button>
+                </div>
+            )}
         </div>
     );
 }

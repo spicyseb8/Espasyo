@@ -16,14 +16,14 @@ import {
   ref,
   uploadBytes,
 } from "firebase/storage";
-import { doc, getDoc } from "firebase/firestore";
 import {
   Globe2,
   UserRound,
 } from "lucide-react";
 import NavBar from "./NavBar";
 import { useAuth } from "../context/AuthContext";
-import { db, storage } from "../firebase/firebase";
+import { storage } from "../firebase/firebase";
+import { getUserProfileByAuthUid } from "../firebase/user";
 import { saveUserProfile } from "../services/userSettings";
 
 type SettingsSection = "account" | "legal";
@@ -93,19 +93,18 @@ function AccountSettings() {
     let cancelled = false;
     if (!user) return;
 
-    void getDoc(doc(db, "users", user.uid))
-      .then(snapshot => {
+    void getUserProfileByAuthUid(user.uid)
+      .then(profile => {
         if (cancelled) return;
-        const profile = snapshot.exists() ? snapshot.data() : {};
         const fullName = user.displayName?.trim() ||
-          (typeof profile.full_name === "string" ? profile.full_name.trim() : "");
+          (typeof profile?.full_name === "string" ? profile.full_name.trim() : "");
         const nameParts = fullName.split(/\s+/).filter(Boolean);
         setFirstName(nameParts[0] ?? "");
         setLastName(nameParts.slice(1).join(" "));
         setProfileEmail(user.email ?? "");
         setProfilePhoto(
           user.photoURL ??
-          (typeof profile.photo_url === "string" ? profile.photo_url : null)
+          (typeof profile?.photo_url === "string" ? profile.photo_url : null)
         );
       })
       .catch(loadError => {

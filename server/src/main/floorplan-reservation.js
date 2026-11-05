@@ -31,8 +31,48 @@ export async function createReservedFloorPlanDraft(
       Promise.all(projectQueries.map(query => transaction.get(query))),
       Promise.all(draftQueries.map(query => transaction.get(query))),
     ]);
+    const assignmentTargetReferences = assignments.flatMap(assignment => {
+      if (!assignment.exists) return [];
+      const data = assignment.data() ?? {};
+      return [
+        ...(typeof data.projectId === "string" && data.projectId.trim()
+          ? [db.collection("projects").doc(data.projectId.trim())]
+          : []),
+        ...(typeof data.draftId === "string" && data.draftId.trim()
+          ? [db.collection("adminManagedFloorPlanDrafts").doc(data.draftId.trim())]
+          : []),
+      ];
+    });
+    const assignmentTargets = await Promise.all(
+      assignmentTargetReferences.map(reference => transaction.get(reference)),
+    );
+    let targetIndex = 0;
+    const hasExistingAssignment = assignments.some(assignment => {
+      if (!assignment.exists) return false;
+      const data = assignment.data() ?? {};
+      const assignmentOwnerId = typeof data.ownerId === "string" ? data.ownerId.trim() : "";
+      const linkedProject = typeof data.projectId === "string" && data.projectId.trim()
+        ? assignmentTargets[targetIndex++]
+        : null;
+      const linkedDraft = typeof data.draftId === "string" && data.draftId.trim()
+        ? assignmentTargets[targetIndex++]
+        : null;
+      if (assignmentOwnerId && !ownerIds.includes(assignmentOwnerId)) return false;
+      const projectOwnerId = linkedProject?.exists &&
+        typeof linkedProject.data()?.ownerId === "string"
+        ? linkedProject.data().ownerId.trim()
+        : "";
+      const draftOwnerId = linkedDraft?.exists &&
+        typeof linkedDraft.data()?.intendedClientId === "string"
+        ? linkedDraft.data().intendedClientId.trim()
+        : "";
+      return Boolean(
+        (linkedProject?.exists && (!projectOwnerId || ownerIds.includes(projectOwnerId))) ||
+        (linkedDraft?.exists && (!draftOwnerId || ownerIds.includes(draftOwnerId))),
+      );
+    });
     if (
-      assignments.some(assignment => assignment.exists) ||
+      hasExistingAssignment ||
       projects.some(snapshot => snapshot.docs.length > 0) ||
       drafts.some(snapshot => snapshot.docs.length > 0)
     ) {
@@ -41,7 +81,7 @@ export async function createReservedFloorPlanDraft(
       throw error;
     }
 
-    transaction.create(assignmentReference, {
+    transaction.set(assignmentReference, {
       ownerId,
       draftId,
       status: "draft",

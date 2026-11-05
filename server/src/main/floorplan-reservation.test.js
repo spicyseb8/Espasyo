@@ -15,6 +15,8 @@ function createMemoryDb(seed = {}) {
         doc(id) {
           return {
             key: `${name}/${id}`,
+            collection: name,
+            id,
             async get() {
               const value = records.get(`${name}/${id}`);
               return { exists: value !== undefined, data: () => value };
@@ -37,9 +39,17 @@ function createMemoryDb(seed = {}) {
       await previous;
       const writes = [];
       try {
-        return await callback({
+        const result = await callback({
           async get(reference) {
             if (reference.collection) {
+              if (reference.field === undefined) {
+                const value = records.get(`${reference.collection}/${reference.id}`);
+                return {
+                  exists: value !== undefined,
+                  data: () => value,
+                  key: reference.key,
+                };
+              }
               const matching = [...records.entries()].filter(([key, data]) =>
                 key.startsWith(`${reference.collection}/`) &&
                 data[reference.field] === reference.value
@@ -50,18 +60,27 @@ function createMemoryDb(seed = {}) {
             return { exists: value !== undefined, data: () => value, key: reference.key };
           },
           create(reference, value) {
-            writes.push(() => {
-              if (records.has(reference.key)) {
+            writes.push(stagedRecords => {
+              if (stagedRecords.has(reference.key)) {
                 const error = new Error("already exists");
                 error.code = 6;
                 throw error;
               }
-              records.set(reference.key, value);
+              stagedRecords.set(reference.key, value);
+            });
+          },
+          set(reference, value) {
+            writes.push(stagedRecords => {
+              stagedRecords.set(reference.key, value);
             });
           },
         });
+        const stagedRecords = new Map(records);
+        for (const write of writes) write(stagedRecords);
+        records.clear();
+        for (const [key, value] of stagedRecords) records.set(key, value);
+        return result;
       } finally {
-        for (const write of writes) write();
         release();
       }
     },
@@ -145,11 +164,37 @@ test("legacy assignments and owner IDs stored as account document IDs block new 
       ownerId: "client-1",
       projectId: "legacy-assignment-project",
     },
+    "projects/legacy-assignment-project": {
+      projectName: "Legacy assigned project",
+    },
   });
   await assert.rejects(
     createReservedFloorPlanDraft(assignmentDb, draft("client-1", "new-draft")),
     { status: 409 },
   );
+});
+
+test("malformed and orphaned assignment reservations do not block a client", async () => {
+  const db = createMemoryDb({
+    "adminManagedProjectAssignments/client-1": {
+      ownerId: "client-1",
+      status: "draft",
+    },
+  });
+  await createReservedFloorPlanDraft(db, draft("client-1", "new-draft"));
+  assert.equal(
+    db.records.get("adminManagedProjectAssignments/client-1").draftId,
+    "new-draft",
+  );
+  assert.equal(db.records.get("adminManagedFloorPlanDrafts/new-draft").intendedClientId, "client-1");
+});
+
+test("failed draft creation leaves no reservation behind", async () => {
+  const db = createMemoryDb({
+    "adminManagedFloorPlanDrafts/new-draft": { draftId: "new-draft" },
+  });
+  await assert.rejects(createReservedFloorPlanDraft(db, draft("client-1", "new-draft")));
+  assert.equal(db.records.has("adminManagedProjectAssignments/client-1"), false);
 });
 
 test("different clients can reserve independent floor plans", async () => {

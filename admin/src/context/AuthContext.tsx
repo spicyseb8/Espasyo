@@ -78,7 +78,8 @@ export function AuthProvider({
           }
 
           if (!currentUser.emailVerified) {
-            await signOut(auth);
+            setUser(null);
+            setRole(null);
             return;
           }
 
@@ -98,7 +99,9 @@ export function AuthProvider({
           }
 
           const employee = employeeSnapshot.docs.find(
-            (document) => isAdminRole(document.data().role)
+            (document) =>
+              isAdminRole(document.data().role) &&
+              document.data().account_status === "active"
           );
           const employeeRole = employee?.data().role;
 

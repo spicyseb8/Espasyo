@@ -7,38 +7,18 @@ import assetRoutes from "./create-asset.js";
 import projectCommentRoutes from "./project-comments.js";
 import projectDeadlineRoutes from "./project-deadlines.js";
 import managedProjectRoutes from "./managed-projects.js";
+import { createCorsOptions } from "./cors-config.js";
 
 const app = express();
 
 const PORT = Number(process.env.PORT) || 5000;
-const configuredOrigins = (process.env.CORS_ORIGINS || "")
-  .split(",")
-  .map(origin => origin.trim())
-  .filter(Boolean);
-if (process.env.NODE_ENV === "production" && configuredOrigins.length === 0) {
-  throw new Error("CORS_ORIGINS must include the deployed admin and client origins in production.");
-}
-const developmentOrigins = process.env.NODE_ENV === "production"
-  ? []
-  : [
-      "http://localhost:5173",
-      "http://localhost:5174",
-      "http://127.0.0.1:9999",
-      "http://localhost:9999",
-    ];
 
 // --------------------------------------------------
 // MIDDLEWARE
 // --------------------------------------------------
 
 app.use(
-  cors({
-    origin: [
-      ...configuredOrigins,
-      ...developmentOrigins,
-    ],
-    credentials: true,
-  })
+  cors(createCorsOptions())
 );
 
 app.use(

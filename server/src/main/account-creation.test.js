@@ -54,7 +54,7 @@ function createHarness({ firestoreError, existingEmail } = {}) {
         throw error;
       }
       const uid = `uid-${nextUid++}`;
-      authUsers.set(uid, { uid, email, password, displayName });
+      authUsers.set(uid, { uid, email, password, displayName, emailVerified: false });
       return { uid };
     },
     async deleteUser(uid) {
@@ -87,6 +87,7 @@ test("creates a client Auth account and compatible Firestore user record", async
   assert.equal(user.uid, account.uid);
   assert.equal(user.full_name, "Client One");
   assert.equal(user.account_status, "active");
+  assert.equal(harness.authUsers.get(account.uid).emailVerified, false);
   assert.equal(harness.authUsers.size, 1);
 });
 

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node src/main/server.js",
+    "test": "node --test src/main/account-creation.test.js src/main/account-id.test.js src/main/authorization.test.js src/main/client-account.test.js src/main/cors-config.test.js src/main/floorplan-client-eligibility.test.js src/main/floorplan-reservation.test.js src/main/floorplan-publishing.test.js src/main/managed-project-file-access.test.js src/main/project-deadline-service.test.js src/main/project-workflow.test.js",
     "verify-superadmin": "node src/create-superadmin.js",
     "seed-test-data": "node src/seed-test-data.js",
     "inspect:firestore": "node src/inspect-firestore.js",

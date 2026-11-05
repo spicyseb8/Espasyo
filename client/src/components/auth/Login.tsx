@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   reload,
+  sendEmailVerification,
   signInWithEmailAndPassword,
   signOut,
 } from "firebase/auth";
@@ -34,7 +35,10 @@ import {
 } from "@/components/ui/alert-dialog";
 
 import { auth } from "@/firebase/firebase";
+import { getUserProfileByAuthUid } from "@/firebase/user";
 import { validateLoginForm } from "@/utils/validators";
+import { ensureEmailVerified } from "../../../../shared/auth/loginVerification.mjs";
+import { getLoginErrorMessage } from "../../../../shared/auth/loginErrors.mjs";
 
 export function LoginForm({
   className,
@@ -82,12 +86,33 @@ export function LoginForm({
        * Prevent unverified users from accessing Espasyo.
        */
       if (!auth.currentUser?.emailVerified) {
-        await signOut(auth);
+         const verification = await ensureEmailVerified(
+           user,
+           sendEmailVerification,
+           () => signOut(auth),
+         );
+         if (verification.verificationError) {
+           console.error(
+             "Unable to send client email verification:",
+             verification.verificationError,
+           );
+         }
 
-        setError(
-          "Please verify your email before signing in."
+         setError(
+           verification.verificationSent
+             ? "A verification email has been sent. Verify your email, then sign in again."
+             : "Your email is not verified, and a verification email could not be sent. Please try again or contact support."
         );
 
+        return;
+      }
+
+      const profile = await getUserProfileByAuthUid(user.uid);
+      if (!profile || profile.account_status !== "active") {
+        await signOut(auth);
+        setError(
+          "We could not find an active client profile linked to this login. Contact support for help."
+        );
         return;
       }
 
@@ -98,36 +123,10 @@ export function LoginForm({
       window.location.href = "/home";
     } catch (error: any) {
       console.error("Login error:", error);
-
-      switch (error.code) {
-        case "auth/invalid-credential":
-          setError("Incorrect email or password.");
-          break;
-
-        case "auth/user-not-found":
-          setError("No account was found with this email.");
-          break;
-
-        case "auth/wrong-password":
-          setError("Incorrect email or password.");
-          break;
-
-        case "auth/invalid-email":
-          setError("Please enter a valid email address.");
-          break;
-
-        case "auth/too-many-requests":
-          setError(
-            "Too many failed attempts. Please try again later."
-          );
-          break;
-
-        case "auth/user-disabled":
-          setShowSuspendedDialog(true);
-          break;
-
-        default:
-          setError("Unable to sign in. Please try again.");
+      if (error?.code === "auth/user-disabled") {
+        setShowSuspendedDialog(true);
+      } else {
+        setError(getLoginErrorMessage(error?.code));
       }
     } finally {
       setLoading(false);
