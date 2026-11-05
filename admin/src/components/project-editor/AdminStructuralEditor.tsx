@@ -32,6 +32,7 @@ import {
     getManagedFloorPlanDraft,
     loadManagedProjectStructure,
     publishManagedFloorPlanDraft,
+    deleteManagedFloorPlanDraft,
     saveManagedFloorPlanDraft,
     saveManagedStructure
 } from "@/services/assets/projectStructureService";
@@ -40,6 +41,7 @@ import {
     loadLocalManagedProjectDraft,
     removeLocalManagedProjectDraft
 } from "@/services/assets/localManagedProjectDraft";
+import { createManagedEditorExitFingerprint } from "./managedEditorExitGuard";
 import { useAuth } from "@/context/AuthContext";
 import { getDoorAssets, getWindowAssets } from "@/services/assets/FirebaseDoorWindowLibrary";
 import AdminBuildPanel from "./AdminBuildPanel";
@@ -156,6 +158,9 @@ type BlueprintSession = {
     width: number;
     aspectRatio: number;
 };
+type PendingEditorExit =
+    | { kind: "navigate"; destination: string }
+    | { kind: "history"; delta: number };
 
 const WORLD_SIZE = 20;
 const CENTER = WORLD_SIZE / 2;
@@ -360,6 +365,66 @@ export default function AdminStructuralEditor() {
     const [newFloorMode, setNewFloorMode] = useState<"blank" | "outline">("blank");
     const [isCreatingFloor, setIsCreatingFloor] = useState(false);
     const [deadlineOpen, setDeadlineOpen] = useState(false);
+    const [exitGuardOpen, setExitGuardOpen] = useState(false);
+    const [exitGuardSaving, setExitGuardSaving] = useState(false);
+    const [exitGuardError, setExitGuardError] = useState("");
+    const [pendingEditorExit, setPendingEditorExit] = useState<PendingEditorExit | null>(null);
+    const savedEditorFingerprintRef = useRef<string | null>(null);
+    const savedDeadlineRef = useRef("");
+    const allowEditorExitRef = useRef(false);
+    const navigationCreatedDraft =
+        typeof (location.state as { newlyCreatedDraftId?: unknown } | null)?.newlyCreatedDraftId === "string" &&
+        (location.state as { newlyCreatedDraftId: string }).newlyCreatedDraftId === draftId;
+    const [newlyCreatedDraftIdState, setNewlyCreatedDraftIdState] = useState<string | null>(
+        navigationCreatedDraft && draftId ? draftId : null
+    );
+    const isNewlyCreatedDraft = Boolean(draftId && newlyCreatedDraftIdState === draftId);
+    const editorStateRef = useRef({
+        floorPlans,
+        activeFloorId,
+        projectName,
+        deadline,
+        initializationState,
+        isReadOnly
+    });
+    const locationRef = useRef(location);
+    const routerHistoryStateRef = useRef(window.history.state);
+    useEffect(() => {
+        editorStateRef.current = {
+            floorPlans,
+            activeFloorId,
+            projectName,
+            deadline,
+            initializationState,
+            isReadOnly
+        };
+        locationRef.current = location;
+        routerHistoryStateRef.current = window.history.state;
+        allowEditorExitRef.current = false;
+    }, [activeFloorId, deadline, floorPlans, initializationState, isReadOnly, location, projectName]);
+
+    const getCurrentEditorFingerprint = useCallback(() => {
+        const current = editorStateRef.current;
+        if (
+            current.initializationState !== "ready" ||
+            current.isReadOnly ||
+            current.floorPlans.length === 0
+        ) {
+            return null;
+        }
+        return createManagedEditorExitFingerprint({
+            floors: current.floorPlans,
+            activeFloorId: current.activeFloorId,
+            projectName: current.projectName,
+            deadline: current.deadline
+        });
+    }, []);
+    const hasUnsavedChanges = useCallback(() => {
+        const currentFingerprint = getCurrentEditorFingerprint();
+        return currentFingerprint !== null &&
+            savedEditorFingerprintRef.current !== null &&
+            currentFingerprint !== savedEditorFingerprintRef.current;
+    }, [getCurrentEditorFingerprint]);
     const updateActiveBlueprint = (updates: Partial<BlueprintSession>) => {
         if (!activeFloorId) return;
         setBlueprintSessions(current => ({
@@ -500,10 +565,19 @@ export default function AdminStructuralEditor() {
         }
 
         async function initialize() {
+            savedEditorFingerprintRef.current = null;
             if (showInitializationLoading) setInitializationState("loading");
             if (projectId) {
                 const initialized = await loadManagedProject(projectId);
                 if (!cancelled) {
+                    const savedDeadline = normalizeProjectDeadlineForInput(initialized.metadata.deadline);
+                    savedDeadlineRef.current = savedDeadline;
+                    savedEditorFingerprintRef.current = createManagedEditorExitFingerprint({
+                        floors: initialized.floors,
+                        activeFloorId: initialized.activeFloorId,
+                        projectName: initialized.projectName,
+                        deadline: savedDeadline
+                    });
                     setFloorPlans(initialized.floors);
                     setActiveFloorId(initialized.activeFloorId);
                     setProjectName(initialized.projectName);
@@ -512,7 +586,7 @@ export default function AdminStructuralEditor() {
                     setCreatorDisplayName(initialized.metadata.creatorName ?? "");
                     setIsDraftRecord(false);
                     setIsPublished(initialized.metadata.structuralStatus === "published");
-                    setDeadline(normalizeProjectDeadlineForInput(initialized.metadata.deadline));
+                    setDeadline(savedDeadline);
                     setIsReadOnly(initialized.metadata.createdBy !== user?.uid);
                     if (initialized.metadata.createdBy !== user?.uid) {
                         setStatus("Read-only view. Only the administrator who created this floor plan can edit or publish it.");
@@ -566,6 +640,14 @@ export default function AdminStructuralEditor() {
                     };
                 }
                 if (!cancelled) {
+                    const savedDeadline = normalizeProjectDeadlineForInput(draft.deadline);
+                    savedDeadlineRef.current = savedDeadline;
+                    savedEditorFingerprintRef.current = createManagedEditorExitFingerprint({
+                        floors: initializedFloors.floors,
+                        activeFloorId: initializedFloors.activeFloorId,
+                        projectName: initializedFloors.projectName,
+                        deadline: savedDeadline
+                    });
                     setFloorPlans(initializedFloors.floors);
                     setActiveFloorId(initializedFloors.activeFloorId);
                     setProjectName(initializedFloors.projectName);
@@ -574,7 +656,7 @@ export default function AdminStructuralEditor() {
                     setCreatorDisplayName(draft.creatorName ?? "");
                     setIsDraftRecord(true);
                     setIsPublished(false);
-                    setDeadline(normalizeProjectDeadlineForInput(draft.deadline));
+                    setDeadline(savedDeadline);
                     setIsReadOnly(draft.createdBy !== user?.uid);
                     setStatus(draft.createdBy !== user?.uid
                         ? "Read-only view. Only the administrator who created this draft can edit or publish it."
@@ -600,6 +682,87 @@ export default function AdminStructuralEditor() {
             cancelled = true;
         };
     }, [draftId, ownerName, projectId, showInitializationLoading, user?.uid]);
+
+    useEffect(() => {
+        const handlePopState = (event: PopStateEvent) => {
+            if (allowEditorExitRef.current || !hasUnsavedChanges()) return;
+
+            const currentHistoryState = routerHistoryStateRef.current as { idx?: unknown } | null;
+            const destinationHistoryState = event.state as { idx?: unknown } | null;
+            const currentIndex = typeof currentHistoryState?.idx === "number"
+                ? currentHistoryState.idx
+                : null;
+            const destinationIndex = typeof destinationHistoryState?.idx === "number"
+                ? destinationHistoryState.idx
+                : null;
+            const delta = currentIndex !== null && destinationIndex !== null &&
+                destinationIndex > currentIndex
+                ? 1
+                : -1;
+            const currentLocation = locationRef.current;
+            const currentUrl = `${currentLocation.pathname}${currentLocation.search}${currentLocation.hash}`;
+
+            event.stopImmediatePropagation();
+            window.history.pushState(routerHistoryStateRef.current, "", currentUrl);
+            setPendingEditorExit({ kind: "history", delta });
+            setExitGuardError("");
+            setExitGuardOpen(true);
+        };
+
+        const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+            if (!hasUnsavedChanges()) return;
+            event.preventDefault();
+            event.returnValue = "";
+        };
+
+        const handleInternalLinkClick = (event: MouseEvent) => {
+            if (
+                event.defaultPrevented ||
+                event.button !== 0 ||
+                event.metaKey ||
+                event.ctrlKey ||
+                event.shiftKey ||
+                event.altKey ||
+                !hasUnsavedChanges()
+            ) {
+                return;
+            }
+            if (!(event.target instanceof Element)) return;
+            const link = event.target.closest("a");
+            if (
+                !link ||
+                link.target === "_blank" ||
+                link.hasAttribute("download")
+            ) {
+                return;
+            }
+
+            const destinationUrl = new URL(link.href, window.location.origin);
+            if (destinationUrl.origin !== window.location.origin) return;
+            const destination =
+                `${destinationUrl.pathname}${destinationUrl.search}${destinationUrl.hash}`;
+            const currentLocation = locationRef.current;
+            const current =
+                `${currentLocation.pathname}${currentLocation.search}${currentLocation.hash}`;
+            if (destination === current) return;
+
+            event.preventDefault();
+            event.stopPropagation();
+            setPendingEditorExit({ kind: "navigate", destination });
+            setExitGuardError("");
+            setExitGuardOpen(true);
+        };
+
+        window.addEventListener("popstate", handlePopState, true);
+        window.addEventListener("beforeunload", handleBeforeUnload);
+        document.addEventListener("click", handleInternalLinkClick, true);
+
+        return () => {
+            window.removeEventListener("popstate", handlePopState, true);
+            window.removeEventListener("beforeunload", handleBeforeUnload);
+            document.removeEventListener("click", handleInternalLinkClick, true);
+        };
+    }, [hasUnsavedChanges, location.hash, location.pathname, location.search]);
 
     const structureCorners = structure?.corners;
     const structureWalls = structure?.walls;
@@ -2298,18 +2461,83 @@ export default function AdminStructuralEditor() {
         commit({ ...structure, [key]: value });
     };
 
-    const save = async (published: boolean) => {
-        if (!structure || savingAction) return;
+    const completeGuardedExit = () => {
+        const pending = pendingEditorExit;
+        if (!pending) return;
+        allowEditorExitRef.current = true;
+        setExitGuardOpen(false);
+        setExitGuardError("");
+        setPendingEditorExit(null);
+        if (pending.kind === "navigate") {
+            navigate(pending.destination);
+        } else {
+            navigate(pending.delta);
+        }
+    };
+
+    const requestBackNavigation = () => {
+        if (!hasUnsavedChanges()) {
+            navigate(-1);
+            return;
+        }
+        setPendingEditorExit({ kind: "history", delta: -1 });
+        setExitGuardError("");
+        setExitGuardOpen(true);
+    };
+
+    const discardAndExit = async () => {
+        if (!pendingEditorExit || exitGuardSaving || savingAction !== null) return;
+        setExitGuardSaving(true);
+        setExitGuardError("");
+        try {
+            if (draftId && isNewlyCreatedDraft) {
+                await deleteManagedFloorPlanDraft(draftId);
+                setNewlyCreatedDraftIdState(null);
+            }
+            completeGuardedExit();
+        } catch (error) {
+            const message = error instanceof Error
+                ? error.message
+                : "Unable to discard this floor-plan draft.";
+            setExitGuardError(message);
+            setStatus(message);
+        } finally {
+            setExitGuardSaving(false);
+        }
+    };
+
+    const saveDraftAndExit = async () => {
+        if (!pendingEditorExit || exitGuardSaving || savingAction !== null) return;
+        setExitGuardSaving(true);
+        setExitGuardError("");
+        try {
+            await save(false, true);
+        } finally {
+            setExitGuardSaving(false);
+        }
+    };
+
+    const save = async (published: boolean, exitAfterSave = false) => {
+        if (!structure || savingAction) {
+            if (exitAfterSave) setExitGuardError("The floor plan is not ready to save. Please try again.");
+            return;
+        }
         if (isReadOnly) {
-            setStatus("This floor plan is read-only. Only its creator can save or publish it.");
+            const message = "This floor plan is read-only. Only its creator can save or publish it.";
+            setStatus(message);
+            if (exitAfterSave) setExitGuardError(message);
             return;
         }
         if (!structure.projectId.trim() || !structure.ownerId.trim()) {
-            setStatus("Project ID and client owner UID are required before saving.");
+            const message = "Project ID and client owner UID are required before saving.";
+            setStatus(message);
+            if (exitAfterSave) setExitGuardError(message);
             return;
         }
         if (!projectName.trim()) {
-            setStatus("A floor-plan name is required before saving.");
+            const message = "A floor-plan name is required before saving.";
+            setStatus(message);
+            if (exitAfterSave) setExitGuardError(message);
             return;
         }
         if (published && !isPublished) {
@@ -2326,6 +2554,9 @@ export default function AdminStructuralEditor() {
         try {
             setStatus(published ? "Publishing..." : "Saving draft...");
             const savedAt = new Date().toISOString();
+            const savedDeadline = draftId && deadline
+                ? deadline
+                : savedDeadlineRef.current;
             const nextStructure = { ...structure, projectName, savedAt, blueprint: null };
             const projectData = serializeManagedStructureProject(
                 floorPlans,
@@ -2344,6 +2575,7 @@ export default function AdminStructuralEditor() {
                     setRevision(Math.max(revision, 0) + 1);
                     setHistoryByFloor({});
                     setFutureByFloor({});
+                    setNewlyCreatedDraftIdState(null);
                     try {
                         removeLocalManagedProjectDraft(structure.ownerId);
                     } catch (error) {
@@ -2366,12 +2598,28 @@ export default function AdminStructuralEditor() {
                     ...(deadline ? { deadline } : {})
                 });
                 setRevision(nextRevision);
+                if (deadline) savedDeadlineRef.current = deadline;
+                savedEditorFingerprintRef.current = createManagedEditorExitFingerprint({
+                    floors: floorPlans,
+                    activeFloorId,
+                    projectName,
+                    deadline: savedDeadlineRef.current
+                });
+                const wasNewDraft = newlyCreatedDraftIdState === draftId;
+                setNewlyCreatedDraftIdState(null);
+                if (wasNewDraft) {
+                    navigate(
+                        `${location.pathname}${location.search}${location.hash}`,
+                        { replace: true, state: { ownerName } }
+                    );
+                }
                 try {
                     removeLocalManagedProjectDraft(structure.ownerId);
                 } catch (error) {
                     console.error("Draft saved but its prior browser copy could not be removed.", error);
                 }
                 setStatus("Draft saved to the admin workspace. It has not been shared with the client.");
+                if (exitAfterSave) completeGuardedExit();
                 return;
             }
 
@@ -2390,10 +2638,21 @@ export default function AdminStructuralEditor() {
             });
             commit(nextStructure);
             setRevision(nextRevision);
+            savedEditorFingerprintRef.current = createManagedEditorExitFingerprint({
+                floors: floorPlans.map(floor => floor.floorId === activeFloorId
+                    ? { ...floor, structure: nextStructure }
+                    : floor),
+                activeFloorId,
+                projectName,
+                deadline: savedDeadline
+            });
             if (published) setIsPublished(true);
             setStatus(published ? "Project published successfully." : "Draft saved successfully.");
+            if (exitAfterSave) completeGuardedExit();
         } catch (error) {
-            setStatus(error instanceof Error ? error.message : "Unable to save project.");
+            const message = error instanceof Error ? error.message : "Unable to save project.";
+            setStatus(message);
+            if (exitAfterSave) setExitGuardError(message);
         } finally {
             setSavingAction(null);
         }
@@ -2428,7 +2687,7 @@ export default function AdminStructuralEditor() {
                     <button
                         type="button"
                         className="mt-5 rounded-md bg-white px-4 py-2 text-sm font-medium text-black hover:bg-zinc-200"
-                        onClick={() => navigate(-1)}
+                        onClick={requestBackNavigation}
                     >
                         Back to Projects
                     </button>
@@ -2444,7 +2703,7 @@ export default function AdminStructuralEditor() {
                     <button
                         type="button"
                         className="ae-btn ae-icon-btn"
-                        onClick={() => navigate(-1)}
+                        onClick={requestBackNavigation}
                         aria-label="Back"
                         title="Back"
                     >
@@ -2920,6 +3179,152 @@ export default function AdminStructuralEditor() {
                     <button type="button" onClick={() => setStatus("")} aria-label="Dismiss message" title="Dismiss">
                         <X size={14} />
                     </button>
+                </div>
+            )}
+            {exitGuardOpen && (
+                <div
+                    style={{
+                        position: "fixed",
+                        inset: 0,
+                        zIndex: 9999,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: 16,
+                        background: "rgba(15, 15, 15, 0.45)",
+                        backdropFilter: "blur(3px)"
+                    }}
+                >
+                    <div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="admin-unsaved-changes-title"
+                        style={{
+                            position: "relative",
+                            width: "min(460px, 100%)",
+                            borderRadius: 18,
+                            background: "#ffffff",
+                            padding: 24,
+                            boxShadow: "0 24px 70px rgba(0, 0, 0, 0.22)"
+                        }}
+                    >
+                        <button
+                            type="button"
+                            aria-label="Close"
+                            onClick={() => {
+                                if (exitGuardSaving || savingAction !== null) return;
+                                setExitGuardOpen(false);
+                                setExitGuardError("");
+                                setPendingEditorExit(null);
+                            }}
+                            disabled={exitGuardSaving || savingAction !== null}
+                            style={{
+                                position: "absolute",
+                                top: 14,
+                                right: 14,
+                                width: 34,
+                                height: 34,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                border: "none",
+                                borderRadius: "50%",
+                                background: "transparent",
+                                color: "#777777",
+                                cursor: exitGuardSaving || savingAction !== null ? "default" : "pointer"
+                            }}
+                        >
+                            <X size={19} />
+                        </button>
+                        <div style={{ paddingRight: 36 }}>
+                            <h2
+                                id="admin-unsaved-changes-title"
+                                style={{
+                                    margin: 0,
+                                    fontSize: 19,
+                                    lineHeight: 1.3,
+                                    fontWeight: 700,
+                                    color: "#222222"
+                                }}
+                            >
+                                Unsaved Changes
+                            </h2>
+                            <p style={{
+                                margin: "8px 0 0",
+                                fontSize: 13,
+                                lineHeight: 1.6,
+                                color: "#777777"
+                            }}>
+                                {draftId
+                                    ? isNewlyCreatedDraft
+                                        ? "This new floor plan has unsaved changes."
+                                        : "This draft is not autosaved. Save the latest changes before leaving, or discard them and keep the last saved draft."
+                                    : "You have unsaved changes to this project."}
+                            </p>
+                            {exitGuardError && (
+                                <p role="alert" style={{
+                                    margin: "10px 0 0",
+                                    fontSize: 13,
+                                    lineHeight: 1.5,
+                                    color: "#b42318"
+                                }}>
+                                    {exitGuardError}
+                                </p>
+                            )}
+                        </div>
+                        <div style={{
+                            display: "flex",
+                            justifyContent: draftId ? "stretch" : "flex-end",
+                            gap: 10,
+                            marginTop: 24
+                        }}>
+                            <button
+                                type="button"
+                                onClick={() => void discardAndExit()}
+                                disabled={exitGuardSaving || savingAction !== null}
+                                style={{
+                                    width: draftId ? "auto" : 130,
+                                    flex: draftId ? 1 : "0 0 130px",
+                                    height: 42,
+                                    padding: "0 16px",
+                                    border: "1px solid #dededb",
+                                    borderRadius: 9,
+                                    background: "#f5f5f2",
+                                    color: "#444444",
+                                    cursor: exitGuardSaving || savingAction !== null ? "default" : "pointer",
+                                    fontSize: 14,
+                                    fontWeight: 500,
+                                    whiteSpace: "nowrap"
+                                }}
+                            >
+                                Discard
+                            </button>
+                            {draftId && (
+                                <button
+                                    type="button"
+                                    onClick={() => void saveDraftAndExit()}
+                                    disabled={exitGuardSaving || savingAction !== null}
+                                    style={{
+                                        flex: 1,
+                                        minWidth: 0,
+                                        height: 42,
+                                        padding: "0 16px",
+                                        border: "none",
+                                        borderRadius: 9,
+                                        background: "#ff7a00",
+                                        color: "#ffffff",
+                                        cursor: exitGuardSaving || savingAction !== null ? "default" : "pointer",
+                                        fontSize: 14,
+                                        fontWeight: 600,
+                                        whiteSpace: "nowrap",
+                                        boxShadow: "0 2px 6px rgba(255, 122, 0, 0.18)"
+                                    }}
+                                >
+                                    {exitGuardSaving || savingAction !== null ? "Saving..." : "Save Draft & Exit"}
+                                </button>
+                            )}
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
