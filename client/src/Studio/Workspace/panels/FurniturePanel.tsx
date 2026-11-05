@@ -5,6 +5,7 @@ import AssetSection from "./AssetSection";
 import type { Asset } from "../../../assets/Asset";
 import { getFurnitureAssets } from "../../../engine/furniture/FirebaseFurnitureLibrary";
 import { FURNITURE_CATEGORY_SECTIONS } from "../../../engine/furniture/FurnitureCategory";
+import { useAssetFavorites } from "../../../context/useAssetFavorites";
 
 function filterFurniture(
     assets: Asset[],
@@ -22,6 +23,7 @@ function filterFurniture(
 }
 
 export default function FurniturePanel() {
+    const { favorites } = useAssetFavorites();
     const [furnitureAssets, setFurnitureAssets] = useState<Asset[]>([]);
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
@@ -29,9 +31,6 @@ export default function FurniturePanel() {
 
     useEffect(() => {
         let cancelled = false;
-
-        setLoading(true);
-        setLoadError(null);
 
         getFurnitureAssets()
             .then(assets => {
@@ -65,18 +64,31 @@ export default function FurniturePanel() {
                 ...section,
                 assets: filterFurniture(
                     furnitureAssets.filter(
-                        asset => asset.furnitureCategory === section.category
+                        asset =>
+                            asset.furnitureCategory === section.category &&
+                            !favorites.furniture.includes(asset.id)
                     ),
                     searchQuery
                 )
             })),
-        [furnitureAssets, searchQuery]
+        [furnitureAssets, searchQuery, favorites.furniture]
+    );
+
+    const favoriteFurniture = useMemo(
+        () =>
+            filterFurniture(
+                furnitureAssets.filter(asset =>
+                    favorites.furniture.includes(asset.id)
+                ),
+                searchQuery
+            ),
+        [furnitureAssets, favorites.furniture, searchQuery]
     );
 
     const isSearching = searchQuery.trim().length > 0;
-    const hasResults = sections.some(
-        section => section.assets.length > 0
-    );
+    const hasResults =
+        favoriteFurniture.length > 0 ||
+        sections.some(section => section.assets.length > 0);
     return (
         <div className="furniture-panel">
             <div className="furniture-panel-search">
@@ -104,6 +116,22 @@ export default function FurniturePanel() {
                     {loadError}
                 </p>
             )}
+
+            {!loading &&
+                !loadError &&
+                hasResults &&
+                favoriteFurniture.length > 0 && (
+                    <AssetSection
+                        title="Favorites"
+                        assets={favoriteFurniture}
+                        defaultOpen
+                        forceOpen={
+                            isSearching
+                                ? true
+                                : undefined
+                        }
+                    />
+                )}
 
             {!loading &&
                 !loadError &&
