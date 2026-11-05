@@ -1,8 +1,8 @@
 import {
   collection,
   doc,
-  getDoc,
-  getDocs,
+  getDocFromServer,
+  getDocsFromServer,
   limit,
   query,
   setDoc,
@@ -46,7 +46,7 @@ export async function getUserProfileByAuthUid(
   const uid = userUid.trim();
   if (!uid) throw new Error("A signed-in user ID is required.");
 
-  const matchingDocuments = await getDocs(
+  const matchingDocuments = await getDocsFromServer(
     query(collection(db, "users"), where("uid", "==", uid), limit(2)),
   );
   const matchingProfiles = matchingDocuments.docs.map(accountDocument => ({
@@ -54,7 +54,7 @@ export async function getUserProfileByAuthUid(
     id: accountDocument.id,
   }));
   const legacyDocument = matchingProfiles.length === 0
-    ? await getDoc(doc(db, "users", uid))
+    ? await getDocFromServer(doc(db, "users", uid))
     : null;
   const legacyProfile = legacyDocument?.exists()
     ? { ...legacyDocument.data(), id: legacyDocument.id }

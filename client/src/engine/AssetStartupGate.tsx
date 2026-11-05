@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useLocation } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
 import {
@@ -369,6 +370,7 @@ export default function AssetStartupGate({
   children: ReactNode;
 }) {
   const { user, loading } = useAuth();
+  const { pathname } = useLocation();
   const [retryToken, setRetryToken] = useState(0);
   const [preparation, setPreparation] = useState(EMPTY_PREPARATION);
 
@@ -510,6 +512,10 @@ export default function AssetStartupGate({
   }
 
   if (!user) {
+    return children;
+  }
+
+  if (pathname === "/auth") {
     return children;
   }
 

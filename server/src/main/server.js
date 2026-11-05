@@ -7,6 +7,7 @@ import assetRoutes from "./create-asset.js";
 import projectCommentRoutes from "./project-comments.js";
 import projectDeadlineRoutes from "./project-deadlines.js";
 import managedProjectRoutes from "./managed-projects.js";
+import legalAcceptanceRoutes from "./legal-acceptance.js";
 import { createCorsOptions } from "./cors-config.js";
 
 const app = express();
@@ -71,6 +72,11 @@ app.use(
 app.use(
   "/api",
   managedProjectRoutes
+);
+
+app.use(
+  "/api",
+  legalAcceptanceRoutes
 );
 
 // --------------------------------------------------

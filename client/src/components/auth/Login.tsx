@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   reload,
   sendEmailVerification,
   signInWithEmailAndPassword,
   signOut,
+  type User,
 } from "firebase/auth";
+import { Check } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import { cn } from "cn";
 
@@ -35,24 +38,270 @@ import {
 } from "@/components/ui/alert-dialog";
 
 import { auth } from "@/firebase/firebase";
+import { useAuth } from "@/context/AuthContext";
 import { getUserProfileByAuthUid } from "@/firebase/user";
+import LoadingScreen from "@/scene/LoadingScreen";
 import { validateLoginForm } from "@/utils/validators";
 import { ensureEmailVerified } from "../../../../shared/auth/loginVerification.mjs";
 import { getLoginErrorMessage } from "../../../../shared/auth/loginErrors.mjs";
+import {
+  LegalDocumentContent,
+  type LegalDocument,
+} from "@/components/legal/LegalDocumentContent";
+import {
+  getLegalAcceptance,
+  saveLegalAcceptance,
+} from "@/services/legalAcceptance";
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
+  const navigate = useNavigate();
+  const { user: authenticatedUser, loading: authLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showSuspendedDialog, setShowSuspendedDialog] = useState(false);
+  const [activeLegalDocument, setActiveLegalDocument] = useState<LegalDocument>("terms");
+  const [legalModalOpen, setLegalModalOpen] = useState(false);
+  const [termsRead, setTermsRead] = useState(false);
+  const [privacyPolicyRead, setPrivacyPolicyRead] = useState(false);
+  const [agreedToPolicies, setAgreedToPolicies] = useState(false);
+  const [pendingAcceptanceUser, setPendingAcceptanceUser] = useState<User | null>(null);
+  const [acceptanceSaveError, setAcceptanceSaveError] = useState("");
+  const [savingAcceptance, setSavingAcceptance] = useState(false);
+  const [acceptanceNeedsReview, setAcceptanceNeedsReview] = useState(false);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const scrollPositions = useRef<Record<LegalDocument, number>>({ terms: 0, privacy: 0 });
+  const acceptanceChoice = useRef({
+    termsRead: false,
+    privacyPolicyRead: false,
+    agreedToPolicies: false,
+    email: "",
+  });
+  const acceptanceSaveInFlight = useRef(false);
+  const authenticationInFlight = useRef(false);
+  const canSubmit = !loading && !pendingAcceptanceUser;
+
+  function openLegalDocument(document: LegalDocument) {
+    if (scrollAreaRef.current) {
+      scrollPositions.current[activeLegalDocument] = scrollAreaRef.current.scrollTop;
+    }
+    setActiveLegalDocument(document);
+    setLegalModalOpen(true);
+  }
+
+  function switchLegalDocument(document: LegalDocument) {
+    if (scrollAreaRef.current) {
+      scrollPositions.current[activeLegalDocument] = scrollAreaRef.current.scrollTop;
+    }
+    setActiveLegalDocument(document);
+  }
+
+  useEffect(() => {
+    if (!legalModalOpen) return;
+    const scrollArea = scrollAreaRef.current;
+    const content = contentRef.current;
+    if (!scrollArea || !content) return;
+
+    scrollArea.scrollTop = scrollPositions.current[activeLegalDocument];
+    const markDocumentReadAtEnd = () => {
+      scrollPositions.current[activeLegalDocument] = scrollArea.scrollTop;
+      if (
+        scrollArea.scrollTop > 0 &&
+        scrollArea.scrollTop + scrollArea.clientHeight >= scrollArea.scrollHeight - 4
+      ) {
+        if (activeLegalDocument === "terms") {
+          setTermsRead(true);
+          acceptanceChoice.current.termsRead = true;
+        } else {
+          setPrivacyPolicyRead(true);
+          acceptanceChoice.current.privacyPolicyRead = true;
+        }
+      }
+    };
+
+    scrollArea.addEventListener("scroll", markDocumentReadAtEnd, { passive: true });
+    const resizeObserver = new ResizeObserver(markDocumentReadAtEnd);
+    resizeObserver.observe(scrollArea);
+    resizeObserver.observe(content);
+    return () => {
+      scrollArea.removeEventListener("scroll", markDocumentReadAtEnd);
+      resizeObserver.disconnect();
+    };
+  }, [activeLegalDocument, legalModalOpen]);
+
+  const continueToRequestedPath = useCallback(() => {
+    setTermsRead(true);
+    setPrivacyPolicyRead(true);
+    setAgreedToPolicies(true);
+    acceptanceChoice.current = {
+      termsRead: true,
+      privacyPolicyRead: true,
+      agreedToPolicies: true,
+      email: auth.currentUser?.email?.trim().toLowerCase() ?? "",
+    };
+    setPendingAcceptanceUser(null);
+    setAcceptanceNeedsReview(false);
+    setAcceptanceSaveError("");
+    navigate("/home", { replace: true });
+    return true;
+  }, [navigate]);
+
+  const checkAuthenticatedClient = useCallback(async (
+    user: User,
+    isCancelled: () => boolean = () => false,
+  ): Promise<boolean> => {
+    await reload(user);
+    if (isCancelled() || auth.currentUser?.uid !== user.uid) return false;
+
+    if (!user.emailVerified) {
+      const verification = await ensureEmailVerified(
+        user,
+        sendEmailVerification,
+        () => auth.currentUser?.uid === user.uid
+          ? signOut(auth)
+          : Promise.resolve(),
+      );
+      if (verification.verificationError) {
+        console.error(
+          "Unable to send client email verification:",
+          verification.verificationError,
+        );
+      }
+      if (!isCancelled()) {
+        setError(
+          verification.verificationSent
+            ? "A verification email has been sent. Verify your email, then sign in again."
+            : "Your email is not verified, and a verification email could not be sent. Please try again or contact support.",
+        );
+      }
+      return false;
+    }
+
+    const profile = await getUserProfileByAuthUid(user.uid);
+    if (isCancelled() || auth.currentUser?.uid !== user.uid) return false;
+    if (!profile || profile.account_status !== "active") {
+      if (auth.currentUser?.uid === user.uid) {
+        await signOut(auth);
+      }
+      if (!isCancelled()) {
+        setError(
+          "We could not find an active client profile linked to this login. Contact support for help.",
+        );
+      }
+      return false;
+    }
+
+    try {
+      const accepted = await getLegalAcceptance(user);
+      if (isCancelled() || auth.currentUser?.uid !== user.uid) return false;
+      if (accepted) {
+        return continueToRequestedPath();
+      }
+
+      setPendingAcceptanceUser(user);
+      setAcceptanceNeedsReview(true);
+      setAcceptanceSaveError("");
+      const choice = acceptanceChoice.current;
+      if (
+        choice.termsRead &&
+        choice.privacyPolicyRead &&
+        choice.agreedToPolicies &&
+        choice.email === user.email?.trim().toLowerCase()
+      ) {
+        try {
+          await saveLegalAcceptance(user);
+          if (!await getLegalAcceptance(user)) {
+            throw new Error("We could not verify your agreement. Please retry.");
+          }
+          if (isCancelled() || auth.currentUser?.uid !== user.uid) return false;
+          return continueToRequestedPath();
+        } catch (saveError) {
+          if (isCancelled() || auth.currentUser?.uid !== user.uid) return false;
+          console.error("Unable to save client agreement acceptance:", saveError);
+          setAcceptanceSaveError(
+            saveError instanceof Error
+              ? saveError.message
+              : "We could not save your agreement. Please retry.",
+          );
+        }
+        return false;
+      }
+      return false;
+    } catch (verificationError) {
+      if (isCancelled() || auth.currentUser?.uid !== user.uid) return false;
+      console.error("Unable to verify client agreement acceptance:", verificationError);
+      setPendingAcceptanceUser(user);
+      setAcceptanceNeedsReview(false);
+      setAcceptanceSaveError(
+        verificationError instanceof Error
+          ? verificationError.message
+          : "We could not verify your agreement. Please retry.",
+      );
+      return false;
+    }
+  }, [continueToRequestedPath]);
+
+  useEffect(() => {
+    if (authLoading || !authenticatedUser || authenticationInFlight.current) return;
+
+    let cancelled = false;
+    setError("");
+    void checkAuthenticatedClient(authenticatedUser, () => cancelled).catch(error => {
+      console.error("Unable to verify the signed-in client account:", error);
+      if (!cancelled) {
+        setError("We could not verify your account. Please retry.");
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authenticatedUser, authLoading, checkAuthenticatedClient]);
+
+  async function retryAcceptanceSave() {
+    if (!pendingAcceptanceUser || acceptanceSaveInFlight.current) return;
+    acceptanceSaveInFlight.current = true;
+    setSavingAcceptance(true);
+    setAcceptanceSaveError("");
+    try {
+      let accepted = await getLegalAcceptance(pendingAcceptanceUser);
+      if (auth.currentUser?.uid !== pendingAcceptanceUser.uid) {
+        throw new Error("Your session changed. Please sign in again.");
+      }
+      if (!accepted) {
+        if (!termsRead || !privacyPolicyRead || !agreedToPolicies) {
+          setAcceptanceNeedsReview(true);
+          return;
+        }
+        await saveLegalAcceptance(pendingAcceptanceUser);
+        accepted = await getLegalAcceptance(pendingAcceptanceUser);
+      }
+      if (!accepted) {
+        throw new Error("We could not verify your agreement. Please retry.");
+      }
+      continueToRequestedPath();
+    } catch (saveError) {
+      console.error("Unable to save client agreement acceptance:", saveError);
+      setAcceptanceSaveError(
+        saveError instanceof Error
+          ? saveError.message
+          : "We could not save your agreement. Please retry.",
+      );
+    } finally {
+      setSavingAcceptance(false);
+      acceptanceSaveInFlight.current = false;
+    }
+  }
 
   const handleSubmit = async (e: React.SubmitEvent) => {
     e.preventDefault();
+    if (authenticationInFlight.current || !canSubmit) return;
 
     setError("");
 
@@ -66,7 +315,9 @@ export function LoginForm({
     }
 
     setLoading(true);
+    authenticationInFlight.current = true;
 
+    let navigatingToHome = false;
     try {
       const userCredential = await signInWithEmailAndPassword(
         auth,
@@ -74,64 +325,33 @@ export function LoginForm({
         password
       );
 
-      const user = userCredential.user;
-
-      /*
-       * Refresh the user's Auth information.
-       * This makes sure we get the latest emailVerified status.
-       */
-      await reload(user);
-
-      /*
-       * Prevent unverified users from accessing Espasyo.
-       */
-      if (!auth.currentUser?.emailVerified) {
-         const verification = await ensureEmailVerified(
-           user,
-           sendEmailVerification,
-           () => signOut(auth),
-         );
-         if (verification.verificationError) {
-           console.error(
-             "Unable to send client email verification:",
-             verification.verificationError,
-           );
-         }
-
-         setError(
-           verification.verificationSent
-             ? "A verification email has been sent. Verify your email, then sign in again."
-             : "Your email is not verified, and a verification email could not be sent. Please try again or contact support."
-        );
-
-        return;
-      }
-
-      const profile = await getUserProfileByAuthUid(user.uid);
-      if (!profile || profile.account_status !== "active") {
-        await signOut(auth);
-        setError(
-          "We could not find an active client profile linked to this login. Contact support for help."
-        );
-        return;
-      }
-
-      /*
-       * Email is verified.
-       * Allow the user to enter Espasyo.
-       */
-      window.location.href = "/home";
-    } catch (error: any) {
+      navigatingToHome = await checkAuthenticatedClient(userCredential.user);
+    } catch (error: unknown) {
       console.error("Login error:", error);
-      if (error?.code === "auth/user-disabled") {
+      const errorCode = typeof error === "object" && error !== null &&
+          "code" in error && typeof error.code === "string"
+        ? error.code
+        : undefined;
+      if (errorCode === "auth/user-disabled") {
         setShowSuspendedDialog(true);
       } else {
-        setError(getLoginErrorMessage(error?.code));
+        setError(getLoginErrorMessage(errorCode));
       }
     } finally {
-      setLoading(false);
+      if (!navigatingToHome) {
+        setLoading(false);
+        authenticationInFlight.current = false;
+      }
     }
   };
+
+  if (loading) {
+    return (
+      <div className="fixed inset-0 z-[100]">
+        <LoadingScreen label="Signing in" />
+      </div>
+    );
+  }
 
   return (
     <div
@@ -159,6 +379,7 @@ export function LoginForm({
                   variant="outline"
                   type="button"
                   className="w-full"
+                  disabled={!canSubmit}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -180,6 +401,7 @@ export function LoginForm({
                   variant="outline"
                   type="button"
                   className="w-full"
+                  disabled={!canSubmit}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -211,7 +433,12 @@ export function LoginForm({
                   placeholder="m@example.com"
                   value={email}
                   onChange={(e) => {
-                    setEmail(e.target.value)
+                    const nextEmail = e.target.value;
+                    setEmail(nextEmail);
+                    if (nextEmail.trim().toLowerCase() !== acceptanceChoice.current.email) {
+                      setAgreedToPolicies(false);
+                      acceptanceChoice.current.agreedToPolicies = false;
+                    }
                     setError("");
                   }}
                   autoComplete="email"
@@ -252,7 +479,7 @@ export function LoginForm({
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={loading}
+                  disabled={!canSubmit}
                 >
                   {loading
                     ? "Signing in..."
@@ -265,23 +492,179 @@ export function LoginForm({
         </CardContent>
       </Card>
 
-      <FieldDescription className="px-6 text-center">
-        By clicking continue, you agree to our{" "}
-        <a
-          href="#"
-          className="underline underline-offset-4"
+      {!pendingAcceptanceUser && (
+        <div className="space-y-3 px-6 text-center">
+          <FieldDescription>
+            Read the{" "}
+            <button
+              type="button"
+              className="underline underline-offset-4"
+              onClick={() => openLegalDocument("terms")}
+            >
+              Terms of Service
+            </button>
+            {" and "}
+            <button
+              type="button"
+              className="underline underline-offset-4"
+              onClick={() => openLegalDocument("privacy")}
+            >
+              Privacy Policy
+            </button>
+            {" before agreeing. If your account has already accepted the current versions, you can continue without reviewing them again."}
+          </FieldDescription>
+          <label className={`flex items-start gap-3 text-left text-sm leading-relaxed ${
+            termsRead && privacyPolicyRead
+              ? "cursor-pointer"
+              : "cursor-not-allowed opacity-60"
+          }`}>
+            <input
+              type="checkbox"
+              checked={agreedToPolicies}
+              disabled={!termsRead || !privacyPolicyRead}
+              onChange={event => {
+                const checked = event.target.checked;
+                setAgreedToPolicies(checked);
+                acceptanceChoice.current.agreedToPolicies = checked;
+                acceptanceChoice.current.email = email.trim().toLowerCase();
+              }}
+              className="mt-1 size-4 accent-primary"
+            />
+            <span>I have read and agree to the Terms of Service and Privacy Policy.</span>
+          </label>
+        </div>
+      )}
+
+      {pendingAcceptanceUser && (
+        <div className="space-y-3 px-6" role="status">
+          {acceptanceNeedsReview ? (
+            <>
+              <p className="text-sm">
+                Read both documents and confirm your agreement to continue.
+              </p>
+              <FieldDescription>
+                <button
+                  type="button"
+                  className="underline underline-offset-4"
+                  onClick={() => openLegalDocument("terms")}
+                >
+                  Terms of Service
+                </button>
+                {" and "}
+                <button
+                  type="button"
+                  className="underline underline-offset-4"
+                  onClick={() => openLegalDocument("privacy")}
+                >
+                  Privacy Policy
+                </button>
+              </FieldDescription>
+              <label className={`flex items-start gap-3 text-left text-sm leading-relaxed ${
+                termsRead && privacyPolicyRead
+                  ? "cursor-pointer"
+                  : "cursor-not-allowed opacity-60"
+              }`}>
+                <input
+                  type="checkbox"
+                  checked={agreedToPolicies}
+                  disabled={!termsRead || !privacyPolicyRead || savingAcceptance}
+                  onChange={event => {
+                    const checked = event.target.checked;
+                    setAgreedToPolicies(checked);
+                    acceptanceChoice.current.agreedToPolicies = checked;
+                    acceptanceChoice.current.email = email.trim().toLowerCase();
+                  }}
+                  className="mt-1 size-4 accent-primary"
+                />
+                <span>I have read and agree to the Terms of Service and Privacy Policy.</span>
+              </label>
+            </>
+          ) : (
+            <p className="text-sm text-destructive">
+              Your login succeeded, but we could not verify your agreement. Protected areas remain unavailable until verification succeeds.
+            </p>
+          )}
+          {acceptanceSaveError && (
+            <p className="text-sm text-destructive" role="alert">{acceptanceSaveError}</p>
+          )}
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            disabled={savingAcceptance || (
+              acceptanceNeedsReview &&
+              (!termsRead || !privacyPolicyRead || !agreedToPolicies)
+            )}
+            onClick={() => void retryAcceptanceSave()}
+          >
+            {savingAcceptance
+              ? "Verifying..."
+              : acceptanceNeedsReview
+                ? acceptanceSaveError
+                  ? "Retry saving agreement"
+                  : "Agree and continue"
+                : "Retry verification"}
+          </Button>
+        </div>
+      )}
+
+      {legalModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setLegalModalOpen(false)}
         >
-          Terms of Service
-        </a>{" "}
-        and{" "}
-        <a
-          href="#"
-          className="underline underline-offset-4"
-        >
-          Privacy Policy
-        </a>
-        .
-      </FieldDescription>
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="login-legal-modal-title"
+            className="flex max-h-[90vh] w-full max-w-3xl flex-col rounded-lg border bg-background shadow-xl"
+            onClick={event => event.stopPropagation()}
+          >
+            <header className="flex items-center justify-between gap-4 border-b p-4">
+              <div>
+                <h2 id="login-legal-modal-title" className="text-lg font-semibold">
+                  {activeLegalDocument === "terms" ? "Terms of Service" : "Privacy Policy"}
+                </h2>
+                <div className="mt-2 flex gap-4 text-sm">
+                  <button
+                    type="button"
+                    className={activeLegalDocument === "terms" ? "font-semibold underline" : "underline"}
+                    aria-current={activeLegalDocument === "terms" ? "page" : undefined}
+                    onClick={() => switchLegalDocument("terms")}
+                  >
+                    Terms of Service
+                    {termsRead && <Check className="ml-1 inline size-4" aria-label="Read" />}
+                  </button>
+                  <button
+                    type="button"
+                    className={activeLegalDocument === "privacy" ? "font-semibold underline" : "underline"}
+                    aria-current={activeLegalDocument === "privacy" ? "page" : undefined}
+                    onClick={() => switchLegalDocument("privacy")}
+                  >
+                    Privacy Policy
+                    {privacyPolicyRead && <Check className="ml-1 inline size-4" aria-label="Read" />}
+                  </button>
+                </div>
+              </div>
+            </header>
+            <div
+              ref={scrollAreaRef}
+              className="min-h-0 flex-1 overflow-y-auto p-5"
+              tabIndex={0}
+              aria-label={`${activeLegalDocument === "terms" ? "Terms of Service" : "Privacy Policy"} content`}
+            >
+              <div ref={contentRef}>
+                <LegalDocumentContent document={activeLegalDocument} />
+              </div>
+            </div>
+            <footer className="flex justify-end border-t p-4">
+              <Button type="button" variant="outline" onClick={() => setLegalModalOpen(false)}>
+                Close
+              </Button>
+            </footer>
+          </section>
+        </div>
+      )}
 
       <AlertDialog
         open={showSuspendedDialog}

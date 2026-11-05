@@ -1,4 +1,5 @@
 import { auth } from "../firebase/firebase";
+import type { User } from "firebase/auth";
 
 const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
 if (!configuredApiBaseUrl && !import.meta.env.DEV) {
@@ -8,11 +9,17 @@ if (!configuredApiBaseUrl && !import.meta.env.DEV) {
 const API_BASE_URL = (configuredApiBaseUrl || "http://localhost:5000/api")
     .replace(/\/+$/, "");
 
-export async function projectApi<T>(path: string, init: RequestInit = {}): Promise<T> {
-    const user = auth.currentUser;
+export async function projectApi<T>(
+    path: string,
+    init: RequestInit = {},
+    user: User | null = auth.currentUser,
+): Promise<T> {
     if (!user) throw new Error("Please log in before saving a project.");
 
     const token = await user.getIdToken();
+    if (auth.currentUser?.uid !== user.uid) {
+        throw new Error("Your session changed. Please retry the request.");
+    }
     const headers = new Headers(init.headers);
     headers.set("Authorization", `Bearer ${token}`);
     if (init.body && !headers.has("Content-Type")) {
