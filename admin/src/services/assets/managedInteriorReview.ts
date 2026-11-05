@@ -30,9 +30,10 @@ export interface AdminManagedProjectMetadata {
     structuralStatus?: string;
     structuralRevision?: number;
     publishedStructuralRevision?: number;
-    jsonUrl: string;
-    interiorJsonPath?: string;
-    interiorJsonUrl?: string;
+    hasInterior?: boolean;
+    submittedSubmissionId?: string;
+    approvedSubmissionId?: string;
+    reviewSnapshotType?: "latest-saved" | "submitted" | "approved";
 }
 
 export interface AdminReviewProjectData extends Record<string, unknown> {
@@ -122,7 +123,7 @@ export function mergeManagedInteriorData<T extends Record<string, unknown>>(
 
 export async function loadAdminManagedProjectForReview(
     metadata: AdminManagedProjectMetadata,
-    fetcher: typeof fetch = fetch
+    loadFile?: (kind: "structure" | "interior" | "submitted" | "approved") => Promise<unknown>
 ): Promise<AdminReviewProjectData> {
     if (
         metadata.workflowType !== "admin-managed" ||
@@ -133,15 +134,13 @@ export async function loadAdminManagedProjectForReview(
         throw new Error("Only a published admin-managed project can be reviewed.");
     }
 
-    const structureResponse = await fetcher(metadata.jsonUrl.trim(), {
-        method: "GET",
-        cache: "no-store"
+    const fetchProjectFile = loadFile ?? (async kind => {
+        const { projectApi } = await import("./projectApi.ts");
+        return projectApi<unknown>(
+            `/admin/projects/${encodeURIComponent(metadata.projectId)}/files/${kind}`
+        );
     });
-    if (!structureResponse.ok) {
-        throw new Error(`Project JSON request failed with HTTP ${structureResponse.status}.`);
-    }
-
-    const structure: unknown = await structureResponse.json();
+    const structure: unknown = await fetchProjectFile("structure");
     if (!isRecord(structure)) {
         throw new Error("Published project JSON is invalid.");
     }
@@ -190,7 +189,20 @@ export async function loadAdminManagedProjectForReview(
         }
     }
 
-    const interiorPayload = await loadInteriorPayload(metadata, fetcher);
+    const snapshotType = metadata.reviewSnapshotType;
+    if (snapshotType === "submitted" && !metadata.submittedSubmissionId) {
+        throw new Error("The submitted project snapshot is unavailable.");
+    }
+    if (snapshotType === "approved" && !metadata.approvedSubmissionId) {
+        throw new Error("The approved project snapshot is unavailable.");
+    }
+    const interiorPayload = await loadInteriorPayload(
+        metadata,
+        snapshotType === "submitted" || snapshotType === "approved"
+            ? snapshotType
+            : "interior",
+        fetchProjectFile
+    );
     return mergeManagedInteriorData(
         structure as AdminReviewProjectData,
         interiorPayload
@@ -199,36 +211,23 @@ export async function loadAdminManagedProjectForReview(
 
 async function loadInteriorPayload(
     metadata: AdminManagedProjectMetadata,
-    fetcher: typeof fetch
+    kind: "interior" | "submitted" | "approved",
+    loadFile: (kind: "structure" | "interior" | "submitted" | "approved") => Promise<unknown>
 ): Promise<AdminManagedInteriorPayload | null> {
-    const url = metadata.interiorJsonUrl?.trim();
-    if (!url) {
-        if (metadata.interiorJsonPath) {
-            throw new Error("Interior design metadata has a path but no download URL.");
+    if (kind === "interior" && !metadata.hasInterior) {
+        return null;
+    }
+    let value: unknown;
+    try {
+        value = await loadFile(kind);
+    } catch (error) {
+        if (kind === "interior" &&
+            error instanceof Error &&
+            error.message.includes("does not exist")) {
+            return null;
         }
-        return null;
+        throw error;
     }
-
-    const expectedPath = `projects/${metadata.ownerId}/${metadata.projectId}.interior.json`;
-    if (
-        metadata.interiorJsonPath &&
-        metadata.interiorJsonPath !== expectedPath
-    ) {
-        throw new Error("Interior design storage path does not match the selected client project.");
-    }
-
-    const response = await fetcher(url, {
-        method: "GET",
-        cache: "no-store"
-    });
-    if (response.status === 404) {
-        return null;
-    }
-    if (!response.ok) {
-        throw new Error(`Interior design request failed with HTTP ${response.status}.`);
-    }
-
-    const value: unknown = await response.json();
     if (!isRecord(value)) {
         throw new Error("Interior design JSON is invalid.");
     }

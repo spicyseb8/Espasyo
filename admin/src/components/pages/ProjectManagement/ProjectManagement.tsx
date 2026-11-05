@@ -44,7 +44,6 @@ import {
     type AdminProject
 } from "../../../services/assets/projectService";
 import {
-    getClientDesignedProjects,
     getUnverifiedManagedProjects
 } from "../../../services/assets/projectLifecycle";
 
@@ -64,6 +63,7 @@ type SortField =
 type SortDirection = "asc" | "desc";
 
 type ProjectView = "list" | "tiles";
+type ProjectTab = "ongoing" | "submitted" | "approved";
 
 const SORT_FIELDS: {
     value: SortField;
@@ -233,6 +233,7 @@ export default function ProjectManagement() {
     const [sortField, setSortField] = useState<SortField>("Date Modified");
     const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
     const [projectView, setProjectView] = useState<ProjectView>("tiles");
+    const [activeTab, setActiveTab] = useState<ProjectTab>("ongoing");
 
     const [selectedProject, setSelectedProject] =
         useState<AdminProject | null>(null);
@@ -268,7 +269,9 @@ export default function ProjectManagement() {
                 const loadedProjects = await getAdminProjects();
 
                 if (!cancelled) {
-                    setProjects(getClientDesignedProjects(loadedProjects));
+                    setProjects(loadedProjects.filter(project =>
+                        project.lifecycleStatus !== "unverified"
+                    ));
                     setUnverifiedProjects(getUnverifiedManagedProjects(loadedProjects));
                 }
 
@@ -308,9 +311,17 @@ export default function ProjectManagement() {
 
         const value = search.trim().toLowerCase();
 
+        const statusProjects = projects.filter(project => {
+            const status = project.projectStatus ??
+                (project.lifecycleStatus === "legacy" ? "ongoing" : "available");
+            if (activeTab === "submitted") return status === "submitted";
+            if (activeTab === "approved") return status === "approved";
+            return ["available", "ongoing", "revision-requested"].includes(status) ||
+                project.lifecycleStatus === "legacy";
+        });
         const base = !value
-            ? projects
-            : projects.filter(
+            ? statusProjects
+            : statusProjects.filter(
                 project =>
                     project.projectName.toLowerCase().includes(value) ||
                     (project.ownerName ?? "").toLowerCase().includes(value) ||
@@ -344,12 +355,12 @@ export default function ProjectManagement() {
 
         return sorted;
 
-    }, [projects, search, sortField, sortDirection]);
+    }, [projects, search, sortField, sortDirection, activeTab]);
 
 
-    function handleReviewClientDesign(project: AdminProject) {
+    function handleReviewClientDesign(project: AdminProject, snapshot?: "submitted" | "approved") {
         setSelectedProject(null);
-        navigate(`/projects/view/${project.projectId}`);
+        navigate(`/projects/view/${project.projectId}${snapshot ? `?snapshot=${snapshot}` : ""}`);
     }
 
 
@@ -369,11 +380,11 @@ export default function ProjectManagement() {
 
                         <div>
                             <CardTitle className="text-base">
-                                Client-Designed Projects
+                                Project Management
                             </CardTitle>
 
                             <CardDescription>
-                                Projects with successfully saved client interior designs.
+                                Manage assigned designs, submissions, revisions, and approvals.
                             </CardDescription>
                         </div>
 
@@ -464,6 +475,25 @@ export default function ProjectManagement() {
 
                     </div>
 
+                    <div className="mt-4 flex gap-1 border-b border-border/60" role="tablist" aria-label="Project lifecycle">
+                        {([
+                            ["ongoing", "Ongoing Projects"],
+                            ["submitted", "Submitted Projects"],
+                            ["approved", "Approved Projects"]
+                        ] as const).map(([tab, label]) => (
+                            <button
+                                key={tab}
+                                type="button"
+                                role="tab"
+                                aria-selected={activeTab === tab}
+                                className={`border-b-2 px-3 py-2 text-sm ${activeTab === tab ? "border-primary font-medium" : "border-transparent text-muted-foreground"}`}
+                                onClick={() => setActiveTab(tab)}
+                            >
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+
                 </CardHeader>
 
 
@@ -471,7 +501,7 @@ export default function ProjectManagement() {
                     {!loading && !error && unverifiedProjects.length > 0 && (
                         <div className="mx-4 mt-4 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950">
                             <p className="font-medium">
-                                {unverifiedProjects.length} project(s) could not be classified and are excluded from Client-Designed Projects.
+                                {unverifiedProjects.length} project(s) could not be classified and are excluded from lifecycle tabs.
                             </p>
                             <ul className="mt-1 list-inside list-disc">
                                 {unverifiedProjects.map(project => (
@@ -520,7 +550,11 @@ export default function ProjectManagement() {
 
                             <div className="text-center">
                                 <p className="text-sm font-medium">
-                                    No projects found
+                                    {activeTab === "submitted"
+                                        ? "No projects are waiting for review."
+                                        : activeTab === "approved"
+                                            ? "No projects have been approved yet."
+                                            : "There are no ongoing projects yet."}
                                 </p>
 
                                 <p className="mt-1 text-xs text-muted-foreground">
@@ -618,7 +652,7 @@ export default function ProjectManagement() {
 
                                             <TableCell>
                                                 <Badge variant="outline">
-                                                    Saved
+                                                    {getProjectDisplayStatus(project)}
                                                 </Badge>
                                             </TableCell>
 
@@ -689,7 +723,7 @@ export default function ProjectManagement() {
                                                     {formatCost(project)}
                                                 </span>
                                                 <Badge variant="outline">
-                                                    Saved
+                                                    {getProjectDisplayStatus(project)}
                                                 </Badge>
                                             </div>
                                         </CardContent>
@@ -714,6 +748,20 @@ export default function ProjectManagement() {
                     }
                 }}
                 onReviewClientDesign={handleReviewClientDesign}
+                onProjectReviewed={(projectId, status) => {
+                    setProjects(current => current.map(project =>
+                        project.projectId === projectId
+                            ? {
+                                ...project,
+                                projectStatus: status as AdminProject["projectStatus"],
+                                lifecycleStatus: status as AdminProject["lifecycleStatus"]
+                            }
+                            : project
+                    ));
+                    setSelectedProject(current => current?.projectId === projectId
+                        ? { ...current, projectStatus: status as AdminProject["projectStatus"] }
+                        : current);
+                }}
                 onDeadlineSaved={(projectId, deadline) => {
                     setProjects(current =>
                         current.map(project =>
@@ -735,4 +783,34 @@ export default function ProjectManagement() {
 
     );
 
+}
+
+function getProjectDisplayStatus(project: AdminProject): string {
+    const status = project.projectStatus ??
+        (project.lifecycleStatus === "legacy" ? "legacy" : "available");
+    if (["approved", "submitted"].includes(status)) {
+        return status.replaceAll("-", " ");
+    }
+    if (project.deadline) {
+        const parts = new Intl.DateTimeFormat("en-US", {
+            timeZone: "Asia/Manila",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit"
+        }).formatToParts(new Date());
+        const today = `${parts.find(part => part.type === "year")?.value}-${parts.find(part => part.type === "month")?.value}-${parts.find(part => part.type === "day")?.value}`;
+        const revisionLabel = status === "revision-requested"
+            ? " · revision requested"
+            : "";
+        const deadlineDate = project.deadline.slice(0, 10);
+        if (deadlineDate < today) return `overdue${revisionLabel}`;
+        const days = Math.ceil(
+            (new Date(project.deadline.length > 10
+                ? `${project.deadline}:00+08:00`
+                : `${project.deadline}T23:59:59+08:00`).getTime() - Date.now()) /
+            86_400_000
+        );
+        if (days <= 3) return `due soon${revisionLabel}`;
+    }
+    return status === "available" ? "assigned" : status.replaceAll("-", " ");
 }

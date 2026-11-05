@@ -23,7 +23,6 @@ function createDependencies(overrides = {}) {
             upload: async (path, json) => {
                 calls.push("upload");
                 calls.push({ path, data: JSON.parse(json) });
-                return "https://storage.example/published.json";
             },
             commit: async publication => {
                 calls.push("commit");

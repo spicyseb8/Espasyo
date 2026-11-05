@@ -1,5 +1,14 @@
 const DEADLINE_TIME_ZONE = "Asia/Manila";
 
+export function isValidDeadlineValue(value) {
+  if (typeof value !== "string") return false;
+  const date = value.slice(0, 10);
+  if (!isValidCalendarDeadline(date)) return false;
+  if (value === date) return true;
+  if (!/^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d$/.test(value)) return false;
+  return true;
+}
+
 export function isValidCalendarDeadline(value) {
   if (
     typeof value !== "string" ||
@@ -35,6 +44,20 @@ export function isValidCalendarDeadline(value) {
   return day <= daysInMonth[month - 1];
 }
 
+export function getPhilippineDateTimeKey(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: DEADLINE_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const value = type => parts.find(part => part.type === type)?.value;
+  return `${value("year")}-${value("month")}-${value("day")}T${value("hour")}:${value("minute")}`;
+}
+
 export function getPhilippineDateKey(date = new Date()) {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: DEADLINE_TIME_ZONE,
@@ -51,21 +74,17 @@ export function getPhilippineDateKey(date = new Date()) {
 }
 
 export function validateDeadlineUpdate(value, today = getPhilippineDateKey()) {
-  if (value === null) {
-    return { valid: true, deadline: null };
-  }
-
-  if (!isValidCalendarDeadline(value)) {
+  if (!isValidDeadlineValue(value)) {
     return {
       valid: false,
-      message: "Deadline must be a valid YYYY-MM-DD calendar date or null.",
+      message: "Deadline must be a valid Philippine date and time. Deadlines cannot be cleared.",
     };
   }
 
-  if (value < today) {
+  if (value.slice(0, 10) <= today.slice(0, 10)) {
     return {
       valid: false,
-      message: "A new deadline must be today or a future date.",
+      message: "A new deadline must be after today.",
     };
   }
 
@@ -73,21 +92,37 @@ export function validateDeadlineUpdate(value, today = getPhilippineDateKey()) {
 }
 
 export function isDeadlineExpired(value, today = getPhilippineDateKey()) {
-  return isValidCalendarDeadline(value) && value < today;
+  if (!isValidDeadlineValue(value)) return false;
+  const deadlineDate = value.slice(0, 10);
+  const nowDate = today.slice(0, 10);
+  if (deadlineDate !== nowDate) return deadlineDate < nowDate;
+  return value.length > 10 && today.length > 10 && value <= today.slice(0, 16);
 }
 
-export async function saveProjectDeadline(db, projectId, deadline) {
+export async function saveProjectDeadline(db, projectId, deadline, actor, reason = "") {
   const projectReference = db.collection("projects").doc(projectId);
-  const projectSnapshot = await projectReference.get();
-
-  if (!projectSnapshot.exists) {
-    return false;
-  }
-
-  await projectReference.update({
-    deadline,
-    updatedAt: new Date(),
+  const activityReference = db.collection("projectActivity").doc();
+  return db.runTransaction(async (transaction) => {
+    const projectSnapshot = await transaction.get(projectReference);
+    if (!projectSnapshot.exists) return false;
+    const previousDeadline = projectSnapshot.data().deadline ?? null;
+    transaction.update(projectReference, {
+      deadline,
+      updatedAt: new Date(),
+    });
+    transaction.create(activityReference, {
+      projectId,
+      actorId: actor.uid,
+      actorRole: actor.role,
+      ...(typeof actor.name === "string" && actor.name.trim()
+        ? { actorName: actor.name.trim() }
+        : {}),
+      action: previousDeadline ? "deadline-changed" : "deadline-created",
+      previousValue: { deadline: previousDeadline },
+      newValue: { deadline },
+      ...(reason ? { description: reason } : {}),
+      createdAt: new Date(),
+    });
+    return true;
   });
-
-  return true;
 }

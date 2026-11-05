@@ -9,6 +9,7 @@ import {
   ExternalLink,
   Info,
   Pencil,
+  Trash2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -52,6 +53,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import NewFloorPlanProjectButton from "@/components/project-editor/NewFloorPlanProjectButton";
+import { deleteManagedFloorPlanDraft } from "@/services/assets/projectStructureService";
 
 /* ------------------------------------------------------------------ */
 /* Shared line styles (same as UserTable)                              */
@@ -200,13 +202,28 @@ function AvailableFloorPlanProjectsCard({
   const [sortBy, setSortBy] = useState<"modified" | "created" | "name">("modified");
   const [tab, setTab] = useState<"all" | "mine">("all");
   const [detailsProject, setDetailsProject] = useState<AdminProject | null>(null);
+  const [deletedDraftIds, setDeletedDraftIds] = useState<string[]>([]);
+  const [draftDeleteError, setDraftDeleteError] = useState("");
 
   const visibleProjects = useMemo(
-    () => tab === "all"
+    () => (tab === "all"
       ? projects.filter(project => project.structuralStatus === "draft")
-      : projects.filter(project => project.createdBy === currentUserId),
-    [projects, tab, currentUserId],
+      : projects.filter(project => project.createdBy === currentUserId))
+      .filter(project => !deletedDraftIds.includes(project.projectId)),
+    [projects, tab, currentUserId, deletedDraftIds],
   );
+
+  async function handleDeleteDraft(project: AdminProject) {
+    if (project.createdBy !== currentUserId) return;
+    if (!window.confirm(`Delete the unpublished draft "${project.projectName}"? This cannot be undone.`)) return;
+    setDraftDeleteError("");
+    try {
+      await deleteManagedFloorPlanDraft(project.projectId);
+      setDeletedDraftIds(current => [...current, project.projectId]);
+    } catch (error) {
+      setDraftDeleteError(error instanceof Error ? error.message : "Unable to delete draft.");
+    }
+  }
 
   const filteredProjects = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -284,6 +301,7 @@ function AvailableFloorPlanProjectsCard({
         </div>
       </CardHeader>
       <CardContent className="min-h-[300px] px-4 pb-4 pt-0">
+        {draftDeleteError && <p className="mb-3 text-sm text-destructive" role="alert">{draftDeleteError}</p>}
         {loading ? (
           <p className="py-12 text-center text-sm text-muted-foreground">Loading drafts...</p>
         ) : error ? (
@@ -370,6 +388,15 @@ function AvailableFloorPlanProjectsCard({
                               <DropdownMenuItem onClick={() => onOpenProject(project, true)}>
                                 <Pencil size={14} />
                                 Rename
+                              </DropdownMenuItem>
+                            )}
+                            {project.createdBy === currentUserId && project.recordType === "draft" && (
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={() => void handleDeleteDraft(project)}
+                              >
+                                <Trash2 size={14} />
+                                Delete draft
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuItem onClick={() => setDetailsProject(project)}>
@@ -521,14 +548,15 @@ function GreetingCalendarCard({
 
       if (
         typeof deadline !== "string" ||
-        !/^\d{4}-\d{2}-\d{2}$/.test(deadline)
+        !/^\d{4}-\d{2}-\d{2}(?:T(?:[01]\d|2[0-3]):[0-5]\d)?$/.test(deadline)
       ) {
         continue;
       }
 
-      const existing = groups.get(deadline) ?? [];
+      const deadlineDate = deadline.slice(0, 10);
+      const existing = groups.get(deadlineDate) ?? [];
       existing.push(project);
-      groups.set(deadline, existing);
+      groups.set(deadlineDate, existing);
     }
 
     for (const [date, items] of groups) {

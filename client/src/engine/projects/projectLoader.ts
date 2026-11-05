@@ -16,6 +16,7 @@ import {
     loadManagedInteriorData,
     mergeManagedInteriorData
 } from "../../services/managedProjectData";
+import { getClientManagedProjectFile } from "../../services/clientProjectWorkflow";
 
 
 //==================================================
@@ -153,10 +154,14 @@ export async function getUserProjects(
         }
 
 
+        const workflowType = data.workflowType === "admin-managed"
+            ? "admin-managed"
+            : data.workflowType === "legacy"
+                ? "legacy"
+                : undefined;
         if (
-            typeof data.jsonUrl !==
-            "string" ||
-            data.jsonUrl.trim() === ""
+            workflowType !== "admin-managed" &&
+            (typeof data.jsonUrl !== "string" || data.jsonUrl.trim() === "")
         ) {
             continue;
         }
@@ -178,16 +183,14 @@ export async function getUserProjects(
             ownerId:
                 data.ownerId,
 
-            jsonPath:
-                typeof data.jsonPath ===
-                "string"
-
-                    ? data.jsonPath
-
-                    : "",
+            jsonPath: workflowType === "admin-managed"
+                ? ""
+                : typeof data.jsonPath === "string" ? data.jsonPath : "",
 
             jsonUrl:
-                data.jsonUrl,
+                workflowType === "admin-managed"
+                    ? ""
+                    : typeof data.jsonUrl === "string" ? data.jsonUrl : "",
 
             schemaVersion:
                 typeof data.schemaVersion ===
@@ -197,12 +200,7 @@ export async function getUserProjects(
 
                     : 1,
 
-            workflowType:
-                data.workflowType === "admin-managed"
-                    ? "admin-managed"
-                    : data.workflowType === "legacy"
-                        ? "legacy"
-                        : undefined,
+            workflowType,
 
             structuralStatus:
                 data.structuralStatus === "published" || data.structuralStatus === "draft"
@@ -220,12 +218,12 @@ export async function getUserProjects(
                     : undefined,
 
             interiorJsonPath:
-                typeof data.interiorJsonPath === "string"
+                workflowType !== "admin-managed" && typeof data.interiorJsonPath === "string"
                     ? data.interiorJsonPath
                     : undefined,
 
             interiorJsonUrl:
-                typeof data.interiorJsonUrl === "string"
+                workflowType !== "admin-managed" && typeof data.interiorJsonUrl === "string"
                     ? data.interiorJsonUrl
                     : undefined,
 
@@ -290,32 +288,19 @@ export async function loadProjectData(
     // Fetch saved JSON.
     //--------------------------------------------------
 
-    const response =
-        await fetch(
-            project.jsonUrl,
-            {
-                method:
-                    "GET"
-            }
+    let data: Record<string, unknown>;
+    if (project.workflowType === "admin-managed") {
+        data = await getClientManagedProjectFile(
+            project.projectId,
+            "structure"
         );
-
-
-    if (
-        !response.ok
-    ) {
-
-        throw new Error(
-            `Failed to download project JSON (${response.status}).`
-        );
+    } else {
+        const response = await fetch(project.jsonUrl, { method: "GET" });
+        if (!response.ok) {
+            throw new Error(`Failed to download project JSON (${response.status}).`);
+        }
+        data = await response.json();
     }
-
-
-    //--------------------------------------------------
-    // Parse JSON.
-    //--------------------------------------------------
-
-    const data =
-        await response.json();
 
 
     //--------------------------------------------------
@@ -374,7 +359,7 @@ export async function loadProjectData(
         throw new Error("Project JSON does not match the selected project owner and ID.");
     }
 
-    let projectData = data as SavedProjectData;
+    let projectData = data as unknown as SavedProjectData;
     if (project.workflowType === "admin-managed") {
         if (
             project.structuralStatus !== "published" ||
@@ -387,7 +372,10 @@ export async function loadProjectData(
             throw new Error("The published structure does not match this project's revision.");
         }
 
-        const interiorPayload = await loadManagedInteriorData(project);
+        const interiorPayload = await loadManagedInteriorData({
+            ...project,
+            workflowType: "admin-managed"
+        });
         projectData = mergeManagedInteriorData(
             projectData,
             interiorPayload

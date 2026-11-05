@@ -10,7 +10,22 @@ import managedProjectRoutes from "./managed-projects.js";
 
 const app = express();
 
-const PORT = 5000;
+const PORT = Number(process.env.PORT) || 5000;
+const configuredOrigins = (process.env.CORS_ORIGINS || "")
+  .split(",")
+  .map(origin => origin.trim())
+  .filter(Boolean);
+if (process.env.NODE_ENV === "production" && configuredOrigins.length === 0) {
+  throw new Error("CORS_ORIGINS must include the deployed admin and client origins in production.");
+}
+const developmentOrigins = process.env.NODE_ENV === "production"
+  ? []
+  : [
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "http://127.0.0.1:9999",
+      "http://localhost:9999",
+    ];
 
 // --------------------------------------------------
 // MIDDLEWARE
@@ -19,10 +34,8 @@ const PORT = 5000;
 app.use(
   cors({
     origin: [
-      "http://localhost:5173",
-      "http://localhost:5174",
-      "http://127.0.0.1:9999",
-      "http://localhost:9999",
+      ...configuredOrigins,
+      ...developmentOrigins,
     ],
     credentials: true,
   })

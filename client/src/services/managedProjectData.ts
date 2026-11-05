@@ -30,6 +30,7 @@ export interface ManagedInteriorFloor {
 export interface ManagedInteriorReference {
     projectId: string;
     ownerId: string;
+    workflowType?: "legacy" | "admin-managed";
     interiorJsonPath?: string;
     interiorJsonUrl?: string;
 }
@@ -37,18 +38,19 @@ export interface ManagedInteriorReference {
 export interface ManagedInteriorSaveInput {
     projectId: string;
     ownerId: string;
-    projectName: string;
     estimatedCost: number;
     interiorData: ManagedInteriorPayload;
     hasMeaningfulChanges: boolean;
-    updatedAt: unknown;
-    createdAt?: unknown;
-    uploadJson: (storagePath: string, json: string) => Promise<string>;
     uploadThumbnail?: () => Promise<{
         thumbnailPath: string;
         thumbnailUrl: string;
     } | undefined>;
-    updateMetadata: (metadata: Record<string, unknown>) => Promise<void>;
+    save?: (input: {
+        projectId: string;
+        interiorData: ManagedInteriorPayload;
+        estimatedCost: number;
+        thumbnail?: { thumbnailPath: string; thumbnailUrl: string };
+    }) => Promise<{ versionId: string; versionNumber: number }>;
 }
 
 export function hasMeaningfulManagedInteriorChanges(
@@ -310,8 +312,28 @@ export function validateManagedInteriorPayload(
 
 export async function loadManagedInteriorData(
     reference: ManagedInteriorReference,
-    fetcher: typeof fetch = fetch
+    fetcher: typeof fetch = fetch,
+    loadManagedFile?: (projectId: string) => Promise<ManagedInteriorPayload>
 ): Promise<ManagedInteriorPayload | null> {
+    if (reference.workflowType === "admin-managed") {
+        try {
+            const payload = loadManagedFile
+                ? await loadManagedFile(reference.projectId)
+                : await (async () => {
+                    const { projectApi } = await import("./projectApi.ts");
+                    return projectApi<ManagedInteriorPayload>(
+                        `/projects/${encodeURIComponent(reference.projectId)}/files/interior`
+                    );
+                })();
+            return validateManagedInteriorPayload(payload, reference);
+        } catch (error) {
+            if (error instanceof Error && error.message.includes("does not exist")) {
+                return null;
+            }
+            throw error;
+        }
+    }
+
     const url = reference.interiorJsonUrl?.trim();
     if (!url) {
         if (reference.interiorJsonPath) {
@@ -326,7 +348,8 @@ export async function loadManagedInteriorData(
     );
     if (
         reference.interiorJsonPath &&
-        reference.interiorJsonPath !== expectedPath
+        reference.interiorJsonPath !== expectedPath &&
+        !isManagedInteriorVersionPath(reference.interiorJsonPath, reference.ownerId, reference.projectId)
     ) {
         throw new Error("Interior design storage path does not match the selected client project.");
     }
@@ -345,12 +368,17 @@ export async function loadManagedInteriorData(
     return validateManagedInteriorPayload(await response.json(), reference);
 }
 
+function isManagedInteriorVersionPath(path: string, ownerId: string, projectId: string): boolean {
+    const prefix = `projects/${ownerId}/${projectId}/`;
+    if (!path.startsWith(prefix)) return false;
+    return /^(versions|submissions)\/[a-zA-Z0-9-]+\.json$/.test(path.slice(prefix.length));
+}
+
 export async function saveManagedInteriorData(
     input: ManagedInteriorSaveInput
-): Promise<{ storagePath: string; downloadUrl: string }> {
+): Promise<{ versionId: string; versionNumber: number }> {
     const ownerId = input.ownerId.trim();
     const projectId = input.projectId.trim();
-    const storagePath = getManagedInteriorStoragePath(ownerId, projectId);
     const interiorData = validateManagedInteriorPayload(input.interiorData, {
         projectId,
         ownerId
@@ -361,37 +389,23 @@ export async function saveManagedInteriorData(
     ) {
         throw new Error("Interior design lifecycle state does not match the saved changes.");
     }
-    const downloadUrl = await input.uploadJson(
-        storagePath,
-        JSON.stringify(interiorData, null, 2)
-    );
-    if (!downloadUrl.trim()) {
-        throw new Error("Interior design upload did not return a download URL.");
-    }
-
     const thumbnail = await input.uploadThumbnail?.();
-    const metadata: Record<string, unknown> = {
-        projectId,
-        ownerId,
-        schemaVersion: 1,
-        estimatedCost: input.estimatedCost,
-        updatedAt: input.updatedAt,
-        interiorJsonPath: storagePath,
-        interiorJsonUrl: downloadUrl
-    };
-    if (input.hasMeaningfulChanges) {
-        metadata.clientDesignStarted = true;
-    }
-    if (input.createdAt !== undefined) {
-        metadata.createdAt = input.createdAt;
-    }
-    if (thumbnail) {
-        metadata.thumbnailPath = thumbnail.thumbnailPath;
-        metadata.thumbnailUrl = thumbnail.thumbnailUrl;
-    }
-
-    await input.updateMetadata(metadata);
-    return { storagePath, downloadUrl };
+    const save = input.save ?? (async payload => {
+        const { projectApi } = await import("./projectApi.ts");
+        return projectApi<{ versionId: string; versionNumber: number }>(
+            `/projects/${encodeURIComponent(projectId)}/managed-interior`,
+            {
+                method: "PUT",
+                body: JSON.stringify({
+                    interiorData: payload.interiorData,
+                    estimatedCost: payload.estimatedCost,
+                    thumbnailPath: payload.thumbnail?.thumbnailPath,
+                    thumbnailUrl: payload.thumbnail?.thumbnailUrl
+                })
+            }
+        );
+    });
+    return save({ projectId, interiorData, estimatedCost: input.estimatedCost, thumbnail });
 }
 
 export function mergeManagedInteriorData<T extends object>(

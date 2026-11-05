@@ -4,21 +4,122 @@ function managedProjectSignedIn() {
   return request.auth != null;
 }
 
+function ownsManagedProject(projectId) {
+  let projectPath = /databases/(default)/documents/projects/$(projectId);
+  let assignmentPath = /databases/(default)/documents/adminManagedProjectAssignments/$(request.auth.uid);
+  return managedProjectSignedIn()
+    && exists(projectPath)
+    && get(projectPath).data.ownerId == request.auth.uid
+    && exists(assignmentPath)
+    && get(assignmentPath).data.ownerId == request.auth.uid
+    && get(assignmentPath).data.projectId == projectId;
+}
+
+function isAssignedPublishedManagedProject(projectId) {
+  let projectPath = /databases/(default)/documents/projects/$(projectId);
+  let assignmentPath = /databases/(default)/documents/adminManagedProjectAssignments/$(request.auth.uid);
+  return managedProjectSignedIn()
+    && exists(projectPath)
+    && get(projectPath).data.ownerId == request.auth.uid
+    && get(projectPath).data.get("workflowType", "legacy") == "admin-managed"
+    && get(projectPath).data.get("structuralStatus", "") == "published"
+    && get(projectPath).data.get("publishedStructuralRevision", 0) >= 1
+    && exists(assignmentPath)
+    && get(assignmentPath).data.ownerId == request.auth.uid
+    && get(assignmentPath).data.projectId == projectId;
+}
+
+function containsClientManagedLifecycleFields(data) {
+  return data.keys().hasAny([
+    "projectStatus",
+    "structuralStatus",
+    "structuralOwner",
+    "structuralRevision",
+    "publishedStructuralRevision",
+    "deadline",
+    "accessAcknowledgement",
+    "submissionAgreement",
+    "currentDesignVersionId",
+    "currentDesignVersionNumber",
+    "submittedVersionId",
+    "submittedVersionNumber",
+    "submittedSubmissionId",
+    "submittedSnapshotPath",
+    "submittedSnapshotUrl",
+    "submittedAt",
+    "submittedBy",
+    "reviewedBy",
+    "reviewedAt",
+    "approvedBy",
+    "approvedByName",
+    "approvedAt",
+    "approvedVersionId",
+    "approvedVersionNumber",
+    "approvedSubmissionId",
+    "approvedSnapshotPath",
+    "approvedSnapshotUrl",
+    "revisionFeedback",
+    "revisionRequestedAt",
+    "revisionRequestedBy"
+  ]);
+}
+
 match /projects/{projectId} {
-  allow read: if managedProjectSignedIn() && resource.data.ownerId == request.auth.uid;
+  allow read: if managedProjectSignedIn()
+    && resource.data.ownerId == request.auth.uid
+    && (
+      resource.data.get("workflowType", "legacy") != "admin-managed"
+      || isAssignedPublishedManagedProject(projectId)
+    );
 
   // Client-created legacy projects remain supported. Managed floor plans are
   // created and changed through the authenticated server API.
   allow create: if managedProjectSignedIn()
     && request.resource.data.ownerId == request.auth.uid
-    && request.resource.data.get("workflowType", "legacy") != "admin-managed";
+    && request.resource.data.get("workflowType", "legacy") == "legacy"
+    && !containsClientManagedLifecycleFields(request.resource.data);
   allow update: if managedProjectSignedIn()
     && resource.data.ownerId == request.auth.uid
     && resource.data.get("workflowType", "legacy") != "admin-managed"
     && request.resource.data.ownerId == resource.data.ownerId
     && request.resource.data.get("workflowType", "legacy")
-      == resource.data.get("workflowType", "legacy");
-  allow delete: if false;
+      == resource.data.get("workflowType", "legacy")
+    && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+      "projectStatus",
+      "workflowType",
+      "structuralStatus",
+      "structuralOwner",
+      "structuralRevision",
+      "publishedStructuralRevision",
+      "deadline",
+      "accessAcknowledgement",
+      "submissionAgreement",
+      "currentDesignVersionId",
+      "currentDesignVersionNumber",
+      "submittedVersionId",
+      "submittedVersionNumber",
+      "submittedSubmissionId",
+      "submittedSnapshotPath",
+      "submittedSnapshotUrl",
+      "submittedAt",
+      "submittedBy",
+      "reviewedBy",
+      "reviewedAt",
+      "approvedBy",
+      "approvedByName",
+      "approvedAt",
+      "approvedVersionId",
+      "approvedVersionNumber",
+      "approvedSubmissionId",
+      "approvedSnapshotPath",
+      "approvedSnapshotUrl",
+      "revisionFeedback",
+      "revisionRequestedAt",
+      "revisionRequestedBy"
+    ]);
+  allow delete: if managedProjectSignedIn()
+    && resource.data.ownerId == request.auth.uid
+    && resource.data.get("workflowType", "legacy") != "admin-managed";
 }
 
 match /adminManagedFloorPlanDrafts/{draftId} {
@@ -27,4 +128,24 @@ match /adminManagedFloorPlanDrafts/{draftId} {
 
 match /adminManagedProjectAssignments/{assignmentId} {
   allow read, write: if false;
+}
+
+match /projectActivity/{activityId} {
+  allow read: if ownsManagedProject(resource.data.projectId);
+  allow create, update, delete: if false;
+}
+
+match /projectVersions/{versionId} {
+  allow read: if ownsManagedProject(resource.data.projectId);
+  allow create, update, delete: if false;
+}
+
+match /projectSubmissions/{submissionId} {
+  allow read: if ownsManagedProject(resource.data.projectId);
+  allow create, update, delete: if false;
+}
+
+match /adminComments/{commentId} {
+  allow read: if ownsManagedProject(resource.data.projectId);
+  allow create, update, delete: if false;
 }

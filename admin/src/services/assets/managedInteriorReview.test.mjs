@@ -54,9 +54,7 @@ function createMetadata(overrides = {}) {
         structuralStatus: "published",
         structuralRevision: 7,
         publishedStructuralRevision: 7,
-        jsonUrl: "https://example.test/structure.json",
-        interiorJsonPath: "projects/client-uid/PRJ-00126.interior.json",
-        interiorJsonUrl: "https://example.test/interior.json",
+        hasInterior: true,
         ...overrides
     };
 }
@@ -85,34 +83,23 @@ function createStructure() {
     };
 }
 
-function response(data, status = 200) {
-    return {
-        ok: status >= 200 && status < 300,
-        status,
-        json: async () => data
-    };
-}
-
 test("admin review loads published structure and then merges the client's furniture and finishes", async () => {
     const calls = [];
-    const loaded = await loadAdminManagedProjectForReview(createMetadata(), async url => {
-        calls.push(url);
-        return url.endsWith("structure.json")
-            ? response(createStructure())
-            : response({
+    const loaded = await loadAdminManagedProjectForReview(createMetadata(), async kind => {
+        calls.push(kind);
+        return kind === "structure"
+            ? createStructure()
+            : {
                 projectId: "PRJ-00126",
                 ownerId: "client-uid",
                 furniture: [furniturePlacement],
                 floorFinishes: { "room-1": "floor-asset" },
                 wallFinishes: { "room-1": { "wall-1:1": "wall-asset" } },
                 costEstimate: savedCostEstimate
-            });
+            };
     });
 
-    assert.deepEqual(calls, [
-        "https://example.test/structure.json",
-        "https://example.test/interior.json"
-    ]);
+    assert.deepEqual(calls, ["structure", "interior"]);
     assert.deepEqual(loaded.walls, [{ id: "wall-1" }]);
     assert.deepEqual(loaded.doors, [{ id: "door-1" }]);
     assert.deepEqual(loaded.furniture, [furniturePlacement]);
@@ -213,8 +200,8 @@ test("admin review keeps legacy client designs and other placements when an asse
 
 test("admin review gracefully loads a published project with no interior file", async () => {
     const loaded = await loadAdminManagedProjectForReview(
-        createMetadata({ interiorJsonPath: undefined, interiorJsonUrl: undefined }),
-        async () => response(createStructure())
+        createMetadata({ hasInterior: false }),
+        async () => createStructure()
     );
     assert.deepEqual(loaded.furniture, []);
     assert.deepEqual(loaded.floorFinishes, {});
@@ -223,9 +210,9 @@ test("admin review gracefully loads a published project with no interior file", 
 
     const deletedFile = await loadAdminManagedProjectForReview(
         createMetadata(),
-        async url => url.endsWith("structure.json")
-            ? response(createStructure())
-            : response(null, 404)
+        async kind => kind === "structure"
+            ? createStructure()
+            : Promise.reject(new Error("Managed project file does not exist."))
     );
     assert.deepEqual(deletedFile.furniture, []);
 });
@@ -241,41 +228,53 @@ test("admin review does not reuse the published estimate when saved interior has
 
 test("admin review rejects malformed saved cost estimates", async () => {
     await assert.rejects(
-        loadAdminManagedProjectForReview(createMetadata(), async url =>
-            url.endsWith("structure.json")
-                ? response(createStructure())
-                : response({
+        loadAdminManagedProjectForReview(createMetadata(), async kind =>
+            kind === "structure"
+                ? createStructure()
+                : {
                     ownerId: "client-uid",
                     costEstimate: { items: "invalid", total: 100, subtotal: 100 }
-                })
+                }
         ),
         /cost estimate is invalid/
     );
 });
 
+test("admin review requests the submitted snapshot through its authorized file kind", async () => {
+    const calls = [];
+    const loaded = await loadAdminManagedProjectForReview(
+        createMetadata({
+            reviewSnapshotType: "submitted",
+            submittedSubmissionId: "submission-id"
+        }),
+        async kind => {
+            calls.push(kind);
+            return kind === "structure"
+                ? createStructure()
+                : {
+                    ownerId: "client-uid",
+                    furniture: [furniturePlacement]
+                };
+        }
+    );
+    assert.deepEqual(calls, ["structure", "submitted"]);
+    assert.deepEqual(loaded.furniture, [furniturePlacement]);
+});
+
 test("admin review rejects wrong project/client references and invalid furniture data", async () => {
     await assert.rejects(
-        loadAdminManagedProjectForReview(createMetadata(), async url =>
-            url.endsWith("structure.json")
-                ? response(createStructure())
-                : response({ projectId: "another-project", ownerId: "client-uid", furniture: [] })
+        loadAdminManagedProjectForReview(createMetadata(), async kind =>
+            kind === "structure"
+                ? createStructure()
+                : { projectId: "another-project", ownerId: "client-uid", furniture: [] }
         ),
         /project ID does not match/
     );
     await assert.rejects(
-        loadAdminManagedProjectForReview(
-            createMetadata({ interiorJsonPath: "projects/other/other.interior.json" }),
-            async url => url.endsWith("structure.json")
-                ? response(createStructure())
-                : assert.fail("mismatched interior paths must not be fetched")
-        ),
-        /storage path does not match/
-    );
-    await assert.rejects(
-        loadAdminManagedProjectForReview(createMetadata(), async url =>
-            url.endsWith("structure.json")
-                ? response(createStructure())
-                : response({ ownerId: "client-uid", furniture: [{ id: "invalid" }] })
+        loadAdminManagedProjectForReview(createMetadata(), async kind =>
+            kind === "structure"
+                ? createStructure()
+                : { ownerId: "client-uid", furniture: [{ id: "invalid" }] }
         ),
         /furniture placements are invalid/
     );
@@ -284,22 +283,22 @@ test("admin review rejects wrong project/client references and invalid furniture
 test("admin review waits for structure before interior and preserves structural publication data", async () => {
     let finishStructure;
     const calls = [];
-    const loading = loadAdminManagedProjectForReview(createMetadata(), url => {
-        calls.push(url);
-        if (url.endsWith("structure.json")) {
+    const loading = loadAdminManagedProjectForReview(createMetadata(), kind => {
+        calls.push(kind);
+        if (kind === "structure") {
             return new Promise(resolve => {
-                finishStructure = () => resolve(response(createStructure()));
+                finishStructure = () => resolve(createStructure());
             });
         }
-        return Promise.resolve(response({
+        return Promise.resolve({
             furniture: [furniturePlacement],
             floorFinishes: { room: "floor-id" },
             wallFinishes: {}
-        }));
+        });
     });
 
     await Promise.resolve();
-    assert.equal(calls.length, 1);
+    assert.deepEqual(calls, ["structure"]);
     finishStructure();
     const result = await loading;
     assert.equal(calls.length, 2);

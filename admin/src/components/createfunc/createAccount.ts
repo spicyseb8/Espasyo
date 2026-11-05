@@ -1,5 +1,6 @@
 // admin/src/components/createfunc/createAccount.ts
 import { auth } from "@/firebase/firebase";
+import { API_BASE_URL } from "@/services/assets/projectApi";
 
 export type AccountType = "user" | "employee";
 
@@ -36,7 +37,7 @@ export async function createAccount(
 
   const token = await user.getIdToken();
   const response = await fetch(
-    "http://localhost:5000/api/accounts",
+    `${API_BASE_URL}/accounts`,
     {
       method: "POST",
       headers: {
@@ -47,10 +48,14 @@ export async function createAccount(
     }
   );
 
-  const result =
-    await response.json();
+  let result: CreateAccountResponse;
+  try {
+    result = await response.json() as CreateAccountResponse;
+  } catch {
+    throw new Error("The account service returned an invalid response. Please try again.");
+  }
 
-  if (!response.ok) {
+  if (!response.ok || result.success !== true) {
     throw new Error(
       result.message ||
         "Failed to create account."

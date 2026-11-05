@@ -17,7 +17,13 @@ function createResponse() {
   };
 }
 
-function createHarness({ tokenError, employee, databaseError, emailVerified = true } = {}) {
+function createHarness({
+  tokenError,
+  employee,
+  databaseError,
+  emailVerified = true,
+  requiredRoles = ["admin", "superadmin"],
+} = {}) {
   const calls = { verifyIdToken: [], employeeLookup: 0, next: 0 };
   const authClient = {
     async verifyIdToken(token, checkRevoked) {
@@ -62,7 +68,7 @@ function createHarness({ tokenError, employee, databaseError, emailVerified = tr
     },
   };
   const res = createResponse();
-  const middleware = createRequireRole({ authClient, dbClient })("admin", "superadmin");
+  const middleware = createRequireRole({ authClient, dbClient })(...requiredRoles);
 
   return {
     calls,
@@ -149,6 +155,24 @@ test("rejects insufficient roles and unverified email", async () => {
 test("allows existing superadmin permissions and fails closed on lookup errors", async () => {
   const superadmin = createHarness({
     employee: { role: "superadmin", account_status: "active" },
+  });
+
+  test("account-creation permission remains restricted to superadmins", async () => {
+    const admin = createHarness({
+      employee: { role: "admin", account_status: "active" },
+      requiredRoles: ["superadmin"],
+    });
+    await admin.invoke();
+    assert.equal(admin.res.statusCode, 403);
+    assert.equal(admin.calls.next, 0);
+
+    const superadmin = createHarness({
+      employee: { role: "superadmin", account_status: "active" },
+      requiredRoles: ["superadmin"],
+    });
+    await superadmin.invoke();
+    assert.equal(superadmin.res.statusCode, 200);
+    assert.equal(superadmin.calls.next, 1);
   });
   await superadmin.invoke();
   assert.equal(superadmin.res.statusCode, 200);

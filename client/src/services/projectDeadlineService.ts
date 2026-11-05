@@ -15,12 +15,12 @@ export function isValidProjectDeadline(
 ): value is string {
     if (
         typeof value !== "string" ||
-        !/^\d{4}-\d{2}-\d{2}$/.test(value)
+        !/^\d{4}-\d{2}-\d{2}(?:T(?:[01]\d|2[0-3]):[0-5]\d)?$/.test(value)
     ) {
         return false;
     }
 
-    const [year, month, day] = value
+    const [year, month, day] = value.slice(0, 10)
         .split("-")
         .map(Number);
 
@@ -50,6 +50,17 @@ export function getPhilippineDateKey(
     return `${year}-${month}-${day}`;
 }
 
+export function getDaysUntilProjectDeadline(
+    deadline: string
+): number {
+    const today = getPhilippineDateKey();
+    return Math.round(
+        (Date.parse(`${deadline.slice(0, 10)}T00:00:00Z`) -
+            Date.parse(`${today}T00:00:00Z`)) /
+            86_400_000
+    );
+}
+
 export function isDeadlinePassed(
     deadline: unknown
 ): boolean {
@@ -57,8 +68,23 @@ export function isDeadlinePassed(
         return false;
     }
 
-    // The deadline remains valid for the entire deadline date.
-    return getPhilippineDateKey() > deadline;
+    const deadlineDate = deadline.slice(0, 10);
+    if (getPhilippineDateKey() !== deadlineDate) {
+        return getPhilippineDateKey() > deadlineDate;
+    }
+    if (deadline.length === 10) return false;
+    return Date.now() >= Date.parse(`${deadline}:00+08:00`);
+}
+
+export function formatProjectDeadline(value: string): string {
+    const date = value.length === 10
+        ? new Date(`${value}T00:00:00+08:00`)
+        : new Date(`${value}:00+08:00`);
+    return new Intl.DateTimeFormat("en-PH", {
+        timeZone: TIME_ZONE,
+        dateStyle: "medium",
+        ...(value.length > 10 ? { timeStyle: "short" as const } : {}),
+    }).format(date);
 }
 
 export function setActiveProjectDeadline(

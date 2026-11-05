@@ -113,6 +113,16 @@ function formatCommentDate(
         );
     }
 
+    if (typeof value === "string") {
+        const date = new Date(value);
+        if (!Number.isNaN(date.getTime())) {
+            return date.toLocaleString(undefined, {
+                dateStyle: "medium",
+                timeStyle: "short"
+            });
+        }
+    }
+
     return "Just now";
 }
 
@@ -663,6 +673,15 @@ export default function AdminProjectViewer({
                             metadata.projectName
                         }
                     </h1>
+                    {metadata.reviewSnapshotType && (
+                        <p className="mt-1 text-[10px] font-medium text-[#555]">
+                            {metadata.reviewSnapshotType === "submitted"
+                                ? `Submitted snapshot · v${metadata.submittedVersionNumber ?? "legacy"}`
+                                : metadata.reviewSnapshotType === "approved"
+                                    ? `Approved snapshot · v${metadata.approvedVersionNumber ?? "legacy"}`
+                                    : `Latest saved design · v${metadata.currentDesignVersionNumber ?? "not versioned"} · not live`}
+                        </p>
+                    )}
 
                     <nav className="mt-2 flex max-w-[190px] gap-1 overflow-x-auto" aria-label="Review floors">
                         {reviewFloors.map(floor => (

@@ -32,7 +32,9 @@ export default function NewFloorPlanProjectButton() {
                     setClients(result.clients);
                     setHasIneligibleMatches(result.hasIneligibleMatches);
                     setSelectedClientId(current =>
-                        result.clients.some(client => client.uid === current) ? current : ""
+                        result.clients.some(client => client.uid === current && client.eligible)
+                            ? current
+                            : ""
                     );
                 })
                 .catch(loadError => {
@@ -65,7 +67,7 @@ export default function NewFloorPlanProjectButton() {
     async function createProject() {
         if (!projectName.trim() || !selectedClientId || creating) return;
         const client = clients.find(item => item.uid === selectedClientId);
-        if (!client) return;
+        if (!client?.eligible) return;
 
         setCreating(true);
         setError("");
@@ -88,6 +90,15 @@ export default function NewFloorPlanProjectButton() {
                 : "Unable to create the floor-plan draft.");
         } finally {
             setCreating(false);
+        }
+    }
+
+    function openExistingFloorPlan(client: AdminClient) {
+        setOpen(false);
+        if (client.existingDraftId) {
+            navigate(`/projects/draft/${encodeURIComponent(client.existingDraftId)}`);
+        } else if (client.existingProjectId) {
+            navigate(`/projects/edit/${encodeURIComponent(client.existingProjectId)}`);
         }
     }
 
@@ -147,22 +158,40 @@ export default function NewFloorPlanProjectButton() {
                                 />
                             </span>
                         </label>
-                        <div className="mt-2 max-h-48 overflow-auto rounded-md border border-border" role="listbox" aria-label="Eligible clients">
+                        <div className="mt-2 max-h-48 overflow-auto rounded-md border border-border" role="listbox" aria-label="Clients">
                             {loadingClients ? (
                                 <p className="p-3 text-sm text-muted-foreground">Searching clients...</p>
                             ) : clients.length > 0 ? (
                                 clients.map(client => (
-                                    <button
-                                        key={client.uid}
-                                        type="button"
-                                        role="option"
-                                        aria-selected={selectedClientId === client.uid}
-                                        className={`block w-full border-b border-border px-3 py-2 text-left last:border-b-0 hover:bg-muted ${selectedClientId === client.uid ? "bg-muted" : ""}`}
-                                        onClick={() => setSelectedClientId(client.uid)}
-                                    >
-                                        <span className="block text-sm font-medium">{client.name}</span>
-                                        <span className="block text-xs text-muted-foreground">{client.email || "No email address"}</span>
-                                    </button>
+                                    <div key={client.uid} className="border-b border-border px-3 py-2 last:border-b-0">
+                                        <button
+                                            type="button"
+                                            role="option"
+                                            aria-selected={selectedClientId === client.uid}
+                                            className={`block w-full rounded text-left ${client.eligible ? "hover:bg-muted" : "cursor-not-allowed opacity-70"} ${selectedClientId === client.uid ? "bg-muted" : ""}`}
+                                            disabled={!client.eligible}
+                                            onClick={() => setSelectedClientId(client.uid)}
+                                        >
+                                            <span className="block text-sm font-medium">{client.name}</span>
+                                            <span className="block text-xs text-muted-foreground">{client.email || "No email address"}</span>
+                                        </button>
+                                        {!client.eligible && (client.existingProjectId || client.existingDraftId) && (
+                                            <div className="mt-1 flex items-center justify-between gap-2">
+                                                <span className="text-xs text-amber-700">
+                                                    {client.existingDraftId
+                                                        ? "This client already has a floorplan. You can view the existing draft, but cannot create another one."
+                                                        : "This client already has a floorplan. You can view the existing project, but cannot create another one."}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    className="shrink-0 text-xs underline"
+                                                    onClick={() => openExistingFloorPlan(client)}
+                                                >
+                                                    {client.existingDraftId ? "View draft" : "View project"}
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
                                 ))
                             ) : (
                                 <p className="p-3 text-sm text-muted-foreground">

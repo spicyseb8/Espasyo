@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
     canMutateManagedStructure,
-    getManagedInteriorStoragePath,
     getClientDesignLifecycleUpdate,
     hasMeaningfulManagedInteriorChanges,
     loadManagedInteriorData,
@@ -269,11 +268,10 @@ test("project budget persists in interior JSON and restores without changing str
         hasMeaningfulChanges: true,
         interiorData: interior,
         updatedAt: "timestamp",
-        uploadJson: async (_path, json) => {
-            savedJson = json;
-            return "https://example.test/interior.json";
-        },
-        updateMetadata: async () => {}
+        save: async payload => {
+            savedJson = JSON.stringify(payload.interiorData);
+            return { versionId: "version-1", versionNumber: 1 };
+        }
     });
 
     const restored = await loadManagedInteriorData({
@@ -379,21 +377,12 @@ test("managed interior serializer saves all floors and retains legacy first-floo
     );
 });
 
-test("managed save uploads to the designated path and updates interior metadata only", async () => {
-    const projectMetadata = {
-        jsonPath: "published/structure.json",
-        jsonUrl: "https://example.test/structure.json",
-        structuralRevision: 7,
-        publishedStructuralRevision: 7,
-        structuralStatus: "published",
-        workflowType: "admin-managed"
-    };
+test("managed saves use the authenticated API and return version metadata without a URL", async () => {
     const operationOrder = [];
-    let uploadedJson;
-    await saveManagedInteriorData({
+    let savedInput;
+    const result = await saveManagedInteriorData({
         projectId: "PRJ-00126",
         ownerId: "client-uid",
-        projectName: "Client plan",
         estimatedCost: 125,
         hasMeaningfulChanges: true,
         interiorData: {
@@ -403,71 +392,32 @@ test("managed save uploads to the designated path and updates interior metadata 
             floorFinishes: { room: "tile" },
             wallFinishes: { room: { wall: "paint" } }
         },
-        updatedAt: "timestamp",
-        uploadJson: async (path, json) => {
-            operationOrder.push("upload");
-            assert.equal(path, "projects/client-uid/PRJ-00126.interior.json");
-            uploadedJson = JSON.parse(json);
-            return "https://example.test/interior.json";
-        },
-        updateMetadata: async metadata => {
-            operationOrder.push("metadata");
-            assert.equal(metadata.ownerId, "client-uid");
-            assert.equal(metadata.projectId, "PRJ-00126");
-            assert.equal("projectName" in metadata, false);
-            assert.equal(metadata.interiorJsonPath, "projects/client-uid/PRJ-00126.interior.json");
-            assert.equal(metadata.interiorJsonUrl, "https://example.test/interior.json");
-            assert.equal(metadata.clientDesignStarted, true);
-            assert.equal("jsonPath" in metadata, false);
-            assert.equal("jsonUrl" in metadata, false);
-            assert.equal("structuralRevision" in metadata, false);
-            Object.assign(projectMetadata, metadata);
+        save: async input => {
+            operationOrder.push("authenticated-save");
+            savedInput = input;
+            return { versionId: "version-1", versionNumber: 1 };
         }
     });
 
-    assert.deepEqual(operationOrder, ["upload", "metadata"]);
-    assert.equal(uploadedJson.ownerId, "client-uid");
-    assert.equal("stairs" in uploadedJson, false);
-    assert.equal("stairLandings" in uploadedJson, false);
-    assert.equal(projectMetadata.jsonPath, "published/structure.json");
-    assert.equal(projectMetadata.jsonUrl, "https://example.test/structure.json");
-    assert.equal(projectMetadata.structuralRevision, 7);
-    assert.equal(projectMetadata.publishedStructuralRevision, 7);
-    assert.equal(getManagedInteriorStoragePath("client-uid", "PRJ-00126"), "projects/client-uid/PRJ-00126.interior.json");
+    assert.deepEqual(operationOrder, ["authenticated-save"]);
+    assert.deepEqual(result, { versionId: "version-1", versionNumber: 1 });
+    assert.equal(savedInput.projectId, "PRJ-00126");
+    assert.equal(savedInput.interiorData.ownerId, "client-uid");
+    assert.equal("storagePath" in savedInput, false);
+    assert.equal("downloadUrl" in result, false);
 });
 
-test("managed save propagates upload and metadata failures", async () => {
-    const input = {
+test("managed save propagates authenticated API failures", async () => {
+    await assert.rejects(saveManagedInteriorData({
         projectId: "PRJ-00126",
         ownerId: "client-uid",
-        projectName: "Plan",
         estimatedCost: 0,
         hasMeaningfulChanges: false,
         interiorData: { furniture: [] },
-        updatedAt: "timestamp",
-        uploadJson: async () => "https://example.test/interior.json",
-        updateMetadata: async () => {
-            throw new Error("metadata denied");
+        save: async () => {
+            throw new Error("save denied");
         }
-    };
-    await assert.rejects(
-        saveManagedInteriorData({
-            ...input,
-            uploadJson: async () => {
-                throw new Error("upload denied");
-            },
-            updateMetadata: async () => assert.fail("metadata must not update after upload failure")
-        }),
-        /upload denied/
-    );
-    await assert.rejects(saveManagedInteriorData(input), /metadata denied/);
-    await saveManagedInteriorData({
-        ...input,
-        updateMetadata: async metadata => {
-            assert.equal("clientDesignStarted" in metadata, false);
-            assert.equal("clientDesignStartedAt" in metadata, false);
-        }
-    });
+    }), /save denied/);
 });
 
 test("empty interior saves do not mark lifecycle while meaningful saves set an idempotent first timestamp", () => {
@@ -527,6 +477,27 @@ test("client interior load tolerates a missing file and validates identity and r
         }, async () => assert.fail("mismatched paths must not be fetched")),
         /storage path does not match/
     );
+});
+
+test("managed interior downloads use the project API and ignore supplied URLs and paths", async () => {
+    let requestedProjectId;
+    const payload = await loadManagedInteriorData({
+        projectId: "PRJ-00126",
+        ownerId: "client-uid",
+        workflowType: "admin-managed",
+        interiorJsonPath: "projects/another-client/other-project/versions/fake.json",
+        interiorJsonUrl: "https://example.test/public-token"
+    }, async () => assert.fail("managed files must not be fetched by URL"), async projectId => {
+        requestedProjectId = projectId;
+        return {
+            projectId: "PRJ-00126",
+            ownerId: "client-uid",
+            furniture: []
+        };
+    });
+
+    assert.equal(requestedProjectId, "PRJ-00126");
+    assert.equal(payload.projectId, "PRJ-00126");
 });
 
 test("client interior load waits for the referenced data before returning it", async () => {

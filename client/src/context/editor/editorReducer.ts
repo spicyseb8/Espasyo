@@ -25,7 +25,21 @@ function reduceEditorAction(
     state: EditorState,
     action: EditorAction
 ): EditorState {
+    const allowedWhileLocked = action.type === "SET_PROJECT_LOCKED" ||
+        action.type === "LOAD_PROJECT" ||
+        action.type === "SET_ACTIVE_TAB" ||
+        action.type === "SET_ACTIVE_TOOL" ||
+        action.type === "CLEAR_SELECTION" ||
+        action.type === "TOGGLE_WALKTHROUGH" ||
+        action.type.startsWith("SELECT_");
+    if (state.projectLocked && !allowedWhileLocked) return state;
+
     switch (action.type) {
+        case "SET_PROJECT_LOCKED":
+            return {
+                ...state,
+                projectLocked: action.payload
+            };
         case "SET_PROJECT_BUDGET":
             if (action.payload !== null && !isValidProjectBudget(action.payload)) {
                 return state;

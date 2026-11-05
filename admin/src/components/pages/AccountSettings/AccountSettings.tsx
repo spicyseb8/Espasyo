@@ -39,6 +39,7 @@ import {
 } from "@/hooks/useUserDetails";
 
 import { auth } from "@/firebase/firebase";
+import { API_BASE_URL } from "@/services/assets/projectApi";
 import { useAuth } from "@/context/AuthContext";
 
 import AccountTab from "./AccountTab";
@@ -202,7 +203,7 @@ export default function AccountSettings({
 
     const token = await currentUser.getIdToken();
     const response = await fetch(
-      `http://localhost:5000/api/accounts/${encodeURIComponent(id)}/suspend`,
+      `${API_BASE_URL}/accounts/${encodeURIComponent(id)}/suspend`,
       {
         method: "POST",
         headers: {
@@ -247,7 +248,7 @@ export default function AccountSettings({
 
     const token = await currentUser.getIdToken();
     const response = await fetch(
-      `http://localhost:5000/api/accounts/${encodeURIComponent(id)}/reactivate`,
+      `${API_BASE_URL}/accounts/${encodeURIComponent(id)}/reactivate`,
       {
         method: "POST",
         headers: {

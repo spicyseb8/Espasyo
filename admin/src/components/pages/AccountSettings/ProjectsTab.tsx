@@ -188,8 +188,8 @@ export default function ProjectsTab({ ownerId }: ProjectsTabProps) {
           projectId: project.projectId,
           projectName: project.projectName,
           ownerId: project.ownerId,
-          jsonPath: project.jsonPath,
-          jsonUrl: project.jsonUrl,
+          jsonPath: project.jsonPath ?? "",
+          jsonUrl: project.jsonUrl ?? "",
           schemaVersion: project.schemaVersion,
           createdAt: project.createdAt,
           updatedAt: project.updatedAt

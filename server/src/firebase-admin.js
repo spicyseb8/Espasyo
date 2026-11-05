@@ -1,4 +1,8 @@
-import { initializeApp, cert } from "firebase-admin/app";
+import {
+  applicationDefault,
+  cert,
+  initializeApp,
+} from "firebase-admin/app";
 
 import { getAuth } from "firebase-admin/auth";
 
@@ -24,17 +28,28 @@ const serviceAccountPath = path.join(
   "serviceAccountKey.json"
 );
 
+const projectId = process.env.FIREBASE_PROJECT_ID ||
+  process.env.GOOGLE_CLOUD_PROJECT;
+const storageBucket = process.env.FIREBASE_STORAGE_BUCKET ||
+  "espasyo-6072d.firebasestorage.app";
 
-const serviceAccountFile = await readFile(
-  serviceAccountPath,
-  "utf8"
-);
-
-const serviceAccount = JSON.parse(serviceAccountFile);
-
+let credential;
+let serviceAccount;
+try {
+  const serviceAccountFile = await readFile(serviceAccountPath, "utf8");
+  serviceAccount = JSON.parse(serviceAccountFile);
+  credential = cert(serviceAccount);
+} catch (error) {
+  if (error?.code !== "ENOENT") throw error;
+  credential = applicationDefault();
+}
 
 const app = initializeApp({
-  credential: cert(serviceAccount),
+  credential,
+  ...((projectId || serviceAccount?.project_id)
+    ? { projectId: projectId || serviceAccount.project_id }
+    : {}),
+  storageBucket,
 });
 
 
@@ -42,6 +57,4 @@ export const adminAuth = getAuth(app);
 
 export const adminDb = getFirestore(app);
 
-export const adminStorage = getStorage(app).bucket(
-  "espasyo-6072d.firebasestorage.app"
-);
+export const adminStorage = getStorage(app).bucket();

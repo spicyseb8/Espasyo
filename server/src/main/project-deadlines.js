@@ -44,7 +44,9 @@ router.patch(
       const saved = await saveProjectDeadline(
         adminDb,
         projectId,
-        validation.deadline
+        validation.deadline,
+        req.adminUser,
+        typeof req.body.reason === "string" ? req.body.reason.trim().slice(0, 1000) : ""
       );
 
       if (!saved) {

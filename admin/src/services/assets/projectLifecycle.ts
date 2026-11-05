@@ -1,6 +1,9 @@
 export type ProjectLifecycleStatus =
     | "available"
     | "client-designed"
+    | "submitted"
+    | "revision-requested"
+    | "approved"
     | "legacy"
     | "unverified";
 
@@ -11,6 +14,7 @@ export interface LifecycleProject {
     structuralStatus?: string;
     publishedStructuralRevision?: number;
     clientDesignStarted?: boolean;
+    projectStatus?: string;
     lifecycleStatus?: ProjectLifecycleStatus;
 }
 
@@ -39,6 +43,15 @@ export function classifyProjectLifecycle(
     ) {
         return "unverified";
     }
+
+    if (
+        project.projectStatus === "submitted" ||
+        project.projectStatus === "revision-requested" ||
+        project.projectStatus === "approved"
+    ) {
+        return project.projectStatus;
+    }
+    if (project.projectStatus === "ongoing") return "client-designed";
 
     return project.clientDesignStarted === true ||
         (project.clientDesignStarted === undefined && hasMeaningfulInteriorData(interiorData))
@@ -74,6 +87,9 @@ export function getClientDesignedProjects<T extends LifecycleProject>(
 ): T[] {
     return projects.filter(project =>
         project.lifecycleStatus === "client-designed" ||
+        project.lifecycleStatus === "submitted" ||
+        project.lifecycleStatus === "revision-requested" ||
+        project.lifecycleStatus === "approved" ||
         project.lifecycleStatus === "legacy"
     );
 }

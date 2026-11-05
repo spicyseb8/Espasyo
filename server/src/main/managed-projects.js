@@ -8,6 +8,25 @@ import {
   adminStorage,
 } from "../firebase-admin.js";
 import { requireRole } from "./authorization.js";
+import { createReservedFloorPlanDraft } from "./floorplan-reservation.js";
+import {
+  ACCESS_AGREEMENT_VERSION,
+  SUBMISSION_AGREEMENT_VERSION,
+  canContinueAdminStructureSave,
+  canTransitionProject,
+  getPhilippineDateTimeKey,
+  getClientEditLockReason,
+  getProjectStatus,
+  isCurrentProjectAcknowledgement,
+  isFutureProjectDeadline,
+  isValidProjectDeadline,
+} from "./project-workflow.js";
+import {
+  isClientAssignedToPublishedProject,
+  isClientAccessibleManagedProjectFileKind,
+  resolveManagedProjectFilePath,
+  stripManagedFileUrlFields,
+} from "./managed-project-file-access.js";
 
 const router = express.Router();
 const PROJECTS = "projects";
@@ -15,6 +34,9 @@ const USERS = "users";
 const EMPLOYEES = "adminEmployees";
 const ASSIGNMENTS = "adminManagedProjectAssignments";
 const DRAFTS = "adminManagedFloorPlanDrafts";
+const PROJECT_ACTIVITY = "projectActivity";
+const PROJECT_VERSIONS = "projectVersions";
+const PROJECT_SUBMISSIONS = "projectSubmissions";
 const MAX_STRUCTURE_BYTES = 10 * 1024 * 1024;
 const OWNER_PROJECT_CONFLICT =
   "This client already has a project or assignment. Open the existing project instead.";
@@ -61,7 +83,7 @@ function validateStructure(value, projectId, ownerId, projectName) {
       throw httpError(400, `Floor-plan ${field} data must be an array.`);
     }
   }
-  const serialized = JSON.stringify(value);
+  const serialized = JSON.stringify(stripManagedFileUrlFields(value));
   if (Buffer.byteLength(serialized, "utf8") > MAX_STRUCTURE_BYTES) {
     throw httpError(413, "Floor-plan data exceeds the 10 MB limit.");
   }
@@ -77,20 +99,13 @@ function timestampToIso(value) {
   return null;
 }
 
-function storageDownloadUrl(path, token) {
-  return `https://firebasestorage.googleapis.com/v0/b/${adminStorage.name}/o/${encodeURIComponent(path)}?alt=media&token=${token}`;
-}
-
 async function uploadJson(path, json) {
-  const token = randomUUID();
   await adminStorage.file(path).save(Buffer.from(json, "utf8"), {
     resumable: false,
     metadata: {
       contentType: "application/json",
-      metadata: { firebaseStorageDownloadTokens: token },
     },
   });
-  return storageDownloadUrl(path, token);
 }
 
 async function deleteStorageObject(path) {
@@ -110,6 +125,57 @@ function assignmentReference(ownerId) {
   return adminDb.collection(ASSIGNMENTS).doc(encodeURIComponent(ownerId));
 }
 
+function getTodayInManila() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Manila",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const year = parts.find(part => part.type === "year")?.value;
+  const month = parts.find(part => part.type === "month")?.value;
+  const day = parts.find(part => part.type === "day")?.value;
+  return `${year}-${month}-${day}`;
+}
+
+function recordProjectActivity(transaction, projectId, actor, action, details = {}) {
+  const reference = adminDb.collection(PROJECT_ACTIVITY).doc(randomUUID());
+  const activity = {
+    projectId,
+    actorId: actor.uid,
+    actorRole: actor.role,
+    ...(normalizedString(actor.name) ? { actorName: normalizedString(actor.name) } : {}),
+    action,
+    createdAt: FieldValue.serverTimestamp(),
+  };
+  for (const [key, value] of Object.entries(details)) {
+    if (value !== undefined) activity[key] = value;
+  }
+  transaction.create(reference, activity);
+}
+
+function assertAssignedClient(project, assignment, projectId, ownerId) {
+  if (!assignment.exists || !isClientAssignedToPublishedProject(
+    { ...project, projectId: normalizedString(project.projectId) || projectId },
+    assignment.data(),
+    projectId,
+    ownerId,
+  )) {
+    throw httpError(403, "This published project is not assigned to the signed-in client.");
+  }
+}
+
+function getInteriorStoragePath(project, ownerId, projectId) {
+  const path = normalizedString(project.interiorJsonPath);
+  if (!path) return "";
+  const legacyPath = `projects/${ownerId}/${projectId}.interior.json`;
+  const versionPath = `projects/${ownerId}/${projectId}/versions/`;
+  if (path !== legacyPath && !path.startsWith(versionPath)) {
+    throw httpError(409, "Saved interior design path does not match this project.");
+  }
+  return path;
+}
+
 async function findClientAccount(ownerId) {
   const [usersSnapshot, employeeSnapshot] = await Promise.all([
     adminDb.collection(USERS).where("uid", "==", ownerId).limit(1).get(),
@@ -121,15 +187,7 @@ async function findClientAccount(ownerId) {
   if (user.account_status !== "active" || ["admin", "superadmin"].includes(user.role)) {
     return null;
   }
-  return { document: userDocument, data: user };
-}
-
-async function hasExistingProjectOrAssignment(ownerId) {
-  const [projectsSnapshot, assignmentSnapshot] = await Promise.all([
-    adminDb.collection(PROJECTS).where("ownerId", "==", ownerId).limit(1).get(),
-    assignmentReference(ownerId).get(),
-  ]);
-  return projectsSnapshot.size > 0 || assignmentSnapshot.exists;
+  return { id: userDocument.id, document: userDocument, data: user };
 }
 
 async function reserveNextProjectId(transaction, year) {
@@ -201,19 +259,16 @@ async function createDraft(req, res) {
     const ownerId = normalizedString(req.body?.ownerId);
     const projectName = validateName(req.body?.projectName);
     if (!ownerId) throw httpError(400, "A client account is required.");
-    if (!(await findClientAccount(ownerId))) {
+    const clientAccount = await findClientAccount(ownerId);
+    if (!clientAccount) {
       throw httpError(409, "This client account is not eligible for a floor plan.");
     }
-    if (await hasExistingProjectOrAssignment(ownerId)) {
-      throw httpError(409, OWNER_PROJECT_CONFLICT);
-    }
-
     const draftId = randomUUID();
-    const reference = adminDb.collection(DRAFTS).doc(draftId);
     const record = {
       draftId,
       projectName,
       intendedClientId: ownerId,
+      intendedClientAccountId: clientAccount.id,
       createdBy: req.adminUser.uid,
       creatorName: req.adminUser.name,
       workflowType: "admin-managed",
@@ -224,7 +279,16 @@ async function createDraft(req, res) {
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     };
-    await reference.create(record);
+    await createReservedFloorPlanDraft(adminDb, {
+      ownerId,
+      draftId,
+      draftRecord: record,
+      assignmentReference: assignmentReference(ownerId),
+      additionalOwnerIds: clientAccount.id === ownerId ? [] : [clientAccount.id],
+      additionalAssignmentReferences: clientAccount.id === ownerId
+        ? []
+        : [assignmentReference(clientAccount.id)],
+    });
     return res.status(201).json({ success: true, draft: { ...record, draftId } });
   } catch (error) {
     return sendFailure(res, error, "Unable to create the floor-plan draft.");
@@ -234,23 +298,37 @@ async function createDraft(req, res) {
 async function searchClients(req, res) {
   try {
     const search = normalizedString(req.query.search).toLocaleLowerCase();
-    const [usersSnapshot, projectsSnapshot, assignmentSnapshot, employeesSnapshot] = await Promise.all([
+    const [usersSnapshot, projectsSnapshot, assignmentSnapshot, employeesSnapshot, draftsSnapshot] = await Promise.all([
       adminDb.collection(USERS).get(),
       adminDb.collection(PROJECTS).get(),
       adminDb.collection(ASSIGNMENTS).get(),
       adminDb.collection(EMPLOYEES).get(),
+      adminDb.collection(DRAFTS).get(),
     ]);
 
-    const projectOwners = new Set(
-      projectsSnapshot.docs
-        .map(document => document.data().ownerId)
-        .filter(value => typeof value === "string")
-    );
-    const assignedOwners = new Set(
-      assignmentSnapshot.docs
-        .map(document => document.data().ownerId)
-        .filter(value => typeof value === "string")
-    );
+    const projectsByOwner = new Map();
+    for (const document of projectsSnapshot.docs) {
+      const ownerId = normalizedString(document.data().ownerId);
+      if (ownerId && !projectsByOwner.has(ownerId)) projectsByOwner.set(ownerId, document.id);
+    }
+    const draftsByOwner = new Map();
+    for (const document of draftsSnapshot.docs) {
+      const ownerId = normalizedString(document.data().intendedClientId);
+      if (
+        ownerId &&
+        !document.data().publishedProjectId &&
+        document.data().deleting !== true &&
+        !draftsByOwner.has(ownerId)
+      ) {
+        draftsByOwner.set(ownerId, document.id);
+      }
+    }
+    const assignmentsByOwner = new Map();
+    for (const document of assignmentSnapshot.docs) {
+      const assignment = document.data();
+      const ownerId = normalizedString(assignment.ownerId);
+      if (ownerId) assignmentsByOwner.set(ownerId, assignment);
+    }
     const employeeUids = new Set(
       employeesSnapshot.docs
         .map(document => document.data().uid)
@@ -266,16 +344,33 @@ async function searchClients(req, res) {
       const email = normalizedString(data.email);
       if (search && !`${name} ${email}`.toLocaleLowerCase().includes(search)) continue;
 
+      const ownerIdentifiers = [...new Set([uid, document.id])];
+      const projectId = ownerIdentifiers.map(id => projectsByOwner.get(id)).find(Boolean) ??
+        ownerIdentifiers.map(id => assignmentsByOwner.get(id)?.projectId).find(Boolean) ??
+        null;
+      const existingDraftId = ownerIdentifiers.map(id => draftsByOwner.get(id)).find(Boolean) ??
+        ownerIdentifiers.map(id => assignmentsByOwner.get(id)?.draftId).find(Boolean) ??
+        null;
+      const hasFloorPlan = Boolean(projectId || existingDraftId);
       const isEligible = data.account_status === "active"
         && !["admin", "superadmin"].includes(data.role)
         && !employeeUids.has(uid)
-        && !projectOwners.has(uid)
-        && !assignedOwners.has(uid);
-      if (!isEligible) {
+        && !hasFloorPlan
+        && !ownerIdentifiers.some(id => assignmentsByOwner.has(id));
+      if (!isEligible && !hasFloorPlan) {
         hasIneligibleMatches = true;
         continue;
       }
-      clients.push({ id: document.id, uid, name, email: email || undefined });
+      if (!isEligible) hasIneligibleMatches = true;
+      clients.push({
+        id: document.id,
+        uid,
+        name,
+        email: email || undefined,
+        eligible: isEligible,
+        existingProjectId: projectId ?? undefined,
+        existingDraftId: existingDraftId ?? undefined,
+      });
     }
 
     clients.sort((first, second) => first.name.localeCompare(second.name));
@@ -292,6 +387,7 @@ async function searchClients(req, res) {
 function mapProject(document, ownerNames, creatorNames, assignmentByOwner, ownerEmails = new Map()) {
   const data = document.data();
   const projectId = typeof data.projectId === "string" ? data.projectId : document.id;
+  const isManaged = data.workflowType === "admin-managed";
   return {
     projectId,
     projectName: typeof data.projectName === "string" ? data.projectName : "Unnamed Project",
@@ -312,14 +408,47 @@ function mapProject(document, ownerNames, creatorNames, assignmentByOwner, owner
     intendedClientId: typeof data.intendedClientId === "string" ? data.intendedClientId : undefined,
     intendedClientEmail: ownerEmails.get(data.intendedClientId ?? data.ownerId),
     recordType: "project",
-    jsonPath: typeof data.jsonPath === "string" ? data.jsonPath : "",
-    jsonUrl: typeof data.jsonUrl === "string" ? data.jsonUrl : "",
-    draftJsonPath: typeof data.draftJsonPath === "string" ? data.draftJsonPath : undefined,
-    draftJsonUrl: typeof data.draftJsonUrl === "string" ? data.draftJsonUrl : undefined,
-    interiorJsonPath: typeof data.interiorJsonPath === "string" ? data.interiorJsonPath : undefined,
-    interiorJsonUrl: typeof data.interiorJsonUrl === "string" ? data.interiorJsonUrl : undefined,
+    ...(isManaged
+      ? {
+          hasPublishedStructure: typeof data.jsonPath === "string" && Boolean(data.jsonPath),
+          hasDraftStructure: typeof data.draftJsonPath === "string" && Boolean(data.draftJsonPath),
+          hasInterior: Boolean(data.interiorJsonPath || data.interiorJsonUrl),
+        }
+      : {
+          jsonPath: typeof data.jsonPath === "string" ? data.jsonPath : "",
+          jsonUrl: typeof data.jsonUrl === "string" ? data.jsonUrl : "",
+          interiorJsonPath: typeof data.interiorJsonPath === "string" ? data.interiorJsonPath : undefined,
+          interiorJsonUrl: typeof data.interiorJsonUrl === "string" ? data.interiorJsonUrl : undefined,
+        }),
     clientDesignStarted: typeof data.clientDesignStarted === "boolean" ? data.clientDesignStarted : undefined,
     clientDesignStartedAt: timestampToIso(data.clientDesignStartedAt),
+    projectStatus: getProjectStatus(data),
+    currentDesignVersionId: typeof data.currentDesignVersionId === "string" ? data.currentDesignVersionId : undefined,
+    currentDesignVersionNumber: Number.isSafeInteger(data.currentDesignVersionNumber)
+      ? data.currentDesignVersionNumber
+      : undefined,
+    submittedVersionId: typeof data.submittedVersionId === "string" ? data.submittedVersionId : undefined,
+    submittedAt: timestampToIso(data.submittedAt),
+    submittedVersionNumber: Number.isSafeInteger(data.submittedVersionNumber) ? data.submittedVersionNumber : undefined,
+    ...(isManaged ? {
+      submittedSubmissionId: typeof data.submittedSubmissionId === "string" ? data.submittedSubmissionId : undefined,
+      approvedSubmissionId: typeof data.approvedSubmissionId === "string" ? data.approvedSubmissionId : undefined,
+    } : {}),
+    ...(isManaged ? {} : {
+      submittedSnapshotPath: typeof data.submittedSnapshotPath === "string" ? data.submittedSnapshotPath : undefined,
+      submittedSnapshotUrl: typeof data.submittedSnapshotUrl === "string" ? data.submittedSnapshotUrl : undefined,
+    }),
+    approvedAt: timestampToIso(data.approvedAt),
+    approvedBy: typeof data.approvedBy === "string" ? data.approvedBy : undefined,
+    approvedByName: typeof data.approvedByName === "string" ? data.approvedByName : undefined,
+    approvedVersionNumber: Number.isSafeInteger(data.approvedVersionNumber) ? data.approvedVersionNumber : undefined,
+    ...(isManaged ? {} : {
+      approvedSnapshotPath: typeof data.approvedSnapshotPath === "string" ? data.approvedSnapshotPath : undefined,
+      approvedSnapshotUrl: typeof data.approvedSnapshotUrl === "string" ? data.approvedSnapshotUrl : undefined,
+    }),
+    approvedVersionId: typeof data.approvedVersionId === "string" ? data.approvedVersionId : undefined,
+    revisionFeedback: typeof data.revisionFeedback === "string" ? data.revisionFeedback : undefined,
+    revisionRequestedAt: timestampToIso(data.revisionRequestedAt),
     lifecycleAssignmentId: assignmentByOwner.get(data.ownerId) ?? null,
     thumbnailPath: typeof data.thumbnailPath === "string" ? data.thumbnailPath : undefined,
     thumbnailUrl: typeof data.thumbnailUrl === "string" ? data.thumbnailUrl : undefined,
@@ -396,14 +525,11 @@ async function getAdminProjects(req, res, includeDrafts) {
           recordType: "draft",
           thumbnailPath: typeof draft.thumbnailPath === "string" ? draft.thumbnailPath : undefined,
           thumbnailUrl: typeof draft.thumbnailUrl === "string" ? draft.thumbnailUrl : undefined,
-          jsonPath: "",
-          jsonUrl: "",
-          draftJsonPath: typeof draft.draftJsonPath === "string" ? draft.draftJsonPath : undefined,
-          draftJsonUrl: typeof draft.draftJsonUrl === "string" ? draft.draftJsonUrl : undefined,
+          hasDraftStructure: typeof draft.draftJsonPath === "string" && Boolean(draft.draftJsonPath),
           schemaVersion: 1,
           createdAt: timestampToIso(draft.createdAt),
           updatedAt: timestampToIso(draft.updatedAt),
-          deadline: null,
+          deadline: typeof draft.deadline === "string" ? draft.deadline : null,
         });
       }
     }
@@ -497,14 +623,21 @@ async function getDraft(req, res) {
     const snapshot = await reference.get();
     if (!snapshot.exists) throw httpError(404, "Floor-plan draft does not exist.");
     const draft = snapshot.data();
-    const projectData = draft.draftJsonPath ? await loadJson(draft.draftJsonPath) : null;
+    const projectData = draft.draftJsonPath
+      ? stripManagedFileUrlFields(await loadJson(draft.draftJsonPath))
+      : null;
     const clientAccount = await findClientAccount(draft.intendedClientId);
     const clientData = clientAccount?.data;
+    const {
+      draftJsonPath: _draftJsonPath,
+      draftJsonUrl: _draftJsonUrl,
+      ...safeDraft
+    } = draft;
     return res.json({
       success: true,
       draft: {
         draftId,
-        ...draft,
+        ...safeDraft,
         intendedClientName: clientData?.full_name ?? clientData?.name ?? "Unknown User",
         projectData,
       },
@@ -530,22 +663,29 @@ async function saveDraft(req, res) {
     if (draft.publishedProjectId) {
       throw httpError(409, "This draft has already been published.");
     }
+    if (draft.deleting === true) {
+      throw httpError(409, "This draft is being deleted.");
+    }
     const revision = Number(req.body?.revision);
     if (!Number.isSafeInteger(revision) || revision < 1) {
       throw httpError(400, "A positive floor-plan revision is required.");
+    }
+    const deadline = normalizedString(req.body?.deadline);
+    if (deadline && !isValidProjectDeadline(deadline)) {
+      throw httpError(400, "Choose a valid project date and time.");
     }
     const ownerId = normalizedString(draft.intendedClientId);
     const projectData = req.body?.projectData;
     const json = validateStructure(projectData, draftId, ownerId, projectName);
     const storagePath = `adminManagedFloorPlanDrafts/${req.adminUser.uid}/${draftId}/draft-r${revision}-${randomUUID()}.json`;
     uploadedPath = storagePath;
-    const jsonUrl = await uploadJson(storagePath, json);
+    await uploadJson(storagePath, json);
 
     await adminDb.runTransaction(async transaction => {
       const currentSnapshot = await transaction.get(reference);
       if (!currentSnapshot.exists) throw httpError(404, "Floor-plan draft was removed during save.");
       const current = currentSnapshot.data();
-      if (current.createdBy !== req.adminUser.uid || current.publishedProjectId) {
+      if (current.createdBy !== req.adminUser.uid || current.publishedProjectId || current.deleting === true) {
         throw httpError(403, "Draft ownership or status changed during save.");
       }
       transaction.set(reference, {
@@ -553,11 +693,12 @@ async function saveDraft(req, res) {
         structuralRevision: revision,
         structureInitialized: true,
         draftJsonPath: storagePath,
-        draftJsonUrl: jsonUrl,
+        draftJsonUrl: FieldValue.delete(),
+        ...(deadline ? { deadline } : {}),
         updatedAt: FieldValue.serverTimestamp(),
       }, { merge: true });
     });
-    return res.json({ success: true, draftId, revision, draftJsonPath: storagePath, draftJsonUrl: jsonUrl });
+    return res.json({ success: true, draftId, revision });
   } catch (error) {
     if (uploadedPath) {
       try {
@@ -584,6 +725,14 @@ async function publishDraft(req, res) {
     }
     if (initial.publishedProjectId) {
       return res.json({ success: true, projectId: initial.publishedProjectId, alreadyPublished: true });
+    }
+    if (initial.deleting === true) {
+      throw httpError(409, "This draft is being deleted.");
+    }
+    const deadline = normalizedString(req.body?.deadline) ||
+      normalizedString(initial.deadline);
+    if (!isFutureProjectDeadline(deadline, getTodayInManila())) {
+      throw httpError(400, "Choose a valid project deadline after today before publishing.");
     }
     const projectName = validateName(req.body?.projectName ?? initial.projectName);
     const ownerId = normalizedString(initial.intendedClientId);
@@ -617,17 +766,25 @@ async function publishDraft(req, res) {
     };
     const finalJson = validateStructure(publishedData, reservedId, ownerId, projectName);
     uploadedPath = `projects/${ownerId}/${reservedId}/published-r${revision}-${randomUUID()}.json`;
-    const jsonUrl = await uploadJson(uploadedPath, finalJson);
+    await uploadJson(uploadedPath, finalJson);
     const destinationReference = adminDb.collection(PROJECTS).doc(reservedId);
     const lockReference = assignmentReference(ownerId);
-    const ownerProjectsQuery = adminDb.collection(PROJECTS).where("ownerId", "==", ownerId);
+    const ownerAccount = await findClientAccount(ownerId);
+    const ownerIdentifiers = [...new Set([
+      ownerId,
+      normalizedString(initial.intendedClientAccountId) || ownerAccount?.id || ownerId,
+    ])];
+    const assignmentReferences = ownerIdentifiers.map(assignmentReference);
+    const ownerProjectsQueries = ownerIdentifiers.map(id =>
+      adminDb.collection(PROJECTS).where("ownerId", "==", id).limit(1)
+    );
 
     const result = await adminDb.runTransaction(async transaction => {
-      const [currentDraftSnapshot, assignmentSnapshot, ownerProjectsSnapshot, destinationSnapshot] =
+      const [currentDraftSnapshot, assignmentSnapshots, ownerProjectsSnapshots, destinationSnapshot] =
         await Promise.all([
           transaction.get(reference),
-          transaction.get(lockReference),
-          transaction.get(ownerProjectsQuery),
+          Promise.all(assignmentReferences.map(ref => transaction.get(ref))),
+          Promise.all(ownerProjectsQueries.map(query => transaction.get(query))),
           transaction.get(destinationReference),
         ]);
       if (!currentDraftSnapshot.exists) throw httpError(404, "Floor-plan draft was removed during publishing.");
@@ -638,10 +795,29 @@ async function publishDraft(req, res) {
       if (currentDraft.publishedProjectId) {
         return { projectId: currentDraft.publishedProjectId, alreadyPublished: true };
       }
+      if (currentDraft.deleting === true) {
+        throw httpError(409, "This draft is being deleted.");
+      }
       if (currentDraft.projectName !== initial.projectName) {
         throw httpError(409, "The draft name changed while publishing. Reload and try again.");
       }
-      if (assignmentSnapshot.exists || ownerProjectsSnapshot.size > 0) {
+      if (
+        currentDraft.structuralRevision !== initial.structuralRevision ||
+        currentDraft.draftJsonPath !== initial.draftJsonPath
+      ) {
+        throw httpError(409, "The floor-plan draft changed while publishing. Reload and try again.");
+      }
+      const primaryAssignment = assignmentSnapshots[0];
+      const currentReservation = primaryAssignment.exists ? primaryAssignment.data() : null;
+      const ownsDraftReservation = currentReservation?.status === "draft" &&
+        currentReservation.draftId === draftId &&
+        currentReservation.ownerId === ownerId;
+      if (
+        assignmentSnapshots.some((assignment, index) =>
+          assignment.exists && !(index === 0 && ownsDraftReservation)
+        ) ||
+        ownerProjectsSnapshots.some(snapshot => snapshot.docs.length > 0)
+      ) {
         throw httpError(409, OWNER_PROJECT_CONFLICT);
       }
       if (destinationSnapshot.exists) {
@@ -655,23 +831,33 @@ async function publishDraft(req, res) {
         workflowType: "admin-managed",
         structuralOwner: "admin",
         structuralStatus: "published",
+        projectStatus: "available",
         structuralRevision: revision,
         publishedStructuralRevision: revision,
+        deadline,
         clientDesignStarted: false,
         structureInitialized: true,
         jsonPath: uploadedPath,
-        jsonUrl,
+        jsonUrl: FieldValue.delete(),
         createdBy: req.adminUser.uid,
         creatorName: req.adminUser.name,
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       };
-      transaction.create(lockReference, {
+      transaction.set(lockReference, {
         ownerId,
         projectId: reservedId,
+        status: "published",
+        draftId: FieldValue.delete(),
         updatedAt: FieldValue.serverTimestamp(),
-      });
+      }, { merge: true });
       transaction.create(destinationReference, projectRecord);
+      recordProjectActivity(transaction, reservedId, req.adminUser, "floor-plan-published", {
+        newValue: { projectName, deadline, ownerId, structuralRevision: revision },
+      });
+      recordProjectActivity(transaction, reservedId, req.adminUser, "project-assigned", {
+        newValue: { ownerId, projectId: reservedId },
+      });
       transaction.set(reference, {
         projectName,
         publishedProjectId: reservedId,
@@ -710,6 +896,10 @@ async function saveProjectStructure(req, res) {
     if (existing.workflowType !== "admin-managed") {
       throw httpError(400, "Only admin-managed floor plans can be saved here.");
     }
+    const existingStatus = getProjectStatus(existing);
+    if (existingStatus === "submitted" || existingStatus === "approved") {
+      throw httpError(409, "A submitted or approved project structure cannot be edited.");
+    }
     const ownerId = normalizedString(existing.ownerId);
     const projectName = validateName(req.body?.projectName);
     if (normalizedString(req.body?.ownerId) !== ownerId) {
@@ -720,6 +910,14 @@ async function saveProjectStructure(req, res) {
       throw httpError(400, "A positive floor-plan revision is required.");
     }
     const published = req.body?.published === true;
+    const firstPublication = published && existing.structuralStatus !== "published";
+    const deadline = firstPublication ? normalizedString(req.body?.deadline) : existing.deadline;
+    if (
+      firstPublication &&
+      !isFutureProjectDeadline(deadline, getTodayInManila())
+    ) {
+      throw httpError(400, "Choose a valid project deadline after today before publishing.");
+    }
     const projectData = req.body?.projectData;
     const managedData = {
       ...projectData,
@@ -736,7 +934,7 @@ async function saveProjectStructure(req, res) {
     const json = validateStructure(managedData, projectId, ownerId, projectName);
     const storagePath = `projects/${ownerId}/${projectId}/${published ? "published" : "draft"}-r${revision}-${randomUUID()}.json`;
     uploadedPath = storagePath;
-    const jsonUrl = await uploadJson(storagePath, json);
+    await uploadJson(storagePath, json);
     const lockReference = assignmentReference(ownerId);
 
     await adminDb.runTransaction(async transaction => {
@@ -761,10 +959,12 @@ async function saveProjectStructure(req, res) {
         current.structuralRevision !== existing.structuralRevision ||
         current.publishedStructuralRevision !== existing.publishedStructuralRevision ||
         current.structuralStatus !== existing.structuralStatus ||
-        current.draftJsonPath !== existing.draftJsonPath ||
-        current.jsonUrl !== existing.jsonUrl
+        current.draftJsonPath !== existing.draftJsonPath
       ) {
         throw httpError(409, "The project changed during save. Reload before trying again.");
+      }
+      if (!canContinueAdminStructureSave(existing, current)) {
+        throw httpError(409, "The project lifecycle changed during save. Reload before trying again.");
       }
 
       const wasPublished = current.structuralStatus === "published"
@@ -777,6 +977,15 @@ async function saveProjectStructure(req, res) {
         workflowType: "admin-managed",
         structuralOwner: "admin",
         structuralStatus: published || wasPublished ? "published" : "draft",
+        jsonUrl: FieldValue.delete(),
+        draftJsonUrl: FieldValue.delete(),
+        interiorJsonUrl: FieldValue.delete(),
+        submittedSnapshotUrl: FieldValue.delete(),
+        approvedSnapshotUrl: FieldValue.delete(),
+        ...(firstPublication ? {
+          projectStatus: "available",
+          deadline,
+        } : {}),
         structuralRevision: published ? revision : wasPublished ? current.structuralRevision : revision,
         structureInitialized: true,
         updatedAt: FieldValue.serverTimestamp(),
@@ -784,7 +993,7 @@ async function saveProjectStructure(req, res) {
       if (published) {
         Object.assign(metadata, {
           jsonPath: storagePath,
-          jsonUrl,
+          jsonUrl: FieldValue.delete(),
           publishedStructuralRevision: revision,
           clientDesignStarted: typeof current.clientDesignStarted === "boolean"
             ? current.clientDesignStarted
@@ -793,10 +1002,15 @@ async function saveProjectStructure(req, res) {
       } else {
         Object.assign(metadata, {
           draftJsonPath: storagePath,
-          draftJsonUrl: jsonUrl,
+          draftJsonUrl: FieldValue.delete(),
         });
       }
       transaction.set(reference, metadata, { merge: true });
+      if (firstPublication) {
+        recordProjectActivity(transaction, projectId, req.adminUser, "floor-plan-published", {
+          newValue: { projectName, deadline, structuralRevision: revision },
+        });
+      }
     });
     return res.json({ success: true, projectId, revision, published });
   } catch (error) {
@@ -829,11 +1043,23 @@ function hasMeaningfulInteriorData(data) {
     (isRecord(data.wallFinishes) && Object.keys(data.wallFinishes).length > 0);
 }
 
+function hasCurrentProjectAccessAcknowledgement(project, ownerId) {
+  return isCurrentProjectAcknowledgement(
+    project.accessAcknowledgement,
+    project.projectId,
+    ownerId,
+    "project-access",
+    ACCESS_AGREEMENT_VERSION,
+  );
+}
+
 async function saveClientInterior(req, res) {
   const projectId = normalizedString(req.params.projectId);
   const ownerId = req.clientUser.uid;
   const reference = adminDb.collection(PROJECTS).doc(projectId);
   const lockReference = assignmentReference(ownerId);
+  const versionId = randomUUID();
+  const versionReference = adminDb.collection(PROJECT_VERSIONS).doc(versionId);
   let uploadedPath;
   try {
     if (!projectId) throw httpError(400, "Project ID is required.");
@@ -849,7 +1075,7 @@ async function saveClientInterior(req, res) {
     ) {
       throw httpError(400, "Interior design data is invalid.");
     }
-    const serialized = JSON.stringify(interiorData);
+    const serialized = JSON.stringify(stripManagedFileUrlFields(interiorData));
     if (Buffer.byteLength(serialized, "utf8") > MAX_STRUCTURE_BYTES) {
       throw httpError(413, "Interior design data exceeds the 10 MB limit.");
     }
@@ -857,10 +1083,25 @@ async function saveClientInterior(req, res) {
     if (!Number.isFinite(estimatedCost) || estimatedCost < 0) {
       throw httpError(400, "Estimated cost must be a non-negative number.");
     }
-    const hasChanges = hasMeaningfulInteriorData(interiorData);
-    const storagePath = `projects/${ownerId}/${projectId}.interior.json`;
+    const [initialSnapshot, initialAssignment] = await Promise.all([
+      reference.get(),
+      lockReference.get(),
+    ]);
+    if (!initialSnapshot.exists) throw httpError(404, "Project does not exist.");
+    const initial = initialSnapshot.data();
+    assertAssignedClient(initial, initialAssignment, projectId, ownerId);
+    if (!hasCurrentProjectAccessAcknowledgement(initial, ownerId)) {
+      throw httpError(403, "Acknowledge project access before saving a design.");
+    }
+    const lockReason = getClientEditLockReason(initial, getPhilippineDateTimeKey());
+    if (lockReason) throw httpError(409, lockReason);
+
+    const versionNumber = (Number.isSafeInteger(initial.currentDesignVersionNumber)
+      ? initial.currentDesignVersionNumber
+      : 0) + 1;
+    const storagePath = `projects/${ownerId}/${projectId}/versions/${versionId}.json`;
     uploadedPath = storagePath;
-    const jsonUrl = await uploadJson(storagePath, serialized);
+    await uploadJson(storagePath, serialized);
     const thumbnailPath = normalizedString(req.body?.thumbnailPath);
     const thumbnailUrl = normalizedString(req.body?.thumbnailUrl);
     if (thumbnailPath && thumbnailPath !== `projects/${ownerId}/${projectId}.jpg`) {
@@ -874,16 +1115,19 @@ async function saveClientInterior(req, res) {
       ]);
       if (!projectSnapshot.exists) throw httpError(404, "Project does not exist.");
       const current = projectSnapshot.data();
+      assertAssignedClient(current, assignmentSnapshot, projectId, ownerId);
+      if (!hasCurrentProjectAccessAcknowledgement(current, ownerId)) {
+        throw httpError(403, "Acknowledge project access before saving a design.");
+      }
+      const currentLockReason = getClientEditLockReason(current, getPhilippineDateTimeKey());
+      if (currentLockReason) throw httpError(409, currentLockReason);
       if (
-        current.ownerId !== ownerId ||
-        current.workflowType !== "admin-managed" ||
-        current.structuralStatus !== "published" ||
-        !Number.isSafeInteger(current.publishedStructuralRevision) ||
-        !assignmentSnapshot.exists ||
-        assignmentSnapshot.data().ownerId !== ownerId ||
-        assignmentSnapshot.data().projectId !== projectId
+        (current.currentDesignVersionId ?? null) !==
+          (initial.currentDesignVersionId ?? null) ||
+        (current.currentDesignVersionNumber ?? 0) !==
+          (initial.currentDesignVersionNumber ?? 0)
       ) {
-        throw httpError(403, "This published project is not assigned to the signed-in client.");
+        throw httpError(409, "A newer design version was saved. Reload the project before saving again.");
       }
       const update = {
         projectId,
@@ -891,10 +1135,13 @@ async function saveClientInterior(req, res) {
         schemaVersion: 1,
         estimatedCost,
         interiorJsonPath: storagePath,
-        interiorJsonUrl: jsonUrl,
+        interiorJsonUrl: FieldValue.delete(),
+        currentDesignVersionId: versionId,
+        currentDesignVersionNumber: versionNumber,
+        projectStatus: "ongoing",
         updatedAt: FieldValue.serverTimestamp(),
       };
-      if (hasChanges) {
+      if (hasMeaningfulInteriorData(interiorData)) {
         update.clientDesignStarted = true;
         if (!current.clientDesignStartedAt) {
           update.clientDesignStartedAt = FieldValue.serverTimestamp();
@@ -904,9 +1151,29 @@ async function saveClientInterior(req, res) {
         update.thumbnailPath = thumbnailPath;
         update.thumbnailUrl = thumbnailUrl;
       }
+      transaction.create(versionReference, {
+        projectId,
+        ownerId,
+        versionId,
+        versionNumber,
+        createdBy: ownerId,
+        actorRole: "client",
+        snapshotType: "design",
+        storagePath,
+        estimatedCost,
+        createdAt: FieldValue.serverTimestamp(),
+      });
       transaction.set(reference, update, { merge: true });
+      recordProjectActivity(transaction, projectId, { uid: ownerId, role: "client" }, "design-saved", {
+        versionId,
+        newValue: { versionNumber },
+      });
+      recordProjectActivity(transaction, projectId, { uid: ownerId, role: "client" }, "design-version-created", {
+        versionId,
+        newValue: { versionNumber, snapshotType: "design" },
+      });
     });
-    return res.json({ success: true, interiorJsonPath: storagePath, interiorJsonUrl: jsonUrl });
+    return res.json({ success: true, versionId, versionNumber });
   } catch (error) {
     if (uploadedPath) {
       try {
@@ -920,6 +1187,603 @@ async function saveClientInterior(req, res) {
   }
 }
 
+async function getClientProjectWorkflow(req, res) {
+  try {
+    const projectId = normalizedString(req.params.projectId);
+    const ownerId = req.clientUser.uid;
+    if (!projectId) throw httpError(400, "Project ID is required.");
+    const [projectSnapshot, assignmentSnapshot] = await Promise.all([
+      adminDb.collection(PROJECTS).doc(projectId).get(),
+      assignmentReference(ownerId).get(),
+    ]);
+    if (!projectSnapshot.exists) throw httpError(404, "Project does not exist.");
+    const project = projectSnapshot.data();
+    assertAssignedClient(project, assignmentSnapshot, projectId, ownerId);
+    const submissionAgreement = project.submissionAgreement;
+    return res.json({
+      success: true,
+      workflow: {
+        projectId,
+        projectName: project.projectName,
+        projectStatus: getProjectStatus(project),
+        deadline: project.deadline ?? null,
+        currentDesignVersionId: project.currentDesignVersionId ?? null,
+        currentDesignVersionNumber: project.currentDesignVersionNumber ?? null,
+        clientDesignStarted: project.clientDesignStarted === true,
+        submittedVersionId: project.submittedVersionId ?? null,
+        submittedVersionNumber: project.submittedVersionNumber ?? null,
+        submittedAt: timestampToIso(project.submittedAt),
+        revisionFeedback: project.revisionFeedback ?? null,
+        revisionRequestedAt: timestampToIso(project.revisionRequestedAt),
+        approvedAt: timestampToIso(project.approvedAt),
+        accessAcknowledged:
+            hasCurrentProjectAccessAcknowledgement(project, ownerId),
+        submissionAgreementAcknowledged: isCurrentProjectAcknowledgement(
+            submissionAgreement,
+            projectId,
+            ownerId,
+            "project-submission",
+            SUBMISSION_AGREEMENT_VERSION,
+        ),
+      },
+    });
+  } catch (error) {
+    return sendFailure(res, error, "Unable to load project workflow.");
+  }
+}
+
+async function getManagedProjectFile(req, res, isAdmin) {
+  try {
+    const projectId = normalizedString(req.params.projectId);
+    const kind = normalizedString(req.params.kind);
+    const ownerId = isAdmin ? "" : req.clientUser.uid;
+    if (!projectId || !["structure", "editable-structure", "interior", "version", "submitted", "approved", "submission"].includes(kind)) {
+      throw httpError(400, "A valid project file request is required.");
+    }
+    if (!isAdmin && !isClientAccessibleManagedProjectFileKind(kind)) {
+      throw httpError(404, "Managed project file does not exist.");
+    }
+
+    const projectReference = adminDb.collection(PROJECTS).doc(projectId);
+    const projectSnapshot = await projectReference.get();
+    if (!projectSnapshot.exists) throw httpError(404, "Project file does not exist.");
+    const projectData = projectSnapshot.data();
+    if (projectData.workflowType !== "admin-managed") {
+      throw httpError(404, "Managed project file does not exist.");
+    }
+    const project = {
+      ...projectData,
+      projectId: normalizedString(projectData.projectId) || projectId,
+    };
+
+    if (!isAdmin) {
+      const assignmentSnapshot = await assignmentReference(ownerId).get();
+      assertAssignedClient(project, assignmentSnapshot, projectId, ownerId);
+    }
+
+    const fileId = normalizedString(req.params.fileId);
+    const versionId = kind === "version"
+      ? fileId
+      : kind === "interior"
+        ? normalizedString(project.currentDesignVersionId)
+        : "";
+    const submissionId = kind === "submission"
+      ? fileId
+      : kind === "submitted"
+        ? normalizedString(project.submittedSubmissionId)
+        : kind === "approved"
+          ? normalizedString(project.approvedSubmissionId)
+          : "";
+
+    const [versionSnapshot, submissionSnapshot] = await Promise.all([
+      versionId
+        ? adminDb.collection(PROJECT_VERSIONS).doc(versionId).get()
+        : Promise.resolve(null),
+      submissionId
+        ? adminDb.collection(PROJECT_SUBMISSIONS).doc(submissionId).get()
+        : Promise.resolve(null),
+    ]);
+    const versionRecord = versionSnapshot?.exists ? versionSnapshot.data() : null;
+    const submissionRecord = submissionSnapshot?.exists ? submissionSnapshot.data() : null;
+    const storagePath = resolveManagedProjectFilePath({
+      project,
+      projectId,
+      ownerId: project.ownerId,
+      kind,
+      fileId,
+      versionRecord,
+      submissionRecord,
+    });
+    if (!storagePath) throw httpError(404, "Managed project file does not exist.");
+
+    const file = adminStorage.file(storagePath);
+    const [fileMetadata] = await file.getMetadata();
+    if (Number(fileMetadata.size) > MAX_STRUCTURE_BYTES) {
+      throw httpError(413, "Managed project JSON exceeds the download size limit.");
+    }
+    if (
+      typeof fileMetadata.contentType === "string" &&
+      fileMetadata.contentType !== "application/json"
+    ) {
+      throw httpError(409, "Managed project file is not JSON.");
+    }
+    const [contents] = await file.download();
+    let payload;
+    try {
+      payload = JSON.parse(contents.toString("utf8"));
+    } catch {
+      throw httpError(409, "Saved managed project JSON is invalid.");
+    }
+    if (
+      !isRecord(payload) ||
+      (payload.projectId !== undefined && payload.projectId !== projectId) ||
+      (payload.ownerId !== undefined && payload.ownerId !== project.ownerId)
+    ) {
+      throw httpError(409, "Saved managed project JSON does not match its project.");
+    }
+
+    res.set({
+      "Cache-Control": "private, no-store, max-age=0",
+      "Pragma": "no-cache",
+      "X-Content-Type-Options": "nosniff",
+    });
+    return res.type("application/json").send(JSON.stringify(stripManagedFileUrlFields(payload)));
+  } catch (error) {
+    if (
+      String(error?.code) === "404" ||
+      error?.code === "storage/object-not-found"
+    ) {
+      return res.status(404).json({ success: false, message: "Managed project file does not exist." });
+    }
+    return sendFailure(res, error, "Unable to download managed project file.");
+  }
+}
+
+async function getClientManagedProjectFile(req, res) {
+  return getManagedProjectFile(req, res, false);
+}
+
+async function getAdminManagedProjectFile(req, res) {
+  return getManagedProjectFile(req, res, true);
+}
+
+async function acknowledgeProjectAccess(req, res) {
+  const projectId = normalizedString(req.params.projectId);
+  const ownerId = req.clientUser.uid;
+  const reference = adminDb.collection(PROJECTS).doc(projectId);
+  const assignment = assignmentReference(ownerId);
+  try {
+    if (!projectId) throw httpError(400, "Project ID is required.");
+    if (req.body?.agreementVersion !== ACCESS_AGREEMENT_VERSION) {
+      throw httpError(400, "The project access agreement version is invalid.");
+    }
+    await adminDb.runTransaction(async transaction => {
+      const [projectSnapshot, assignmentSnapshot] = await Promise.all([
+        transaction.get(reference),
+        transaction.get(assignment),
+      ]);
+      if (!projectSnapshot.exists) throw httpError(404, "Project does not exist.");
+      const project = projectSnapshot.data();
+      assertAssignedClient(project, assignmentSnapshot, projectId, ownerId);
+      if (getProjectStatus(project) === "submitted" || getProjectStatus(project) === "approved") {
+        throw httpError(409, "This project is no longer available for client editing.");
+      }
+      if (hasCurrentProjectAccessAcknowledgement(project, ownerId)) return;
+      const acceptedAt = FieldValue.serverTimestamp();
+      transaction.set(reference, {
+        accessAcknowledgement: {
+          projectId,
+          userId: ownerId,
+          agreementType: "project-access",
+          agreementVersion: ACCESS_AGREEMENT_VERSION,
+          accepted: true,
+          acceptedAt,
+          deadlineAtAcceptance: project.deadline ?? null,
+        },
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      recordProjectActivity(transaction, projectId, { uid: ownerId, role: "client" }, "project-acknowledged", {
+        newValue: { agreementType: "project-access", agreementVersion: ACCESS_AGREEMENT_VERSION },
+      });
+    });
+    return res.json({ success: true, agreementVersion: ACCESS_AGREEMENT_VERSION });
+  } catch (error) {
+    return sendFailure(res, error, "Unable to record project acknowledgement.");
+  }
+}
+
+async function acknowledgeSubmissionAgreement(req, res) {
+  const projectId = normalizedString(req.params.projectId);
+  const ownerId = req.clientUser.uid;
+  const reference = adminDb.collection(PROJECTS).doc(projectId);
+  const assignment = assignmentReference(ownerId);
+  try {
+    if (!projectId) throw httpError(400, "Project ID is required.");
+    if (
+      req.body?.agreementVersion !== SUBMISSION_AGREEMENT_VERSION ||
+      req.body?.accepted !== true
+    ) {
+      throw httpError(400, "Explicit acknowledgement of the submission agreement is required.");
+    }
+    await adminDb.runTransaction(async transaction => {
+      const [projectSnapshot, assignmentSnapshot] = await Promise.all([
+        transaction.get(reference),
+        transaction.get(assignment),
+      ]);
+      if (!projectSnapshot.exists) throw httpError(404, "Project does not exist.");
+      const project = projectSnapshot.data();
+      assertAssignedClient(project, assignmentSnapshot, projectId, ownerId);
+      const lockReason = getClientEditLockReason(project, getPhilippineDateTimeKey());
+      if (lockReason) throw httpError(409, lockReason);
+      if (!hasCurrentProjectAccessAcknowledgement(project, ownerId)) {
+        throw httpError(409, "Acknowledge project access before submission.");
+      }
+      transaction.set(reference, {
+        submissionAgreement: {
+          projectId,
+          userId: ownerId,
+          agreementType: "project-submission",
+          agreementVersion: SUBMISSION_AGREEMENT_VERSION,
+          accepted: true,
+          acceptedAt: FieldValue.serverTimestamp(),
+        },
+      }, { merge: true });
+      recordProjectActivity(transaction, projectId, { uid: ownerId, role: "client" }, "submission-agreement-acknowledged", {
+        newValue: { agreementType: "project-submission", agreementVersion: SUBMISSION_AGREEMENT_VERSION },
+      });
+    });
+    return res.json({ success: true, agreementVersion: SUBMISSION_AGREEMENT_VERSION });
+  } catch (error) {
+    return sendFailure(res, error, "Unable to record submission agreement acknowledgement.");
+  }
+}
+
+async function submitClientProject(req, res) {
+  const projectId = normalizedString(req.params.projectId);
+  const ownerId = req.clientUser.uid;
+  const reference = adminDb.collection(PROJECTS).doc(projectId);
+  const assignment = assignmentReference(ownerId);
+  const submissionId = randomUUID();
+  const submissionReference = adminDb.collection(PROJECT_SUBMISSIONS).doc(submissionId);
+  let uploadedPath;
+  try {
+    if (!projectId) throw httpError(400, "Project ID is required.");
+    const [initialSnapshot, assignmentSnapshot] = await Promise.all([
+      reference.get(),
+      assignment.get(),
+    ]);
+    if (!initialSnapshot.exists) throw httpError(404, "Project does not exist.");
+    const initial = initialSnapshot.data();
+    assertAssignedClient(initial, assignmentSnapshot, projectId, ownerId);
+    const initialLockReason = getClientEditLockReason(initial, getPhilippineDateTimeKey());
+    if (initialLockReason) throw httpError(409, initialLockReason);
+    if (
+      !isCurrentProjectAcknowledgement(
+        initial.submissionAgreement,
+        projectId,
+        ownerId,
+        "project-submission",
+        SUBMISSION_AGREEMENT_VERSION,
+      ) ||
+      !hasCurrentProjectAccessAcknowledgement(initial, ownerId)
+    ) {
+      throw httpError(409, "Acknowledge the Project Submission Agreement before submitting.");
+    }
+    const sourcePath = getInteriorStoragePath(initial, ownerId, projectId);
+    if (!sourcePath) throw httpError(409, "Save a design version before submitting.");
+    const [sourceContents] = await adminStorage.file(sourcePath).download();
+    let submittedData;
+    try {
+      submittedData = JSON.parse(sourceContents.toString("utf8"));
+    } catch {
+      throw httpError(409, "The latest saved design version is invalid.");
+    }
+    if (
+      !isRecord(submittedData) ||
+      submittedData.projectId !== projectId ||
+      submittedData.ownerId !== ownerId
+    ) {
+      throw httpError(409, "The saved design does not match this project and client.");
+    }
+    const versionId = initial.currentDesignVersionId ?? `legacy-${randomUUID()}`;
+    const versionNumber = Number.isSafeInteger(initial.currentDesignVersionNumber)
+      ? initial.currentDesignVersionNumber
+      : 0;
+    uploadedPath = `projects/${ownerId}/${projectId}/submissions/${submissionId}.json`;
+    await uploadJson(uploadedPath, sourceContents.toString("utf8"));
+
+    await adminDb.runTransaction(async transaction => {
+      const [projectSnapshot, currentAssignment] = await Promise.all([
+        transaction.get(reference),
+        transaction.get(assignment),
+      ]);
+      if (!projectSnapshot.exists) throw httpError(404, "Project does not exist.");
+      const current = projectSnapshot.data();
+      assertAssignedClient(current, currentAssignment, projectId, ownerId);
+      const currentStatus = getProjectStatus(current);
+      const currentLockReason = getClientEditLockReason(current, getPhilippineDateTimeKey());
+      if (currentLockReason) throw httpError(409, currentLockReason);
+      if (
+        getInteriorStoragePath(current, ownerId, projectId) !== sourcePath ||
+        (current.currentDesignVersionId ?? null) !== (initial.currentDesignVersionId ?? null) ||
+        !isCurrentProjectAcknowledgement(
+          current.submissionAgreement,
+          projectId,
+          ownerId,
+          "project-submission",
+          SUBMISSION_AGREEMENT_VERSION,
+        ) ||
+        !hasCurrentProjectAccessAcknowledgement(current, ownerId)
+      ) {
+        throw httpError(409, "The project changed during submission. Reload and try again.");
+      }
+      transaction.create(submissionReference, {
+        projectId,
+        ownerId,
+        submissionId,
+        versionId,
+        versionNumber,
+        snapshotType: "submission",
+        snapshotPath: uploadedPath,
+        submittedBy: ownerId,
+        submittedAt: FieldValue.serverTimestamp(),
+        agreementVersion: SUBMISSION_AGREEMENT_VERSION,
+      });
+      transaction.set(reference, {
+        projectStatus: "submitted",
+        submittedVersionId: versionId,
+        submittedVersionNumber: versionNumber,
+        submittedSubmissionId: submissionId,
+        submittedSnapshotPath: uploadedPath,
+        submittedSnapshotUrl: FieldValue.delete(),
+        submittedAt: FieldValue.serverTimestamp(),
+        submittedBy: ownerId,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      recordProjectActivity(
+        transaction,
+        projectId,
+        { uid: ownerId, role: "client" },
+        currentStatus === "revision-requested" ? "project-resubmitted" : "project-submitted",
+        {
+          versionId,
+          newValue: { submissionId, versionNumber },
+        },
+      );
+    });
+    return res.json({ success: true, submissionId, versionId, versionNumber });
+  } catch (error) {
+    if (uploadedPath) {
+      try {
+        await deleteStorageObject(uploadedPath);
+      } catch (cleanupError) {
+        console.error("Project submission failed and its new snapshot could not be removed:", cleanupError);
+        return res.status(500).json({ success: false, message: "Submission failed; temporary snapshot cleanup could not be confirmed." });
+      }
+    }
+    return sendFailure(res, error, "Unable to submit project.");
+  }
+}
+
+async function reviewSubmittedProject(req, res) {
+  const projectId = normalizedString(req.params.projectId);
+  const action = req.body?.action;
+  const reason = normalizedString(req.body?.reason);
+  const reference = adminDb.collection(PROJECTS).doc(projectId);
+  try {
+    if (!projectId) throw httpError(400, "Project ID is required.");
+    if (!["approve", "request-revision"].includes(action)) {
+      throw httpError(400, "Choose approve or request-revision.");
+    }
+    if (action === "request-revision" && (!reason || reason.length > 2000)) {
+      throw httpError(400, "Revision feedback is required and must be 2,000 characters or fewer.");
+    }
+    const result = await adminDb.runTransaction(async transaction => {
+      const projectSnapshot = await transaction.get(reference);
+      if (!projectSnapshot.exists) throw httpError(404, "Project does not exist.");
+      const project = projectSnapshot.data();
+      const status = getProjectStatus(project);
+      if (!canTransitionProject(status, action)) {
+        throw httpError(409, "Only a submitted project can be approved or returned for revision.");
+      }
+      const update = {
+        projectStatus: action === "approve" ? "approved" : "revision-requested",
+        reviewedBy: req.adminUser.uid,
+        reviewedAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+      if (action === "approve") {
+        Object.assign(update, {
+          approvedBy: req.adminUser.uid,
+          approvedByName: req.adminUser.name || "",
+          approvedAt: FieldValue.serverTimestamp(),
+          approvedVersionId: project.submittedVersionId ?? null,
+          approvedVersionNumber: Number.isSafeInteger(project.submittedVersionNumber)
+            ? project.submittedVersionNumber
+            : null,
+          approvedSubmissionId: project.submittedSubmissionId ?? null,
+          approvedSnapshotPath: project.submittedSnapshotPath ?? null,
+          approvedSnapshotUrl: FieldValue.delete(),
+        });
+      } else {
+        Object.assign(update, {
+          revisionFeedback: reason,
+          revisionRequestedAt: FieldValue.serverTimestamp(),
+          revisionRequestedBy: req.adminUser.uid,
+          submissionAgreement: null,
+        });
+      }
+      transaction.set(reference, update, { merge: true });
+      recordProjectActivity(
+        transaction,
+        projectId,
+        req.adminUser,
+        action === "approve" ? "project-approved" : "revision-requested",
+        {
+          versionId: project.submittedVersionId ?? null,
+          description: action === "request-revision" ? reason : undefined,
+          newValue: action === "approve"
+            ? { approvedSubmissionId: project.submittedSubmissionId ?? null }
+            : { projectStatus: "revision-requested" },
+        },
+      );
+      return {
+        projectStatus: update.projectStatus,
+        submittedSubmissionId: project.submittedSubmissionId,
+      };
+    });
+    return res.json({ success: true, ...result });
+  } catch (error) {
+    return sendFailure(res, error, "Unable to review submitted project.");
+  }
+}
+
+async function readProjectActivity(projectId) {
+  const snapshot = await adminDb.collection(PROJECT_ACTIVITY)
+    .where("projectId", "==", projectId)
+    .get();
+  return snapshot.docs
+    .map(document => {
+      const data = document.data();
+      return {
+        id: document.id,
+        ...data,
+        createdAt: timestampToIso(data.createdAt),
+      };
+    })
+    .sort((first, second) => {
+      const getTime = value => {
+        if (typeof value?.toMillis === "function") return value.toMillis();
+        if (value instanceof Date) return value.getTime();
+        if (typeof value === "string") {
+          const parsed = Date.parse(value);
+          return Number.isNaN(parsed) ? 0 : parsed;
+        }
+        return 0;
+      };
+      const firstTime = getTime(first.createdAt);
+      const secondTime = getTime(second.createdAt);
+      return secondTime - firstTime;
+    })
+    .slice(0, 100);
+}
+
+async function getProjectActivity(req, res) {
+  try {
+    const projectId = normalizedString(req.params.projectId);
+    if (!projectId) throw httpError(400, "Project ID is required.");
+    const project = await adminDb.collection(PROJECTS).doc(projectId).get();
+    if (!project.exists) throw httpError(404, "Project does not exist.");
+    return res.json({ success: true, activities: await readProjectActivity(projectId) });
+  } catch (error) {
+    return sendFailure(res, error, "Unable to load project activity.");
+  }
+}
+
+async function getClientProjectActivity(req, res) {
+  try {
+    const projectId = normalizedString(req.params.projectId);
+    const ownerId = req.clientUser.uid;
+    if (!projectId) throw httpError(400, "Project ID is required.");
+    const [project, assignment] = await Promise.all([
+      adminDb.collection(PROJECTS).doc(projectId).get(),
+      assignmentReference(ownerId).get(),
+    ]);
+    if (!project.exists) throw httpError(404, "Project does not exist.");
+    assertAssignedClient(project.data(), assignment, projectId, ownerId);
+    return res.json({ success: true, activities: await readProjectActivity(projectId) });
+  } catch (error) {
+    return sendFailure(res, error, "Unable to load project activity.");
+  }
+}
+
+async function getClientProjectComments(req, res) {
+  try {
+    const projectId = normalizedString(req.params.projectId);
+    const ownerId = req.clientUser.uid;
+    if (!projectId) throw httpError(400, "Project ID is required.");
+    const [project, assignment] = await Promise.all([
+      adminDb.collection(PROJECTS).doc(projectId).get(),
+      assignmentReference(ownerId).get(),
+    ]);
+    if (!project.exists) throw httpError(404, "Project does not exist.");
+    assertAssignedClient(project.data(), assignment, projectId, ownerId);
+    const snapshot = await adminDb.collection("adminComments")
+      .where("projectId", "==", projectId)
+      .get();
+    const comments = snapshot.docs
+      .map(document => {
+        const data = document.data();
+        return {
+          id: document.id,
+          ...data,
+          createdAt: timestampToIso(data.createdAt),
+        };
+      })
+      .sort((first, second) => {
+        const firstTime = first.createdAt?.toMillis?.() ?? 0;
+        const secondTime = second.createdAt?.toMillis?.() ?? 0;
+        return firstTime - secondTime;
+      });
+    return res.json({ success: true, comments });
+  } catch (error) {
+    return sendFailure(res, error, "Unable to load project comments.");
+  }
+}
+
+async function deleteDraft(req, res) {
+  const draftId = normalizedString(req.params.draftId);
+  const reference = adminDb.collection(DRAFTS).doc(draftId);
+  try {
+    if (!draftId) throw httpError(400, "Draft ID is required.");
+    const storagePath = await adminDb.runTransaction(async transaction => {
+      const snapshot = await transaction.get(reference);
+      if (!snapshot.exists) throw httpError(404, "Floor-plan draft does not exist.");
+      const draft = snapshot.data();
+      if (draft.createdBy !== req.adminUser.uid) {
+        throw httpError(403, "Only the administrator who created this draft may delete it.");
+      }
+      if (draft.publishedProjectId) {
+        throw httpError(409, "A published floor plan cannot be deleted as a draft.");
+      }
+      const path = normalizedString(draft.draftJsonPath);
+      const expectedPrefix = `adminManagedFloorPlanDrafts/${req.adminUser.uid}/${draftId}/`;
+      if (path && !path.startsWith(expectedPrefix)) {
+        throw httpError(409, "Draft storage path does not match the draft owner.");
+      }
+      transaction.set(reference, {
+        deleting: true,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      return path;
+    });
+    if (storagePath) await deleteStorageObject(storagePath);
+    await adminDb.runTransaction(async transaction => {
+      const snapshot = await transaction.get(reference);
+      if (!snapshot.exists) return;
+      const draft = snapshot.data();
+      const reservationReference = assignmentReference(
+        normalizedString(draft.intendedClientId),
+      );
+      const reservationSnapshot = await transaction.get(reservationReference);
+      if (draft.createdBy !== req.adminUser.uid || draft.publishedProjectId || draft.deleting !== true) {
+        throw httpError(409, "Draft status changed while deleting.");
+      }
+      transaction.delete(reference);
+      if (
+        reservationSnapshot.exists &&
+        reservationSnapshot.data().status === "draft" &&
+        reservationSnapshot.data().draftId === draftId
+      ) {
+        transaction.delete(reservationReference);
+      }
+    });
+    return res.json({ success: true });
+  } catch (error) {
+    return sendFailure(res, error, "Unable to delete floor-plan draft.");
+  }
+}
+
 router.get("/admin/floor-plan-clients", requireRole("admin", "superadmin"), searchClients);
 router.get("/admin/projects", requireRole("admin", "superadmin"), (req, res) => getAdminProjects(req, res, false));
 router.get("/admin/floor-plans", requireRole("admin", "superadmin"), (req, res) => getAdminProjects(req, res, true));
@@ -929,7 +1793,20 @@ router.post("/admin/floor-plan-drafts", requireRole("admin", "superadmin"), crea
 router.get("/admin/floor-plan-drafts/:draftId", requireRole("admin", "superadmin"), getDraft);
 router.put("/admin/floor-plan-drafts/:draftId", requireRole("admin", "superadmin"), saveDraft);
 router.post("/admin/floor-plan-drafts/:draftId/publish", requireRole("admin", "superadmin"), publishDraft);
+router.delete("/admin/floor-plan-drafts/:draftId", requireRole("admin", "superadmin"), deleteDraft);
 router.put("/admin/projects/:projectId/structure", requireRole("admin", "superadmin"), saveProjectStructure);
+router.get("/admin/projects/:projectId/files/:kind", requireRole("admin", "superadmin"), getAdminManagedProjectFile);
+router.get("/admin/projects/:projectId/files/:kind/:fileId", requireRole("admin", "superadmin"), getAdminManagedProjectFile);
 router.put("/projects/:projectId/managed-interior", authenticateClient, saveClientInterior);
+router.get("/projects/:projectId/workflow", authenticateClient, getClientProjectWorkflow);
+router.get("/projects/:projectId/files/:kind", authenticateClient, getClientManagedProjectFile);
+router.get("/projects/:projectId/files/:kind/:fileId", authenticateClient, getClientManagedProjectFile);
+router.post("/projects/:projectId/access-acknowledgement", authenticateClient, acknowledgeProjectAccess);
+router.post("/projects/:projectId/submission-agreement", authenticateClient, acknowledgeSubmissionAgreement);
+router.post("/projects/:projectId/submit", authenticateClient, submitClientProject);
+router.post("/admin/projects/:projectId/review", requireRole("admin", "superadmin"), reviewSubmittedProject);
+router.get("/admin/projects/:projectId/activity", requireRole("admin", "superadmin"), getProjectActivity);
+router.get("/projects/:projectId/activity", authenticateClient, getClientProjectActivity);
+router.get("/projects/:projectId/comments", authenticateClient, getClientProjectComments);
 
 export default router;

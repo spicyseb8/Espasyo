@@ -96,3 +96,20 @@ test("legacy projects are kept out of admin-managed lifecycle buckets", () => {
         ownerId: "client-uid"
     }, null), "legacy");
 });
+
+test("managed project lifecycle preserves submitted, revision-requested, and approved states", () => {
+    for (const status of ["submitted", "revision-requested", "approved"]) {
+        assert.equal(classifyProjectLifecycle({
+            ...publishedProject,
+            projectStatus: status
+        }, "PRJ-00126"), status);
+    }
+});
+
+test("explicit ongoing status maps to the client-designed lifecycle", () => {
+    assert.equal(classifyProjectLifecycle({
+        ...publishedProject,
+        projectStatus: "ongoing",
+        clientDesignStarted: false
+    }, "PRJ-00126"), "client-designed");
+});

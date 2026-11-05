@@ -294,8 +294,12 @@ export default function Studio() {
             projectName:
               typeof data.projectName === "string" ? data.projectName : "Unnamed Project",
             ownerId: typeof data.ownerId === "string" ? data.ownerId : "",
-            jsonPath: typeof data.jsonPath === "string" ? data.jsonPath : "",
-            jsonUrl: typeof data.jsonUrl === "string" ? data.jsonUrl : "",
+            jsonPath: data.workflowType === "admin-managed"
+              ? ""
+              : typeof data.jsonPath === "string" ? data.jsonPath : "",
+            jsonUrl: data.workflowType === "admin-managed"
+              ? ""
+              : typeof data.jsonUrl === "string" ? data.jsonUrl : "",
             schemaVersion: typeof data.schemaVersion === "number" ? data.schemaVersion : 1,
             thumbnailPath:
               typeof data.thumbnailPath === "string" ? data.thumbnailPath : undefined,

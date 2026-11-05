@@ -18,6 +18,7 @@ import {
     auth,
     db
 } from "../firebase/firebase";
+import type { SavedProjectData } from "../context/editor/ProjectTypes";
 
 import EditorProvider
     from "../context/EditorProvider";
@@ -52,6 +53,12 @@ import {
     setActiveProjectDeadline,
     subscribeToProjectDeadline
 } from "../services/projectDeadlineService";
+import {
+    acknowledgeProjectAccess,
+    getClientManagedProjectFile,
+    getClientProjectWorkflow,
+    type ClientProjectWorkflow
+} from "../services/clientProjectWorkflow";
 
 function LoadProjectContent() {
     const {
@@ -85,6 +92,9 @@ function LoadProjectContent() {
         deadlinePassed,
         setDeadlinePassed
     ] = useState(false);
+    const [workflow, setWorkflow] = useState<ClientProjectWorkflow | null>(null);
+    const [acknowledgingAccess, setAcknowledgingAccess] = useState(false);
+    const [acknowledgementError, setAcknowledgementError] = useState("");
 
     //==================================================
     // UPDATE DEADLINE STATUS
@@ -189,6 +199,15 @@ function LoadProjectContent() {
                     );
                 }
 
+                let currentWorkflow: ClientProjectWorkflow | null = null;
+                if (projectMetadata.workflowType === "admin-managed") {
+                    currentWorkflow = await getClientProjectWorkflow(projectId);
+                    if (cancelled) return;
+                    setWorkflow(currentWorkflow);
+                } else {
+                    setWorkflow(null);
+                }
+
                 if (
                     projectMetadata.workflowType === "admin-managed" &&
                     (
@@ -236,39 +255,29 @@ function LoadProjectContent() {
                 // VALIDATE PROJECT JSON URL
                 //==================================================
 
-                const jsonUrl =
-                    projectMetadata.jsonUrl;
-
-                if (
-                    typeof jsonUrl !== "string" ||
-                    jsonUrl.trim() === ""
-                ) {
-                    throw new Error(
-                        "This project does not have a valid JSON URL."
+                let projectData: Record<string, unknown>;
+                if (projectMetadata.workflowType === "admin-managed") {
+                    projectData = await getClientManagedProjectFile(
+                        projectId,
+                        "structure",
+                        undefined,
+                        { signal: controller.signal }
                     );
-                }
-
-                //==================================================
-                // DOWNLOAD PROJECT JSON
-                //==================================================
-
-                const response = await fetch(
-                    jsonUrl.trim(),
-                    {
+                } else {
+                    const jsonUrl = projectMetadata.jsonUrl;
+                    if (typeof jsonUrl !== "string" || jsonUrl.trim() === "") {
+                        throw new Error("This project does not have a valid JSON URL.");
+                    }
+                    const response = await fetch(jsonUrl.trim(), {
                         method: "GET",
                         cache: "no-store",
                         signal: controller.signal
+                    });
+                    if (!response.ok) {
+                        throw new Error(`Failed to download project JSON (${response.status}).`);
                     }
-                );
-
-                if (!response.ok) {
-                    throw new Error(
-                        `Failed to download project JSON (${response.status}).`
-                    );
+                    projectData = await response.json();
                 }
-
-                const projectData =
-                    await response.json();
 
                 if (projectMetadata.workflowType === "admin-managed") {
                     if (
@@ -297,16 +306,8 @@ function LoadProjectContent() {
                     const interiorData = await loadManagedInteriorData({
                         projectId,
                         ownerId: user.uid,
-                        interiorJsonPath: typeof projectMetadata.interiorJsonPath === "string"
-                            ? projectMetadata.interiorJsonPath
-                            : undefined,
-                        interiorJsonUrl: typeof projectMetadata.interiorJsonUrl === "string"
-                            ? projectMetadata.interiorJsonUrl
-                            : undefined
-                    }, (input, init) => fetch(input, {
-                        ...init,
-                        signal: controller.signal
-                    }));
+                        workflowType: "admin-managed"
+                    });
                     Object.assign(projectData, mergeManagedInteriorData(
                         projectData,
                         interiorData
@@ -335,12 +336,14 @@ function LoadProjectContent() {
                     return;
                 }
 
+                const savedProjectData = projectData as unknown as SavedProjectData;
+
                 //==================================================
                 // PRELOAD ONLY THIS PROJECT'S ASSETS
                 //==================================================
 
                 await preloadProjectAssets(
-                    projectData
+                    savedProjectData
                 );
 
                 if (cancelled) {
@@ -355,12 +358,12 @@ function LoadProjectContent() {
 
                 dispatch({
                     type: "LOAD_PROJECT",
-                    payload: projectData
+                    payload: savedProjectData
                 });
 
                 saveProjectBaseline(
                     projectId,
-                    projectData
+                    savedProjectData
                 );
 
                 //==================================================
@@ -421,6 +424,24 @@ function LoadProjectContent() {
         dispatch
     ]);
 
+    async function handleAcknowledgeAccess() {
+        if (!projectId || acknowledgingAccess) return;
+        setAcknowledgingAccess(true);
+        setAcknowledgementError("");
+        try {
+            await acknowledgeProjectAccess(projectId);
+            setWorkflow(current => current
+                ? { ...current, accessAcknowledged: true }
+                : current);
+        } catch (acknowledgementFailure) {
+            setAcknowledgementError(acknowledgementFailure instanceof Error
+                ? acknowledgementFailure.message
+                : "Unable to record acknowledgement.");
+        } finally {
+            setAcknowledgingAccess(false);
+        }
+    }
+
     //==================================================
     // LOADING SCREEN
     //==================================================
@@ -457,6 +478,76 @@ function LoadProjectContent() {
                         Back to Projects
                     </button>
                 </div>
+            </div>
+        );
+    }
+
+    if (workflow?.projectStatus === "submitted" || workflow?.projectStatus === "approved") {
+        const approved = workflow.projectStatus === "approved";
+        return (
+            <div className="flex min-h-screen items-center justify-center bg-[#f7f7f5] p-6 text-[#1b1b1b]">
+                <section className="w-full max-w-xl rounded-2xl border border-black/10 bg-white p-8 shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-black/50">
+                        {approved ? "Approved reference" : "Submitted for review"}
+                    </p>
+                    <h1 className="mt-2 text-2xl font-semibold">
+                        {approved ? "This design has been approved" : "Your design is under review"}
+                    </h1>
+                    <p className="mt-3 text-sm leading-6 text-black/60">
+                        {approved
+                            ? "Approval accepts this proposal as a reference for professional development. It is not construction authorization or a finalized construction agreement."
+                            : "Editing is paused while an administrator reviews your submitted design."}
+                    </p>
+                    {workflow.submittedAt && (
+                        <p className="mt-4 text-sm text-black/60">
+                            Submitted {new Date(workflow.submittedAt).toLocaleString()} · Version {workflow.submittedVersionNumber ?? "saved"}
+                        </p>
+                    )}
+                    <button
+                        type="button"
+                        className="mt-6 rounded-lg bg-[#1b1b1b] px-4 py-2.5 text-sm font-medium text-white"
+                        onClick={() => navigate("/studio")}
+                    >
+                        Back to projects
+                    </button>
+                </section>
+            </div>
+        );
+    }
+
+    if (workflow && !workflow.accessAcknowledged) {
+        return (
+            <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/50 p-4">
+                <section className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 text-[#1b1b1b] shadow-xl">
+                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-black/50">Project access acknowledgement</p>
+                    <h1 className="mt-2 text-2xl font-semibold">{workflow.projectName}</h1>
+                    <p className="mt-3 text-sm leading-6 text-black/65">
+                        This project has been assigned to you. Its current deadline is <strong>{workflow.deadline || "not set"}</strong>.
+                        Use the assigned floor plan to prepare an interior-design proposal within the project scope.
+                        Your design is preliminary and is not a construction-ready plan. You are responsible for reviewing your design before submitting it.
+                    </p>
+                    {acknowledgementError && (
+                        <p role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{acknowledgementError}</p>
+                    )}
+                    <div className="mt-6 flex justify-end gap-3">
+                        <button
+                            type="button"
+                            className="rounded-lg border border-black/15 px-4 py-2.5 text-sm"
+                            onClick={() => navigate("/studio")}
+                            disabled={acknowledgingAccess}
+                        >
+                            Not now
+                        </button>
+                        <button
+                            type="button"
+                            className="rounded-lg bg-[#1b1b1b] px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50"
+                            onClick={() => void handleAcknowledgeAccess()}
+                            disabled={acknowledgingAccess}
+                        >
+                            {acknowledgingAccess ? "Recording..." : "Acknowledge and continue"}
+                        </button>
+                    </div>
+                </section>
             </div>
         );
     }

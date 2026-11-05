@@ -1,10 +1,5 @@
-import {
-    collection,
-    onSnapshot,
-    query,
-    where
-} from "firebase/firestore";
-import { auth, db } from "@/firebase/firebase";
+import { auth } from "@/firebase/firebase";
+import { API_BASE_URL, projectApi } from "./projectApi";
 import type { AdminCommentTargetType } from "./adminCommentEvents";
 
 export interface CreateAdminCommentInput {
@@ -50,7 +45,7 @@ export async function createAdminComment(
 
     const token = await user.getIdToken();
     const response = await fetch(
-        `http://localhost:5000/api/projects/${encodeURIComponent(input.projectId.trim())}/comments`,
+        `${API_BASE_URL}/projects/${encodeURIComponent(input.projectId.trim())}/comments`,
         {
             method: "POST",
             headers: {
@@ -85,84 +80,34 @@ export function subscribeToAdminComments(
     callback: (comments: AdminComment[]) => void,
     onError?: (error: unknown) => void
 ) {
-    const commentsQuery = query(
-        collection(db, "adminComments"),
-        where("projectId", "==", projectId)
-    );
-
-    return onSnapshot(
-        commentsQuery,
-        snapshot => {
-            const comments = snapshot.docs.map(
-                document => {
-                    const data = document.data();
-
-                    return {
-                        id: document.id,
-                        projectId:
-                            typeof data.projectId === "string"
-                                ? data.projectId
-                                : projectId,
-                        targetType:
-                            data.targetType as AdminCommentTargetType,
-                        targetId:
-                            typeof data.targetId === "string"
-                                ? data.targetId
-                                : null,
-                        targetLabel:
-                            typeof data.targetLabel === "string"
-                                ? data.targetLabel
-                                : "Project",
-                        regionId:
-                            typeof data.regionId === "string"
-                                ? data.regionId
-                                : undefined,
-                        text:
-                            typeof data.text === "string"
-                                ? data.text
-                                : "",
-                        adminId:
-                            typeof data.adminId === "string"
-                                ? data.adminId
-                                : "",
-                        adminName:
-                            typeof data.adminName === "string"
-                                ? data.adminName
-                                : "Admin",
-                        createdAt:
-                            data.createdAt,
-                        status:
-                            typeof data.status === "string"
-                                ? data.status
-                                : undefined
-                    } satisfies AdminComment;
-                }
+    let active = true;
+    const load = async () => {
+        try {
+            const result = await projectApi<{ comments: AdminComment[] }>(
+                `/admin/projects/${encodeURIComponent(projectId)}/comments`
             );
-
-            comments.sort(
-                (
-                    first,
-                    second
-                ) =>
-                    getTimestamp(
-                        first.createdAt
-                    ) -
-                    getTimestamp(
-                        second.createdAt
-                    )
-            );
-
-            callback(comments);
-        },
-        error => {
+            if (active) {
+                callback(result.comments.sort(
+                    (first, second) =>
+                        getTimestamp(first.createdAt) - getTimestamp(second.createdAt)
+                ));
+            }
+        } catch (error) {
+            if (active) {
             console.error(
                 "Failed to load admin comments:",
                 error
             );
-
             onError?.(error);
+            }
         }
-    );
+    };
+    void load();
+    const timer = window.setInterval(() => void load(), 5000);
+    return () => {
+        active = false;
+        window.clearInterval(timer);
+    };
 }
 
 function getTimestamp(
@@ -191,6 +136,11 @@ function getTimestamp(
 
     if (typeof value === "number") {
         return value;
+    }
+
+    if (typeof value === "string") {
+        const timestamp = new Date(value).getTime();
+        return Number.isNaN(timestamp) ? 0 : timestamp;
     }
 
     return 0;

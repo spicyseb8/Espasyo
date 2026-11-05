@@ -1,4 +1,5 @@
 import { auth } from "@/firebase/firebase";
+import { API_BASE_URL } from "./projectApi";
 
 export async function deleteAsset(assetId: string): Promise<void> {
   const user = auth.currentUser;
@@ -9,7 +10,7 @@ export async function deleteAsset(assetId: string): Promise<void> {
 
   const token = await user.getIdToken();
   const response = await fetch(
-    `http://localhost:5000/api/assets/${encodeURIComponent(assetId)}`,
+    `${API_BASE_URL}/assets/${encodeURIComponent(assetId)}`,
     {
       method: "DELETE",
       headers: {

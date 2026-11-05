@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "test": "node --test src/engine/cost/CostEstimator.test.mjs src/engine/cost/ProjectBudget.test.mjs src/engine/cost/FlooringPieceCalculation.test.mjs src/engine/cost/WallFinishCostCalculator.test.mjs src/engine/furniture/FurnitureCategory.test.mjs src/engine/furniture/FurnitureSupport.test.mjs src/engine/furniture/FurnitureCollision.test.mjs src/services/managedProjectData.test.mjs src/context/editor/staircaseLoading.test.mjs src/scene/Walkthrough/Walkthrough.test.mjs src/pages/studioProjectVisibility.test.mjs ../shared/flooring/patterns.test.mjs ../shared/wallPaintSeparators.test.mjs",
+    "test": "node --test src/engine/cost/CostEstimator.test.mjs src/engine/cost/ProjectBudget.test.mjs src/engine/cost/FlooringPieceCalculation.test.mjs src/engine/cost/WallFinishCostCalculator.test.mjs src/engine/furniture/FurnitureCategory.test.mjs src/engine/furniture/FurnitureSupport.test.mjs src/engine/furniture/FurnitureCollision.test.mjs src/services/managedProjectData.test.mjs src/services/projectDeadlineService.test.mjs src/context/editor/staircaseLoading.test.mjs src/scene/Walkthrough/Walkthrough.test.mjs src/pages/studioProjectVisibility.test.mjs ../shared/flooring/patterns.test.mjs ../shared/wallPaintSeparators.test.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
   },

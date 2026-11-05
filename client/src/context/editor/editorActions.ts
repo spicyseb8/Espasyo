@@ -16,6 +16,7 @@ import type {
 } from "../../../../shared/wallPaintSeparators";
 
 export type EditorAction =
+    | { type: "SET_PROJECT_LOCKED"; payload: boolean; }
     | { type: "SWITCH_FLOOR"; payload: string; }
     | { type: "SET_PROJECT_BUDGET"; payload: number | null; }
     | { type: "SET_ACTIVE_TAB"; payload: string; }

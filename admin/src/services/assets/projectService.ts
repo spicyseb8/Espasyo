@@ -1,7 +1,7 @@
 
 import { auth } from "@/firebase/firebase";
 import { classifyProjectLifecycle } from "./projectLifecycle";
-import { projectApi } from "./projectApi";
+import { API_BASE_URL, projectApi } from "./projectApi";
 
 export interface AdminProject {
     projectId: string;
@@ -20,14 +20,28 @@ export interface AdminProject {
     recordType?: "project" | "draft";
     lifecycleAssignmentId?: string | null;
     ownerName?: string;
-    jsonPath: string;
-    jsonUrl: string;
-    draftJsonPath?: string;
-    draftJsonUrl?: string;
-    interiorJsonPath?: string;
-    interiorJsonUrl?: string;
+    hasPublishedStructure?: boolean;
+    hasDraftStructure?: boolean;
+    hasInterior?: boolean;
+    jsonPath?: string;
+    jsonUrl?: string;
     clientDesignStarted?: boolean;
     clientDesignStartedAt?: unknown;
+    projectStatus?: "available" | "ongoing" | "submitted" | "revision-requested" | "approved";
+    currentDesignVersionId?: string;
+    currentDesignVersionNumber?: number;
+    submittedVersionId?: string;
+    submittedVersionNumber?: number;
+    submittedAt?: unknown;
+    submittedSubmissionId?: string;
+    approvedAt?: unknown;
+    approvedBy?: string;
+    approvedByName?: string;
+    approvedVersionNumber?: number;
+    approvedSubmissionId?: string;
+    reviewSnapshotType?: "latest-saved" | "submitted" | "approved";
+    revisionFeedback?: string;
+    revisionRequestedAt?: unknown;
     lifecycleStatus?: import("./projectLifecycle").ProjectLifecycleStatus;
     lifecycleError?: string;
     thumbnailPath?: string;
@@ -38,7 +52,7 @@ export interface AdminProject {
     totalCost?: number;
     estimatedCost?: number;
 
-    // Calendar deadline stored as YYYY-MM-DD.
+    // Manila local deadline; legacy records may contain only YYYY-MM-DD.
     deadline?: string | null;
 }
 
@@ -68,11 +82,19 @@ export function getTodayLocalDate(): string {
 export function isValidProjectDeadline(
     deadline: string
 ): boolean {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(deadline)) {
+    const date = deadline.slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
         return false;
     }
 
-    const [year, month, day] = deadline.split("-").map(Number);
+    if (
+        deadline !== date &&
+        !/^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d$/.test(deadline)
+    ) {
+        return false;
+    }
+
+    const [year, month, day] = date.split("-").map(Number);
     const isLeapYear =
         year % 4 === 0 &&
         (year % 100 !== 0 || year % 400 === 0);
@@ -101,7 +123,23 @@ export function isValidProjectDeadline(
     }
 
     // YYYY-MM-DD strings can be compared chronologically.
-    return deadline >= getTodayLocalDate();
+    return date > getTodayLocalDate();
+}
+
+export function getTomorrowLocalDateTime(): string {
+    const [year, month, day] = getTodayLocalDate().split("-").map(Number);
+    const tomorrow = new Date(Date.UTC(year, month - 1, day + 1));
+    const date = [
+        tomorrow.getUTCFullYear(),
+        String(tomorrow.getUTCMonth() + 1).padStart(2, "0"),
+        String(tomorrow.getUTCDate()).padStart(2, "0")
+    ].join("-");
+    return `${date}T00:00`;
+}
+
+export function normalizeProjectDeadlineForInput(value: string | null | undefined): string {
+    if (!value) return "";
+    return /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T23:59` : value;
 }
 
 //==================================================
@@ -110,7 +148,8 @@ export function isValidProjectDeadline(
 
 export async function updateProjectDeadline(
     projectId: string,
-    deadline: string | null
+    deadline: string,
+    reason = ""
 ): Promise<void> {
     const normalizedProjectId = projectId.trim();
 
@@ -119,7 +158,6 @@ export async function updateProjectDeadline(
     }
 
     if (
-        deadline !== null &&
         !isValidProjectDeadline(deadline)
     ) {
         throw new Error(
@@ -135,14 +173,14 @@ export async function updateProjectDeadline(
 
     const token = await currentUser.getIdToken();
     const response = await fetch(
-        `http://localhost:5000/api/projects/${encodeURIComponent(normalizedProjectId)}/deadline`,
+        `${API_BASE_URL}/projects/${encodeURIComponent(normalizedProjectId)}/deadline`,
         {
             method: "PATCH",
             headers: {
                 Authorization: `Bearer ${token}`,
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ deadline })
+            body: JSON.stringify({ deadline, reason })
         }
     );
 
@@ -165,6 +203,9 @@ export interface AdminClient {
     uid: string;
     name: string;
     email?: string;
+    eligible: boolean;
+    existingProjectId?: string;
+    existingDraftId?: string;
 }
 
 export interface AdminClientSearchResult {
@@ -201,27 +242,12 @@ async function finalizeManagedProjectLifecycle(projects: AdminProject[]): Promis
             let interiorData: unknown;
             if (
                 project.clientDesignStarted === undefined &&
-                (project.interiorJsonPath || project.interiorJsonUrl)
+                project.hasInterior === true
             ) {
-                const expectedPath = `projects/${project.ownerId}/${project.projectId}.interior.json`;
-                if (project.interiorJsonPath && project.interiorJsonPath !== expectedPath) {
-                    throw new Error("Interior design path does not match the designated project.");
-                }
-                if (!project.interiorJsonUrl?.trim()) {
-                    throw new Error("Interior design URL is missing.");
-                }
-                const response = await fetch(project.interiorJsonUrl, {
-                    method: "GET",
-                    cache: "no-store"
-                });
-                if (response.status !== 404) {
-                    if (!response.ok) {
-                        throw new Error(`Interior design request failed with HTTP ${response.status}.`);
-                    }
-                    interiorData = await response.json();
-                    if (!isRecord(interiorData)) {
-                        throw new Error("Interior design JSON is invalid.");
-                    }
+                interiorData = await projectApi<unknown>(
+                    `/admin/projects/${encodeURIComponent(project.projectId)}/files/interior`
+                );
+                if (isRecord(interiorData)) {
                     if (interiorData.projectId !== undefined && interiorData.projectId !== project.projectId) {
                         throw new Error("Interior design project ID does not match.");
                     }
@@ -317,6 +343,49 @@ export async function getAdminProject(
         `/admin/projects/${encodeURIComponent(normalizedProjectId)}`
     );
     return response.project;
+}
+
+export async function reviewAdminProject(
+    projectId: string,
+    action: "approve" | "request-revision",
+    reason?: string
+): Promise<void> {
+    await projectApi(
+        `/admin/projects/${encodeURIComponent(projectId)}/review`,
+        {
+            method: "POST",
+            body: JSON.stringify({ action, reason })
+        }
+    );
+}
+
+export async function getAdminProjectActivity(projectId: string): Promise<{
+    id: string;
+    action: string;
+    actorId: string;
+    actorRole: string;
+    actorName?: string;
+    description?: string;
+    versionId?: string;
+    previousValue?: unknown;
+    newValue?: unknown;
+    createdAt: unknown;
+}[]> {
+    const response = await projectApi<{
+        activities: {
+            id: string;
+            action: string;
+            actorId: string;
+            actorRole: string;
+            actorName?: string;
+            description?: string;
+            versionId?: string;
+            previousValue?: unknown;
+            newValue?: unknown;
+            createdAt: unknown;
+        }[];
+    }>(`/admin/projects/${encodeURIComponent(projectId)}/activity`);
+    return response.activities;
 }
 
 //==================================================

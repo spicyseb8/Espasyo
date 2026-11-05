@@ -12,14 +12,13 @@ export interface ManagedStructurePublicationCommit {
     ownerId: string;
     revision: number;
     storagePath: string;
-    jsonUrl: string;
 }
 
 export interface ManagedStructurePublicationDependencies {
     findExistingProject: (ownerId: string) => Promise<string | null>;
     getAssignedProject: (ownerId: string) => Promise<string | null>;
     allocateProjectId: () => Promise<string>;
-    upload: (storagePath: string, json: string) => Promise<string>;
+    upload: (storagePath: string, json: string) => Promise<void>;
     commit: (publication: ManagedStructurePublicationCommit) => Promise<void>;
     cleanup: (storagePath: string) => Promise<void>;
 }
@@ -68,15 +67,14 @@ export async function publishManagedStructure(
 
     const storagePath = `projects/${ownerId}/${projectId}/published-r${revision}-${crypto.randomUUID()}.json`;
     const publicationJson = JSON.stringify(managedData, null, 2);
-    let jsonUrl: string;
     try {
-        jsonUrl = await dependencies.upload(storagePath, publicationJson);
+        await dependencies.upload(storagePath, publicationJson);
     } catch (error) {
         try {
             await dependencies.cleanup(storagePath);
         } catch (cleanupError) {
             throw new Error(
-                `Structure upload failed and cleanup could not be confirmed; storage path may be orphaned: ${storagePath}. ${cleanupError instanceof Error ? cleanupError.message : String(cleanupError)}`,
+                `Structure upload failed and cleanup could not be confirmed. ${cleanupError instanceof Error ? cleanupError.message : String(cleanupError)}`,
                 { cause: cleanupError }
             );
         }
@@ -89,20 +87,19 @@ export async function publishManagedStructure(
             projectName,
             ownerId,
             revision,
-            storagePath,
-            jsonUrl
+            storagePath
         });
     } catch (error) {
         try {
             await dependencies.cleanup(storagePath);
         } catch (cleanupError) {
             throw new Error(
-                `${error instanceof Error ? error.message : String(error)} Cleanup failed; orphaned upload may remain at ${storagePath}. ${cleanupError instanceof Error ? cleanupError.message : String(cleanupError)}`,
+                `${error instanceof Error ? error.message : String(error)} Cleanup failed; the uploaded file could not be confirmed as removed. ${cleanupError instanceof Error ? cleanupError.message : String(cleanupError)}`,
                 { cause: cleanupError }
             );
         }
         throw error;
     }
 
-    return { projectId, ownerId, projectName, storagePath, jsonUrl, revision, published: true as const };
+    return { projectId, ownerId, projectName, revision, published: true as const };
 }

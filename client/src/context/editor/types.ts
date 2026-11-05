@@ -47,6 +47,7 @@ export interface BlueprintCalibrationPoint {
 }
 
 export interface EditorState {
+    projectLocked?: boolean;
     workflowType?: "legacy" | "admin-managed";
     structuralOwner?: "admin";
     structuralStatus?: "draft" | "published";

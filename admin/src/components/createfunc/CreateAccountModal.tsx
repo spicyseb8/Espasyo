@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -19,8 +19,8 @@ import {
   Loader2,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { auth } from "@/firebase/firebase";
 import { validateAccountCreationForm } from "@/utils/validators";
+import { createAccount } from "./createAccount";
 
 export type CreateAccountType =
   | "user"
@@ -63,6 +63,7 @@ export default function CreateAccountModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const submitLock = useRef(false);
 
   useEffect(() => {
     if (!open) {
@@ -122,8 +123,8 @@ export default function CreateAccountModal({
   ) => {
     event.preventDefault();
 
-    if (role !== "superadmin") {
-      setError("Only superadmins can create accounts.");
+    if (role !== "superadmin" || submitLock.current) {
+      if (role !== "superadmin") setError("Only superadmins can create accounts.");
       return;
     }
 
@@ -140,50 +141,19 @@ export default function CreateAccountModal({
       return;
     }
 
+    submitLock.current = true;
     setLoading(true);
 
     try {
-      const user = auth.currentUser;
-      if (!user) {
-        throw new Error("Sign in with a superadmin account to create accounts.");
-      }
-
-      const token = await user.getIdToken();
-      const response = await fetch(
-        "http://localhost:5000/api/accounts",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            accountType:
-              accountType === "user"
-                ? "user"
-                : "employee",
-
-            name: form.name.trim(),
-            email: form.email.trim(),
-            password: form.password,
-            phoneNumber: form.phoneNumber.trim(),
-            address: form.address.trim(),
-
-            role: isEmployee
-              ? form.role
-              : undefined,
-          }),
-        }
-      );
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(
-          result.message ||
-            "Failed to create account."
-        );
-      }
+      const result = await createAccount({
+        accountType: accountType === "user" ? "user" : "employee",
+        name: form.name.trim(),
+        email: form.email.trim(),
+        password: form.password,
+        phoneNumber: form.phoneNumber.trim(),
+        address: form.address.trim(),
+        role: isEmployee ? form.role : undefined,
+      });
 
       const createdId =
         result.account?.id || "";
@@ -212,6 +182,7 @@ export default function CreateAccountModal({
           : "Failed to create account."
       );
     } finally {
+      submitLock.current = false;
       setLoading(false);
     }
   };
@@ -292,6 +263,7 @@ export default function CreateAccountModal({
                       }
                       placeholder="Enter full name"
                       disabled={loading}
+                      required
                     />
                   </div>
 
@@ -327,6 +299,7 @@ export default function CreateAccountModal({
                         placeholder="example@email.com"
                         className="pl-9"
                         disabled={loading}
+                        required
                       />
                     </div>
                   </div>
@@ -363,6 +336,7 @@ export default function CreateAccountModal({
                         placeholder="Minimum 6 characters"
                         className="pl-9"
                         disabled={loading}
+                        required
                       />
                     </div>
 
@@ -402,6 +376,7 @@ export default function CreateAccountModal({
                         placeholder="09123456789"
                         className="pl-9"
                         disabled={loading}
+                        required
                       />
                     </div>
                   </div>
@@ -437,6 +412,7 @@ export default function CreateAccountModal({
                         placeholder="Enter address"
                         className="pl-9"
                         disabled={loading}
+                        required={accountType === "user"}
                       />
                     </div>
                   </div>
@@ -539,9 +515,7 @@ export default function CreateAccountModal({
                 </p>
 
                 <p className="mt-2 font-mono text-xs text-muted-foreground">
-                  {accountType === "user"
-                    ? "U-26XXX"
-                    : "AE-26XXX"}
+                  {`U-${String(new Date().getFullYear()).slice(-2)}XXX`}
                 </p>
               </div>
             </div>

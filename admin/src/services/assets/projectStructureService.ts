@@ -9,8 +9,7 @@ export interface ManagedFloorPlanDraft {
     creatorName: string;
     structuralRevision: number;
     structureInitialized: boolean;
-    draftJsonPath?: string;
-    draftJsonUrl?: string;
+    deadline?: string | null;
     projectData: Record<string, unknown> | null;
 }
 
@@ -21,6 +20,7 @@ export interface SaveManagedStructureInput {
     projectData: Record<string, unknown>;
     revision: number;
     published: boolean;
+    deadline?: string;
 }
 
 export async function createManagedFloorPlanDraft(input: {
@@ -51,6 +51,7 @@ export async function saveManagedFloorPlanDraft(input: {
     projectName: string;
     projectData: Record<string, unknown>;
     revision: number;
+    deadline?: string;
 }): Promise<void> {
     await projectApi(
         `/admin/floor-plan-drafts/${encodeURIComponent(input.draftId)}`,
@@ -59,7 +60,8 @@ export async function saveManagedFloorPlanDraft(input: {
             body: JSON.stringify({
                 projectName: input.projectName,
                 projectData: input.projectData,
-                revision: input.revision
+                revision: input.revision,
+                ...(input.deadline ? { deadline: input.deadline } : {})
             })
         }
     );
@@ -68,6 +70,7 @@ export async function saveManagedFloorPlanDraft(input: {
 export async function publishManagedFloorPlanDraft(input: {
     draftId: string;
     projectName: string;
+    deadline: string;
     projectData: Record<string, unknown>;
 }): Promise<{ projectId: string }> {
     const response = await projectApi<{ projectId: string }>(
@@ -76,11 +79,19 @@ export async function publishManagedFloorPlanDraft(input: {
             method: "POST",
             body: JSON.stringify({
                 projectName: input.projectName,
+                deadline: input.deadline,
                 projectData: input.projectData
             })
         }
     );
     return { projectId: response.projectId };
+}
+
+export async function deleteManagedFloorPlanDraft(draftId: string): Promise<void> {
+    await projectApi(
+        `/admin/floor-plan-drafts/${encodeURIComponent(draftId)}`,
+        { method: "DELETE" }
+    );
 }
 
 export async function saveManagedStructure(input: SaveManagedStructureInput): Promise<void> {
@@ -90,5 +101,15 @@ export async function saveManagedStructure(input: SaveManagedStructureInput): Pr
             method: "PUT",
             body: JSON.stringify(input)
         }
+    );
+}
+
+export async function loadManagedProjectStructure(
+    projectId: string,
+    editable = false
+): Promise<Record<string, unknown>> {
+    const kind = editable ? "editable-structure" : "structure";
+    return projectApi<Record<string, unknown>>(
+        `/admin/projects/${encodeURIComponent(projectId)}/files/${kind}`
     );
 }

@@ -9,6 +9,7 @@
     "seed-test-data": "node src/seed-test-data.js",
     "inspect:firestore": "node src/inspect-firestore.js",
     "inspect:assets": "node src/inspect-assets.js",
+    "revoke:managed-project-download-tokens": "node src/revoke-managed-project-download-tokens.js",
     "seed:assets": "node src/seed-assets.js",
     "seed:furniture-previews": "node src/seed-furniture-previews.js"
   },

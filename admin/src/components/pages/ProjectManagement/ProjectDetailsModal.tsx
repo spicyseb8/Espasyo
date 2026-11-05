@@ -35,7 +35,12 @@ import {
 
 import {
     getAdminProject,
+    getAdminProjectActivity,
+    getTomorrowLocalDateTime,
     getTodayLocalDate,
+    isValidProjectDeadline,
+    normalizeProjectDeadlineForInput,
+    reviewAdminProject,
     updateProjectDeadline
 } from "../../../services/assets/projectService";
 
@@ -49,12 +54,13 @@ import {
 interface ProjectDetailsModalProps {
     project: AdminProject | null;
     onOpenChange: (open: boolean) => void;
-    onReviewClientDesign: (project: AdminProject) => void;
+    onReviewClientDesign: (project: AdminProject, snapshot?: "submitted" | "approved") => void;
+    onProjectReviewed?: (projectId: string, status: string) => void;
 
     // Allows the parent project list to update immediately after saving.
     onDeadlineSaved?: (
         projectId: string,
-        deadline: string | null
+        deadline: string
     ) => void;
 }
 
@@ -62,7 +68,8 @@ export default function ProjectDetailsModal({
     project,
     onOpenChange,
     onReviewClientDesign,
-    onDeadlineSaved
+    onDeadlineSaved,
+    onProjectReviewed
 }: ProjectDetailsModalProps) {
     const [generatingPdf, setGeneratingPdf] =
         useState(false);
@@ -70,27 +77,81 @@ export default function ProjectDetailsModal({
     const [pdfError, setPdfError] =
         useState("");
 
-    const [deadline, setDeadline] =
+    const [deadlineReason, setDeadlineReason] =
         useState("");
+
+    const [deadlineInput, setDeadlineInput] = useState({
+        projectId: project?.projectId ?? null,
+        value: normalizeProjectDeadlineForInput(project?.deadline)
+    });
+    const deadline = project && deadlineInput.projectId === project.projectId
+        ? deadlineInput.value
+        : normalizeProjectDeadlineForInput(project?.deadline);
+    function setDeadline(value: string) {
+        setDeadlineInput({
+            projectId: project?.projectId ?? null,
+            value
+        });
+    }
 
     const [savingDeadline, setSavingDeadline] =
         useState(false);
 
-    const [deadlineMessage, setDeadlineMessage] =
-        useState("");
+    const [deadlineFeedback, setDeadlineFeedback] = useState({
+        projectId: project?.projectId ?? null,
+        message: "",
+        error: ""
+    });
+    const deadlineMessage = project && deadlineFeedback.projectId === project.projectId
+        ? deadlineFeedback.message
+        : "";
+    const deadlineError = project && deadlineFeedback.projectId === project.projectId
+        ? deadlineFeedback.error
+        : "";
+    function setDeadlineMessage(message: string) {
+        setDeadlineFeedback(current => ({
+            projectId: project?.projectId ?? null,
+            message,
+            error: current.projectId === project?.projectId ? current.error : ""
+        }));
+    }
+    function setDeadlineError(error: string) {
+        setDeadlineFeedback(current => ({
+            projectId: project?.projectId ?? null,
+            message: current.projectId === project?.projectId ? current.message : "",
+            error
+        }));
+    }
+    const [reviewReason, setReviewReason] = useState("");
+    const [reviewError, setReviewError] = useState("");
+    const [reviewing, setReviewing] = useState(false);
+    const [activityState, setActivityState] = useState<{
+        projectId: string | null;
+        activities: Awaited<ReturnType<typeof getAdminProjectActivity>>;
+    }>({
+        projectId: project?.projectId ?? null,
+        activities: []
+    });
+    const activities = project && activityState.projectId === project.projectId
+        ? activityState.activities
+        : [];
 
-    const [deadlineError, setDeadlineError] =
-        useState("");
-
-    // Load the stored deadline whenever a different project is opened.
     useEffect(() => {
-        setDeadline(project?.deadline ?? "");
-        setDeadlineMessage("");
-        setDeadlineError("");
-    }, [
-        project?.projectId,
-        project?.deadline
-    ]);
+        let active = true;
+        const projectId = project?.projectId;
+        if (!projectId) return;
+        getAdminProjectActivity(projectId)
+            .then(result => {
+                if (active) setActivityState({ projectId, activities: result });
+            })
+            .catch(error => {
+                console.error("Failed to load project activity:", error);
+                if (active) setReviewError("Project activity could not be loaded.");
+            });
+        return () => {
+            active = false;
+        };
+    }, [project?.projectId]);
 
     function handleDialogChange(open: boolean) {
         if (!open) {
@@ -98,6 +159,9 @@ export default function ProjectDetailsModal({
             setPdfError("");
             setDeadlineMessage("");
             setDeadlineError("");
+            setDeadlineReason("");
+            setReviewReason("");
+            setReviewError("");
         }
     }
 
@@ -165,9 +229,9 @@ export default function ProjectDetailsModal({
         // Recheck the local date at save time, not only in the picker.
         const today = getTodayLocalDate();
 
-        if (deadline && deadline < today) {
+        if (!isValidProjectDeadline(deadline) || deadline.slice(0, 10) <= today) {
             setDeadlineError(
-                "Past dates are not allowed. Please choose today or a future date."
+                "Choose a deadline after today. Deadlines cannot be cleared."
             );
             return;
         }
@@ -175,11 +239,12 @@ export default function ProjectDetailsModal({
         setSavingDeadline(true);
 
         try {
-            const savedDeadline = deadline || null;
+            const savedDeadline = deadline;
 
             await updateProjectDeadline(
                 project.projectId,
-                savedDeadline
+                savedDeadline,
+                deadlineReason.trim()
             );
 
             onDeadlineSaved?.(
@@ -187,11 +252,16 @@ export default function ProjectDetailsModal({
                 savedDeadline
             );
 
-            setDeadlineMessage(
-                savedDeadline
-                    ? "Deadline saved successfully."
-                    : "Deadline removed successfully."
-            );
+            setDeadlineMessage("Deadline saved successfully.");
+            setDeadlineReason("");
+            try {
+                setActivityState({
+                    projectId: project.projectId,
+                    activities: await getAdminProjectActivity(project.projectId)
+                });
+            } catch (activityError) {
+                console.error("Deadline was saved, but project activity could not be refreshed:", activityError);
+            }
         } catch (error) {
             console.error(
                 "Failed to save project deadline:",
@@ -205,6 +275,24 @@ export default function ProjectDetailsModal({
             );
         } finally {
             setSavingDeadline(false);
+        }
+    }
+
+    async function handleReview(action: "approve" | "request-revision") {
+        if (!project || reviewing) return;
+        if (action === "approve" && !window.confirm("Approve this submitted design as a reference for professional development? This does not authorize construction.")) return;
+        setReviewing(true);
+        setReviewError("");
+        try {
+            await reviewAdminProject(project.projectId, action, reviewReason.trim());
+            const nextStatus = action === "approve" ? "approved" : "revision-requested";
+            onProjectReviewed?.(project.projectId, nextStatus);
+            setReviewReason("");
+            onOpenChange(false);
+        } catch (error) {
+            setReviewError(error instanceof Error ? error.message : "Unable to update project review.");
+        } finally {
+            setReviewing(false);
         }
     }
 
@@ -236,7 +324,6 @@ export default function ProjectDetailsModal({
                                                 className="text-muted-foreground"
                                             />
                                         </div>
-
                                         <p className="text-sm text-muted-foreground">
                                             3D preview
                                         </p>
@@ -267,6 +354,36 @@ export default function ProjectDetailsModal({
                                         label="Last updated"
                                         value={formatProjectDate(project.updatedAt)}
                                     />
+                                    <InfoRow
+                                        icon={<FolderOpen size={16} />}
+                                        label="Workflow status"
+                                        value={project.projectStatus?.replaceAll("-", " ") || "Ongoing"}
+                                    />
+                                    {project.projectStatus === "submitted" && (
+                                        <InfoRow
+                                            icon={<Clock size={16} />}
+                                            label="Submitted"
+                                            value={`${formatProjectDate(project.submittedAt)} · Version ${project.submittedVersionNumber ?? "legacy"}`}
+                                        />
+                                    )}
+                                    {project.workflowType === "admin-managed" && (
+                                        <InfoRow
+                                            icon={<Save size={16} />}
+                                            label="Last saved design"
+                                            value={project.currentDesignVersionNumber
+                                                ? `Version ${project.currentDesignVersionNumber}`
+                                                : project.clientDesignStarted
+                                                    ? "Legacy version"
+                                                    : "No client design saved"}
+                                        />
+                                    )}
+                                    {project.projectStatus === "approved" && (
+                                        <InfoRow
+                                            icon={<Clock size={16} />}
+                                            label="Approved"
+                                            value={`${formatProjectDate(project.approvedAt)} · ${project.approvedByName || project.approvedBy || "Admin"} · Version ${project.approvedVersionNumber ?? "legacy"}`}
+                                        />
+                                    )}
 
                                     {/* Deadline picker */}
                                     <div className="flex items-start gap-3">
@@ -284,9 +401,9 @@ export default function ProjectDetailsModal({
 
                                             <input
                                                 id="project-deadline"
-                                                type="date"
+                                                type="datetime-local"
                                                 value={deadline}
-                                                min={getTodayLocalDate()}
+                                                min={getTomorrowLocalDateTime()}
                                                 onChange={event => {
                                                     setDeadline(
                                                         event.target.value
@@ -299,8 +416,16 @@ export default function ProjectDetailsModal({
                                             />
 
                                             <p className="mt-1 text-xs text-muted-foreground">
-                                                Select today or a future date.
+                                                Select a future date and time in Philippine time. Deadline changes are recorded in project activity.
                                             </p>
+                                            <input
+                                                value={deadlineReason}
+                                                onChange={event => setDeadlineReason(event.target.value)}
+                                                maxLength={1000}
+                                                placeholder="Reason for change (optional)"
+                                                aria-label="Reason for deadline change"
+                                                className="mt-2 h-9 w-full rounded-md border border-input bg-background px-3 text-xs"
+                                            />
 
                                             <div className="mt-3 flex flex-wrap gap-2">
                                                 <Button
@@ -309,10 +434,8 @@ export default function ProjectDetailsModal({
                                                     onClick={handleSaveDeadline}
                                                     disabled={
                                                         savingDeadline ||
-                                                        Boolean(
-                                                            deadline &&
-                                                            deadline < getTodayLocalDate()
-                                                        )
+                                                        !deadline ||
+                                                        !isValidProjectDeadline(deadline)
                                                     }
                                                 >
                                                     <Save size={14} />
@@ -322,22 +445,6 @@ export default function ProjectDetailsModal({
                                                         : "Save Deadline"}
                                                 </Button>
 
-                                                <Button
-                                                    type="button"
-                                                    size="sm"
-                                                    variant="outline"
-                                                    onClick={() => {
-                                                        setDeadline("");
-                                                        setDeadlineMessage("");
-                                                        setDeadlineError("");
-                                                    }}
-                                                    disabled={
-                                                        savingDeadline ||
-                                                        !deadline
-                                                    }
-                                                >
-                                                    Clear
-                                                </Button>
                                             </div>
 
                                             {deadlineMessage && (
@@ -403,8 +510,67 @@ export default function ProjectDetailsModal({
                                     </div>
                                 </dl>
 
+                                {project.projectStatus === "submitted" && (
+                                    <div className="mt-5 space-y-3 rounded-lg border border-border/60 p-3">
+                                        <Button type="button" className="w-full" variant="outline" onClick={() => onReviewClientDesign(project, "submitted")}>
+                                            Inspect submitted snapshot · v{project.submittedVersionNumber ?? "legacy"}
+                                        </Button>
+                                        <label className="grid gap-1 text-xs text-muted-foreground">
+                                            Revision feedback (required to request changes)
+                                            <textarea
+                                                value={reviewReason}
+                                                onChange={event => setReviewReason(event.target.value)}
+                                                maxLength={2000}
+                                                rows={3}
+                                                className="rounded-md border border-input bg-background p-2 text-sm text-foreground"
+                                            />
+                                        </label>
+                                        {reviewError && <p role="alert" className="text-xs text-destructive">{reviewError}</p>}
+                                        <div className="flex gap-2">
+                                            <Button type="button" variant="outline" className="flex-1" onClick={() => void handleReview("request-revision")} disabled={reviewing || !reviewReason.trim()}>
+                                                Request Revision
+                                            </Button>
+                                            <Button type="button" className="flex-1" onClick={() => void handleReview("approve")} disabled={reviewing}>
+                                                Approve
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+                                {project.projectStatus === "approved" && (
+                                    <Button type="button" variant="outline" className="mt-5 w-full" onClick={() => onReviewClientDesign(project, "approved")}>
+                                        Inspect approved snapshot
+                                    </Button>
+                                )}
+                                <section className="mt-5 space-y-2 border-t border-border/60 pt-4">
+                                    <h3 className="text-sm font-medium">Project activity</h3>
+                                    {activities.length ? (
+                                        <ul className="space-y-2 text-xs text-muted-foreground">
+                                            {activities.map(activity => (
+                                                <li key={activity.id}>
+                                                    <span className="font-medium text-foreground">{activity.action.replaceAll("-", " ")}</span>
+                                                    {" · "}{activity.actorName || activity.actorId}
+                                                    {" · "}{formatProjectDate(activity.createdAt)}
+                                                    {activity.description ? <p>{activity.description}</p> : null}
+                                                    {(activity.previousValue !== undefined || activity.newValue !== undefined) && (
+                                                        <p>
+                                                            {activity.previousValue !== undefined
+                                                                ? `Previous: ${formatActivityValue(activity.previousValue)}`
+                                                                : ""}
+                                                            {activity.previousValue !== undefined && activity.newValue !== undefined ? " · " : ""}
+                                                            {activity.newValue !== undefined
+                                                                ? `New: ${formatActivityValue(activity.newValue)}`
+                                                                : ""}
+                                                        </p>
+                                                    )}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    ) : <p className="text-xs text-muted-foreground">No recorded activity yet.</p>}
+                                </section>
+
                                 <div className="mt-auto pt-8">
-                                    {project.workflowType === "admin-managed" && (
+                                    {project.workflowType === "admin-managed" &&
+                                        !["submitted", "approved"].includes(project.projectStatus ?? "") && (
                                         <Button
                                             type="button"
                                             variant="outline"
@@ -412,7 +578,7 @@ export default function ProjectDetailsModal({
                                             size="lg"
                                             onClick={() => onReviewClientDesign(project)}
                                         >
-                                            Review Client Design
+                                            Review Latest Saved Design
                                         </Button>
                                     )}
                                 </div>
@@ -451,4 +617,14 @@ function InfoRow({
             </div>
         </div>
     );
+}
+
+function formatActivityValue(value: unknown): string {
+    if (value === null) return "none";
+    if (typeof value !== "object" || value instanceof Date) return String(value);
+    try {
+        return JSON.stringify(value);
+    } catch {
+        return "value unavailable";
+    }
 }

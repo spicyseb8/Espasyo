@@ -5,6 +5,7 @@ import type {
   AssetType,
 } from "./asset-types";
 import { isOptionalFurniturePrice } from "./furnitureCategories";
+import { API_BASE_URL } from "./projectApi";
 import {
   DEFAULT_FLOOR_GROUT_WIDTH_M,
   isHerringboneTileRatio,
@@ -181,7 +182,7 @@ export async function createAsset(
   const token = await user.getIdToken();
 
   const response = await fetch(
-    "http://localhost:5000/api/assets",
+    `${API_BASE_URL}/assets`,
     {
       method: "POST",
       headers: {

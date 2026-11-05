@@ -985,6 +985,7 @@ if (
         if (isProjectReadOnlyByDeadline()) {
             return;
         }
+        if (stateRef.current.projectLocked) return;
 
         const currentState =
             stateRef.current;
@@ -1151,6 +1152,7 @@ if (
         if (isProjectReadOnlyByDeadline()) {
             return;
         }
+        if (stateRef.current.projectLocked) return;
 
         const currentState =
             stateRef.current;

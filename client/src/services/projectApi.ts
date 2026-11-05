@@ -1,6 +1,12 @@
 import { auth } from "../firebase/firebase";
 
-const API_BASE_URL = "http://localhost:5000/api";
+const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+if (!configuredApiBaseUrl && !import.meta.env.DEV) {
+    throw new Error("VITE_API_BASE_URL must be configured for production.");
+}
+
+const API_BASE_URL = (configuredApiBaseUrl || "http://localhost:5000/api")
+    .replace(/\/+$/, "");
 
 export async function projectApi<T>(path: string, init: RequestInit = {}): Promise<T> {
     const user = auth.currentUser;

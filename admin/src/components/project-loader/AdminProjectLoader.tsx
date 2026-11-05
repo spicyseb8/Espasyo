@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 
 import { auth } from "@/firebase/firebase";
+import { projectApi } from "@/services/assets/projectApi";
 import { getAdminProject } from "@/services/assets/projectService";
 import type { AdminProject } from "@/services/assets/projectService";
 import { filterUnavailableProjectAssets } from "@/services/assets/filterUnavailableProjectAssets";
@@ -23,6 +24,8 @@ interface LoadedProject {
 export default function AdminProjectLoader() {
     const { projectId } = useParams<{ projectId: string }>();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const snapshotType = searchParams.get("snapshot");
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -68,9 +71,21 @@ export default function AdminProjectLoader() {
                 if (cancelled || controller.signal.aborted) return;
 
                 let data: unknown;
+                const reviewSnapshotType: AdminProject["reviewSnapshotType"] =
+                    snapshotType === "submitted" || snapshotType === "approved"
+                        ? snapshotType
+                        : metadata.workflowType === "admin-managed"
+                            ? "latest-saved"
+                            : undefined;
+                const reviewMetadata = reviewSnapshotType
+                    ? { ...metadata, reviewSnapshotType }
+                    : metadata;
                 if (metadata.workflowType === "admin-managed") {
-                    data = await loadAdminManagedProjectForReview(metadata, (input, init) =>
-                        fetch(input, { ...init, signal: controller.signal })
+                    data = await loadAdminManagedProjectForReview(reviewMetadata, kind =>
+                        projectApi<unknown>(
+                            `/admin/projects/${encodeURIComponent(projectId)}/files/${kind}`,
+                            { signal: controller.signal }
+                        )
                     );
                 } else {
                     // Legacy projects continue to load the JSON referenced by jsonUrl.
@@ -108,7 +123,7 @@ export default function AdminProjectLoader() {
                 // STORE
                 //==================================================
                 setLoadedProject({
-                    metadata,
+                    metadata: reviewMetadata,
                     data: projectData,
                     unavailableAssetIds
                 });
@@ -134,7 +149,7 @@ export default function AdminProjectLoader() {
             activeController?.abort();
             unsubscribe();
         };
-    }, [projectId]);
+    }, [projectId, snapshotType]);
 
     //==================================================
     // LOADING

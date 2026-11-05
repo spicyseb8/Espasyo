@@ -1,4 +1,5 @@
 import express from "express";
+import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "../firebase-admin.js";
 import { requireRole } from "./authorization.js";
 
@@ -27,7 +28,7 @@ function formatCommentId(sequence, year) {
 
 router.post(
   "/projects/:projectId/comments",
-  requireRole("admin"),
+  requireRole("admin", "superadmin"),
   async (req, res) => {
     const projectId = req.params.projectId.trim();
 
@@ -37,7 +38,7 @@ router.post(
       targetLabel,
       regionId,
       text,
-    } = req.body;
+    } = req.body ?? {};
 
     if (!projectId) {
       return res.status(400).json({
@@ -52,10 +53,19 @@ router.post(
         message: "Comment cannot be empty.",
       });
     }
+    if (text.trim().length > 2000) {
+      return res.status(400).json({
+        success: false,
+        message: "Comment must be 2,000 characters or fewer.",
+      });
+    }
 
     if (
       typeof targetType !== "string" ||
-      typeof targetLabel !== "string"
+      !["project", "wall", "floor", "furniture", "door", "window", "opening"].includes(targetType) ||
+      typeof targetLabel !== "string" ||
+      !targetLabel.trim() ||
+      targetLabel.trim().length > 120
     ) {
       return res.status(400).json({
         success: false,
@@ -119,6 +129,14 @@ router.post(
           const commentRef = adminDb
             .collection(COMMENTS_COLLECTION)
             .doc(nextCommentId);
+          const projectRef = adminDb.collection("projects").doc(projectId);
+          const projectSnapshot = await transaction.get(projectRef);
+          if (!projectSnapshot.exists) {
+            const error = new Error("Project does not exist.");
+            error.status = 404;
+            throw error;
+          }
+          const activityRef = adminDb.collection("projectActivity").doc();
 
           // Create the comment and update its counter
           // atomically, preventing duplicate sequence IDs.
@@ -134,6 +152,15 @@ router.post(
             adminName: req.adminUser.name || "Admin",
             status: "open",
             createdAt: new Date(),
+          });
+          transaction.create(activityRef, {
+            projectId,
+            actorId: req.adminUser.uid,
+            actorRole: req.adminUser.role,
+            actorName: req.adminUser.name || "",
+            action: "admin-comment-added",
+            description: text.trim(),
+            createdAt: FieldValue.serverTimestamp(),
           });
 
           transaction.set(
@@ -158,10 +185,48 @@ router.post(
     } catch (error) {
       console.error("Admin comment creation failed:", error);
 
-      return res.status(500).json({
+      return res.status(error.status ?? 500).json({
         success: false,
-        message: "Failed to save comment.",
+        message: error.status ? error.message : "Failed to save comment.",
       });
+    }
+  }
+);
+
+router.get(
+  "/admin/projects/:projectId/comments",
+  requireRole("admin", "superadmin"),
+  async (req, res) => {
+    const projectId = req.params.projectId.trim();
+    if (!projectId) {
+      return res.status(400).json({ success: false, message: "Project ID is required." });
+    }
+    try {
+      const project = await adminDb.collection("projects").doc(projectId).get();
+      if (!project.exists) return res.status(404).json({ success: false, message: "Project does not exist." });
+      const snapshot = await adminDb.collection(COMMENTS_COLLECTION)
+        .where("projectId", "==", projectId)
+        .get();
+      const comments = snapshot.docs
+        .map(document => {
+          const data = document.data();
+          return {
+            id: document.id,
+            ...data,
+            createdAt: data.createdAt instanceof Date
+              ? data.createdAt.toISOString()
+              : data.createdAt?.toDate?.().toISOString() ?? null,
+          };
+        })
+        .sort((first, second) => {
+          const firstTime = first.createdAt?.toMillis?.() ?? 0;
+          const secondTime = second.createdAt?.toMillis?.() ?? 0;
+          return firstTime - secondTime;
+        });
+      return res.json({ success: true, comments });
+    } catch (error) {
+      console.error("Admin project comments load failed:", error);
+      return res.status(500).json({ success: false, message: "Unable to load project comments." });
     }
   }
 );

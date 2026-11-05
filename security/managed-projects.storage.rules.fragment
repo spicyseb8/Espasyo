@@ -11,8 +11,26 @@ function isManagedFloorPlan(ownerId, projectId) {
     && firestore.get(projectPath).data.get("ownerId", "") == ownerId;
 }
 
+function isAssignedPublishedManagedFloorPlan(ownerId, projectId) {
+  let projectPath = /databases/(default)/documents/projects/$(projectId);
+  let assignmentPath = /databases/(default)/documents/adminManagedProjectAssignments/$(ownerId);
+  return firestore.exists(projectPath)
+    && firestore.get(projectPath).data.get("workflowType", "legacy") == "admin-managed"
+    && firestore.get(projectPath).data.get("ownerId", "") == ownerId
+    && firestore.get(projectPath).data.get("structuralStatus", "") == "published"
+    && firestore.get(projectPath).data.get("publishedStructuralRevision", 0) >= 1
+    && firestore.exists(assignmentPath)
+    && firestore.get(assignmentPath).data.get("ownerId", "") == ownerId
+    && firestore.get(assignmentPath).data.get("projectId", "") == projectId;
+}
+
 match /projects/{ownerId}/{fileName} {
-  allow read: if managedProjectStorageSignedIn() && request.auth.uid == ownerId;
+  allow read: if managedProjectStorageSignedIn()
+    && request.auth.uid == ownerId
+    && (
+      !isManagedFloorPlan(ownerId, fileName.split(".")[0])
+      || isAssignedPublishedManagedFloorPlan(ownerId, fileName.split(".")[0])
+    );
   allow write: if managedProjectStorageSignedIn()
     && request.auth.uid == ownerId
     && (
@@ -23,12 +41,21 @@ match /projects/{ownerId}/{fileName} {
       )
       || (
         fileName.matches(".*\\.json")
+        && request.resource.size <= 10 * 1024 * 1024
+        && request.resource.contentType == "application/json"
         && !isManagedFloorPlan(ownerId, fileName.split(".")[0])
       )
     );
 }
 
 match /projects/{ownerId}/{projectId}/{fileName=**} {
-  allow read: if managedProjectStorageSignedIn() && request.auth.uid == ownerId;
+  allow read: if managedProjectStorageSignedIn()
+    && request.auth.uid == ownerId
+    && isAssignedPublishedManagedFloorPlan(ownerId, projectId)
+    && (
+      fileName.matches("published-r[0-9]+-[0-9a-fA-F-]+\\.json")
+      || fileName.matches("versions/[0-9a-fA-F-]+\\.json")
+      || fileName.matches("submissions/[0-9a-fA-F-]+\\.json")
+    );
   allow write: if false;
 }

@@ -3,6 +3,7 @@ import { Tool } from "./tools";
 import { BuildTool } from "../BuildTool";
 
 export const initialState: EditorState = {
+    projectLocked: false,
     workflowType: "legacy",
     structuralOwner: undefined,
     structuralStatus: undefined,

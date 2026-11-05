@@ -214,7 +214,7 @@ export default function Topbar() {
                         type="button"
                         className="history-button"
                         onClick={undo}
-                        disabled={!canUndo}
+                        disabled={!canUndo || state.projectLocked}
                         title="Undo"
                         aria-label="Undo"
                     >
@@ -225,7 +225,7 @@ export default function Topbar() {
                         type="button"
                         className="history-button"
                         onClick={redo}
-                        disabled={!canRedo}
+                        disabled={!canRedo || state.projectLocked}
                         title="Redo"
                         aria-label="Redo"
                     >

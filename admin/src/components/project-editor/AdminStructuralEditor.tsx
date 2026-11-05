@@ -19,9 +19,16 @@ import type { Wall } from "@/components/project-loader/engine/walls/WallTypes";
 import type { Asset } from "@/components/project-loader/engine/assets/Asset";
 import { pointInPolygon } from "@/components/project-loader/engine/regions/Polygon";
 import { solveRegions } from "@/components/project-loader/engine/regions/RegionSolver";
-import { getAdminProject } from "@/services/assets/projectService";
+import {
+    getAdminProject,
+    getTomorrowLocalDateTime,
+    getTodayLocalDate,
+    isValidProjectDeadline,
+    normalizeProjectDeadlineForInput
+} from "@/services/assets/projectService";
 import {
     getManagedFloorPlanDraft,
+    loadManagedProjectStructure,
     publishManagedFloorPlanDraft,
     saveManagedFloorPlanDraft,
     saveManagedStructure
@@ -255,6 +262,8 @@ export default function AdminStructuralEditor() {
         showInitializationLoading ? "loading" : "ready"
     );
     const [isDraftRecord, setIsDraftRecord] = useState(Boolean(draftId));
+    const [isPublished, setIsPublished] = useState(false);
+    const [deadline, setDeadline] = useState("");
     const [isReadOnly, setIsReadOnly] = useState(false);
     const [floorPlans, setFloorPlans] = useState<ManagedEditorFloor[]>([]);
     const [activeFloorId, setActiveFloorId] = useState<string | null>(null);
@@ -448,9 +457,7 @@ export default function AdminStructuralEditor() {
                 throw new Error("This is a legacy project. Open it in the project viewer instead.");
             }
 
-            const jsonUrl = metadata.draftJsonUrl?.trim()
-                || (metadata.structuralStatus === "published" ? metadata.jsonUrl.trim() : "");
-            if (!jsonUrl) {
+            if (!metadata.hasDraftStructure && !metadata.hasPublishedStructure) {
                 if (metadata.structureInitialized !== false) {
                     throw new Error(metadata.structuralStatus === "draft"
                         ? "This draft has no saved draft JSON. The published project was not loaded to avoid overwriting it."
@@ -470,9 +477,7 @@ export default function AdminStructuralEditor() {
                 };
             }
 
-            const response = await fetch(jsonUrl);
-            if (!response.ok) throw new Error(`Unable to load project JSON (${response.status}).`);
-            const loadedData: unknown = await response.json();
+            const loadedData: unknown = await loadManagedProjectStructure(metadata.projectId, true);
             const validationErrors = validateStructuralProjectData(loadedData);
             if (validationErrors.length) {
                 throw new Error(`Saved project JSON is invalid: ${validationErrors.join(" ")}`);
@@ -503,6 +508,8 @@ export default function AdminStructuralEditor() {
                     setClientDisplayName(initialized.metadata.ownerName ?? ownerName ?? "");
                     setCreatorDisplayName(initialized.metadata.creatorName ?? "");
                     setIsDraftRecord(false);
+                    setIsPublished(initialized.metadata.structuralStatus === "published");
+                    setDeadline(normalizeProjectDeadlineForInput(initialized.metadata.deadline));
                     setIsReadOnly(initialized.metadata.createdBy !== user?.uid);
                     if (initialized.metadata.createdBy !== user?.uid) {
                         setStatus("Read-only view. Only the administrator who created this floor plan can edit or publish it.");
@@ -563,6 +570,8 @@ export default function AdminStructuralEditor() {
                     setClientDisplayName(draft.intendedClientName ?? ownerName ?? "");
                     setCreatorDisplayName(draft.creatorName ?? "");
                     setIsDraftRecord(true);
+                    setIsPublished(false);
+                    setDeadline(normalizeProjectDeadlineForInput(draft.deadline));
                     setIsReadOnly(draft.createdBy !== user?.uid);
                     setStatus(draft.createdBy !== user?.uid
                         ? "Read-only view. Only the administrator who created this draft can edit or publish it."
@@ -2300,6 +2309,15 @@ export default function AdminStructuralEditor() {
             setStatus("A floor-plan name is required before saving.");
             return;
         }
+        if (published && !isPublished) {
+            if (!isValidProjectDeadline(deadline) || deadline <= getTodayLocalDate()) {
+                setStatus("Choose a valid project deadline after today before publishing.");
+                return;
+            }
+        }
+        if (published && !window.confirm(`Publish "${projectName.trim()}" to its assigned client with deadline ${deadline || "not set"}?`)) {
+            return;
+        }
         setSavingAction(published ? "publish" : "draft");
         try {
             setStatus(published ? "Publishing..." : "Saving draft...");
@@ -2316,6 +2334,7 @@ export default function AdminStructuralEditor() {
                     const result = await publishManagedFloorPlanDraft({
                         draftId,
                         projectName,
+                        deadline,
                         projectData: { ...projectData }
                     });
                     setRevision(Math.max(revision, 0) + 1);
@@ -2339,7 +2358,8 @@ export default function AdminStructuralEditor() {
                     draftId,
                     projectName,
                     projectData: { ...projectData },
-                    revision: nextRevision
+                    revision: nextRevision,
+                    ...(deadline ? { deadline } : {})
                 });
                 setRevision(nextRevision);
                 try {
@@ -2361,10 +2381,12 @@ export default function AdminStructuralEditor() {
                 ownerId: structure.ownerId,
                 projectData: { ...projectData },
                 revision: nextRevision,
-                published
+                published,
+                ...(!isPublished && published ? { deadline } : {})
             });
             commit(nextStructure);
             setRevision(nextRevision);
+            if (published) setIsPublished(true);
             setStatus(published ? "Project published successfully." : "Draft saved successfully.");
         } catch (error) {
             setStatus(error instanceof Error ? error.message : "Unable to save project.");
@@ -2459,6 +2481,24 @@ export default function AdminStructuralEditor() {
                     </button>
                 </div>
                 <div className="admin-editor-header-actions">
+                {!isPublished && (
+                    <label className="admin-editor-status">
+                        Publish deadline (Philippine time)
+                        <input
+                            type="datetime-local"
+                            value={deadline}
+                            min={getTomorrowLocalDateTime()}
+                            onChange={event => setDeadline(event.target.value)}
+                            disabled={isReadOnly || savingAction !== null}
+                            aria-label="Required project deadline date and time before publishing, Philippine time"
+                        />
+                    </label>
+                )}
+                {isPublished && deadline && (
+                    <span className="admin-editor-status" role="status">
+                        Deadline (Philippine time): {deadline.replace("T", " ")}
+                    </span>
+                )}
                 {isDraftRecord && (
                     <span className="admin-editor-status" role="status">
                         Unpublished database draft — not shared with the client
