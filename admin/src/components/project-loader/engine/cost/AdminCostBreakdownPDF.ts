@@ -3,6 +3,7 @@ import { jsPDF } from "jspdf";
 import { autoTable } from "jspdf-autotable";
 import type { SavedProjectData } from "../../ProjectTypes";
 import { calculateAdminCostEstimate } from "./AdminCostCalculation";
+import { calculateMaterialWasteReportTotals } from "../../../../../../shared/cost/MaterialWasteAllowance";
 
 type CostCategory =
     | "furniture"
@@ -181,6 +182,7 @@ export async function downloadAdminCostBreakdownPDF(
 
     const estimate = await calculateAdminCostEstimate(projectData);
     const preparedItems = estimate.items.map(prepareCostItem);
+    const reportTotals = calculateMaterialWasteReportTotals(estimate.floors);
 
     const doc = new jsPDF({
         orientation: "portrait",
@@ -250,7 +252,8 @@ export async function downloadAdminCostBreakdownPDF(
 
     let currentY = 53;
 
-    for (const floor of estimate.floors) {
+    for (const [floorIndex, floor] of estimate.floors.entries()) {
+        const reportFloor = reportTotals.floors[floorIndex];
         if (currentY + 15 > pageHeight - 16) {
             doc.addPage();
             currentY = 16;
@@ -271,7 +274,7 @@ export async function downloadAdminCostBreakdownPDF(
         doc.setFontSize(9);
         doc.text(floor.name, margin + 3, currentY + 6);
         doc.text(
-            formatMoney(floor.subtotal),
+            formatMoney(reportFloor.subtotal),
             pageWidth - margin - 3,
             currentY + 6,
             { align: "right" }
@@ -432,6 +435,51 @@ export async function downloadAdminCostBreakdownPDF(
         });
 
         currentY = (doc.lastAutoTable?.finalY ?? currentY) + 6;
+
+        if (isWallSection || isFlooringSection) {
+            if (currentY + 17 > pageHeight - 16) {
+                doc.addPage();
+                currentY = 16;
+            }
+
+            const materialTotals = isWallSection
+                ? reportFloor.wallMaterials
+                : reportFloor.flooringMaterials;
+            const materialLabel = isWallSection ? "Wall" : "Flooring";
+            const subtotalRows = [
+                [
+                    `Original ${materialLabel} Materials Subtotal`,
+                    materialTotals.originalSubtotal,
+                    false
+                ],
+                [
+                    "Material Waste Allowance (10%)",
+                    materialTotals.allowance,
+                    false
+                ],
+                [
+                    `Adjusted ${materialLabel} Materials Subtotal`,
+                    materialTotals.adjustedSubtotal,
+                    true
+                ]
+            ] as const;
+
+            subtotalRows.forEach(([label, amount, isAdjusted], index) => {
+                doc.setFont("helvetica", isAdjusted ? "bold" : "normal");
+                doc.setFontSize(7);
+                if (isAdjusted) {
+                    doc.setTextColor(67, 78, 59);
+                } else {
+                    doc.setTextColor(95, 99, 91);
+                }
+                const rowY = currentY + 3 + index * 4;
+                doc.text(label, margin + 2, rowY);
+                doc.text(formatMoney(amount), pageWidth - margin, rowY, {
+                    align: "right"
+                });
+            });
+            currentY += 17;
+        }
         }
 
         if (floor.items.length === 0) {
@@ -454,7 +502,7 @@ export async function downloadAdminCostBreakdownPDF(
         doc.setFontSize(8);
         doc.text(`${floor.name} SUBTOTAL`, margin, currentY + 6);
         doc.text(
-            formatMoney(floor.subtotal),
+            formatMoney(reportFloor.subtotal),
             pageWidth - margin,
             currentY + 6,
             { align: "right" }
@@ -462,7 +510,7 @@ export async function downloadAdminCostBreakdownPDF(
         currentY += 12;
     }
 
-    const reportTotal = estimate.total;
+    const reportTotal = reportTotals.total;
 
     if (currentY + 20 > pageHeight - 15) {
         doc.addPage();

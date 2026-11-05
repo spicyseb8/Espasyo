@@ -967,13 +967,15 @@ export default function AdminStructureScene({
                     />
                 )}
                 {buildElementAsset && buildElementAsset.type !== "opening" && (
-                    <AdminBuildElementPreview
-                        asset={buildElementAsset}
-                        candidate={buildElementPlacement ?? null}
-                        wallThickness={structure.wallThickness}
-                        onModelBounds={onAssetModelBounds ?? (() => {})}
-                        onPreviewReady={onBuildElementPreviewReady}
-                    />
+                    <Suspense fallback={null}>
+                        <AdminBuildElementPreview
+                            asset={buildElementAsset}
+                            candidate={buildElementPlacement ?? null}
+                            wallThickness={structure.wallThickness}
+                            onModelBounds={onAssetModelBounds ?? (() => {})}
+                            onPreviewReady={onBuildElementPreviewReady}
+                        />
+                    </Suspense>
                 )}
                 {selectedElementData && toolbarPosition && selectedElement && (
                     <Html position={toolbarPosition} zIndexRange={[10000, 0]}>

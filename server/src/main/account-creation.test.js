@@ -47,14 +47,14 @@ function createHarness({ firestoreError, existingEmail } = {}) {
       error.code = "auth/user-not-found";
       throw error;
     },
-    async createUser({ email, password, displayName }) {
+    async createUser({ email, password, displayName, emailVerified = false }) {
       if ([...authUsers.values()].some(user => user.email === email)) {
         const error = new Error("duplicate");
         error.code = "auth/email-already-exists";
         throw error;
       }
       const uid = `uid-${nextUid++}`;
-      authUsers.set(uid, { uid, email, password, displayName, emailVerified: false });
+      authUsers.set(uid, { uid, email, password, displayName, emailVerified });
       return { uid };
     },
     async deleteUser(uid) {
@@ -87,7 +87,7 @@ test("creates a client Auth account and compatible Firestore user record", async
   assert.equal(user.uid, account.uid);
   assert.equal(user.full_name, "Client One");
   assert.equal(user.account_status, "active");
-  assert.equal(harness.authUsers.get(account.uid).emailVerified, false);
+  assert.equal(harness.authUsers.get(account.uid).emailVerified, true);
   assert.equal(harness.authUsers.size, 1);
 });
 
@@ -103,6 +103,7 @@ test("creates an employee account with its requested role and employee fields", 
   assert.equal(employee.role, "admin");
   assert.equal(employee.name, "Client One");
   assert.equal(employee.account_status, "active");
+  assert.equal(harness.authUsers.get(account.uid).emailVerified, false);
 });
 
 test("rejects duplicate email addresses recorded in Firestore", async () => {

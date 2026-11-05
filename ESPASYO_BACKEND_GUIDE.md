@@ -124,9 +124,11 @@ Consequently, comments are displayed through Firestore subscriptions but do not 
 
 ### Account creation
 
-`POST /api/accounts` is superadmin-only. It validates account type, name, email, password length, and employee role. It creates a Firebase Auth user and then a Firestore record in `users` for customers or `adminEmployees` for employees. If the Firestore write fails, it attempts to delete the Auth user.
+`POST /api/accounts` is superadmin-only. It validates account type, name, email, password length, and employee role. It creates a Firebase Auth user and then a Firestore record in `users` for customers or `adminEmployees` for employees. Newly created customer Auth users are marked `emailVerified: true` by the backend; employee verification behavior is unchanged. If the Firestore write fails, it attempts to delete the Auth user.
 
 Customer records include `full_name`, `email`, `phone_number`, `address`, `uid`, `account_status`, `created_at`, `updated_at`, and `avatar`. Employee records include `name`, `email`, `role`, `uid`, `account_status`, `created_at`, `updated_at`, and `avatar`. New accounts are marked active. See [`create-account.js`](server/src/main/create-account.js#L83) and its record creation/rollback logic (server/src/main/create-account.js#L270).
+
+Existing customer verification migration: from `server`, run `npm run migrate:client-email-verification` to dry-run. It only considers `users` records with generated `U-YY###` IDs matching their `id` field, a UID, email, full name, and an active/suspended client status; it excludes records with a role or an identifier in `adminEmployees`. It verifies each linked Firebase Auth UID and normalized email against the profile and rechecks both immediately before updating. To apply, run `npm run migrate:client-email-verification -- --apply`. The operation changes only `emailVerified`; it does not activate suspended users or modify Firestore records. Skipped/ambiguous records require manual review.
 
 ### Suspend and reactivate
 

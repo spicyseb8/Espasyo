@@ -63,6 +63,7 @@ export async function createAccountRecord(input, {
       email: normalizedEmail,
       password,
       displayName: normalizedName,
+      ...(accountType === "user" ? { emailVerified: true } : {}),
     });
   } catch (error) {
     if (error.code === "auth/email-already-exists") {
