@@ -1,5 +1,5 @@
 
-import { useEffect, useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import {
     BrowserRouter,
     Navigate,
@@ -9,7 +9,7 @@ import {
 } from "react-router-dom";
 
 import { useAuth } from "./context/AuthContext";
-import { getLegalAcceptance } from "./services/legalAcceptance";
+import { ProtectedNavigationProvider } from "./context/ProtectedNavigationContext";
 import LoadingScreen from "./scene/LoadingScreen";
 import Home
     from "./pages/Home";
@@ -36,50 +36,8 @@ import AssetStartupGate
     from "./engine/AssetStartupGate";
 
 function ClientAccessRoute({ children }: { children: ReactNode }) {
-    const { user, loading } = useAuth();
+    const { user, loading, agreement, verifyAgreement } = useAuth();
     const location = useLocation();
-    const [retryToken, setRetryToken] = useState(0);
-    const [status, setStatus] = useState<{
-        uid: string;
-        accepted: boolean;
-        error: string | null;
-        retryToken: number;
-    } | null>(null);
-
-    useEffect(() => {
-        if (loading || !user) return;
-
-        let cancelled = false;
-        const requestRetryToken = retryToken;
-        void getLegalAcceptance(user)
-            .then(accepted => {
-                if (!cancelled) {
-                    setStatus({
-                        uid: user.uid,
-                        accepted,
-                        error: null,
-                        retryToken: requestRetryToken,
-                    });
-                }
-            })
-            .catch(error => {
-                console.error("Unable to verify access agreement:", error);
-                if (!cancelled) {
-                    setStatus({
-                        uid: user.uid,
-                        accepted: false,
-                        error: error instanceof Error
-                            ? error.message
-                            : "Unable to verify your agreement. Please retry.",
-                        retryToken: requestRetryToken,
-                    });
-                }
-            });
-
-        return () => {
-            cancelled = true;
-        };
-    }, [user, loading, retryToken]);
 
     if (loading) {
         return <LoadingScreen label="Checking your session" />;
@@ -89,20 +47,24 @@ function ClientAccessRoute({ children }: { children: ReactNode }) {
         return <Navigate to="/auth" replace state={{ from: location }} />;
     }
 
-    if (status?.uid !== user.uid || status.retryToken !== retryToken) {
+    if (!agreement || agreement.uid !== user.uid || agreement.status === "checking") {
         return <LoadingScreen label="Verifying your agreement" />;
     }
 
-    if (status.error) {
+    if (agreement.status === "error") {
         return (
             <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
                 <p role="alert" className="max-w-md text-sm text-destructive">
-                    {status.error} Protected areas remain unavailable until verification succeeds.
+                    {agreement.error} Protected areas remain unavailable until verification succeeds.
                 </p>
                 <button
                     type="button"
                     className="rounded-md border px-4 py-2 text-sm"
-                    onClick={() => setRetryToken(value => value + 1)}
+                    onClick={() => {
+                        void verifyAgreement(user, true).catch(error => {
+                            console.error("Unable to verify access agreement:", error);
+                        });
+                    }}
                 >
                     Retry verification
                 </button>
@@ -110,7 +72,7 @@ function ClientAccessRoute({ children }: { children: ReactNode }) {
         );
     }
 
-    if (!status.accepted) {
+    if (agreement.status !== "accepted") {
         return <Navigate to="/auth" replace state={{ from: location }} />;
     }
 
@@ -122,9 +84,9 @@ function App() {
     return (
 
         <BrowserRouter>
-
-            <AssetStartupGate>
-                <Routes>
+            <ProtectedNavigationProvider>
+                <AssetStartupGate>
+                    <Routes>
 
                 {/* HOME */}
 
@@ -206,8 +168,9 @@ function App() {
                     }
                 />
 
-                </Routes>
-            </AssetStartupGate>
+                    </Routes>
+                </AssetStartupGate>
+            </ProtectedNavigationProvider>
 
         </BrowserRouter>
     );

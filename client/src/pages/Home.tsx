@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useProgress } from "@react-three/drei";
+import { useAuth } from "../context/AuthContext";
+import { useProtectedNavigation } from "../context/ProtectedNavigationContext";
 import NavBar from "./NavBar";
 import { WAYPOINTS } from "./Waypoints";
 import { usePagedScroll } from "./usePagedScroll";
@@ -90,6 +92,8 @@ function LoadingOverlay({ ready }: { ready: boolean }) {
 
 export default function Home() {
   const reduce = useReducedMotion();
+  const { user } = useAuth();
+  const requestProtectedNavigation = useProtectedNavigation();
   const stageRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const progress = useRef(0); // 0 → WAYPOINTS.length - 1, read by the 3D rig
@@ -218,11 +222,31 @@ export default function Home() {
                 </p>
 
                 <div className="home__cta-row">
-                  <Link to="/studio" className="home__cta" tabIndex={heroOn ? 0 : -1}>
+                  <Link
+                    to="/studio"
+                    className="home__cta"
+                    tabIndex={heroOn ? 0 : -1}
+                    onClick={(event) => {
+                      if (!user) {
+                        event.preventDefault();
+                        requestProtectedNavigation("/studio");
+                      }
+                    }}
+                  >
                     Start designing
                     <ArrowRight className="home__cta-icon" strokeWidth={2} />
                   </Link>
-                  <Link to="/library" className="home__cta-ghost" tabIndex={heroOn ? 0 : -1}>
+                  <Link
+                    to="/library"
+                    className="home__cta-ghost"
+                    tabIndex={heroOn ? 0 : -1}
+                    onClick={(event) => {
+                      if (!user) {
+                        event.preventDefault();
+                        requestProtectedNavigation("/library");
+                      }
+                    }}
+                  >
                     Browse the library
                   </Link>
                 </div>
@@ -290,6 +314,12 @@ export default function Home() {
                           to="/studio"
                           className="home__cta home__cta--light"
                           tabIndex={footerOn ? 0 : -1}
+                          onClick={(event) => {
+                            if (!user) {
+                              event.preventDefault();
+                              requestProtectedNavigation("/studio");
+                            }
+                          }}
                         >
                           Start designing
                           <ArrowRight className="home__cta-icon" strokeWidth={2} />
@@ -302,8 +332,30 @@ export default function Home() {
                           rights reserved.
                         </p>
                         <nav aria-label="Footer">
-                          <Link to="/library" tabIndex={footerOn ? 0 : -1}>Library</Link>
-                          <Link to="/studio" tabIndex={footerOn ? 0 : -1}>Studio</Link>
+                          <Link
+                            to="/library"
+                            tabIndex={footerOn ? 0 : -1}
+                            onClick={(event) => {
+                              if (!user) {
+                                event.preventDefault();
+                                requestProtectedNavigation("/library");
+                              }
+                            }}
+                          >
+                            Library
+                          </Link>
+                          <Link
+                            to="/studio"
+                            tabIndex={footerOn ? 0 : -1}
+                            onClick={(event) => {
+                              if (!user) {
+                                event.preventDefault();
+                                requestProtectedNavigation("/studio");
+                              }
+                            }}
+                          >
+                            Studio
+                          </Link>
                           <Link to="/signup" tabIndex={footerOn ? 0 : -1}>Sign up</Link>
                         </nav>
                       </footer>

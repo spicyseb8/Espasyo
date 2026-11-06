@@ -208,7 +208,7 @@ function LibrarySyncStatus({ progress }: { progress: AssetSyncProgress }) {
         aria-live="polite"
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
-        className={`fixed bottom-4 right-4 z-[10000] w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-border/60 bg-background/90 shadow-xl shadow-black/10 ring-1 ring-black/5 backdrop-blur-md dark:ring-white/5 ${leaving ? "lss-exit" : "lss-enter"}`}
+        className={`hidden fixed bottom-4 right-4 z-[10000] w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-border/60 bg-background/90 shadow-xl shadow-black/10 ring-1 ring-black/5 backdrop-blur-md dark:ring-white/5 ${leaving ? "lss-exit" : "lss-enter"}`}
       >
         <div className="p-4">
           {/* Header */}

@@ -4,6 +4,7 @@ import { Bell, Loader2, LogOut, Settings } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 
 import { useAuth } from "@/context/AuthContext";
+import { useProtectedNavigation } from "@/context/ProtectedNavigationContext";
 import { logout } from "../firebase/auth";
 import {
   AlertDialog,
@@ -50,6 +51,7 @@ export default function NavBar() {
   const reduce = useReducedMotion();
   const navigate = useNavigate();
   const { user, loading } = useAuth();
+  const requestProtectedNavigation = useProtectedNavigation();
 
   const [playIntro] = useState(() => !introPlayed);
   const [scrolled, setScrolled] = useState(false);
@@ -136,6 +138,12 @@ export default function NavBar() {
                 to={link.to}
                 end={link.end}
                 className="navbar__link"
+                onClick={(event) => {
+                  if (!user && link.to !== "/") {
+                    event.preventDefault();
+                    requestProtectedNavigation(link.to);
+                  }
+                }}
               >
                 {({ isActive }) => (
                   <>

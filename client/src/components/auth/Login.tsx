@@ -7,7 +7,7 @@ import {
   type User,
 } from "firebase/auth";
 import { Check } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import { cn } from "cn";
 
@@ -49,7 +49,6 @@ import {
   type LegalDocument,
 } from "@/components/legal/LegalDocumentContent";
 import {
-  getLegalAcceptance,
   saveLegalAcceptance,
 } from "@/services/legalAcceptance";
 
@@ -58,7 +57,25 @@ export function LoginForm({
   ...props
 }: React.ComponentProps<"div">) {
   const navigate = useNavigate();
-  const { user: authenticatedUser, loading: authLoading } = useAuth();
+  const {
+    user: authenticatedUser,
+    loading: authLoading,
+    verifyAgreement,
+  } = useAuth();
+  const location = useLocation();
+  const from = (location.state as { from?: unknown } | null)?.from;
+  const fromPath = typeof from === "string"
+    ? from
+    : from && typeof from === "object" && "pathname" in from
+      ? `${typeof from.pathname === "string" ? from.pathname : ""}${
+          "search" in from && typeof from.search === "string" ? from.search : ""
+        }${
+          "hash" in from && typeof from.hash === "string" ? from.hash : ""
+        }`
+      : "";
+  const requestedPath = fromPath.startsWith("/") && !fromPath.startsWith("//")
+    ? fromPath
+    : "/home";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -148,9 +165,9 @@ export function LoginForm({
     setPendingAcceptanceUser(null);
     setAcceptanceNeedsReview(false);
     setAcceptanceSaveError("");
-    navigate("/home", { replace: true });
+    navigate(requestedPath, { replace: true });
     return true;
-  }, [navigate]);
+  }, [navigate, requestedPath]);
 
   const checkAuthenticatedClient = useCallback(async (
     user: User,
@@ -198,7 +215,7 @@ export function LoginForm({
     }
 
     try {
-      const accepted = await getLegalAcceptance(user);
+      const accepted = await verifyAgreement(user);
       if (isCancelled() || auth.currentUser?.uid !== user.uid) return false;
       if (accepted) {
         return continueToRequestedPath();
@@ -216,7 +233,7 @@ export function LoginForm({
       ) {
         try {
           await saveLegalAcceptance(user);
-          if (!await getLegalAcceptance(user)) {
+          if (!await verifyAgreement(user, true)) {
             throw new Error("We could not verify your agreement. Please retry.");
           }
           if (isCancelled() || auth.currentUser?.uid !== user.uid) return false;
@@ -245,7 +262,7 @@ export function LoginForm({
       );
       return false;
     }
-  }, [continueToRequestedPath]);
+  }, [continueToRequestedPath, verifyAgreement]);
 
   useEffect(() => {
     if (authLoading || !authenticatedUser || authenticationInFlight.current) return;
@@ -270,7 +287,7 @@ export function LoginForm({
     setSavingAcceptance(true);
     setAcceptanceSaveError("");
     try {
-      let accepted = await getLegalAcceptance(pendingAcceptanceUser);
+      let accepted = await verifyAgreement(pendingAcceptanceUser, true);
       if (auth.currentUser?.uid !== pendingAcceptanceUser.uid) {
         throw new Error("Your session changed. Please sign in again.");
       }
@@ -280,7 +297,7 @@ export function LoginForm({
           return;
         }
         await saveLegalAcceptance(pendingAcceptanceUser);
-        accepted = await getLegalAcceptance(pendingAcceptanceUser);
+        accepted = await verifyAgreement(pendingAcceptanceUser, true);
       }
       if (!accepted) {
         throw new Error("We could not verify your agreement. Please retry.");
