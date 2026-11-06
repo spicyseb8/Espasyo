@@ -1,0 +1,89 @@
+.admin-floor-rail {
+    position: absolute;
+    z-index: 5;
+    /* vertically centred in the scene area (below the header) */
+    top: calc(var(--ae-header-h, 52px) + (100% - var(--ae-header-h, 52px)) / 2);
+    right: var(--ae-gap, 12px);
+    display: flex;
+    max-height: calc(100% - var(--ae-header-h, 52px) - 200px);
+    flex-direction: column;
+    gap: 8px;
+    padding: 6px;
+    overflow-y: auto;
+    scrollbar-width: none;
+    transform: translateY(-50%);
+}
+
+.admin-floor-rail::-webkit-scrollbar {
+    display: none;
+}
+
+.admin-floor-rail-box {
+    display: grid;
+    width: 46px;
+    height: 46px;
+    flex: 0 0 auto;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, .76);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .92);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .12), 0 1px 3px rgba(0, 0, 0, .06);
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    color: var(--ae-ink, #18181b);
+    cursor: pointer;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    transition: background .15s ease, color .15s ease, transform .1s ease;
+}
+
+.admin-floor-rail-box:hover:not(:disabled):not(.active) {
+    background: #fff;
+    transform: translateX(-2px);
+}
+
+.admin-floor-rail-box.active {
+    border-color: var(--ae-ink, #18181b);
+    background: var(--ae-ink, #18181b);
+    color: #fff;
+}
+
+.admin-floor-rail-box.add {
+    border-style: dashed;
+    border-color: #c4c4cc;
+    background: rgba(255, 255, 255, .7);
+    box-shadow: none;
+    color: #52525b;
+}
+
+.admin-floor-rail-box.add:hover:not(:disabled) {
+    border-color: var(--ae-ink, #18181b);
+    background: #fff;
+    color: var(--ae-ink, #18181b);
+}
+
+.admin-floor-rail-box.delete {
+    border-color: rgba(180, 35, 24, .18);
+    background: rgba(255, 255, 255, .86);
+    color: #b42318;
+}
+
+.admin-floor-rail-box.delete:hover:not(:disabled) {
+    border-color: #b42318;
+    background: #fff1f0;
+    color: #b42318;
+}
+
+.admin-floor-rail-box:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+    .admin-floor-rail-box {
+        width: 40px;
+        height: 40px;
+        font-size: 12px;
+    }
+}

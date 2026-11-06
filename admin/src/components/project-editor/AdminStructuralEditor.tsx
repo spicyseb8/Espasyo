@@ -3,10 +3,7 @@ import type { ChangeEvent } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
     ArrowLeft,
-    CalendarClock,
-    DraftingCompass,
-    Hammer,
-    Plus,
+    CalendarDays,
     Redo2,
     Save,
     Send,
@@ -45,8 +42,9 @@ import { createManagedEditorExitFingerprint } from "./managedEditorExitGuard";
 import { useAuth } from "@/context/AuthContext";
 import { getDoorAssets, getWindowAssets } from "@/services/assets/FirebaseDoorWindowLibrary";
 import AdminBuildPanel from "./AdminBuildPanel";
-import AdminFloorPlanPanel from "./AdminFloorPlanPanel";
-import type { AdminStructuralTool } from "./AdminFloorPlanPanel";
+import AdminToolDock from "./AdminToolDock";
+import type { AdminStructuralTool } from "./AdminToolDock";
+import AdminFloorRail from "./Adminfloorrail";
 import AdminStructureScene from "./AdminStructureScene";
 import {
     blueprintDisplayBounds,
@@ -250,6 +248,35 @@ function getManagedFloorRegions(structure: ManagedStructure) {
     );
 }
 
+const DEADLINE_PRESETS = [7, 30, 60] as const;
+
+function getEditorDeadlineDateAfterDays(days: number): string {
+    const [year, month, day] = getTodayLocalDate().split("-").map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day + days));
+    return [
+        date.getUTCFullYear(),
+        String(date.getUTCMonth() + 1).padStart(2, "0"),
+        String(date.getUTCDate()).padStart(2, "0")
+    ].join("-");
+}
+
+function normalizeEditorDeadline(value: string | null | undefined): string {
+    const normalized = normalizeProjectDeadlineForInput(value);
+    return normalized ? `${normalized.slice(0, 10)}T23:59` : "";
+}
+
+function formatEditorDeadline(value: string): string {
+    const date = value.slice(0, 10);
+    const timestamp = new Date(`${date}T00:00:00.000Z`);
+    if (Number.isNaN(timestamp.getTime())) return date;
+    return new Intl.DateTimeFormat("en-PH", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        timeZone: "UTC"
+    }).format(timestamp);
+}
+
 export default function AdminStructuralEditor() {
     const { projectId, draftId } = useParams();
     const { user } = useAuth();
@@ -362,6 +389,7 @@ export default function AdminStructuralEditor() {
     const history = activeFloorId ? historyByFloor[activeFloorId] ?? [] : [];
     const future = activeFloorId ? futureByFloor[activeFloorId] ?? [] : [];
     const [isAddFloorDialogOpen, setIsAddFloorDialogOpen] = useState(false);
+    const [floorToDeleteId, setFloorToDeleteId] = useState<string | null>(null);
     const [newFloorMode, setNewFloorMode] = useState<"blank" | "outline">("blank");
     const [isCreatingFloor, setIsCreatingFloor] = useState(false);
     const [deadlineOpen, setDeadlineOpen] = useState(false);
@@ -464,8 +492,6 @@ export default function AdminStructuralEditor() {
         floorPlans,
         activeFloorId
     );
-    const [workspaceView, setWorkspaceView] = useState<"floorplan" | "build">("floorplan");
-    const [workspacePanelOpen, setWorkspacePanelOpen] = useState(true);
     const [showWallMeasurements, setShowWallMeasurements] = useState(true);
     const handleAssetModelBounds = useCallback((assetId: string, bounds: AdminElementModelBounds) => {
         setAssetModelBounds(current => {
@@ -570,7 +596,7 @@ export default function AdminStructuralEditor() {
             if (projectId) {
                 const initialized = await loadManagedProject(projectId);
                 if (!cancelled) {
-                    const savedDeadline = normalizeProjectDeadlineForInput(initialized.metadata.deadline);
+                    const savedDeadline = normalizeEditorDeadline(initialized.metadata.deadline);
                     savedDeadlineRef.current = savedDeadline;
                     savedEditorFingerprintRef.current = createManagedEditorExitFingerprint({
                         floors: initialized.floors,
@@ -640,7 +666,7 @@ export default function AdminStructuralEditor() {
                     };
                 }
                 if (!cancelled) {
-                    const savedDeadline = normalizeProjectDeadlineForInput(draft.deadline);
+                    const savedDeadline = normalizeEditorDeadline(draft.deadline);
                     savedDeadlineRef.current = savedDeadline;
                     savedEditorFingerprintRef.current = createManagedEditorExitFingerprint({
                         floors: initializedFloors.floors,
@@ -2303,8 +2329,6 @@ export default function AdminStructuralEditor() {
         setSelectedAsset(null);
         setBuildPointer(null);
         setTool(nextStructure.layoutConfirmed ? "select" : "wall");
-        setWorkspaceView("floorplan");
-        setWorkspacePanelOpen(true);
     };
 
     const switchFloor = (floorId: string) => {
@@ -2314,6 +2338,53 @@ export default function AdminStructuralEditor() {
         resetFloorInteractions(nextFloor.structure);
         setActiveFloorId(nextFloor.floorId);
         setStatus("");
+    };
+
+    const deleteFloor = () => {
+        if (isReadOnly || savingAction !== null || floorPlans.length <= 1 || !floorToDeleteId) return;
+        const deletedFloorIndex = floorPlans.findIndex(floor => floor.floorId === floorToDeleteId);
+        const deletedFloor = floorPlans[deletedFloorIndex];
+        if (!deletedFloor) {
+            setFloorToDeleteId(null);
+            return;
+        }
+
+        const deletedStairIds = new Set(deletedFloor.structure.stairs.map(stair => stair.id));
+        const deletedStairConnectionIds = new Set(
+            deletedFloor.structure.stairs.map(stair => stair.stairConnectionId)
+        );
+        const nextFloors = floorPlans
+            .filter(floor => floor.floorId !== deletedFloor.floorId)
+            .map((floor, index) => ({
+                ...floor,
+                name: getFloorName(index),
+                structure: {
+                    ...floor.structure,
+                    stairs: floor.structure.stairs.filter(
+                        stair => stair.destinationFloorId !== deletedFloor.floorId
+                    ),
+                    stairLandings: floor.structure.stairLandings.filter(
+                        landing =>
+                            !deletedStairIds.has(landing.stairId) &&
+                            !deletedStairConnectionIds.has(landing.stairConnectionId)
+                    )
+                }
+            }));
+        const nextActiveFloor = nextFloors[Math.min(deletedFloorIndex, nextFloors.length - 1)];
+        if (!nextActiveFloor) return;
+
+        resetFloorInteractions(nextActiveFloor.structure);
+        setFloorPlans(nextFloors);
+        setActiveFloorId(nextActiveFloor.floorId);
+        setHistoryByFloor({});
+        setFutureByFloor({});
+        setBlueprintSessions(current => {
+            const next = { ...current };
+            delete next[deletedFloor.floorId];
+            return next;
+        });
+        setFloorToDeleteId(null);
+        setStatus(`${deletedFloor.name} removed. Any stairs connected to it were also removed. Save to keep this change.`);
     };
 
     const addFloor = () => {
@@ -2341,7 +2412,7 @@ export default function AdminStructuralEditor() {
             setIsAddFloorDialogOpen(false);
             setStatus(newFloorMode === "outline"
                 ? "New floor created from the first floor's exterior outline."
-                : "New blank floor created. Upload a blueprint in the Floor Plan panel to begin tracing.");
+                : "New blank floor created. Use the Blueprint button below to upload a plan and begin tracing.");
         } catch (error) {
             setStatus(error instanceof Error
                 ? error.message
@@ -2547,7 +2618,11 @@ export default function AdminStructuralEditor() {
                 return;
             }
         }
-        if (published && !window.confirm(`Publish "${projectName.trim()}" to its assigned client with deadline ${deadline || "not set"}?`)) {
+        if (published && !window.confirm(
+            `Publish "${projectName.trim()}" to its assigned client with deadline ${
+                deadline ? `${formatEditorDeadline(deadline)} at 11:59 PM Philippine time` : "not set"
+            }?`
+        )) {
             return;
         }
         setSavingAction(published ? "publish" : "draft");
@@ -2665,13 +2740,27 @@ export default function AdminStructuralEditor() {
         projectName.trim()
     );
 
-    const handleWorkspaceTabChange = (nextView: "floorplan" | "build") => {
-        if (nextView === workspaceView) {
-            setWorkspacePanelOpen(open => !open);
-            return;
-        }
-        setWorkspaceView(nextView);
-        setWorkspacePanelOpen(true);
+    const handleToolChange = (nextTool: AdminStructuralTool) => {
+        setActiveElementPlacement(null);
+        setActiveStaircasePlacement(null);
+        setSelectedStructureElement(null);
+        setTool(nextTool);
+        staircaseCommitRef.current = false;
+        setStaircaseDrawingPhase(nextTool === "staircase"
+            ? "selecting-start"
+            : "idle");
+        setStaircaseDrawingStart(null);
+        setStaircaseDrawingRegionId(null);
+        setStaircaseFootprintPreview(null);
+        setStaircasePointerValid(false);
+        setBuildPointer(null);
+        setStaircasePointer(null);
+        setPendingWallStart(null);
+        setWallChainStart(null);
+        setPreviewWallEnd(null);
+        setWallGuides(null);
+        setPendingRoomStart(null);
+        setPreviewRoomEnd(null);
     };
 
     if (showInitializationLoading && initializationState === "loading") {
@@ -2733,35 +2822,10 @@ export default function AdminStructuralEditor() {
                         </span>
                     )}
                 </div>
-                <div className="admin-editor-floor-switcher">
-                    <div className="admin-editor-floor-tabs" role="tablist" aria-label="Project floors">
-                        {floorPlans.map(floor => (
-                            <button
-                                key={floor.floorId}
-                                type="button"
-                                role="tab"
-                                aria-selected={floor.floorId === activeFloorId}
-                                className={floor.floorId === activeFloorId ? "active" : ""}
-                                onClick={() => switchFloor(floor.floorId)}
-                            >
-                                {floor.name}
-                            </button>
-                        ))}
-                    </div>
-                    <button
-                        type="button"
-                        className="admin-editor-add-floor"
-                        onClick={() => setIsAddFloorDialogOpen(true)}
-                        disabled={!structure || isReadOnly || savingAction !== null}
-                    >
-                        <Plus size={14} />
-                        <span>Add Floor</span>
-                    </button>
-                </div>
                 <div className="admin-editor-header-right">
                     {isPublished && deadline && (
                         <span className="admin-editor-badge" role="status">
-                            Deadline (Philippine time): {deadline.replace("T", " ")}
+                            Deadline: {formatEditorDeadline(deadline)} (11:59 PM Philippine time)
                         </span>
                     )}
                     {!isPublished && (
@@ -2775,9 +2839,9 @@ export default function AdminStructuralEditor() {
                                 onClick={() => setDeadlineOpen(open => !open)}
                                 disabled={isReadOnly || savingAction !== null}
                             >
-                                <CalendarClock size={15} />
+                                <CalendarDays size={15} />
                                 <span className="ae-label">
-                                    {deadline ? deadline.replace("T", " ") : "Set deadline"}
+                                    {deadline ? formatEditorDeadline(deadline) : "Set deadline"}
                                 </span>
                             </button>
                             {deadlineOpen && (
@@ -2790,18 +2854,45 @@ export default function AdminStructuralEditor() {
                                     }}
                                 >
                                     <label>
-                                        Publish deadline (Philippine time)
+                                        Publish deadline
                                         <input
-                                            type="datetime-local"
-                                            value={deadline}
-                                            min={getTomorrowLocalDateTime()}
-                                            onChange={event => setDeadline(event.target.value)}
+                                            type="date"
+                                            value={deadline.slice(0, 10)}
+                                            min={getTomorrowLocalDateTime().slice(0, 10)}
+                                            onChange={event => setDeadline(
+                                                event.target.value ? `${event.target.value}T23:59` : ""
+                                            )}
                                             disabled={isReadOnly || savingAction !== null}
-                                            aria-label="Required project deadline date and time before publishing, Philippine time"
+                                            aria-label="Project deadline date"
                                             autoFocus
                                         />
                                     </label>
                                     <p>Required before the project can be published to the client.</p>
+                                    <p className="admin-editor-deadline-cutoff">
+                                        Due by 11:59 PM Philippine time.
+                                    </p>
+                                    <div
+                                        className="admin-editor-deadline-presets"
+                                        role="group"
+                                        aria-label="Suggested deadlines"
+                                    >
+                                        {DEADLINE_PRESETS.map(days => {
+                                            const presetDate = getEditorDeadlineDateAfterDays(days);
+                                            return (
+                                                <button
+                                                    key={days}
+                                                    type="button"
+                                                    className={deadline.slice(0, 10) === presetDate ? "active" : ""}
+                                                    aria-pressed={deadline.slice(0, 10) === presetDate}
+                                                    aria-label={`Set deadline ${days} days from today`}
+                                                    disabled={isReadOnly || savingAction !== null}
+                                                    onClick={() => setDeadline(`${presetDate}T23:59`)}
+                                                >
+                                                    {days} days
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
                                     <button type="button" className="ae-btn" onClick={() => setDeadlineOpen(false)}>
                                         Done
                                     </button>
@@ -2896,147 +2987,42 @@ export default function AdminStructuralEditor() {
                     </section>
                 </div>
             )}
-            <aside className={`admin-editor-sidebar ${workspacePanelOpen ? "is-open" : "is-closed"}`}>
-                <div className="admin-editor-tabs" role="tablist" aria-label="Editor panels">
-                    <button
-                        type="button"
-                        role="tab"
-                        aria-selected={workspaceView === "floorplan" && workspacePanelOpen}
-                        aria-pressed={workspaceView === "floorplan" && workspacePanelOpen}
-                        className={workspaceView === "floorplan" && workspacePanelOpen ? "active" : ""}
-                        onClick={() => handleWorkspaceTabChange("floorplan")}
+            {floorToDeleteId && (
+                <div
+                    className="admin-editor-dialog-backdrop"
+                    onMouseDown={event => {
+                        if (event.target === event.currentTarget) setFloorToDeleteId(null);
+                    }}
+                    onKeyDown={event => {
+                        if (event.key === "Escape") setFloorToDeleteId(null);
+                    }}
+                >
+                    <section
+                        className="admin-editor-add-floor-dialog"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="admin-editor-delete-floor-title"
                     >
-                        <DraftingCompass size={17} />
-                        {workspaceView === "floorplan" && workspacePanelOpen && <span>Floor Plan</span>}
-                    </button>
-                    <button
-                        type="button"
-                        role="tab"
-                        aria-selected={workspaceView === "build" && workspacePanelOpen}
-                        aria-pressed={workspaceView === "build" && workspacePanelOpen}
-                        className={workspaceView === "build" && workspacePanelOpen ? "active" : ""}
-                        onClick={() => handleWorkspaceTabChange("build")}
-                    >
-                        <Hammer size={17} />
-                        {workspaceView === "build" && workspacePanelOpen && <span>Build</span>}
-                    </button>
+                        <h2 id="admin-editor-delete-floor-title">Delete {floorPlans.find(floor => floor.floorId === floorToDeleteId)?.name ?? "floor"}?</h2>
+                        <p>This cannot be undone. Any stairs connected to this floor will also be removed. Save the project after deleting to keep the change.</p>
+                        <button
+                            type="button"
+                            className="admin-editor-dialog-cancel"
+                            onClick={() => setFloorToDeleteId(null)}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="button"
+                            className="admin-editor-dialog-delete"
+                            onClick={deleteFloor}
+                            disabled={isReadOnly || savingAction !== null}
+                        >
+                            Delete Floor
+                        </button>
+                    </section>
                 </div>
-                <div className={`admin-editor-panel-content ${workspacePanelOpen ? "is-open" : "is-closed"}`}>
-                    {structure && (
-                        <div className={`admin-editor-panel-view ${workspacePanelOpen && workspaceView === "floorplan" ? "active" : ""}`}>
-                            <AdminFloorPlanPanel
-                                structure={structure}
-                                readOnly={isReadOnly}
-                                tool={tool}
-                                blueprintUrl={blueprintUrl}
-                                blueprintName={blueprintName}
-                                blueprintVisible={blueprintVisible}
-                                blueprintOpacity={blueprintOpacity}
-                                blueprintLocked={blueprintLocked}
-                                calibrationStep={calibrationStep}
-                                measuredBlueprintLength={measuredBlueprintLength}
-                                actualBlueprintLength={actualBlueprintLength}
-                                showWallMeasurements={showWallMeasurements}
-                                status={status}
-                                staircaseStepCount={staircaseDimensions.riserCount}
-                                staircaseRailings={staircaseDimensions.railings}
-                                staircaseShape={staircaseDimensions.shape}
-                                staircaseTurnDirection={staircaseDimensions.turnDirection}
-                                staircasePlacementMessage={staircasePanelMessage}
-                                onStaircaseStepCountChange={updateStaircaseStepCount}
-                                onStaircaseRailingsChange={updateStaircaseRailings}
-                                onStaircaseShapeChange={updateStaircaseShape}
-                                onStaircaseTurnDirectionChange={updateStaircaseTurnDirection}
-                                onToolChange={nextTool => {
-                                    setActiveElementPlacement(null);
-                                    setActiveStaircasePlacement(null);
-                                    setSelectedStructureElement(null);
-                                    setTool(nextTool);
-                                    staircaseCommitRef.current = false;
-                                    setStaircaseDrawingPhase(nextTool === "staircase"
-                                        ? "selecting-start"
-                                        : "idle");
-                                    setStaircaseDrawingStart(null);
-                                    setStaircaseDrawingRegionId(null);
-                                    setStaircaseFootprintPreview(null);
-                                    setStaircasePointerValid(false);
-                                    setBuildPointer(null);
-                                    setStaircasePointer(null);
-                                    setPendingWallStart(null);
-                                    setWallChainStart(null);
-                                    setPreviewWallEnd(null);
-                                    setWallGuides(null);
-                                    setPendingRoomStart(null);
-                                    setPreviewRoomEnd(null);
-                                }}
-                                onBlueprintUpload={handleBlueprintUpload}
-                                onBlueprintRemove={removeBlueprint}
-                                onBlueprintVisibilityChange={() => {
-                                    if (blueprintVisible && calibrationStep !== "idle") cancelCalibration();
-                                    setBlueprintVisible(value => !value);
-                                }}
-                                onBlueprintOpacityChange={setBlueprintOpacity}
-                                onBlueprintLockChange={() => {
-                                    if (!blueprintLocked && calibrationStep !== "idle") cancelCalibration();
-                                    setPendingWallStart(null);
-                                    setWallChainStart(null);
-                                    setPreviewWallEnd(null);
-                                    setWallGuides(null);
-                                    setPendingRoomStart(null);
-                                    setPreviewRoomEnd(null);
-                                    setBlueprintLocked(value => !value);
-                                }}
-                                onCalibrationStart={startCalibration}
-                                onCalibrationCancel={cancelCalibration}
-                                onCalibrationLengthChange={setActualBlueprintLength}
-                                onCalibrationApply={applyCalibration}
-                                onWallHeightChange={updateWallHeight}
-                                onWallThicknessChange={updateWallThickness}
-                                onShowWallMeasurementsChange={setShowWallMeasurements}
-                                onConfirmLayout={confirmLayout}
-                            />
-                        </div>
-                    )}
-                    {structure && (
-                        <div className={`admin-editor-panel-view ${workspacePanelOpen && workspaceView === "build" ? "active" : ""}`}>
-                            <AdminBuildPanel
-                                structure={structure}
-                                readOnly={isReadOnly}
-                                doors={doors}
-                                windows={windows}
-                                loading={assetsLoading}
-                                loadError={assetsError}
-                                selectedAsset={selectedAsset}
-                                tool={tool}
-                                placementWidth={placementWidth}
-                                placementHeight={placementHeight}
-                                onSelectAsset={selectAsset}
-                                onActivateAsset={activateAsset}
-                                onPlacementWidthChange={value => {
-                                    if (validPositiveNumber(value)) {
-                                        setPlacementWidth(value);
-                                        setPlacementWidthEdited(true);
-                                    }
-                                }}
-                                onPlacementHeightChange={value => {
-                                    if (validPositiveNumber(value)) {
-                                        setPlacementHeight(value);
-                                        setPlacementHeightEdited(true);
-                                    }
-                                }}
-                                onOpeningWidthChange={value => updateOpeningSetting("openingWidth", value)}
-                                onOpeningHeightChange={value => updateOpeningSetting("openingHeight", value)}
-                                onArchRiseChange={value => updateOpeningSetting("archRise", value)}
-                            />
-                        </div>
-                    )}
-                    {!structure && (
-                        <p className="admin-editor-loading">
-                            {status || "Loading project..."}
-                        </p>
-                    )}
-                </div>
-            </aside>
+            )}
             <main className="admin-editor-main" aria-label="Structural editing scene">
                 {structure && (
                     <AdminStructureScene
@@ -3149,6 +3135,107 @@ export default function AdminStructuralEditor() {
                     />
                 )}
             </main>
+            {structure && (
+                <AdminFloorRail
+                    floors={floorPlans}
+                    activeFloorId={activeFloorId}
+                    canAdd={!isReadOnly && savingAction === null}
+                    canDelete={!isReadOnly && savingAction === null && floorPlans.length > 1}
+                    onSelect={switchFloor}
+                    onAdd={() => setIsAddFloorDialogOpen(true)}
+                    onDelete={() => {
+                        if (activeFloorId) setFloorToDeleteId(activeFloorId);
+                    }}
+                />
+            )}
+            {structure && (
+                <AdminToolDock
+                    structure={structure}
+                    readOnly={isReadOnly}
+                    tool={tool}
+                    blueprintUrl={blueprintUrl}
+                    blueprintName={blueprintName}
+                    blueprintVisible={blueprintVisible}
+                    blueprintOpacity={blueprintOpacity}
+                    blueprintLocked={blueprintLocked}
+                    calibrationStep={calibrationStep}
+                    measuredBlueprintLength={measuredBlueprintLength}
+                    actualBlueprintLength={actualBlueprintLength}
+                    showWallMeasurements={showWallMeasurements}
+                    staircaseStepCount={staircaseDimensions.riserCount}
+                    staircaseRailings={staircaseDimensions.railings}
+                    staircaseShape={staircaseDimensions.shape}
+                    staircaseTurnDirection={staircaseDimensions.turnDirection}
+                    staircasePlacementMessage={staircasePanelMessage}
+                    onStaircaseStepCountChange={updateStaircaseStepCount}
+                    onStaircaseRailingsChange={updateStaircaseRailings}
+                    onStaircaseShapeChange={updateStaircaseShape}
+                    onStaircaseTurnDirectionChange={updateStaircaseTurnDirection}
+                    onToolChange={handleToolChange}
+                    onBlueprintUpload={handleBlueprintUpload}
+                    onBlueprintRemove={removeBlueprint}
+                    onBlueprintVisibilityChange={() => {
+                        if (blueprintVisible && calibrationStep !== "idle") cancelCalibration();
+                        setBlueprintVisible(value => !value);
+                    }}
+                    onBlueprintOpacityChange={setBlueprintOpacity}
+                    onBlueprintLockChange={() => {
+                        if (!blueprintLocked && calibrationStep !== "idle") cancelCalibration();
+                        setPendingWallStart(null);
+                        setWallChainStart(null);
+                        setPreviewWallEnd(null);
+                        setWallGuides(null);
+                        setPendingRoomStart(null);
+                        setPreviewRoomEnd(null);
+                        setBlueprintLocked(value => !value);
+                    }}
+                    onCalibrationStart={startCalibration}
+                    onCalibrationCancel={cancelCalibration}
+                    onCalibrationLengthChange={setActualBlueprintLength}
+                    onCalibrationApply={applyCalibration}
+                    onWallHeightChange={updateWallHeight}
+                    onWallThicknessChange={updateWallThickness}
+                    onShowWallMeasurementsChange={setShowWallMeasurements}
+                    onConfirmLayout={confirmLayout}
+                    renderBuildLibrary={closeLibrary => (
+                        <AdminBuildPanel
+                            structure={structure}
+                            readOnly={isReadOnly}
+                            doors={doors}
+                            windows={windows}
+                            loading={assetsLoading}
+                            loadError={assetsError}
+                            selectedAsset={selectedAsset}
+                            tool={tool}
+                            placementWidth={placementWidth}
+                            placementHeight={placementHeight}
+                            onSelectAsset={selectAsset}
+                            onActivateAsset={asset => {
+                                activateAsset(asset);
+                                closeLibrary();
+                            }}
+                            onPlacementWidthChange={value => {
+                                if (validPositiveNumber(value)) {
+                                    setPlacementWidth(value);
+                                    setPlacementWidthEdited(true);
+                                }
+                            }}
+                            onPlacementHeightChange={value => {
+                                if (validPositiveNumber(value)) {
+                                    setPlacementHeight(value);
+                                    setPlacementHeightEdited(true);
+                                }
+                            }}
+                            onOpeningWidthChange={value => updateOpeningSetting("openingWidth", value)}
+                            onOpeningHeightChange={value => updateOpeningSetting("openingHeight", value)}
+                            onArchRiseChange={value => updateOpeningSetting("archRise", value)}
+                        />
+                    )}
+                />
+            )}
+            {!structure && !status && (
+                <p className="admin-editor-loading">Loading project...</p>
+            )}
             {structure && (
                 <div className="admin-editor-canvas-tools" role="toolbar" aria-label="Structure history">
                     <button type="button" onClick={undo} disabled={isReadOnly || !history.length} title="Undo" aria-label="Undo">

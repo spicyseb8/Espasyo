@@ -1,0 +1,469 @@
+/* Bottom-centre tool dock + popovers (rendered inside .admin-editor) */
+
+.admin-dock {
+    position: absolute;
+    z-index: 5;
+    right: 12px;
+    bottom: 16px;
+    left: 12px;
+    display: flex;
+    width: fit-content;
+    max-width: calc(100% - 24px);
+    margin: 0 auto;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    pointer-events: none;
+}
+
+.admin-dock > * {
+    pointer-events: auto;
+}
+
+.admin-dock.is-readonly > * {
+    pointer-events: none;
+    opacity: .6;
+}
+
+/* ---------- Bar ---------- */
+
+.admin-dock-bar {
+    display: flex;
+    max-width: 100%;
+    box-sizing: border-box;
+    align-items: stretch;
+    gap: 4px;
+    padding: 6px;
+    overflow-x: auto;
+    border: 1px solid rgba(255, 255, 255, .76);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, .92);
+    box-shadow: 0 14px 40px rgba(0, 0, 0, .16), 0 2px 6px rgba(0, 0, 0, .06);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    scrollbar-width: none;
+}
+
+.admin-dock-bar::-webkit-scrollbar {
+    display: none;
+}
+
+.admin-dock-btn {
+    display: flex;
+    width: 60px;
+    height: 56px;
+    flex: 0 0 auto;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 0 4px;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: #3f3f46;
+    cursor: pointer;
+    font: inherit;
+    font-size: 10.5px;
+    font-weight: 500;
+    line-height: 1.1;
+    white-space: nowrap;
+    transition: background .15s ease, color .15s ease, transform .1s ease;
+}
+
+.admin-dock-btn:hover:not(:disabled):not(.active) {
+    background: var(--ae-surface-2, #f4f4f5);
+    color: var(--ae-ink, #18181b);
+}
+
+.admin-dock-btn:active:not(:disabled) {
+    transform: scale(.96);
+}
+
+.admin-dock-btn.active {
+    background: var(--ae-ink, #18181b);
+    color: #fff;
+}
+
+.admin-dock-btn:disabled {
+    opacity: .35;
+    cursor: not-allowed;
+}
+
+.admin-dock-btn.confirm {
+    width: auto;
+    flex-direction: row;
+    gap: 8px;
+    padding: 0 16px;
+    background: #166534;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.admin-dock-btn.confirm:hover:not(:disabled) {
+    background: #14532d;
+    color: #fff;
+}
+
+.admin-dock-sep {
+    width: 1px;
+    flex: 0 0 auto;
+    margin: 8px 4px;
+    background: var(--ae-line, #e4e4e7);
+}
+
+/* ---------- Popover ---------- */
+
+.admin-dock-popover {
+    display: grid;
+    width: min(340px, calc(100vw - 24px));
+    max-height: min(58vh, 520px);
+    box-sizing: border-box;
+    gap: 12px;
+    padding: 14px;
+    overflow-y: auto;
+    border: 1px solid var(--ae-line, #e4e4e7);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, .97);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, .16), 0 2px 8px rgba(0, 0, 0, .06);
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    animation: admin-dock-rise .16s ease;
+}
+
+.admin-dock-popover.library {
+    width: min(400px, calc(100vw - 24px));
+    padding: 0;
+}
+
+.admin-dock-title {
+    margin: 0;
+    color: var(--ae-muted, #71717a);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+
+.admin-dock-hint {
+    margin: 0;
+    color: var(--ae-muted, #71717a);
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+.admin-dock-error {
+    margin: 0;
+    color: var(--ae-danger, #b42318);
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+/* ---------- Form pieces ---------- */
+
+.admin-dock-field {
+    display: grid;
+    gap: 6px;
+    color: #52525b;
+    font-size: 12px;
+}
+
+.admin-dock-field input[type="range"] {
+    width: 100%;
+    accent-color: var(--ae-ink, #18181b);
+}
+
+.admin-dock-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.admin-dock-input {
+    display: flex;
+    min-width: 0;
+    height: 38px;
+    align-items: center;
+    border: 1px solid #d4d4d8;
+    border-radius: 9px;
+    background: #fff;
+}
+
+.admin-dock-input:focus-within {
+    border-color: #71717a;
+    box-shadow: 0 0 0 3px rgba(24, 24, 27, .08);
+}
+
+.admin-dock-input input {
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    box-sizing: border-box;
+    padding: 0 10px;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--ae-ink, #18181b);
+    font: inherit;
+    font-size: 13px;
+}
+
+.admin-dock-input input:disabled {
+    color: #a1a1aa;
+}
+
+.admin-dock-input small {
+    padding-right: 10px;
+    color: var(--ae-muted, #71717a);
+}
+
+.admin-dock-seg {
+    display: flex;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 10px;
+    background: var(--ae-surface-2, #f4f4f5);
+}
+
+.admin-dock-seg button {
+    height: 30px;
+    flex: 1;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--ae-muted, #71717a);
+    cursor: pointer;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.admin-dock-seg button.active {
+    background: #fff;
+    color: var(--ae-ink, #18181b);
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .1), 0 0 0 1px rgba(0, 0, 0, .04);
+}
+
+.admin-dock-toggle-row {
+    display: flex;
+    min-height: 32px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    color: #3f3f46;
+    font-size: 12.5px;
+}
+
+.admin-dock-switch {
+    position: relative;
+    display: flex;
+    width: 38px;
+    height: 22px;
+    flex: 0 0 auto;
+    align-items: center;
+    padding: 2px;
+    border: 0;
+    border-radius: 999px;
+    background: #d4d4d8;
+    cursor: pointer;
+    transition: background .15s ease;
+}
+
+.admin-dock-switch span {
+    display: block;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .2);
+    transition: transform .15s ease;
+}
+
+.admin-dock-switch.on {
+    background: var(--ae-ink, #18181b);
+}
+
+.admin-dock-switch.on span {
+    transform: translateX(16px);
+}
+
+.admin-dock-switch:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+/* ---------- Buttons ---------- */
+
+.admin-dock-line,
+.admin-dock-solid {
+    display: inline-flex;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 0 12px;
+    border: 1px solid var(--ae-line, #e4e4e7);
+    border-radius: 9px;
+    background: #fff;
+    color: var(--ae-ink, #18181b);
+    cursor: pointer;
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 500;
+}
+
+.admin-dock-line:hover:not(:disabled) {
+    background: var(--ae-surface-2, #f4f4f5);
+}
+
+.admin-dock-solid {
+    border-color: var(--ae-ink, #18181b);
+    background: var(--ae-ink, #18181b);
+    color: #fff;
+}
+
+.admin-dock-line:disabled,
+.admin-dock-solid:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+.admin-dock-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.admin-dock-icon-btn {
+    display: inline-flex;
+    width: 30px;
+    height: 30px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #52525b;
+    cursor: pointer;
+}
+
+.admin-dock-icon-btn:hover {
+    background: var(--ae-surface-2, #f4f4f5);
+}
+
+.admin-dock-icon-btn.danger:hover {
+    background: #fdecec;
+    color: #e0483f;
+}
+
+/* ---------- Blueprint ---------- */
+
+.admin-dock-upload {
+    position: relative;
+    display: grid;
+    min-height: 96px;
+    place-content: center;
+    justify-items: center;
+    gap: 4px;
+    border: 1.5px dashed #c4c4cc;
+    border-radius: 12px;
+    background: #fafafa;
+    color: #3f3f46;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.admin-dock-upload:hover {
+    border-color: var(--ae-ink, #18181b);
+    background: #fff;
+}
+
+.admin-dock-upload small {
+    color: var(--ae-muted, #71717a);
+    font-size: 11px;
+    font-weight: 400;
+}
+
+.admin-dock-upload input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+}
+
+.admin-dock-file {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 4px 4px 4px 10px;
+    border-radius: 9px;
+    background: var(--ae-surface-2, #f4f4f5);
+    font-size: 12.5px;
+}
+
+.admin-dock-file > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.admin-dock-calibration {
+    display: grid;
+    gap: 8px;
+    padding: 10px;
+    border-radius: 10px;
+    background: var(--ae-surface-2, #f4f4f5);
+}
+
+.admin-dock-calibration p {
+    margin: 0;
+    color: #3f3f46;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+/* ---------- Motion & small screens ---------- */
+
+@keyframes admin-dock-rise {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+}
+
+@media (max-width: 640px) {
+    .admin-dock {
+        bottom: 10px;
+    }
+
+    .admin-dock-btn {
+        width: 52px;
+        height: 52px;
+        font-size: 10px;
+    }
+
+    .admin-dock-btn.confirm {
+        width: 52px;
+        padding: 0;
+    }
+
+    .admin-dock-btn.confirm span {
+        display: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .admin-dock-popover {
+        animation: none;
+    }
+
+    .admin-dock-btn,
+    .admin-dock-switch,
+    .admin-dock-switch span {
+        transition: none;
+    }
+}

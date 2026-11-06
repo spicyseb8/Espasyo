@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import type { Asset } from "@/components/project-loader/engine/assets/Asset";
 import type { ManagedStructure } from "./structureTypes";
-import type { AdminStructuralTool } from "./AdminFloorPlanPanel";
+import type { AdminStructuralTool } from "./AdminToolDock";
 import AdminAssetSection from "./AdminAssetSection";
 import "./AdminBuildPanel.css";
 

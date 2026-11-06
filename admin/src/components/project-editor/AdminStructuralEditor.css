@@ -1,7 +1,8 @@
 /* ------------------------------------------------------------------
    Admin structural editor
    Layout: slim top bar + full-bleed scene with floating overlays
-   (side panel, history tools, status toast).
+   (floor rail on the right, tool dock at the bottom, history tools,
+   status toast).
 ------------------------------------------------------------------- */
 
 .admin-editor {
@@ -88,7 +89,7 @@
     grid-column: 1;
     display: grid;
     min-width: 0;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     gap: 16px;
     padding: 0 14px;
@@ -185,87 +186,6 @@
     color: #92400e;
 }
 
-/* ---------- Floor switcher (segmented control) ---------- */
-
-.admin-editor-floor-switcher {
-    display: flex;
-    min-width: 0;
-    max-width: 44vw;
-    align-items: center;
-    gap: 6px;
-}
-
-.admin-editor-floor-tabs {
-    display: flex;
-    min-width: 0;
-    gap: 2px;
-    padding: 3px;
-    overflow-x: auto;
-    border-radius: 10px;
-    background: var(--ae-surface-2);
-    scrollbar-width: none;
-}
-
-.admin-editor-floor-tabs::-webkit-scrollbar {
-    display: none;
-}
-
-.admin-editor-floor-tabs button {
-    height: 28px;
-    flex: 0 0 auto;
-    padding: 0 14px;
-    border: 0;
-    border-radius: 7px;
-    background: transparent;
-    color: var(--ae-muted);
-    cursor: pointer;
-    font: inherit;
-    font-size: 12px;
-    font-weight: 500;
-    white-space: nowrap;
-    transition: background .15s ease, color .15s ease, box-shadow .15s ease;
-}
-
-.admin-editor-floor-tabs button:hover {
-    color: var(--ae-ink);
-}
-
-.admin-editor-floor-tabs button.active {
-    background: #fff;
-    color: var(--ae-ink);
-    font-weight: 600;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, .1), 0 0 0 1px rgba(0, 0, 0, .04);
-}
-
-.admin-editor-header .admin-editor-add-floor {
-    display: inline-flex;
-    height: 34px;
-    flex: 0 0 auto;
-    align-items: center;
-    gap: 6px;
-    padding: 0 12px;
-    border: 1px dashed #c4c4cc;
-    border-radius: 8px;
-    background: transparent;
-    color: #52525b;
-    cursor: pointer;
-    font: inherit;
-    font-size: 12px;
-    font-weight: 500;
-    white-space: nowrap;
-}
-
-.admin-editor-header .admin-editor-add-floor:hover:not(:disabled) {
-    border-color: var(--ae-ink);
-    background: #fff;
-    color: var(--ae-ink);
-}
-
-.admin-editor-header .admin-editor-add-floor:disabled {
-    opacity: .45;
-    cursor: not-allowed;
-}
-
 /* ---------- Deadline popover ---------- */
 
 .admin-editor-deadline {
@@ -311,6 +231,48 @@
     margin: 0;
     color: var(--ae-muted);
     font-size: 11px;
+}
+
+.admin-editor-popover .admin-editor-deadline-cutoff {
+    margin-top: -6px;
+    color: #52525b;
+    font-weight: 600;
+}
+
+.admin-editor-deadline-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.admin-editor-deadline-presets button {
+    min-height: 30px;
+    padding: 0 10px;
+    border: 1px solid var(--ae-line);
+    border-radius: 999px;
+    background: #fff;
+    color: #52525b;
+    cursor: pointer;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.admin-editor-deadline-presets button:hover:not(:disabled) {
+    border-color: #a1a1aa;
+    background: var(--ae-surface-2);
+}
+
+.admin-editor-deadline-presets button.active {
+    border-color: var(--ae-ink);
+    background: var(--ae-ink);
+    color: #fff;
+}
+
+.admin-editor-deadline-presets button:disabled {
+    opacity: .45;
+    cursor: not-allowed;
 }
 
 .admin-editor-popover .ae-btn {
@@ -372,13 +334,14 @@
     background: var(--ae-line);
 }
 
+/* Toast sits at the top-centre so it never covers the bottom tool dock */
 .admin-editor-toast {
     position: absolute;
     z-index: 7;
-    bottom: 18px;
+    top: calc(var(--ae-header-h) + var(--ae-gap));
     left: 50%;
     display: flex;
-    max-width: min(560px, calc(100vw - 32px));
+    max-width: min(560px, calc(100vw - 190px));
     align-items: center;
     gap: 10px;
     padding: 10px 8px 10px 14px;
@@ -415,121 +378,18 @@
     color: #fff;
 }
 
-/* ---------- Side panel (floating over the scene) ---------- */
-
-.admin-editor-sidebar {
-    position: absolute;
-    z-index: 4;
-    top: calc(var(--ae-header-h) + var(--ae-gap));
-    bottom: var(--ae-gap);
-    left: var(--ae-gap);
-    display: flex;
-    width: min(320px, calc(100vw - 24px));
-    min-width: 0;
-    min-height: 0;
-    flex-direction: column;
-    border: 1px solid rgba(255, 255, 255, .76);
-    border-radius: 16px;
-    background: rgba(255, 255, 255, .92);
-    box-shadow: 0 18px 48px rgba(0, 0, 0, .13), 0 2px 8px rgba(0, 0, 0, .05);
-    backdrop-filter: blur(20px) saturate(160%);
-    -webkit-backdrop-filter: blur(20px) saturate(160%);
-    overflow: hidden;
-}
-
-.admin-editor-sidebar.is-closed {
-    bottom: auto;
-    width: auto;
-    height: auto;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    overflow: visible;
-}
-
-.admin-editor-tabs {
-    display: flex;
-    flex: 0 0 auto;
-    gap: 2px;
-    margin: 10px 12px 4px;
-    padding: 3px;
-    border: 0;
-    border-radius: 999px;
-    background: rgba(0, 0, 0, .055);
-}
-
-.admin-editor-sidebar.is-closed .admin-editor-tabs {
-    margin: 0;
-    border: 1px solid rgba(255, 255, 255, .76);
-    background: rgba(255, 255, 255, .92);
-    box-shadow: 0 8px 22px rgba(0, 0, 0, .12);
-    backdrop-filter: blur(20px) saturate(160%);
-    -webkit-backdrop-filter: blur(20px) saturate(160%);
-}
-
-.admin-editor-tabs button {
-    position: relative;
-    display: inline-flex;
-    height: 36px;
-    min-width: 36px;
-    flex: 1 1 0;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 0 8px;
-    border: 0;
-    border-radius: 999px;
-    background: transparent;
-    color: rgba(0, 0, 0, .52);
-    cursor: pointer;
-    font: inherit;
-    font-size: 12px;
-    font-weight: 500;
-    transition: color .18s ease, background .18s ease, box-shadow .18s ease;
-}
-
-.admin-editor-tabs button.active {
-    flex: 2.6 1 0;
-    background: #fff;
-    color: #1b1b1b;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, .08), 0 0 0 1px rgba(0, 0, 0, .05);
-}
-
-.admin-editor-panel-content {
-    display: block;
-    min-height: 0;
-    flex: 1 1 auto;
-    padding: 0;
-    overflow-x: hidden;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(0, 0, 0, .18) transparent;
-}
-
-.admin-editor-panel-content.is-closed {
-    display: none;
-}
-
-.admin-editor-panel-view {
-    display: none;
-}
-
-.admin-editor-panel-view.active {
-    display: block;
-    height: 100%;
-    min-height: 0;
-    box-sizing: border-box;
-    animation: admin-panel-in .18s ease;
-}
+/* ---------- Initial loading text ---------- */
 
 .admin-editor-loading {
-    margin: 20px 16px;
+    position: absolute;
+    z-index: 3;
+    inset: var(--ae-header-h) 0 0 0;
+    display: grid;
+    margin: 0;
+    place-items: center;
     color: #52525b;
     font-size: 13px;
+    pointer-events: none;
 }
 
 /* ---------- Scene ---------- */
@@ -550,17 +410,13 @@
     height: 100% !important;
 }
 
-/* ---------- Panel content tweaks (child panels) ---------- */
+/* ---------- Build library (rendered inside the dock popover) ---------- */
 
-.admin-editor .admin-floor-plan-panel,
 .admin-editor .admin-build-panel {
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
-}
-
-.admin-editor .admin-build-panel {
-    padding: 8px 16px 16px;
+    padding: 12px 16px 16px;
 }
 
 .admin-editor .admin-build-sections {
@@ -784,6 +640,13 @@
     color: #fff;
 }
 
+.admin-editor-add-floor-dialog .admin-editor-dialog-delete {
+    width: calc(50% - 4px);
+    border-color: #b42318;
+    background: #b42318;
+    color: #fff;
+}
+
 .admin-editor-add-floor-dialog button:disabled {
     cursor: not-allowed;
     opacity: .5;
@@ -867,13 +730,8 @@
 
 /* ---------- Animations ---------- */
 
-@keyframes admin-panel-in {
-    from { opacity: 0; transform: translateY(4px); }
-    to { opacity: 1; transform: none; }
-}
-
 @keyframes admin-toast-in {
-    from { opacity: 0; transform: translate(-50%, 8px); }
+    from { opacity: 0; transform: translate(-50%, -8px); }
     to { opacity: 1; transform: translate(-50%, 0); }
 }
 
@@ -894,50 +752,7 @@
     }
 }
 
-/* Two-row header: identity + actions on top, floors below */
 @media (max-width: 900px) {
-    .admin-editor {
-        --ae-header-h: 96px;
-    }
-
-    .admin-editor-header {
-        grid-template-columns: minmax(0, 1fr) auto;
-        grid-template-rows: 48px 40px;
-        gap: 0 8px;
-        padding: 0 10px;
-        align-items: center;
-    }
-
-    .admin-editor-header-left {
-        grid-column: 1;
-        grid-row: 1;
-    }
-
-    .admin-editor-header-right {
-        grid-column: 2;
-        grid-row: 1;
-    }
-
-    .admin-editor-floor-switcher {
-        grid-column: 1 / -1;
-        grid-row: 2;
-        width: 100%;
-        max-width: none;
-    }
-
-    .admin-editor-floor-tabs {
-        flex: 1 1 auto;
-    }
-
-    .admin-editor-header .admin-editor-add-floor span {
-        display: none;
-    }
-
-    .admin-editor-header .admin-editor-add-floor {
-        width: 34px;
-        padding: 0;
-    }
-
     .admin-editor-badge {
         display: none;
     }
@@ -945,11 +760,21 @@
     .admin-editor-project input {
         min-width: 0;
     }
+
+    .admin-editor-toast {
+        max-width: calc(100vw - 24px);
+        top: calc(var(--ae-header-h) + 60px);
+    }
 }
 
 @media (max-width: 640px) {
     .admin-editor {
         --ae-gap: 10px;
+    }
+
+    .admin-editor-header {
+        gap: 8px;
+        padding: 0 10px;
     }
 
     .admin-editor .ae-btn.primary .ae-label {
@@ -966,21 +791,6 @@
         right: 10px;
         left: 10px;
         width: auto;
-    }
-
-    /* keep the history tools clear of the open side panel */
-    .admin-editor-canvas-tools {
-        top: auto;
-        bottom: var(--ae-gap);
-        right: var(--ae-gap);
-    }
-
-    .admin-editor-sidebar {
-        bottom: 62px;
-    }
-
-    .admin-editor-toast {
-        bottom: 66px;
     }
 }
 
