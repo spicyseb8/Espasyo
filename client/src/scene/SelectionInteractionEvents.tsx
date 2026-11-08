@@ -156,6 +156,20 @@ export default function SelectionInteractionEvents() {
                 return;
             }
 
+            if (
+                state.activeFloorMaterialId ||
+                state.activeWallMaterialId
+            ) {
+                dispatch({
+                    type: "SET_ACTIVE_FLOOR_MATERIAL",
+                    payload: null
+                });
+                dispatch({
+                    type: "SET_ACTIVE_WALL_MATERIAL",
+                    payload: null
+                });
+            }
+
             if (state.wallSeparatorPlacement) {
                 event.preventDefault();
                 dispatch({
@@ -171,9 +185,29 @@ export default function SelectionInteractionEvents() {
         }
 
         function onKeyDown(event: KeyboardEvent) {
-            if (event.key !== "Escape" || !state.wallSeparatorPlacement) {
+            if (event.key !== "Escape") {
                 return;
             }
+
+            if (
+                state.activeFloorMaterialId ||
+                state.activeWallMaterialId
+            ) {
+                dispatch({
+                    type: "SET_ACTIVE_FLOOR_MATERIAL",
+                    payload: null
+                });
+                dispatch({
+                    type: "SET_ACTIVE_WALL_MATERIAL",
+                    payload: null
+                });
+                return;
+            }
+
+            if (!state.wallSeparatorPlacement) {
+                return;
+            }
+
             dispatch({
                 type: "SET_WALL_SEPARATOR_PLACEMENT",
                 payload: null
@@ -366,6 +400,8 @@ export default function SelectionInteractionEvents() {
         scene,
         state.walkthroughMode,
         state.wallSeparatorPlacement,
+        state.activeFloorMaterialId,
+        state.activeWallMaterialId,
         state.buildTool,
         dispatch,
         raycaster,

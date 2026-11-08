@@ -71,46 +71,6 @@
     gap: 8px;
 }
 
-.floor-tabs {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    max-width: min(48vw, 560px);
-    overflow-x: auto;
-    scrollbar-width: thin;
-}
-
-.floor-tab {
-    flex: 0 0 auto;
-    height: 32px;
-    padding: 0 10px;
-    border: 1px solid transparent;
-    border-radius: 999px;
-    background: transparent;
-    color: var(--tb-ink-muted);
-    font: inherit;
-    font-size: var(--tb-t-label);
-    white-space: nowrap;
-    cursor: pointer;
-}
-
-.floor-tab:hover {
-    background: var(--tb-surface-hover);
-    color: var(--tb-ink);
-}
-
-.floor-tab.active {
-    border-color: var(--tb-line);
-    background: var(--tb-surface-sunken);
-    color: var(--tb-ink);
-    font-weight: 600;
-}
-
-.floor-tab:focus-visible {
-    outline: none;
-    box-shadow: var(--tb-ring);
-}
-
 .topbar-center {
     display: flex;
     align-items: center;
@@ -125,17 +85,55 @@
     gap: 8px;
 }
 
+.project-panel-container {
+    position: relative;
+}
+
+.topbar-project-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 11px;
+    border: 1px solid var(--tb-line-strong);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--tb-ink);
+    font: inherit;
+    font-size: var(--tb-t-label);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.topbar-project-button:hover:not(:disabled),
+.topbar-project-button.active {
+    border-color: var(--tb-ink);
+    background: var(--tb-ink);
+    color: #fff;
+}
+
+.topbar-project-button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.topbar-project-button:focus-visible {
+    outline: none;
+    box-shadow: var(--tb-ring);
+}
+
 @media (max-width: 760px) {
     .topbar {
         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
         gap: 8px;
     }
 
-    .floor-tabs {
-        max-width: 36vw;
+    .topbar-back span {
+        display: none;
     }
 
-    .topbar-back span {
+    .topbar-project-button span {
         display: none;
     }
 }

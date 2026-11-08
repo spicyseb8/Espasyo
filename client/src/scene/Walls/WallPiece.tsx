@@ -12,8 +12,11 @@ import type {
 import { Line } from "@react-three/drei";
 
 import {
+    DoubleSide,
     ExtrudeGeometry,
+    Matrix3,
     Shape,
+    ShapeGeometry,
     Vector3
 } from "three";
 
@@ -48,11 +51,13 @@ import {
     type WallPaintSeparator
 } from "../../../../shared/wallPaintSeparators";
 import { getWallFinishSides } from "../../engine/walls/WallFinishUtils";
+import type { PaintApplyTarget } from "../PaintApplyTarget";
 
 interface Props {
     wallId: string;
     piece: WallPieceType;
     finishSides?: WallFinishSide[];
+    onPaintApplied?: (target: PaintApplyTarget) => void;
 }
 
 const WALL_TRIM_HEIGHT = 0.20;
@@ -102,6 +107,32 @@ function getSectionPiece(
             .add(direction.multiplyScalar((left + right) * 0.5 - pieceCenter))
             .add(new Vector3(0, (bottom + top) * 0.5 - piece.position.y, 0))
     };
+}
+
+function createArchShape(piece: WallPieceType): Shape | null {
+    if (piece.kind !== "arch" || !piece.arch) {
+        return null;
+    }
+
+    const openingWidth = piece.arch.openingWidth;
+    const openingHeight = piece.arch.openingHeight;
+    const shape = new Shape();
+    shape.moveTo(-openingWidth * 0.5, openingHeight);
+    shape.lineTo(-openingWidth * 0.5, piece.height);
+    shape.lineTo(openingWidth * 0.5, piece.height);
+    shape.lineTo(openingWidth * 0.5, openingHeight);
+
+    const radius = openingWidth * 0.5;
+    for (let index = 24; index >= 0; index -= 1) {
+        const angle = Math.PI * (index / 24);
+        shape.lineTo(
+            Math.cos(angle) * radius,
+            openingHeight + Math.sin(angle) * radius
+        );
+    }
+
+    shape.closePath();
+    return shape;
 }
 
 function SeparatorSurface({
@@ -422,7 +453,8 @@ function WallTrim({
 function WallPiece({
     wallId,
     piece,
-    finishSides = []
+    finishSides = [],
+    onPaintApplied
 }: Props) {
     const {
         state,
@@ -433,6 +465,7 @@ function WallPiece({
         hovered,
         setHovered
     ] = useState(false);
+    const [hoveredPaintSide, setHoveredPaintSide] = useState<1 | -1 | null>(null);
     const [previewPosition, setPreviewPosition] = useState<{
         position: number;
         side: 1 | -1;
@@ -474,6 +507,18 @@ function WallPiece({
     const pieceBottom =
         piece.position.y -
         piece.height * 0.5;
+    const archHoverGeometry = useMemo(() => {
+        const shape = createArchShape(piece);
+        if (!shape) {
+            return null;
+        }
+
+        const geometry = new ShapeGeometry(shape);
+        geometry.translate(0, -piece.height * 0.5, 0);
+        return geometry;
+    }, [piece]);
+
+    useEffect(() => () => archHoverGeometry?.dispose(), [archHoverGeometry]);
 
     const touchesFloor =
         pieceBottom <= 0.02;
@@ -514,67 +559,27 @@ function WallPiece({
         touchesFloor
     ]);
 
-    /**
-     * Determines which physical face was clicked.
-     *
-     * +1 = normal side
-     * -1 = opposite side
-     *
-     * This does not require the clicked side to belong to
-     * an existing room region.
-     */
-    const getClickedWallSide = (
-        clickPoint: Vector3
+    const getWallSideFromEvent = (
+        event: ThreeEvent<PointerEvent | MouseEvent>
     ): 1 | -1 | null => {
-        if (!physicalWall) {
+        if (!physicalWall || !event.face) {
             return null;
         }
 
-        const start =
-            physicalWall.start.position;
-
-        const end =
-            physicalWall.end.position;
-
-        const direction =
-            new Vector3().subVectors(
-                end,
-                start
-            );
-
-        const length =
-            direction.length();
-
-        if (length <= 0.001) {
-            return null;
-        }
-
-        direction.normalize();
-
-        const normal = new Vector3(
-            -direction.z,
-            0,
-            direction.x
+        const hitNormal = event.face.normal.clone().applyMatrix3(
+            new Matrix3().getNormalMatrix(event.object.matrixWorld)
         ).normalize();
+        const direction = physicalWall.end.position.clone()
+            .sub(physicalWall.start.position)
+            .normalize();
+        const wallNormal = new Vector3(-direction.z, 0, direction.x);
+        const alignment = hitNormal.dot(wallNormal);
 
-        const center = start.clone().add(
-            direction.clone().multiplyScalar(
-                length * 0.5
-            )
-        );
-
-        const toClick =
-            clickPoint.clone().sub(center);
-
-        const sideValue =
-            toClick.x * normal.x +
-            toClick.z * normal.z;
-
-        if (Math.abs(sideValue) < 0.0001) {
+        if (Math.abs(alignment) < 0.5) {
             return null;
         }
 
-        return sideValue > 0 ? 1 : -1;
+        return alignment > 0 ? 1 : -1;
     };
 
     /**
@@ -614,6 +619,11 @@ function WallPiece({
         );
     };
 
+    const getRoomForWallFace = (
+        clickedSide: 1 | -1
+    ) => getRegionForWallClick(clickedSide) ??
+        getRegionForWallClick(clickedSide === 1 ? -1 : 1);
+
     const getSeparatorPosition = (
         point: Vector3,
         orientation: "vertical" | "horizontal"
@@ -634,12 +644,18 @@ function WallPiece({
     };
 
     const handleWallPointerMove = (event: ThreeEvent<PointerEvent>) => {
+        const side = getWallSideFromEvent(event);
+        setHoveredPaintSide(
+            state.activeWallMaterialId && !state.wallSeparatorPlacement
+                ? side
+                : null
+        );
+
         if (!state.wallSeparatorPlacement || !physicalWall) {
             setPreviewPosition(null);
             return;
         }
         event.stopPropagation();
-        const side = getClickedWallSide(event.point);
         if (side === null) {
             setPreviewPosition(null);
             return;
@@ -659,15 +675,9 @@ function WallPiece({
 
     const placeSeparatorAtPoint = (
         point: Vector3,
-        side: 1 | -1 | null = physicalWall
-            ? getClickedWallSide(point)
-            : null
+        side: 1 | -1 | null
     ) => {
-        if (
-            !state.wallSeparatorPlacement ||
-            !physicalWall ||
-            side === null
-        ) {
+        if (!state.wallSeparatorPlacement || !physicalWall || side === null) {
             return;
         }
         const faceKey = getWallPaintFaceKey(wallId, side);
@@ -734,18 +744,20 @@ function WallPiece({
 
         const clickPoint = event.point;
 
+        const side = getWallSideFromEvent(event);
+
         if (state.wallSeparatorPlacement) {
             placeSeparatorAtPoint(
                 clickPoint,
-                getClickedWallSide(clickPoint)
+                side
             );
             return;
         }
 
-        const side =
-            getClickedWallSide(clickPoint);
-
         if (side === null) {
+            if (state.activeWallMaterialId) {
+                return;
+            }
             dispatch({
                 type: "SELECT_WALL",
                 payload: wallId
@@ -757,32 +769,73 @@ function WallPiece({
         const region =
             getRegionForWallClick(side);
 
-        const face = state.wallPaintSeparators[
-            getWallPaintFaceKey(wallId, side)
-        ];
-        if (face?.separators.length) {
-            const direction = physicalWall?.end.position.clone()
-                .sub(physicalWall.start.position)
-                .normalize();
-            const section = direction && physicalWall && wallLength > 0
-                ? getWallPaintSectionAt(
-                    getWallPaintSections(face),
-                    clickPoint.clone().sub(physicalWall.start.position).dot(direction) / wallLength,
-                    Math.max(0, Math.min(1, clickPoint.y / state.wallHeight))
-                )
-                : undefined;
-            if (section) {
+        const faceKey = getWallPaintFaceKey(wallId, side);
+        const face = state.wallPaintSeparators[faceKey];
+        const direction = physicalWall?.end.position.clone()
+            .sub(physicalWall.start.position)
+            .normalize();
+        const section = face?.separators.length &&
+            direction &&
+            physicalWall &&
+            wallLength > 0
+            ? getWallPaintSectionAt(
+                getWallPaintSections(face),
+                clickPoint.clone().sub(physicalWall.start.position).dot(direction) / wallLength,
+                Math.max(0, Math.min(1, clickPoint.y / state.wallHeight))
+            )
+            : undefined;
+
+        if (state.activeWallMaterialId) {
+            if (face?.separators.length) {
+                if (!section) {
+                    return;
+                }
                 dispatch({
-                    type: "SELECT_WALL_SECTION",
+                    type: "SET_WALL_SECTION_MATERIAL",
                     payload: {
-                        wallId,
-                        side,
+                        faceKey,
                         sectionId: section.id,
-                        regionId: region?.id ?? null
+                        materialId: state.activeWallMaterialId
                     }
                 });
-                return;
+            } else {
+                dispatch({
+                    type: "SET_WALL_FINISH",
+                    payload: {
+                        regionId: region?.id ?? null,
+                        wallId,
+                        materialId: state.activeWallMaterialId,
+                        side
+                    }
+                });
             }
+
+            const room = getRoomForWallFace(side);
+            if (room) {
+                onPaintApplied?.({
+                    kind: "wall",
+                    clientX: event.nativeEvent.clientX,
+                    clientY: event.nativeEvent.clientY,
+                    materialId: state.activeWallMaterialId,
+                    regionId: room.id,
+                    wallId,
+                    side
+                });
+            }
+            return;
+        }
+
+        if (section) {
+            dispatch({
+                type: "SELECT_WALL_SECTION",
+                payload: {
+                    wallId,
+                    side,
+                    sectionId: section.id,
+                    regionId: region?.id ?? null
+                }
+            });
+            return;
         }
 
         // Record the clicked side even when the outside
@@ -814,6 +867,7 @@ function WallPiece({
         }
 
         setHovered(false);
+        setHoveredPaintSide(null);
         setPreviewPosition(null);
     };
 
@@ -908,6 +962,46 @@ function WallPiece({
                     color="#3B82F6"
                     transparent
                     opacity={0.22}
+                    depthWrite={false}
+                />
+            </mesh>
+        );
+    };
+
+    const renderPaintHover = () => {
+        if (!state.activeWallMaterialId || hoveredPaintSide === null) {
+            return null;
+        }
+
+        const direction = new Vector3(
+            Math.cos(piece.rotationY),
+            0,
+            Math.sin(piece.rotationY)
+        );
+        const normal = new Vector3(-direction.z, 0, direction.x);
+        const position = piece.position.clone().add(
+            normal.clone().multiplyScalar(
+                hoveredPaintSide * (piece.thickness * 0.5 + 0.012)
+            )
+        );
+        const archSurface = piece.kind === "arch" ? archHoverGeometry : null;
+
+        return (
+            <mesh
+                geometry={archSurface ?? undefined}
+                position={position}
+                rotation={[0, -piece.rotationY, 0]}
+                raycast={() => {}}
+                renderOrder={6}
+            >
+                {!archSurface && (
+                    <boxGeometry args={[piece.width, piece.height, 0.002]} />
+                )}
+                <meshBasicMaterial
+                    color="#38BDF8"
+                    transparent
+                    opacity={0.28}
+                    side={DoubleSide}
                     depthWrite={false}
                 />
             </mesh>
@@ -1026,57 +1120,10 @@ function WallPiece({
         piece.kind === "arch" &&
         piece.arch
     ) {
-        const {
-            openingWidth,
-            openingHeight
-        } = piece.arch;
-
-        const radius =
-            openingWidth * 0.5;
-
-        const shape = new Shape();
-
-        shape.moveTo(
-            -openingWidth * 0.5,
-            openingHeight
-        );
-
-        shape.lineTo(
-            -openingWidth * 0.5,
-            piece.height
-        );
-
-        shape.lineTo(
-            openingWidth * 0.5,
-            piece.height
-        );
-
-        shape.lineTo(
-            openingWidth * 0.5,
-            openingHeight
-        );
-
-        const segments = 24;
-
-        for (
-            let i = segments;
-            i >= 0;
-            i--
-        ) {
-            const angle =
-                Math.PI * (i / segments);
-
-            const x =
-                Math.cos(angle) * radius;
-
-            const y =
-                openingHeight +
-                Math.sin(angle) * radius;
-
-            shape.lineTo(x, y);
+        const shape = createArchShape(piece);
+        if (!shape) {
+            return null;
         }
-
-        shape.closePath();
 
         const geometry = new ExtrudeGeometry(
             shape,
@@ -1116,6 +1163,7 @@ function WallPiece({
 
                 {renderFinishSurfaces()}
                 {renderSelectedSection()}
+                {renderPaintHover()}
                 {renderSeparators()}
                 {renderPreviewSeparator()}
             </group>
@@ -1165,6 +1213,7 @@ function WallPiece({
 
             {renderFinishSurfaces()}
             {renderSelectedSection()}
+            {renderPaintHover()}
             {renderSeparators()}
             {renderPreviewSeparator()}
         </group>

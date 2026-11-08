@@ -21,6 +21,7 @@ import {
 import {
     getWallFinishSections
 } from "../../engine/walls/WallFinishUtils";
+import type { PaintApplyTarget } from "../PaintApplyTarget";
 interface WallOutlineProps {
     start: Vector3;
     end: Vector3;
@@ -359,7 +360,11 @@ function isWallEndpointConnected(
         }
     );
 }
-function Walls() {
+function Walls({
+    onPaintApplied
+}: {
+    onPaintApplied?: (target: PaintApplyTarget) => void;
+}) {
     const {
         state
     } = useEditor();
@@ -442,6 +447,7 @@ function Walls() {
                                                 finishSides={
                                                     finishSides
                                                 }
+                                                onPaintApplied={onPaintApplied}
                                             />
                                         )
                                     )

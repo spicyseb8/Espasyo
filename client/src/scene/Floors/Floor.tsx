@@ -28,6 +28,7 @@ import type {
 
 import useEditor
     from "../../context/editor/useEditor";
+import type { PaintApplyTarget } from "../PaintApplyTarget";
 
 import type {
     Region
@@ -67,6 +68,7 @@ import {
 interface FloorProps {
     region: Region;
     materials: Material[];
+    onPaintApplied?: (target: PaintApplyTarget) => void;
 }
 
 function distanceToSegment(
@@ -661,11 +663,13 @@ function useFloorOutlineLoops(
 
 export default function Floor({
     region,
-    materials
+    materials,
+    onPaintApplied
 }: FloorProps) {
     const { state, dispatch } = useEditor();
     const [previewPosition, setPreviewPosition] = useState<number | null>(null);
     const [hoveredSeparatorId, setHoveredSeparatorId] = useState<string | null>(null);
+    const [paintHovered, setPaintHovered] = useState(false);
 
     const isChildRegion = Boolean(region.parentRegionId);
 
@@ -933,9 +937,14 @@ export default function Floor({
         const orientation = state.wallSeparatorPlacement;
         if (!orientation) {
             setPreviewPosition(null);
+            setPaintHovered(Boolean(state.activeFloorMaterialId));
+            if (state.activeFloorMaterialId) {
+                event.stopPropagation();
+            }
             return;
         }
         event.stopPropagation();
+        setPaintHovered(false);
         setPreviewPosition(getNormalizedPosition(event.point, orientation));
     };
 
@@ -990,6 +999,34 @@ export default function Floor({
             placeFloorSeparator(event.point);
             return;
         }
+        if (state.activeFloorMaterialId) {
+            if (sectionId) {
+                dispatch({
+                    type: "SET_FLOOR_SECTION_MATERIAL",
+                    payload: {
+                        regionId: region.id,
+                        sectionId,
+                        materialId: state.activeFloorMaterialId
+                    }
+                });
+            } else {
+                dispatch({
+                    type: "SET_FLOOR_FINISH",
+                    payload: {
+                        regionId: region.id,
+                        materialId: state.activeFloorMaterialId
+                    }
+                });
+            }
+            onPaintApplied?.({
+                kind: "floor",
+                clientX: event.nativeEvent.clientX,
+                clientY: event.nativeEvent.clientY,
+                materialId: state.activeFloorMaterialId,
+                regionId: region.id
+            });
+            return;
+        }
         if (sectionId) {
             dispatch({
                 type: "SELECT_FLOOR_SECTION",
@@ -1023,7 +1060,10 @@ export default function Floor({
                         floorY={floorY}
                         selected={selectedSection?.id === section.id}
                         onPointerMove={handleFloorPointerMove}
-                        onPointerOut={() => setPreviewPosition(null)}
+                        onPointerOut={() => {
+                            setPreviewPosition(null);
+                            setPaintHovered(false);
+                        }}
                         onClick={event => handleFloorSurfaceClick(event, section.id)}
                     />
                 ))
@@ -1035,7 +1075,10 @@ export default function Floor({
                     rotation={[-Math.PI / 2, 0, 0]}
                     receiveShadow
                     onPointerMove={handleFloorPointerMove}
-                    onPointerOut={() => setPreviewPosition(null)}
+                    onPointerOut={() => {
+                        setPreviewPosition(null);
+                        setPaintHovered(false);
+                    }}
                     onClick={event => handleFloorSurfaceClick(event)}
                 >
                     <meshStandardMaterial
@@ -1045,6 +1088,23 @@ export default function Floor({
                         metalness={displayMaterial?.metalness ?? 0}
                         roughness={displayMaterial?.roughness ?? 0.8}
                         side={DoubleSide}
+                    />
+                </mesh>
+            )}
+            {paintHovered && state.activeFloorMaterialId && (
+                <mesh
+                    geometry={floorGeometry ?? geometry}
+                    position={[0, floorY + 0.008, 0]}
+                    rotation={[-Math.PI / 2, 0, 0]}
+                    raycast={() => {}}
+                    renderOrder={7}
+                >
+                    <meshBasicMaterial
+                        color="#38BDF8"
+                        transparent
+                        opacity={0.24}
+                        side={DoubleSide}
+                        depthWrite={false}
                     />
                 </mesh>
             )}

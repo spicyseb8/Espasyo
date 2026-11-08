@@ -1,7 +1,9 @@
 import "./MaterialSection.css";
 
 import {
-    Check,
+    Grid2X2,
+    Layers,
+    Rows2,
     Star
 } from "lucide-react";
 
@@ -34,26 +36,11 @@ interface Props {
     onSelect:
         (materialId: string) => void;
 
-    onApply?:
-        () => void;
+    flooringCategory?: "all" | "tiles" | "wood";
 
-    onApplyToRoom?:
-        () => void;
-
-    onApplyToAll?:
-        () => void;
-
-    canApply?: boolean;
-
-    canApplyToRoom?: boolean;
-
-    canApplyToAll?: boolean;
-
-    applyLabel?: string;
-
-    applyToRoomLabel?: string;
-
-    applyToAllLabel?: string;
+    onFlooringCategoryChange?: (
+        category: "all" | "tiles" | "wood"
+    ) => void;
 
 }
 
@@ -73,37 +60,21 @@ export default function MaterialSection({
 
     onSelect,
 
-    onApply,
+    flooringCategory,
 
-
-    onApplyToRoom,
-
-    onApplyToAll,
-
-    canApply = false,
-
-
-    canApplyToRoom = false,
-
-    canApplyToAll = false,
-
-    applyLabel = "Apply",
-
-    applyToRoomLabel = "Apply to Room",
-
-    applyToAllLabel = "Apply to All"
+    onFlooringCategoryChange
 
 }: Props) {
     const { isFavorite } = useAssetFavorites();
-    const favoriteMaterials = favoritesFirst
-        ? materials.filter(material =>
-            isFavorite(favoriteType, material.id)
-        )
-        : [];
-    const otherMaterials = favoritesFirst
-        ? materials.filter(material =>
-            !isFavorite(favoriteType, material.id)
-        )
+    const orderedMaterials = favoritesFirst
+        ? [
+            ...materials.filter(material =>
+                isFavorite(favoriteType, material.id)
+            ),
+            ...materials.filter(material =>
+                !isFavorite(favoriteType, material.id)
+            )
+        ]
         : materials;
 
     const renderMaterialGrid = (items: Material[]) => (
@@ -153,16 +124,8 @@ export default function MaterialSection({
                 <button
                     type="button"
                     className={`material-favorites-toggle ${favoritesFirst ? "is-active" : ""}`}
-                    aria-label={
-                        favoritesFirst
-                            ? "Show original material order"
-                            : "Show favorites first"
-                    }
-                    title={
-                        favoritesFirst
-                            ? "Show original order"
-                            : "Show favorites first"
-                    }
+                    aria-label="Show favorites"
+                    title="Show favorites"
                     aria-pressed={favoritesFirst}
                     onClick={onToggleFavoritesFirst}
                 >
@@ -179,155 +142,57 @@ export default function MaterialSection({
                 SCROLLABLE MATERIAL AREA
                 ========================================= */}
 
-            <div
-                className="material-scroll"
-            >
-
-                {
-                    materials.length > 0
-                        ? favoritesFirst
-                            ? (
-                                <>
-                                    {favoriteMaterials.length > 0 && (
-                                        <>
-                                            <div className="material-group-label">
-                                                Favorites
-                                            </div>
-                                            {renderMaterialGrid(favoriteMaterials)}
-                                        </>
-                                    )}
-                                    {favoriteMaterials.length > 0 &&
-                                        otherMaterials.length > 0 && (
-                                            <div className="material-group-divider">
-                                                All materials
-                                            </div>
-                                        )}
-                                    {otherMaterials.length > 0 &&
-                                        renderMaterialGrid(otherMaterials)}
-                                </>
-                            )
-                            : renderMaterialGrid(materials)
-
-                        : (
-
-                            <p
-                                className="material-empty"
-                            >
-                                No materials available.
-                            </p>
-
-                        )
-                }
-
-            </div>
-
-            {/* =========================================
-                ACTION BUTTONS
-                ========================================= */}
-
-            {
-                (
-                    onApply ||
-                    onApplyToRoom ||
-                    onApplyToAll
-                ) && (
-
-                    <div
-                        className="material-actions"
+            <div className="material-section-body">
+                {onFlooringCategoryChange && (
+                    <nav
+                        className="flooring-category-nav"
+                        aria-label="Flooring categories"
                     >
+                        {([
+                            { id: "all", label: "All", Icon: Layers },
+                            { id: "tiles", label: "Tiles", Icon: Grid2X2 },
+                            { id: "wood", label: "Wood", Icon: Rows2 }
+                        ] as const).map(({ id, label, Icon }) => (
+                            <button
+                                key={id}
+                                type="button"
+                                className={`flooring-category-button${
+                                    flooringCategory === id ? " active" : ""
+                                }`}
+                                aria-label={label}
+                                aria-pressed={flooringCategory === id}
+                                title={label}
+                                onClick={() =>
+                                    onFlooringCategoryChange(id)
+                                }
+                            >
+                                <Icon size={16} aria-hidden="true" />
+                                <span>{label}</span>
+                            </button>
+                        ))}
+                    </nav>
+                )}
 
-                        {
-                            onApply && (
+                <div
+                    className="material-scroll"
+                >
 
-                                <button
+                    {
+                        materials.length > 0
+                            ? renderMaterialGrid(orderedMaterials)
+                            : (
 
-                                    type="button"
-
-                                    className="material-apply-button"
-
-                                    disabled={
-                                        !canApply
-                                    }
-
-                                    onClick={
-                                        onApply
-                                    }
-
+                                <p
+                                    className="material-empty"
                                 >
-
-                                    <Check
-                                        size={15}
-                                    />
-
-                                    {
-                                        applyLabel
-                                    }
-
-                                </button>
+                                    No materials available.
+                                </p>
 
                             )
-                        }
+                    }
 
-                        {
-                            onApplyToRoom && (
-
-                                <button
-
-                                    type="button"
-
-                                    className="material-apply-room-button"
-
-                                    disabled={
-                                        !canApplyToRoom
-                                    }
-
-                                    onClick={
-                                        onApplyToRoom
-                                    }
-
-                                >
-
-                                    {
-                                        applyToRoomLabel
-                                    }
-
-                                </button>
-
-                            )
-                        }
-
-                        {
-                            onApplyToAll && (
-
-                                <button
-
-                                    type="button"
-
-                                    className="material-apply-all-button"
-
-                                    disabled={
-                                        !canApplyToAll
-                                    }
-
-                                    onClick={
-                                        onApplyToAll
-                                    }
-
-                                >
-
-                                    {
-                                        applyToAllLabel
-                                    }
-
-                                </button>
-
-                            )
-                        }
-
-                    </div>
-
-                )
-            }
+                </div>
+            </div>
 
         </section>
     );

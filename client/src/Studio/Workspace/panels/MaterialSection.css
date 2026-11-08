@@ -212,6 +212,96 @@
         transparent;
 }
 
+.workspace-shell.is-material-panel .material-scroll {
+    width: auto;
+    min-width: 0;
+    max-height: none;
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    box-sizing: border-box;
+    padding: 2px 2px 8px;
+    margin: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--ws-border) transparent;
+}
+
+.workspace-shell.is-material-panel .material-section-body {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    display: flex;
+    flex: 1 1 auto;
+    align-items: stretch;
+    gap: 8px;
+    min-height: 0;
+    width: 100%;
+}
+
+.workspace-shell.is-material-panel .flooring-category-nav {
+    display: flex;
+    flex: 0 0 72px;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    gap: 5px;
+    min-height: 0;
+    padding: 2px 0;
+    overflow: hidden;
+}
+
+.workspace-shell.is-material-panel .flooring-category-button {
+    min-height: 26px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 0 5px;
+    border: 1px solid var(--ws-border);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ws-text-muted);
+    font: inherit;
+    font-size: 10px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.workspace-shell.is-material-panel .flooring-category-button svg {
+    width: 12px;
+    height: 12px;
+}
+
+.workspace-shell.is-material-panel .flooring-category-button:hover {
+    background: var(--ws-surface-hover);
+    color: var(--ws-text);
+}
+
+.workspace-shell.is-material-panel .flooring-category-button.active {
+    border-color: var(--ws-border);
+    background: var(--ws-accent-soft);
+    color: var(--ws-accent);
+    font-weight: 650;
+}
+
+.workspace-shell.is-material-panel .flooring-category-button:focus-visible {
+    outline: 2px solid var(--ws-accent);
+    outline-offset: 1px;
+}
+
+.workspace-shell.is-material-panel .material-scroll::-webkit-scrollbar {
+    height: 6px;
+}
+
+.workspace-shell.is-material-panel .material-scroll::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: var(--ws-border);
+}
 
 /* ==========================================================
    WEBKIT SCROLLBAR
@@ -254,21 +344,100 @@
    ========================================================== */
 
 .material-grid {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 100px;
+    grid-template-columns: none;
+    grid-template-rows: minmax(0, 1fr);
+    gap: 8px;
+    width: max-content;
+    min-width: 0;
+    height: 100%;
+    flex: 0 0 auto;
+    box-sizing: border-box;
+}
 
-    display:
-        grid;
+.workspace-shell.is-material-panel .material-card-container {
+    width: 100px;
+    min-width: 0;
+    max-width: 100px;
+    height: 100%;
+    min-height: 0;
+    box-sizing: border-box;
+}
 
-    grid-template-columns:
-        repeat(3, minmax(0, 1fr));
+.workspace-shell.is-material-panel .material-section {
+    display: contents;
+}
 
-    gap:
-        8px;
+.workspace-shell.is-material-panel .material-section-header {
+    display: contents;
+}
 
-    width:
-        100%;
+.workspace-shell.is-material-panel .material-favorites-toggle {
+    grid-column: 5;
+    grid-row: 1;
+    align-self: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--ws-border);
+    border-radius: 9px;
+    background: #fff;
+    color: var(--ws-text-muted);
+}
 
-    box-sizing:
-        border-box;
+.workspace-shell.is-material-panel .material-favorites-toggle:hover {
+    background: var(--ws-surface-hover);
+}
+
+.workspace-shell.is-material-panel .material-favorites-toggle.is-active {
+    color: #d7a928;
+}
+
+.workspace-shell.is-material-panel .material-section-title {
+    display: none;
+}
+
+.workspace-shell.is-material-panel .material-section-count {
+    min-width: 18px;
+    height: 16px;
+    font-size: 9px;
+}
+
+.workspace-shell.is-material-panel .material-actions {
+    display: none;
+}
+
+@media (max-width: 560px) {
+    .material-grid {
+        grid-auto-columns: 100px;
+        gap: 6px;
+    }
+
+    .workspace-shell.is-material-panel .material-card-container {
+        width: 100px;
+        max-width: 100px;
+    }
+
+    .workspace-shell.is-material-panel .workspace-content {
+        display: contents;
+    }
+
+    .workspace-shell.is-material-panel .material-section-body {
+        gap: 5px;
+    }
+
+    .workspace-shell.is-material-panel .flooring-category-button {
+        min-height: 25px;
+        padding: 0 4px;
+        font-size: 9px;
+    }
+
+    .workspace-shell.is-material-panel .flooring-category-nav {
+        flex-basis: 68px;
+        gap: 4px;
+    }
+
 }
 
 

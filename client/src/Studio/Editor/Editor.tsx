@@ -9,6 +9,9 @@ import "./Editor.css";
 import Topbar
     from "../Topbar/Topbar";
 
+import FloorSwitcher
+    from "../FloorSwitcher/FloorSwitcher";
+
 import Workspace
     from "../Workspace/Workspace";
 
@@ -31,12 +34,16 @@ import DraftLoader
 
 import EditorExitGuard
     from "./EditorExitGuard";
+import type { WorkspacePanel } from "../Workspace/WorkspaceTabs";
 
 //==================================================
 // EDITOR
 //==================================================
 
 export default function Editor() {
+
+    const [activePanel, setActivePanel] =
+        useState<WorkspacePanel | null>("furniture");
 
     const [
         walkthroughSpawnConfirmed,
@@ -65,11 +72,28 @@ export default function Editor() {
 
                 <EditorExitGuard />
 
-                <Topbar />
+                <Topbar
+                    projectPanelOpen={activePanel === "project"}
+                    onProjectClick={() =>
+                        setActivePanel(current =>
+                            current === "project" ? null : "project"
+                        )
+                    }
+                />
 
                 <div className="editor-body">
 
-                    <Workspace />
+                    <FloorSwitcher
+                        materialPanelOpen={
+                            activePanel === "flooring" ||
+                            activePanel === "paint"
+                        }
+                    />
+
+                    <Workspace
+                        activePanel={activePanel}
+                        onPanelChange={setActivePanel}
+                    />
 
                     <main className="viewport">
 

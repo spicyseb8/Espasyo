@@ -1,55 +1,95 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 import "./Workspace.css";
-import WorkspaceTabs from "./WorkspaceTabs";
+import WorkspaceTabs, { type WorkspacePanel } from "./WorkspaceTabs";
 import WorkspaceContent from "./WorkspaceContent";
 import useEditor from "../../context/editor/useEditor";
 
-export default function Workspace() {
-    const { state, dispatch } = useEditor();
-    const [panelOpen, setPanelOpen] = useState(true);
+interface Props {
+    activePanel: WorkspacePanel;
+    onPanelChange: (panel: WorkspacePanel) => void;
+}
 
-    // Automatically close the panel when entering Walkthrough mode.
+export default function Workspace({
+    activePanel,
+    onPanelChange,
+}: Props) {
+    const { state } = useEditor();
+    const lastMaterialPanel = useRef<WorkspacePanel | null>(null);
+
+    if (activePanel === "flooring" || activePanel === "paint") {
+        lastMaterialPanel.current = activePanel;
+    }
+
+    const closingMaterialPanel = activePanel === null
+        ? lastMaterialPanel.current
+        : null;
+    const displayedPanel = activePanel ?? closingMaterialPanel;
+
     useEffect(() => {
         if (state.walkthroughMode) {
-            setPanelOpen(false);
+            onPanelChange(null);
         }
-    }, [state.walkthroughMode]);
+    }, [state.walkthroughMode, onPanelChange]);
 
-    function handleTabChange(tab: typeof state.activeTab) {
-        // Clicking the currently active tab toggles the panel.
-        if (tab === state.activeTab) {
-            setPanelOpen((current) => !current);
+    useEffect(() => {
+        if (!activePanel) {
             return;
         }
 
-        // Switching tabs changes the active tab and opens the panel.
-        dispatch({
-            type: "SET_ACTIVE_TAB",
-            payload: tab,
-        });
+        const handleEscape = (event: KeyboardEvent) => {
+            if (event.key === "Escape") {
+                onPanelChange(null);
+            }
+        };
 
-        setPanelOpen(true);
-    }
+        document.addEventListener("keydown", handleEscape);
+        return () => document.removeEventListener("keydown", handleEscape);
+    }, [activePanel, onPanelChange]);
+
+    const panelTitle = {
+        furniture: "Furniture",
+        flooring: "Flooring",
+        paint: "Paint",
+        project: "Project",
+    } as const;
+    const activePanelTitle = displayedPanel
+        ? panelTitle[displayedPanel]
+        : "";
 
     return (
         <aside className="workspace">
-            {/* One surface: tab bar on top, content below. */}
-            <div
-                className={`workspace-shell ${
-                    panelOpen ? "is-open" : "is-closed"
-                }`}
+            <section
+                className={`workspace-shell${displayedPanel === "flooring" || displayedPanel === "paint" ? " is-material-panel" : ""}${closingMaterialPanel ? " is-closed" : ""}`}
+                hidden={(!activePanel && !closingMaterialPanel) || displayedPanel === "project"}
+                aria-hidden={Boolean(closingMaterialPanel)}
+                inert={Boolean(closingMaterialPanel)}
+                aria-labelledby="workspace-panel-title"
             >
-                <WorkspaceTabs
-                    activeTab={state.activeTab}
-                    walkthroughMode={state.walkthroughMode}
-                    panelOpen={panelOpen}
-                    onTabChange={handleTabChange}
-                />
-
+                <header className="workspace-panel-header">
+                    <h2 id="workspace-panel-title">{activePanelTitle}</h2>
+                    <button
+                        type="button"
+                        className="workspace-panel-close"
+                        onClick={() => onPanelChange(null)}
+                        aria-label={`Close ${activePanelTitle} panel`}
+                        title="Close panel (Esc)"
+                    >
+                        <span aria-hidden="true">×</span>
+                    </button>
+                </header>
                 <div className="workspace-content">
-                    <WorkspaceContent activeTab={state.activeTab} />
+                    <WorkspaceContent
+                        activePanel={displayedPanel}
+                        onClosePanel={() => onPanelChange(null)}
+                    />
                 </div>
-            </div>
+            </section>
+
+            <WorkspaceTabs
+                activePanel={activePanel}
+                walkthroughMode={state.walkthroughMode}
+                onPanelChange={onPanelChange}
+            />
         </aside>
     );
 }

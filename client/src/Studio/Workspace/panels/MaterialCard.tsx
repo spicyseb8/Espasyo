@@ -39,10 +39,9 @@ export default function MaterialCard({
     ] = useState(false);
 
     const showImage =
-        Boolean(
-            material.thumbnail
-        ) &&
+        Boolean(material.thumbnail || material.texture) &&
         !imageFailed;
+    const imageSource = material.thumbnail || material.texture;
     const {
         isFavorite,
         toggleFavorite
@@ -81,7 +80,7 @@ export default function MaterialCard({
                     <img
 
                         src={
-                            material.thumbnail
+                            imageSource
                         }
 
                         alt={
@@ -125,6 +124,7 @@ export default function MaterialCard({
 
             <div
                 className="material-card-name"
+                title={material.name}
             >
                 {
                     material.name
@@ -151,6 +151,11 @@ export default function MaterialCard({
                             : "/m²"}
                 </span>
 
+            </div>
+            <div className="material-card-category">
+                {material.sourceCategory || (
+                    favoriteType === "flooring" ? "Flooring" : "Paint"
+                )}
             </div>
 
             </button>

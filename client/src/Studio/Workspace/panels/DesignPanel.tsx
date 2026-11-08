@@ -1,11 +1,13 @@
 
 import {
     useEffect,
+    useLayoutEffect,
     useMemo,
     useRef,
     useState
 } from "react";
-import { Columns2, Plus, Rows2, Search, X } from "lucide-react";
+import { Search, SeparatorHorizontal, X } from "lucide-react";
+import { createPortal } from "react-dom";
 import "./DesignPanel.css";
 
 import useEditor
@@ -28,17 +30,13 @@ import {
 } from "../../../engine/regions/RegionSolver";
 
 import {
-    getRegionWallFinishAssignments,
-    getWallFinishSides,
-    WALL_SIDE_FINISH_BUCKET
+    getWallFinishSides
 } from "../../../engine/walls/WallFinishUtils";
 import {
     getWallPaintFaceKey,
-    getWallPaintSections,
     removeWallPaintSeparator,
     type WallPaintMergeConflict,
     type WallPaintFace,
-    type WallPaintSection,
     type WallPaintSeparatorOrientation
 } from "../../../../../shared/wallPaintSeparators";
 
@@ -64,17 +62,54 @@ function filterMaterialsBySearch(
     );
 }
 
-export default function DesignPanel() {
+type FlooringCategory = "all" | "tiles" | "wood";
+
+function getFlooringCategory(
+    material: Material
+): Exclude<FlooringCategory, "all"> | null {
+    const sourceCategory = material.sourceCategory?.trim().toLowerCase() ?? "";
+
+    if (/\bwood\b|\btimber\b/.test(sourceCategory)) {
+        return "wood";
+    }
+
+    if (/\btile\b|\btiles\b|\bceramic\b/.test(sourceCategory)) {
+        return "tiles";
+    }
+
+    const materialName = material.name.toLowerCase();
+    if (/\bwood\b|\btimber\b/.test(materialName)) {
+        return "wood";
+    }
+
+    if (/\btile\b|\btiles\b|\bceramic\b/.test(materialName)) {
+        return "tiles";
+    }
+
+    return null;
+}
+
+interface Props {
+    mode: "flooring" | "paint";
+}
+
+export default function DesignPanel({ mode }: Props) {
     const {
         state,
         dispatch
     } = useEditor();
     const [showSeparatorOrientations, setShowSeparatorOrientations] =
         useState(false);
+    const [separatorPopoverPosition, setSeparatorPopoverPosition] =
+        useState<{ top: number; left: number } | null>(null);
     const [materialSearch, setMaterialSearch] = useState("");
+    const [flooringCategory, setFlooringCategory] =
+        useState<FlooringCategory>("all");
     const [floorFavoritesFirst, setFloorFavoritesFirst] = useState(false);
     const [wallFavoritesFirst, setWallFavoritesFirst] = useState(false);
     const separatorMenuRef = useRef<HTMLDivElement | null>(null);
+    const separatorTriggerRef = useRef<HTMLButtonElement | null>(null);
+    const separatorPopoverRef = useRef<HTMLDivElement | null>(null);
     const [pendingMerge, setPendingMerge] = useState<{
         faceKey: string;
         separatorId: string;
@@ -140,8 +175,20 @@ export default function DesignPanel() {
     const normalizedMaterialSearch = materialSearch.trim().toLowerCase();
 
     const filteredFlooringMaterials = useMemo(
-        () => filterMaterialsBySearch(flooringMaterials, normalizedMaterialSearch),
-        [flooringMaterials, normalizedMaterialSearch]
+        () => {
+            const searchedMaterials = filterMaterialsBySearch(
+                flooringMaterials,
+                normalizedMaterialSearch
+            );
+
+            return flooringCategory === "all"
+                ? searchedMaterials
+                : searchedMaterials.filter(
+                    material =>
+                        getFlooringCategory(material) === flooringCategory
+                );
+        },
+        [flooringMaterials, flooringCategory, normalizedMaterialSearch]
     );
 
     const filteredWallMaterials = useMemo(
@@ -156,7 +203,11 @@ export default function DesignPanel() {
 
         const handleOutsidePointerDown = (event: PointerEvent) => {
             const target = event.target;
-            if (target instanceof Node && !separatorMenuRef.current?.contains(target)) {
+            if (
+                target instanceof Node &&
+                !separatorMenuRef.current?.contains(target) &&
+                !separatorPopoverRef.current?.contains(target)
+            ) {
                 setShowSeparatorOrientations(false);
             }
         };
@@ -165,6 +216,51 @@ export default function DesignPanel() {
         return () => {
             document.removeEventListener("pointerdown", handleOutsidePointerDown);
         };
+    }, [showSeparatorOrientations]);
+
+    useLayoutEffect(() => {
+        if (!showSeparatorOrientations) {
+            return;
+        }
+
+        const updatePosition = () => {
+            const trigger = separatorTriggerRef.current;
+            if (!trigger) return;
+
+            const bounds = trigger.getBoundingClientRect();
+            const popoverWidth = Math.min(248, window.innerWidth - 24);
+            const left = Math.max(
+                12,
+                Math.min(bounds.left, window.innerWidth - popoverWidth - 12)
+            );
+            setSeparatorPopoverPosition({
+                top: Math.max(8, bounds.top - 106),
+                left
+            });
+        };
+
+        updatePosition();
+        window.addEventListener("resize", updatePosition);
+        window.addEventListener("scroll", updatePosition, true);
+
+        return () => {
+            window.removeEventListener("resize", updatePosition);
+            window.removeEventListener("scroll", updatePosition, true);
+        };
+    }, [showSeparatorOrientations]);
+
+    useEffect(() => {
+        if (!showSeparatorOrientations) {
+            return;
+        }
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key !== "Escape") return;
+            setShowSeparatorOrientations(false);
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
     }, [showSeparatorOrientations]);
 
     useEffect(() => {
@@ -274,63 +370,6 @@ export default function DesignPanel() {
                 : null
         );
 
-    const currentFloorMaterialId =
-        state.selectedRegionId
-            ? state.floorFinishes[
-                state.selectedRegionId
-            ] ?? null
-            : null;
-    const selectedFloorFace = state.selectedRegionId
-        ? state.floorPaintSeparators[state.selectedRegionId]
-        : undefined;
-    const selectedFloorSections = getWallPaintSections(selectedFloorFace);
-    const selectedFloorSection = selectedFloorSections.find(
-        section => section.id === state.selectedFloorSectionId
-    );
-    const selectedFloorSectionMaterialId = selectedFloorSection
-        ? selectedFloorFace?.sectionMaterials[selectedFloorSection.id] ??
-            currentFloorMaterialId
-        : null;
-
-    const selectedWallBelongsToRoom =
-        Boolean(
-            state.selectedWallId &&
-            selectedWallRegionForEdit &&
-            selectedWallRegionForEdit.walls.some(
-                wall =>
-                    wall.id === state.selectedWallId
-            )
-        );
-
-    // Read the material assigned to the actual selected face.
-    const selectedWallSideKey =
-        state.selectedWallId &&
-        state.selectedWallSide !== null &&
-        state.selectedWallSide !== undefined
-            ? `${state.selectedWallId}::side:${state.selectedWallSide}`
-            : null;
-
-    const sideWallMaterialId =
-        selectedWallSideKey
-            ? state.wallFinishes[
-                WALL_SIDE_FINISH_BUCKET
-            ]?.[selectedWallSideKey] ?? null
-            : null;
-
-    // Preserve compatibility with existing room-based wall finishes.
-    const legacyWallMaterialId =
-        selectedWallBelongsToRoom &&
-        selectedWallRegionForEdit &&
-        state.selectedWallId
-            ? state.wallFinishes[
-                selectedWallRegionForEdit.id
-            ]?.[state.selectedWallId] ?? null
-            : null;
-
-    const currentWallMaterialId =
-        sideWallMaterialId ??
-        legacyWallMaterialId;
-
     const selectedWallFaceKey =
         state.selectedWallId &&
         state.selectedWallSide !== null
@@ -342,25 +381,6 @@ export default function DesignPanel() {
     const selectedWallFace = selectedWallFaceKey
         ? state.wallPaintSeparators[selectedWallFaceKey]
         : undefined;
-    const selectedWallSections = getWallPaintSections(selectedWallFace);
-    const selectedWallSection: WallPaintSection | undefined =
-        selectedWallSections.find(
-            section => section.id === state.selectedWallSectionId
-        );
-    const selectedSectionMaterialId = selectedWallSection
-        ? selectedWallFace?.sectionMaterials[selectedWallSection.id] ??
-            currentWallMaterialId
-        : null;
-
-    const selectedFloorMaterialId =
-        state.activeFloorMaterialId ??
-        selectedFloorSectionMaterialId ??
-        currentFloorMaterialId;
-
-    const selectedWallMaterialId =
-        state.activeWallMaterialId ??
-        selectedSectionMaterialId ??
-        currentWallMaterialId;
 
     useEffect(() => {
         if (
@@ -415,7 +435,9 @@ export default function DesignPanel() {
     ) => {
         dispatch({
             type: "SET_ACTIVE_FLOOR_MATERIAL",
-            payload: materialId
+            payload: state.activeFloorMaterialId === materialId
+                ? null
+                : materialId
         });
     };
 
@@ -424,88 +446,10 @@ export default function DesignPanel() {
     ) => {
         dispatch({
             type: "SET_ACTIVE_WALL_MATERIAL",
-            payload: materialId
+            payload: state.activeWallMaterialId === materialId
+                ? null
+                : materialId
         });
-    };
-
-    const handleApplyFloor = () => {
-        if (
-            !state.selectedRegionId ||
-            !selectedFloorMaterialId
-        ) {
-            return;
-        }
-
-        if (selectedFloorSection) {
-            dispatch({
-                type: "SET_FLOOR_SECTION_MATERIAL",
-                payload: {
-                    regionId: state.selectedRegionId,
-                    sectionId: selectedFloorSection.id,
-                    materialId: selectedFloorMaterialId
-                }
-            });
-        } else {
-            dispatch({
-                type: "SET_FLOOR_FINISH",
-                payload: {
-                    regionId: state.selectedRegionId,
-                    materialId: selectedFloorMaterialId
-                }
-            });
-        }
-    };
-
-    const handleApplyFloorToAll = () => {
-        if (
-            !selectedFloorMaterialId
-        ) {
-            return;
-        }
-
-        for (const region of regions) {
-            dispatch({
-                type: "SET_FLOOR_FINISH",
-                payload: {
-                    regionId: region.id,
-                    materialId: selectedFloorMaterialId
-                }
-            });
-        }
-    };
-
-    // Apply the selected material to only the clicked wall face.
-    const handleApplyWall = () => {
-        if (
-            !state.selectedWallId ||
-            state.selectedWallSide === null ||
-            state.selectedWallSide === undefined ||
-            !selectedWallMaterialId
-        ) {
-            return;
-        }
-
-        if (selectedWallSection && selectedWallFaceKey) {
-            dispatch({
-                type: "SET_WALL_SECTION_MATERIAL",
-                payload: {
-                    faceKey: selectedWallFaceKey,
-                    sectionId: selectedWallSection.id,
-                    materialId: selectedWallMaterialId
-                }
-            });
-        } else {
-            dispatch({
-                type: "SET_WALL_FINISH",
-                payload: {
-                    regionId:
-                        selectedWallRegionForEdit?.id ?? null,
-                    wallId: state.selectedWallId,
-                    materialId: selectedWallMaterialId,
-                    side: state.selectedWallSide
-                }
-            });
-        }
     };
 
     const handleStartSeparatorPlacement = (
@@ -680,66 +624,15 @@ export default function DesignPanel() {
         }
     };
 
-    const handleApplyWallToRoom = () => {
-        if (
-            !selectedWallRegionForEdit ||
-            !selectedWallMaterialId
-        ) {
-            return;
-        }
-
-        dispatch({
-            type: "SET_WALL_FINISHES",
-            payload: getRegionWallFinishAssignments(
-                [selectedWallRegionForEdit],
-                selectedWallMaterialId
-            )
-        });
-    };
-
-    const handleApplyWallToAll = () => {
-        if (
-            !selectedWallMaterialId
-        ) {
-            return;
-        }
-
-        dispatch({
-            type: "SET_WALL_FINISHES",
-            payload: getRegionWallFinishAssignments(
-                regions,
-                selectedWallMaterialId
-            )
-        });
-    };
-
-    const canApplyWall =
-        Boolean(
-            state.selectedWallId &&
-            state.selectedWallSide !== null &&
-            state.selectedWallSide !== undefined &&
-            selectedWallMaterialId
-        );
-
     return (
         <div className="design-panel">
             <div
                 ref={separatorMenuRef}
-                className={`design-panel-tools ${
-                    showSeparatorOrientations ? "has-separator-options" : ""
-                }`}
-                onKeyDown={event => {
-                    if (event.key === "Escape") {
-                        setShowSeparatorOrientations(false);
-                    }
-                }}
-                onMouseLeave={() => setShowSeparatorOrientations(false)}
+                className="design-panel-tools"
             >
-                <div
-                    className="wall-separator-menu"
-                    onMouseEnter={() => setShowSeparatorOrientations(true)}
-                >
+                <div className="wall-separator-menu">
                     <button
+                        ref={separatorTriggerRef}
                         type="button"
                         className="wall-separator-trigger"
                         aria-haspopup="true"
@@ -747,12 +640,12 @@ export default function DesignPanel() {
                         aria-label={
                             state.wallSeparatorPlacement
                                 ? "Cancel separator placement"
-                                : "Add separator"
+                                : "Add a surface separator"
                         }
                         title={
                             state.wallSeparatorPlacement
                                 ? "Cancel separator placement"
-                                : "Add separator"
+                                : "Divide a floor or wall surface into sections"
                         }
                         onClick={() => {
                             if (state.wallSeparatorPlacement) {
@@ -763,44 +656,15 @@ export default function DesignPanel() {
                                 setShowSeparatorOrientations(false);
                                 return;
                             }
-                            setShowSeparatorOrientations(true);
+                            setShowSeparatorOrientations(current => !current);
                         }}
                     >
-                        <Plus size={18} />
+                        <SeparatorHorizontal size={17} aria-hidden="true" />
                     </button>
                 </div>
-
                 <div className="design-panel-tool-row">
-                    {!state.wallSeparatorPlacement && showSeparatorOrientations && (
-                        <div
-                            className="wall-separator-orientations is-visible"
-                            role="group"
-                            aria-label="Separator orientation"
-                        >
-                            <button
-                                type="button"
-                                className="wall-separator-option"
-                                aria-label="Horizontal separator"
-                                title="Horizontal separator"
-                                onClick={() => handleStartSeparatorPlacement("horizontal")}
-                            >
-                                <Rows2 size={17} />
-                            </button>
-                            <button
-                                type="button"
-                                className="wall-separator-option"
-                                aria-label="Vertical separator"
-                                title="Vertical separator"
-                                onClick={() => handleStartSeparatorPlacement("vertical")}
-                            >
-                                <Columns2 size={17} />
-                            </button>
-                        </div>
-                    )}
-
                     <div
                         className="material-search"
-                        onMouseEnter={() => setShowSeparatorOrientations(false)}
                     >
                         <Search size={16} aria-hidden="true" />
                         <input
@@ -825,70 +689,120 @@ export default function DesignPanel() {
                 </div>
             </div>
 
-            <MaterialSection
-                title="Floor"
-                materials={filteredFlooringMaterials}
-                favoriteType="flooring"
-                favoritesFirst={floorFavoritesFirst}
-                onToggleFavoritesFirst={() =>
-                    setFloorFavoritesFirst(value => !value)
-                }
-                selectedMaterialId={selectedFloorMaterialId}
-                onSelect={handleSelectFloorMaterial}
-                onApply={handleApplyFloor}
-                onApplyToAll={handleApplyFloorToAll}
-                canApply={Boolean(
-                    state.selectedRegionId &&
-                    selectedFloorMaterialId
-                )}
-                canApplyToAll={Boolean(
-                    selectedFloorMaterialId &&
-                    regions.length > 0
-                )}
-            />
-            {!floorMaterialsLoading &&
-                !floorMaterialsError &&
-                normalizedMaterialSearch &&
-                filteredFlooringMaterials.length === 0 &&
-                flooringMaterials.length > 0 && (
-                    <div className="material-empty">
-                        No flooring materials match your search.
-                    </div>
+            {!state.wallSeparatorPlacement &&
+                showSeparatorOrientations &&
+                createPortal(
+                    <div
+                        ref={separatorPopoverRef}
+                        className="wall-separator-orientations"
+                        role="group"
+                        aria-label="Separator orientation"
+                        style={separatorPopoverPosition
+                            ? {
+                                top: separatorPopoverPosition.top,
+                                left: separatorPopoverPosition.left
+                            }
+                            : { visibility: "hidden" }}
+                    >
+                        <button
+                            type="button"
+                            className="wall-separator-option"
+                            aria-label="Horizontal: divide the selected surface into top and bottom sections"
+                            onClick={() => handleStartSeparatorPlacement("horizontal")}
+                        >
+                            <span className="separator-orientation-diagram horizontal" aria-hidden="true" />
+                            <span className="separator-option-copy">
+                                <strong>Horizontal</strong>
+                                <span>Top and bottom sections</span>
+                            </span>
+                        </button>
+                        <button
+                            type="button"
+                            className="wall-separator-option"
+                            aria-label="Vertical: divide the selected surface into left and right sections"
+                            onClick={() => handleStartSeparatorPlacement("vertical")}
+                        >
+                            <span className="separator-orientation-diagram vertical" aria-hidden="true" />
+                            <span className="separator-option-copy">
+                                <strong>Vertical</strong>
+                                <span>Left and right sections</span>
+                            </span>
+                        </button>
+                    </div>,
+                    document.body
                 )}
 
-            <MaterialSection
-                title="Walls"
-                materials={filteredWallMaterials}
-                favoriteType="wallPaint"
-                favoritesFirst={wallFavoritesFirst}
-                onToggleFavoritesFirst={() =>
-                    setWallFavoritesFirst(value => !value)
-                }
-                selectedMaterialId={selectedWallMaterialId}
-                onSelect={handleSelectWallMaterial}
-                onApply={handleApplyWall}
-                onApplyToRoom={handleApplyWallToRoom}
-                onApplyToAll={handleApplyWallToAll}
-                applyLabel="Apply to Wall"
-                canApply={canApplyWall}
-                canApplyToRoom={Boolean(
-                    selectedWallRegionForEdit &&
-                    selectedWallMaterialId
-                )}
-                canApplyToAll={Boolean(
-                    selectedWallMaterialId &&
-                    regions.length > 0
-                )}
-            />
-            {!wallMaterialsLoading &&
-                !wallMaterialsError &&
-                normalizedMaterialSearch &&
-                filteredWallMaterials.length === 0 &&
-                wallMaterials.length > 0 && (
-                    <div className="material-empty">
-                        No wall paints match your search.
-                    </div>
-                )}
+            {mode === "flooring" && (
+                <>
+                    <MaterialSection
+                        title="Flooring"
+                        materials={filteredFlooringMaterials}
+                        favoriteType="flooring"
+                        flooringCategory={flooringCategory}
+                        onFlooringCategoryChange={setFlooringCategory}
+                        favoritesFirst={floorFavoritesFirst}
+                        onToggleFavoritesFirst={() =>
+                            setFloorFavoritesFirst(value => !value)
+                        }
+                        selectedMaterialId={state.activeFloorMaterialId}
+                        onSelect={handleSelectFloorMaterial}
+                    />
+                    {!floorMaterialsLoading &&
+                        !floorMaterialsError &&
+                        normalizedMaterialSearch &&
+                        filteredFlooringMaterials.length === 0 &&
+                        flooringMaterials.length > 0 && (
+                            <div className="material-empty">
+                                No flooring materials match your search.
+                            </div>
+                        )}
+                    {floorMaterialsLoading && (
+                        <div className="material-empty">
+                            Loading floor materials...
+                        </div>
+                    )}
+                    {!floorMaterialsLoading && floorMaterialsError && (
+                        <div className="material-empty">
+                            Failed to load floor materials.
+                        </div>
+                    )}
+                </>
+            )}
+
+            {mode === "paint" && (
+                <>
+                    <MaterialSection
+                        title="Paint"
+                        materials={filteredWallMaterials}
+                        favoriteType="wallPaint"
+                        favoritesFirst={wallFavoritesFirst}
+                        onToggleFavoritesFirst={() =>
+                            setWallFavoritesFirst(value => !value)
+                        }
+                        selectedMaterialId={state.activeWallMaterialId}
+                        onSelect={handleSelectWallMaterial}
+                    />
+                    {!wallMaterialsLoading &&
+                        !wallMaterialsError &&
+                        normalizedMaterialSearch &&
+                        filteredWallMaterials.length === 0 &&
+                        wallMaterials.length > 0 && (
+                            <div className="material-empty">
+                                No paint materials match your search.
+                            </div>
+                        )}
+                    {wallMaterialsLoading && (
+                        <div className="material-empty">
+                            Loading wall paints...
+                        </div>
+                    )}
+                    {!wallMaterialsLoading && wallMaterialsError && (
+                        <div className="material-empty">
+                            Failed to load wall paints.
+                        </div>
+                    )}
+                </>
+            )}
 
             {(state.selectedWallSeparatorId ||
                 state.selectedFloorSeparatorId ||
@@ -906,7 +820,7 @@ export default function DesignPanel() {
                         </button>
                     )}
                 </div>
-                {pendingMerge && (
+                {mode === "paint" && pendingMerge && (
                     <div className="wall-separator-merge">
                         <strong>Choose the paint to keep in each merged section</strong>
                         {pendingMerge.conflicts.map(conflict => (
@@ -974,7 +888,7 @@ export default function DesignPanel() {
                         </button>
                     </div>
                 )}
-                {pendingFloorMerge && (
+                {mode === "flooring" && pendingFloorMerge && (
                     <div className="wall-separator-merge">
                         <strong>Choose the flooring to keep in each merged section</strong>
                         {pendingFloorMerge.conflicts.map(conflict => (
@@ -1042,31 +956,6 @@ export default function DesignPanel() {
             </section>
             )}
 
-            {floorMaterialsLoading && (
-                <div className="material-empty">
-                    Loading floor materials...
-                </div>
-            )}
-
-            {!floorMaterialsLoading &&
-                floorMaterialsError && (
-                    <div className="material-empty">
-                        Failed to load floor materials.
-                    </div>
-                )}
-
-            {wallMaterialsLoading && (
-                <div className="material-empty">
-                    Loading wall paints...
-                </div>
-            )}
-
-            {!wallMaterialsLoading &&
-                wallMaterialsError && (
-                    <div className="material-empty">
-                        Failed to load wall paints.
-                    </div>
-                )}
         </div>
     );
 }

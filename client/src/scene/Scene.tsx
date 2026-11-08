@@ -1,6 +1,7 @@
 import {
     Suspense,
     useEffect,
+    useMemo,
     useRef,
     useState
 } from "react";
@@ -13,6 +14,12 @@ import {
 import {
     useParams
 } from "react-router-dom";
+import {
+    getRegionWallFinishAssignments,
+    getRegionWallSide
+} from "../engine/walls/WallFinishUtils";
+import { solveRegions } from "../engine/regions/RegionSolver";
+import type { PaintApplyTarget } from "./PaintApplyTarget";
 
 import Camera
     from "./Camera";
@@ -93,6 +100,17 @@ import {
     isValidProjectDeadline,
     subscribeToProjectDeadline
 } from "../services/projectDeadlineService";
+
+const PAINT_CURSOR = `url("data:image/svg+xml,${encodeURIComponent([
+    '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">',
+    '<path d="M13 18 24 7" fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round"/>',
+    '<path d="M13 18 24 7" fill="none" stroke="#17202b" stroke-width="4" stroke-linecap="round"/>',
+    '<path d="m13 18-3.5 1.5L4 28l8-3.5 4-4z" fill="#f3b63f" stroke="#ffffff" stroke-width="4" stroke-linejoin="round"/>',
+    '<path d="m13 18-3.5 1.5L4 28l8-3.5 4-4z" fill="#f3b63f" stroke="#17202b" stroke-width="1.8" stroke-linejoin="round"/>',
+    '<path d="m11 20 4 4" fill="none" stroke="#ffffff" stroke-width="5"/>',
+    '<path d="m11 20 4 4" fill="none" stroke="#17202b" stroke-width="2"/>',
+    "</svg>"
+].join(""))}") 4 28, auto`;
 
 //==================================================
 // PROPS
@@ -186,8 +204,164 @@ export default function Scene({
     onSceneReady
 }: SceneProps) {
     const {
-        state
+        state,
+        dispatch
     } = useEditor();
+    const viewportRef = useRef<HTMLDivElement | null>(null);
+    const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    const [roomApplyPopup, setRoomApplyPopup] = useState<{
+        target: PaintApplyTarget;
+        left: number;
+        top: number;
+    } | null>(null);
+
+    const regions = useMemo(
+        () => solveRegions(state.corners, state.walls),
+        [state.corners, state.walls]
+    );
+    const paintModeActive = Boolean(
+        state.activeFloorMaterialId || state.activeWallMaterialId
+    );
+
+    const handlePaintApplied = (target: PaintApplyTarget) => {
+        const bounds = viewportRef.current?.getBoundingClientRect();
+        if (!bounds) {
+            return;
+        }
+
+        setRoomApplyPopup({
+            target,
+            left: Math.max(
+                8,
+                Math.min(bounds.width - 128, target.clientX - bounds.left + 24)
+            ),
+            top: Math.max(
+                8,
+                Math.min(bounds.height - 42, target.clientY - bounds.top)
+            )
+        });
+    };
+
+    const applyMaterialToRoom = () => {
+        if (!roomApplyPopup) {
+            return;
+        }
+
+        const { target } = roomApplyPopup;
+        const room = regions.find(region => region.id === target.regionId);
+        if (!room) {
+            setRoomApplyPopup(null);
+            return;
+        }
+
+        if (target.kind === "floor") {
+            dispatch({
+                type: "SET_FLOOR_FINISH",
+                payload: {
+                    regionId: target.regionId,
+                    materialId: target.materialId
+                }
+            });
+            setRoomApplyPopup(null);
+            return;
+        }
+
+        const clickedWall = state.walls.find(wall => wall.id === target.wallId);
+        const roomSide = clickedWall
+            ? getRegionWallSide(clickedWall, room)
+            : null;
+        if (roomSide === null) {
+            setRoomApplyPopup(null);
+            return;
+        }
+
+        const assignments = roomSide === target.side
+            ? getRegionWallFinishAssignments([room], target.materialId)
+            : room.walls.flatMap(wall => {
+                const insideSide = getRegionWallSide(wall, room);
+                if (insideSide === null) {
+                    return [];
+                }
+
+                const outsideSide: 1 | -1 = insideSide === 1 ? -1 : 1;
+                const outsideIsAnotherRoom = regions.some(otherRoom =>
+                    otherRoom.id !== room.id &&
+                    otherRoom.walls.some(otherWall => otherWall.id === wall.id) &&
+                    getRegionWallSide(wall, otherRoom) === outsideSide
+                );
+                return outsideIsAnotherRoom
+                    ? []
+                    : [{
+                        wallId: wall.id,
+                        materialId: target.materialId,
+                        side: outsideSide
+                    }];
+            });
+
+        if (assignments.length > 0) {
+            dispatch({
+                type: "SET_WALL_FINISHES",
+                payload: assignments
+            });
+        }
+        setRoomApplyPopup(null);
+    };
+
+    useEffect(() => {
+        if (!roomApplyPopup) {
+            return;
+        }
+        const timeout = window.setTimeout(
+            () => setRoomApplyPopup(null),
+            4000
+        );
+        return () => window.clearTimeout(timeout);
+    }, [roomApplyPopup]);
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) {
+            return;
+        }
+
+        canvas.style.cursor = paintModeActive ? PAINT_CURSOR : "";
+        return () => {
+            canvas.style.cursor = "";
+        };
+    }, [paintModeActive]);
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) {
+            return;
+        }
+
+        const handlePointerDown = (event: PointerEvent) => {
+            setRoomApplyPopup(null);
+            if (event.button === 2) {
+                dispatch({
+                    type: "SET_ACTIVE_FLOOR_MATERIAL",
+                    payload: null
+                });
+                dispatch({
+                    type: "SET_ACTIVE_WALL_MATERIAL",
+                    payload: null
+                });
+            }
+        };
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === "Escape") {
+                setRoomApplyPopup(null);
+            }
+        };
+
+        canvas.addEventListener("pointerdown", handlePointerDown);
+        window.addEventListener("keydown", handleKeyDown);
+        return () => {
+            canvas.removeEventListener("pointerdown", handlePointerDown);
+            window.removeEventListener("keydown", handleKeyDown);
+        };
+    }, [dispatch]);
 
     const {
         projectId
@@ -311,6 +485,15 @@ export default function Scene({
 
     return (
         <div
+            ref={viewportRef}
+            onPointerDownCapture={event => {
+                if (
+                    !(event.target instanceof Element) ||
+                    !event.target.closest("[data-apply-to-room]")
+                ) {
+                    setRoomApplyPopup(null);
+                }
+            }}
             style={{
                 position: "relative",
                 width: "100%",
@@ -318,6 +501,12 @@ export default function Scene({
             }}
         >
             <Canvas
+                onCreated={({ gl }) => {
+                    canvasRef.current = gl.domElement;
+                    gl.domElement.style.cursor = paintModeActive
+                        ? PAINT_CURSOR
+                        : "";
+                }}
                 shadows="percentage"
                 gl={{
                     preserveDrawingBuffer: true
@@ -365,9 +554,9 @@ export default function Scene({
                     }
                 />
 
-                <Floors />
+                <Floors onPaintApplied={handlePaintApplied} />
 
-                <Walls />
+                <Walls onPaintApplied={handlePaintApplied} />
 
                 <Doors />
 
@@ -446,6 +635,40 @@ export default function Scene({
                 />
                 </Suspense>
             </Canvas>
+
+            {roomApplyPopup && (
+                <button
+                    type="button"
+                    data-apply-to-room
+                    aria-label="Apply this material to the room"
+                    onPointerDown={event => event.stopPropagation()}
+                    onClick={event => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        applyMaterialToRoom();
+                    }}
+                    style={{
+                        position: "absolute",
+                        left: roomApplyPopup.left,
+                        top: roomApplyPopup.top,
+                        zIndex: 10001,
+                        pointerEvents: "auto",
+                        touchAction: "manipulation",
+                        padding: "8px 11px",
+                        border: "1px solid #D4DCE8",
+                        borderRadius: "7px",
+                        background: "#FFFFFF",
+                        boxShadow: "0 3px 12px rgba(0, 0, 0, 0.18)",
+                        color: "#202938",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        whiteSpace: "nowrap",
+                        cursor: "pointer"
+                    }}
+                >
+                    Apply to room
+                </button>
+            )}
 
             {showSeparatorReminder && (
                 <div

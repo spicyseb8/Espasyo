@@ -1,0 +1,85 @@
+.floor-switcher {
+    --floor-switcher-half-height: calc(var(--floor-count) * 24px + 2px);
+
+    position: fixed;
+    top: 50%;
+    right: 16px;
+    z-index: 60;
+
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 6px;
+    transform: translateY(-50%);
+
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    font-family: inherit;
+}
+
+.floor-switcher.material-panel-open {
+    top: max(12px, min(50%, calc(100% - 280px - var(--floor-switcher-half-height))));
+}
+
+.floor-switcher-tab {
+    display: flex;
+    width: 40px;
+    height: 40px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    background: #fff;
+    color: #555;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition:
+        background 0.15s ease,
+        border-color 0.15s ease,
+        color 0.15s ease;
+}
+
+.floor-switcher-tab:hover {
+    border-color: #cfd3d8;
+    background: #f5f5f5;
+    color: #1b1b1b;
+}
+
+.floor-switcher-tab.active {
+    border-color: #1b1b1b;
+    background: #1b1b1b;
+    color: #fff;
+    font-weight: 700;
+}
+
+.floor-switcher-tab:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(27, 27, 27, 0.2);
+}
+
+@media (max-width: 600px) {
+    .floor-switcher {
+        --floor-switcher-half-height: calc(var(--floor-count) * 21px + 2px);
+
+        right: 8px;
+        gap: 6px;
+        padding: 5px;
+    }
+
+    .floor-switcher-tab {
+        width: 36px;
+        height: 36px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .floor-switcher-tab {
+        transition: none;
+    }
+}

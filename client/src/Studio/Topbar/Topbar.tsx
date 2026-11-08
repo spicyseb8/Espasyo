@@ -1,6 +1,6 @@
 import "./Topbar.css";
 
-import { ArrowLeft, ChevronDown, Download, Undo2, Redo2 } from "lucide-react";
+import { ArrowLeft, ChevronDown, Download, FolderOpen, Undo2, Redo2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -14,6 +14,7 @@ import {
 } from "../../engine/cost/ProjectBudget";
 import type { CostCategory } from "../../engine/cost/CostTypes";
 import AdminComments from "../../scene/Comment/AdminComments";
+import ProjectPanel from "../Workspace/panels/ProjectPanel";
 
 const CATEGORY_LABELS: Record<CostCategory, string> = {
     furniture: "Furniture",
@@ -39,7 +40,12 @@ const formatCurrency = (amount: number, decimals = 2) =>
         maximumFractionDigits: decimals
     }).format(amount);
 
-export default function Topbar() {
+interface Props {
+    projectPanelOpen: boolean;
+    onProjectClick: () => void;
+}
+
+export default function Topbar({ projectPanelOpen, onProjectClick }: Props) {
     const { state, dispatch, undo, redo, canUndo, canRedo } = useEditor();
 
     const { projectId: routeProjectId } = useParams<{ projectId?: string }>();
@@ -51,6 +57,7 @@ export default function Topbar() {
     const [budgetDraft, setBudgetDraft] = useState("");
     const [budgetError, setBudgetError] = useState("");
     const dropdownRef = useRef<HTMLDivElement | null>(null);
+    const projectPanelRef = useRef<HTMLDivElement | null>(null);
 
     const [projectName, setProjectName] = useState<string>(() => {
         if (typeof window === "undefined") return "";
@@ -91,6 +98,13 @@ export default function Topbar() {
             ) {
                 setOpen(false);
             }
+            if (
+                projectPanelOpen &&
+                projectPanelRef.current &&
+                !projectPanelRef.current.contains(event.target as Node)
+            ) {
+                onProjectClick();
+            }
         };
 
         const handleKey = (event: KeyboardEvent) => {
@@ -104,7 +118,7 @@ export default function Topbar() {
             document.removeEventListener("mousedown", handleOutsideClick);
             document.removeEventListener("keydown", handleKey);
         };
-    }, []);
+    }, [onProjectClick, projectPanelOpen]);
 
     const handleDownloadReport = () => {
         try {
@@ -173,25 +187,6 @@ export default function Topbar() {
                     <ArrowLeft size={15} strokeWidth={1.75} />
                     <span>Studio</span>
                 </Link>
-                <nav className="floor-tabs" aria-label="Project floors">
-                    {(state.floors.length > 0
-                        ? state.floors
-                        : [{ floorId: state.activeFloorId, name: "1st Floor" }]
-                    ).map((floor, index) => (
-                        <button
-                            key={floor.floorId}
-                            type="button"
-                            className={`floor-tab${floor.floorId === state.activeFloorId ? " active" : ""}`}
-                            aria-pressed={floor.floorId === state.activeFloorId}
-                            onClick={() => dispatch({
-                                type: "SWITCH_FLOOR",
-                                payload: floor.floorId
-                            })}
-                        >
-                            {floor.name || `${index + 1} Floor`}
-                        </button>
-                    ))}
-                </nav>
             </div>
 
             {/* Center — project name */}
@@ -209,6 +204,23 @@ export default function Topbar() {
 
             {/* Right — history, comments, estimate */}
             <div className="topbar-actions">
+                <div className="project-panel-container" ref={projectPanelRef}>
+                    <button
+                        type="button"
+                        className={`topbar-project-button${projectPanelOpen ? " active" : ""}`}
+                        onClick={onProjectClick}
+                        aria-label="Project panel"
+                        aria-pressed={projectPanelOpen}
+                        aria-expanded={projectPanelOpen}
+                        aria-controls="project-panel-dropdown"
+                        title="Project"
+                        disabled={state.walkthroughMode}
+                    >
+                        <FolderOpen size={16} strokeWidth={1.75} />
+                        <span>Project</span>
+                    </button>
+                    <ProjectPanel open={projectPanelOpen} />
+                </div>
                 <div className="history-group" role="group" aria-label="History">
                     <button
                         type="button"

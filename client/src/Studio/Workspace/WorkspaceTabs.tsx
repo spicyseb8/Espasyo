@@ -1,18 +1,21 @@
 import {
+    Grid2X2,
     Sofa,
     Paintbrush,
-    FolderOpen,
 } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 
+export type WorkspacePanel =
+    | "furniture"
+    | "flooring"
+    | "paint"
+    | "project"
+    | null;
+
 interface Props {
-    activeTab: string;
-
+    activePanel: WorkspacePanel;
     walkthroughMode: boolean;
-
-    panelOpen: boolean;
-
-    onTabChange: (tab: string) => void;
+    onPanelChange: (panel: WorkspacePanel) => void;
 }
 
 const TABS = [
@@ -22,22 +25,21 @@ const TABS = [
         icon: Sofa,
     },
     {
-        id: "design",
-        label: "Design",
-        icon: Paintbrush,
+        id: "flooring",
+        label: "Flooring",
+        icon: Grid2X2,
     },
     {
-        id: "project",
-        label: "Project",
-        icon: FolderOpen,
+        id: "paint",
+        label: "Paint",
+        icon: Paintbrush,
     },
 ] as const;
 
 export default function WorkspaceTabs({
-    activeTab,
+    activePanel,
     walkthroughMode,
-    panelOpen,
-    onTabChange,
+    onPanelChange,
 }: Props) {
     const reduce = useReducedMotion();
 
@@ -49,23 +51,25 @@ export default function WorkspaceTabs({
                     : "workspace-tabs"
             }
             role="toolbar"
-            aria-label="Workspace tabs"
+            aria-label="Editor panels"
         >
             {TABS.map((tab) => {
                 const Icon = tab.icon;
 
-                const isActive = activeTab === tab.id && panelOpen;
+                const isActive = activePanel === tab.id;
 
                 return (
                     <button
                         key={tab.id}
                         type="button"
-                        aria-label={tab.label}
+                        aria-label={`${tab.label} panel`}
                         aria-pressed={isActive}
                         title={tab.label}
                         disabled={walkthroughMode}
                         className={isActive ? "tab active" : "tab"}
-                        onClick={() => onTabChange(tab.id)}
+                        onClick={() =>
+                            onPanelChange(isActive ? null : tab.id)
+                        }
                     >
                         {isActive && (
                             <motion.span
@@ -84,10 +88,7 @@ export default function WorkspaceTabs({
                         )}
 
                         <Icon size={18} className="tab-icon" />
-
-                        {isActive && (
-                            <span className="tab-label">{tab.label}</span>
-                        )}
+                        <span className="tab-label">{tab.label}</span>
                     </button>
                 );
             })}

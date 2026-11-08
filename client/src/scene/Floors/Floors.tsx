@@ -19,6 +19,7 @@ import useEditor
 
 import Floor
     from "./Floor";
+import type { PaintApplyTarget } from "../PaintApplyTarget";
 
 import {
     solveRegions
@@ -29,7 +30,11 @@ import {
 // FLOORS
 //==================================================
 
-export default function Floors() {
+export default function Floors({
+    onPaintApplied
+}: {
+    onPaintApplied?: (target: PaintApplyTarget) => void;
+}) {
 
     const {
         state
@@ -270,6 +275,7 @@ export default function Floors() {
                                 floorMaterials
                             }
 
+                            onPaintApplied={onPaintApplied}
                         />
 
                     )

@@ -346,8 +346,11 @@
 .asset-thumb {
     position: relative;
     width: 100%;
-    height: 120px;
+    height: auto;
+    aspect-ratio: 1 / 1;
     overflow: hidden;
+    border-radius: 8px;
+    background: #f4f4f2;
 }
 
 .asset-thumb img,
@@ -369,4 +372,147 @@
     justify-content: center;
     font-size: 12px;
     opacity: 0.5;
+}
+
+.workspace-furniture-view .asset-card {
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    aspect-ratio: 4 / 5;
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 9px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.035);
+    box-shadow: none;
+    overflow: hidden;
+}
+
+.workspace-furniture-view .asset-card:hover {
+    background: rgba(0, 0, 0, 0.065);
+}
+
+.workspace-furniture-view .asset-card.selected {
+    background: var(--ws-accent-soft);
+}
+
+.workspace-furniture-view .asset-thumb {
+    flex: 1 1 0;
+    min-height: 0;
+    aspect-ratio: 1;
+}
+
+.workspace-furniture-view .asset-card-details {
+    flex: 0 0 auto;
+    min-height: 64px;
+    box-sizing: border-box;
+    padding: 1px 0 5px;
+    overflow: hidden;
+    gap: 3px;
+    align-items: flex-start;
+}
+
+.workspace-furniture-view .asset-card-details .asset-card-name {
+    color: var(--ws-text);
+    text-align: left;
+    font-size: 11px;
+    line-height: 1.25;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    white-space: normal;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+}
+
+.workspace-furniture-view .asset-card-details small {
+    color: rgba(0, 0, 0, 0.54);
+    font-size: 10px;
+    font-weight: 500;
+    text-align: left;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.workspace-furniture-view .asset-card-details .asset-card-category {
+    box-sizing: border-box;
+    color: rgba(0, 0, 0, 0.46);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    padding-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.asset-card-favorite,
+.asset-card-info {
+    position: absolute;
+    z-index: 3;
+    top: 14px;
+    width: 26px;
+    height: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.94);
+    color: rgba(0, 0, 0, 0.48);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+    cursor: pointer;
+}
+
+.asset-card-favorite {
+    top: 14px;
+    left: 14px;
+}
+
+.workspace-furniture-view .asset-card-favorite {
+    top: 8px;
+    right: 8px;
+    left: auto;
+}
+
+.workspace-furniture-view .selected-badge {
+    top: 5px;
+    right: auto;
+    left: 5px;
+}
+
+.asset-card-info {
+    right: 14px;
+}
+
+.asset-card-info:hover,
+.asset-card-info.is-open {
+    color: #1b1b1b;
+}
+
+.asset-card-information {
+    position: absolute;
+    z-index: 4;
+    top: 44px;
+    right: 8px;
+    left: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 9px;
+    background: #fff;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+    color: #1b1b1b;
+    font-size: 10px;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+.asset-card-information span {
+    color: rgba(0, 0, 0, 0.56);
 }

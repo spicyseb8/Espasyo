@@ -12,6 +12,7 @@ import type { SavedProjectData, SavedProjectFloor } from "./ProjectTypes";
 import type { EditorFloorData } from "./types";
 import { getStaircaseFloorData } from "./staircaseData.ts";
 import { isValidProjectBudget } from "../../engine/cost/ProjectBudget";
+import { BuildTool } from "../BuildTool";
 import {
     getWallFinishSideKey,
     WALL_SIDE_FINISH_BUCKET
@@ -26,6 +27,7 @@ function reduceEditorAction(
     action: EditorAction
 ): EditorState {
     const allowedWhileLocked = action.type === "SET_PROJECT_LOCKED" ||
+        action.type === "SWITCH_FLOOR" ||
         action.type === "LOAD_PROJECT" ||
         action.type === "SET_ACTIVE_TAB" ||
         action.type === "SET_ACTIVE_TOOL" ||
@@ -40,6 +42,14 @@ function reduceEditorAction(
                 ...state,
                 projectLocked: action.payload
             };
+        case "SWITCH_FLOOR": {
+            const floors = state.projectLocked
+                ? state.floors
+                : captureActiveFloor(state).floors;
+            const nextFloor = floors.find(floor => floor.floorId === action.payload);
+            if (!nextFloor || nextFloor.floorId === state.activeFloorId) return state;
+            return showFloor({ ...state, floors }, nextFloor);
+        }
         case "SET_PROJECT_BUDGET":
             if (action.payload !== null && !isValidProjectBudget(action.payload)) {
                 return state;
@@ -61,7 +71,9 @@ function reduceEditorAction(
                 activeTool: action.payload === Tool.Wall ||
                     action.payload === Tool.Room
                     ? Tool.None
-                    : action.payload
+                    : action.payload,
+                activeFloorMaterialId: null,
+                activeWallMaterialId: null
             };
         case "ADD_WALL":
             if (state.walkthroughMode) return state;
@@ -374,9 +386,6 @@ function reduceEditorAction(
             };
         case "SELECT_WALL_SECTION": {
             if (state.walkthroughMode) return state;
-            const wallSectionFace = state.wallPaintSeparators[
-                getWallPaintFaceKey(action.payload.wallId, action.payload.side)
-            ];
             return {
                 ...state,
                 selectedWallId: action.payload.wallId,
@@ -385,13 +394,7 @@ function reduceEditorAction(
                 selectedWallSectionId: action.payload.sectionId,
                 selectedWallSeparatorId: null,
                 selectedFloorSectionId: null,
-                selectedFloorSeparatorId: null,
-                activeWallMaterialId:
-                    wallSectionFace?.sectionMaterials[action.payload.sectionId] ??
-                    state.wallFinishes[WALL_SIDE_FINISH_BUCKET]?.[
-                        getWallFinishSideKey(action.payload.wallId, action.payload.side)
-                    ] ??
-                    state.activeWallMaterialId
+                selectedFloorSeparatorId: null
             };
         }
         case "SELECT_WALL_SEPARATOR":
@@ -408,7 +411,6 @@ function reduceEditorAction(
             };
         case "SELECT_FLOOR_SECTION": {
             if (state.walkthroughMode) return state;
-            const floorSectionFace = state.floorPaintSeparators[action.payload.regionId];
             return {
                 ...state,
                 selectedRegionId: action.payload.regionId,
@@ -418,11 +420,7 @@ function reduceEditorAction(
                 selectedWallSectionId: null,
                 selectedWallSeparatorId: null,
                 selectedFloorSectionId: action.payload.sectionId,
-                selectedFloorSeparatorId: null,
-                activeFloorMaterialId:
-                    floorSectionFace?.sectionMaterials[action.payload.sectionId] ??
-                    state.floorFinishes[action.payload.regionId] ??
-                    state.activeFloorMaterialId
+                selectedFloorSeparatorId: null
             };
         }
         case "SELECT_FLOOR_SEPARATOR":
@@ -446,7 +444,13 @@ function reduceEditorAction(
                 wallSeparatorPlacementVersion: action.payload
                     ? state.wallSeparatorPlacementVersion + 1
                     : state.wallSeparatorPlacementVersion,
-                selectedWallSeparatorId: null
+                selectedWallSeparatorId: null,
+                ...(action.payload
+                    ? {
+                        activeFloorMaterialId: null,
+                        activeWallMaterialId: null
+                    }
+                    : {})
             };
        case "SELECT_WALL_SIDE":
     if (state.walkthroughMode) return state;
@@ -504,8 +508,13 @@ function reduceEditorAction(
             if (state.walkthroughMode) return state;
             return {
                 ...state,
-                selectedAsset:
-                    action.payload
+                selectedAsset: action.payload,
+                ...(action.payload
+                    ? {
+                        activeFloorMaterialId: null,
+                        activeWallMaterialId: null
+                    }
+                    : {})
             };
         case "SET_GRID_SIZE":
             if (state.walkthroughMode) return state;
@@ -525,15 +534,33 @@ function reduceEditorAction(
             if (state.walkthroughMode) return state;
             return {
                 ...state,
-                activeFloorMaterialId:
-                    action.payload
+                activeFloorMaterialId: action.payload,
+                activeWallMaterialId: null,
+                ...(action.payload
+                    ? {
+                        activeTool: Tool.None,
+                        buildTool: BuildTool.None,
+                        selectedAsset: null,
+                        wallSeparatorPlacement: null,
+                        selectedWallSeparatorId: null
+                    }
+                    : {})
             };
         case "SET_ACTIVE_WALL_MATERIAL":
             if (state.walkthroughMode) return state;
             return {
                 ...state,
-                activeWallMaterialId:
-                    action.payload
+                activeWallMaterialId: action.payload,
+                activeFloorMaterialId: null,
+                ...(action.payload
+                    ? {
+                        activeTool: Tool.None,
+                        buildTool: BuildTool.None,
+                        selectedAsset: null,
+                        wallSeparatorPlacement: null,
+                        selectedWallSeparatorId: null
+                    }
+                    : {})
             };
         case "SET_FLOOR_FINISH":
             if (state.walkthroughMode) return state;
@@ -629,16 +656,18 @@ function reduceEditorAction(
             if (state.walkthroughMode) return state;
             return {
                 ...state,
-                buildTool:
-                    action.payload
+                buildTool: action.payload,
+                activeFloorMaterialId: null,
+                activeWallMaterialId: null
             };
         case "APPLY_SELECTED_ASSET":
             if (state.walkthroughMode) return state;
             if (!state.selectedAsset) return state;
             return {
                 ...state,
-                buildTool:
-                    state.selectedAsset.type
+                buildTool: state.selectedAsset.type,
+                activeFloorMaterialId: null,
+                activeWallMaterialId: null
             };
         case "CONFIRM_LAYOUT":
             if (state.walkthroughMode) return state;
@@ -1491,13 +1520,6 @@ export function editorReducer(
     state: EditorState,
     action: EditorAction
 ): EditorState {
-    if (action.type === "SWITCH_FLOOR") {
-        const floors = captureActiveFloor(state).floors;
-        const nextFloor = floors.find(floor => floor.floorId === action.payload);
-        if (!nextFloor || nextFloor.floorId === state.activeFloorId) return state;
-        return showFloor({ ...state, floors }, nextFloor);
-    }
-
     if (action.type === "LOAD_PROJECT") {
         const loaded = reduceEditorAction(state, action);
         if (loaded === state) return state;

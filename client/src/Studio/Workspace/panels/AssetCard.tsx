@@ -6,6 +6,7 @@ import {
 
 import {
     Check,
+    Info,
     Star
 } from "lucide-react";
 
@@ -25,11 +26,15 @@ import {
 
 interface Props {
     asset: Asset;
+    categoryLabel?: string;
+    showInformation?: boolean;
 }
 
 
 export default function AssetCard({
-    asset
+    asset,
+    categoryLabel,
+    showInformation = true
 }: Props) {
 
     const {
@@ -45,6 +50,7 @@ export default function AssetCard({
         isFavorite,
         toggleFavorite
     } = useAssetFavorites();
+    const [showInfo, setShowInfo] = useState(false);
 
     const isFurniture = asset.type === BuildTool.Furniture;
     const favorite =
@@ -159,9 +165,12 @@ export default function AssetCard({
             </div>
 
 
-            <div>
+            <div className="asset-card-details">
 
-                <span>
+                <span
+                    className="asset-card-name"
+                    title={asset.name}
+                >
                     {
                         asset.name
                     }
@@ -178,6 +187,11 @@ export default function AssetCard({
                     }
 
                 </small>
+                {categoryLabel && (
+                    <small className="asset-card-category">
+                        {categoryLabel}
+                    </small>
+                )}
 
             </div>
 
@@ -201,6 +215,35 @@ export default function AssetCard({
                         fill={favorite ? "currentColor" : "none"}
                     />
                 </button>
+            )}
+            {showInformation && (
+                <>
+                    <button
+                        type="button"
+                        className={`asset-card-info${showInfo ? " is-open" : ""}`}
+                        aria-label={`Information about ${asset.name}`}
+                        aria-expanded={showInfo}
+                        title="Asset information"
+                        onClick={event => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            setShowInfo(value => !value);
+                        }}
+                    >
+                        <Info size={13} strokeWidth={2} />
+                    </button>
+                    {showInfo && (
+                        <div className="asset-card-information" role="status">
+                            <strong>{asset.name}</strong>
+                            <span>{categoryLabel ?? "Furniture"}</span>
+                            <span>
+                                {asset.price == null
+                                    ? "Price unavailable"
+                                    : `₱${asset.price.toLocaleString()}`}
+                            </span>
+                        </div>
+                    )}
+                </>
             )}
         </div>
     );

@@ -31,17 +31,10 @@
     --ws-pill-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05);
 
     position: absolute;
-    top: 0;
-    left: 0;
-    bottom: 0;
+    inset: 0;
     z-index: 50;
 
-    width: min(340px, 100vw);
-    padding: 12px;
     box-sizing: border-box;
-
-    display: flex;
-    flex-direction: column;
 
     font-family: inherit;
     color: var(--ws-text);
@@ -57,24 +50,116 @@
    ================================================== */
 
 .workspace-shell {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: 1;
     pointer-events: auto;
 
     display: flex;
     flex-direction: column;
+    height: min(78vh, 820px);
     min-height: 0;
-    max-height: 100%;
+    width: min(72vw, 1400px);
+    max-height: calc(100% - 104px);
 
-    background: rgba(255, 255, 255, 0.88);
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    background: #fff;
 
-    border: 1px solid rgba(255, 255, 255, 0.7);
-    border-radius: 20px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 18px;
     box-shadow:
-        0 18px 48px rgba(0, 0, 0, 0.12),
-        0 2px 8px rgba(0, 0, 0, 0.05);
+        0 20px 56px rgba(0, 0, 0, 0.18),
+        0 3px 10px rgba(0, 0, 0, 0.07);
 
     overflow: hidden;
+    transform: translate(-50%, -50%);
+}
+
+.workspace-shell[hidden] {
+    display: none !important;
+}
+
+.workspace-shell.is-project-panel {
+    width: min(620px, calc(100vw - 32px));
+    height: min(720px, calc(100% - 104px));
+}
+
+.workspace-shell.is-material-panel {
+    --material-panel-height: clamp(172px, 21vh, 176px);
+    top: auto;
+    right: auto;
+    bottom: calc(78px + env(safe-area-inset-bottom));
+    left: 50%;
+    width: min(88vw, 1200px);
+    height: var(--material-panel-height);
+    max-height: calc(100% - 100px);
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr) 32px minmax(120px, 280px) 32px 28px;
+    grid-template-rows: 36px minmax(0, 1fr);
+    align-content: stretch;
+    align-items: stretch;
+    column-gap: 6px;
+    row-gap: 4px;
+    padding: 6px 12px 8px;
+    box-sizing: border-box;
+    border-radius: 18px;
+    transform: translateX(-50%);
+    transition:
+        height 0.2s ease,
+        opacity 0.18s ease,
+        transform 0.2s ease;
+}
+
+.workspace-shell.is-material-panel.is-closed {
+    height: 0;
+    min-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    pointer-events: none;
+    transform: translate(-50%, 8px);
+}
+
+.workspace-panel-header {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 58px;
+    padding: 0 18px;
+    border-bottom: 1px solid var(--ws-line);
+    background: #fff;
+}
+
+.workspace-panel-header h2 {
+    margin: 0;
+    color: var(--ws-text);
+    font-size: 15px;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+}
+
+.workspace .workspace-panel-close {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 50%;
+    background: var(--ws-tint);
+    color: var(--ws-muted);
+    font: inherit;
+    font-size: 23px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.workspace .workspace-panel-close:hover {
+    background: var(--ws-tint-hover);
+    color: var(--ws-ink);
 }
 
 .workspace button:focus-visible {
@@ -89,25 +174,35 @@
    ================================================== */
 
 .workspace-tabs {
-    flex-shrink: 0;
+    position: absolute;
+    left: 50%;
+    bottom: 14px;
+    z-index: 2;
+    width: min(430px, calc(100vw - 32px));
+    box-sizing: border-box;
+    pointer-events: auto;
     display: flex;
-    gap: 2px;
-    margin: 8px;
-    padding: 3px;
-    border-radius: 999px;
-    background: var(--ws-tint);
+    gap: 4px;
+    padding: 6px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.16);
+    transform: translateX(-50%);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
 }
 
 .workspace .tab {
     position: relative;
     flex: 1 1 0;
     min-width: 0;
-    height: 36px;
+    min-height: 42px;
 
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 7px;
 
     padding: 0 8px;
     border: 0;
@@ -117,7 +212,7 @@
 
     font: inherit;
     font-size: 12px;
-    font-weight: 500;
+    font-weight: 550;
     white-space: nowrap;
 
     cursor: pointer;
@@ -130,7 +225,6 @@
 }
 
 .workspace .tab.active {
-    flex: 2.6 1 0;
     color: var(--ws-ink);
 }
 
@@ -157,6 +251,10 @@
     opacity: 0.55;
 }
 
+.workspace-tabs.walkthrough-locked .tab {
+    cursor: not-allowed;
+}
+
 
 /* ==================================================
    CONTENT — flat, scrolls inside the shell
@@ -165,17 +263,94 @@
 .workspace-content {
     flex: 1 1 auto;
     min-height: 0;
-    padding: 0 18px 18px;
+    padding: 8px 18px 18px;
     box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 
+}
+
+.workspace-shell.is-material-panel .workspace-panel-header {
+    display: contents;
+}
+
+.workspace-shell.is-material-panel .workspace-panel-header h2 {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: center;
+    min-width: 0;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.workspace-shell.is-material-panel .workspace-panel-close {
+    grid-column: 6;
+    grid-row: 1;
+    align-self: center;
+    width: 28px;
+    height: 28px;
+    font-size: 19px;
+}
+
+.workspace-shell.is-material-panel .workspace-content {
+    display: contents;
+}
+
+.workspace-shell.is-material-panel .workspace-panels,
+.workspace-shell.is-material-panel .workspace-design-view:not([hidden]),
+.workspace-shell.is-material-panel .workspace-design-view:not([hidden]) > .design-panel {
+    display: contents !important;
+}
+
+.workspace-panels,
+.workspace-panel-view {
+    min-height: 0;
+}
+
+.workspace-panels {
+    flex: 1 1 auto;
+    height: 100%;
+    overflow: hidden;
+}
+
+.workspace-panel-view[hidden] {
+    display: none !important;
+}
+
+.workspace-panel-view:not([hidden]) {
+    display: block;
+    height: 100%;
     overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
-
     scrollbar-width: thin;
     scrollbar-color: rgba(0, 0, 0, 0.18) transparent;
+}
 
-    animation: ws-open 0.18s ease;
+.workspace-furniture-view:not([hidden]) {
+    display: flex;
+    overflow: hidden;
+}
+
+.workspace-panel-view::-webkit-scrollbar { width: 6px; }
+.workspace-panel-view::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.16);
+    border-radius: 999px;
+}
+
+.workspace-design-view:not([hidden]) {
+    display: flex;
+    flex-direction: column;
+}
+
+.workspace-design-view:not([hidden]) > .design-panel {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.workspace-project-view:not([hidden]) {
+    padding: 0 0 4px;
 }
 
 .workspace-content::-webkit-scrollbar { width: 6px; }
@@ -185,19 +360,65 @@
     border-radius: 999px;
 }
 
-/* Collapsing the panel leaves just the tab bar */
-.workspace-shell.is-closed .workspace-content {
-    display: none;
-}
-
-.workspace .workspace-content-inner {
-    min-height: max-content;
-    padding-top: 4px;
-}
-
 @keyframes ws-open {
     from { opacity: 0; transform: translateY(-4px); }
     to { opacity: 1; transform: none; }
+}
+
+@media (max-width: 640px) {
+    .workspace-shell {
+        width: calc(100vw - 24px);
+        height: min(76vh, calc(100% - 96px));
+        max-height: calc(100% - 96px);
+    }
+
+    .workspace-shell.is-project-panel {
+        width: calc(100vw - 24px);
+        height: min(76vh, calc(100% - 96px));
+    }
+
+    .workspace-shell.is-material-panel {
+        --material-panel-height: clamp(172px, 29vh, 176px);
+        bottom: calc(74px + env(safe-area-inset-bottom));
+        width: 94vw;
+        max-height: calc(100% - 88px);
+        grid-template-columns: max-content minmax(0, 1fr) 32px minmax(120px, 1fr) 32px 28px;
+        column-gap: 4px;
+        padding: 6px 8px 8px;
+    }
+
+    .workspace-content {
+        padding: 8px 14px 14px;
+    }
+
+    .workspace-shell.is-material-panel .workspace-content {
+        display: contents;
+    }
+
+    .workspace-tabs {
+        bottom: max(10px, env(safe-area-inset-bottom));
+        width: calc(100vw - 24px);
+    }
+
+    .workspace .tab {
+        gap: 5px;
+        padding: 0 4px;
+        font-size: 11px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .workspace-shell.is-material-panel {
+        transition: none;
+    }
+}
+
+@media (max-width: 380px) {
+    .workspace .tab {
+        flex-direction: column;
+        gap: 2px;
+        font-size: 10px;
+    }
 }
 
 /* Panel roots: no card of their own */

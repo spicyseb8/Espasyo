@@ -1,102 +1,34 @@
-import {
-    useState
-} from "react";
-
 import "./WorkspaceContent.css";
 
 import FurniturePanel from "./panels/FurniturePanel";
 import DesignPanel from "./panels/DesignPanel";
-import ProjectPanel from "./panels/ProjectPanel";
+import type { WorkspacePanel } from "./WorkspaceTabs";
 
 interface Props {
-
-    activeTab: string;
-
+    activePanel: WorkspacePanel;
+    onClosePanel: () => void;
 }
 
 export default function WorkspaceContent({
-
-    activeTab
-
+    activePanel,
+    onClosePanel,
 }: Props) {
-
-    const isDesignTab =
-        activeTab === "design";
-
-    const [
-        hasOpenedDesignTab,
-        setHasOpenedDesignTab
-    ] = useState<boolean>(
-        isDesignTab
-    );
-
-    if (
-        isDesignTab &&
-        !hasOpenedDesignTab
-    ) {
-
-        setHasOpenedDesignTab(
-            true
-        );
-    }
-
-
-    //==================================================
-    // OTHER PANELS
-    //
-    // Unchanged behavior: only the active one is
-    // rendered, and it remounts on tab change.
-    //==================================================
-
-    const panels = {
-        furniture: <FurniturePanel />,
-        project: <ProjectPanel />
-    };
-    const activePanel = panels[activeTab as keyof typeof panels] ?? <FurniturePanel />;
-
     return (
-
-        <>
-
-            {!isDesignTab && (
-
-                <div key={activeTab} className="workspace-content-inner">
-
-                    {activePanel}
-
-                </div>
-
-            )}
-
-            {/*
-                Inline style on purpose: a CSS class such as
-                display:flex on .workspace-content-inner would
-                override the HTML "hidden" attribute.
-            */}
-
-            {hasOpenedDesignTab && (
-
-                <div
-
-                    className="workspace-content-inner"
-
-                    style={{
-                        display:
-                            isDesignTab
-                                ? undefined
-                                : "none"
-                    }}
-
-                >
-
-                    <DesignPanel />
-
-                </div>
-
-            )}
-
-        </>
-
+        <div className="workspace-panels">
+            <div
+                className="workspace-panel-view workspace-furniture-view"
+                hidden={activePanel !== "furniture"}
+                aria-hidden={activePanel !== "furniture"}
+            >
+                <FurniturePanel onClose={onClosePanel} />
+            </div>
+            <div
+                className="workspace-panel-view workspace-design-view"
+                hidden={activePanel !== "flooring" && activePanel !== "paint"}
+                aria-hidden={activePanel !== "flooring" && activePanel !== "paint"}
+            >
+                <DesignPanel mode={activePanel === "paint" ? "paint" : "flooring"} />
+            </div>
+        </div>
     );
-
 }

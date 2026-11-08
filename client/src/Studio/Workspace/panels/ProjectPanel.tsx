@@ -61,8 +61,6 @@ import {
 
 import {
     isDeadlinePassed,
-    getDaysUntilProjectDeadline,
-    formatProjectDeadline,
     isProjectReadOnlyByDeadline,
     isValidProjectDeadline,
     setActiveProjectDeadline,
@@ -110,27 +108,6 @@ function formatProjectId(
     ).padStart(2, "0");
 
     return `PRJ-${sequenceCode}${yearCode}`;
-}
-
-function formatActivityTimestamp(value: unknown): string {
-    const date = typeof value === "string"
-        ? new Date(value)
-        : value instanceof Date
-            ? value
-            : null;
-    return date && !Number.isNaN(date.getTime())
-        ? date.toLocaleString()
-        : "Unknown date";
-}
-
-function formatActivityValue(value: unknown): string {
-    if (value === null) return "none";
-    if (typeof value !== "object" || value instanceof Date) return String(value);
-    try {
-        return JSON.stringify(value);
-    } catch {
-        return "value unavailable";
-    }
 }
 
 //======================================================
@@ -247,7 +224,11 @@ function usesProjectIdFormat(
 // PROJECT PANEL
 //======================================================
 
-export default function ProjectPanel() {
+interface Props {
+    open: boolean;
+}
+
+export default function ProjectPanel({ open }: Props) {
     const {
         state,
         dispatch
@@ -289,7 +270,7 @@ export default function ProjectPanel() {
     const [revisionFeedback, setRevisionFeedback] = useState<string | null>(null);
     const [deadline, setDeadline] = useState<string | null>(null);
     const [savedVersionNumber, setSavedVersionNumber] = useState<number | null>(null);
-    const [projectActivities, setProjectActivities] = useState<ProjectActivity[]>([]);
+    const [, setProjectActivities] = useState<ProjectActivity[]>([]);
     const [showSubmissionAgreement, setShowSubmissionAgreement] = useState(false);
     const [submissionAgreementChecked, setSubmissionAgreementChecked] = useState(false);
     const [submitting, setSubmitting] = useState(false);
@@ -941,9 +922,6 @@ export default function ProjectPanel() {
         }
     }
 
-    const daysRemaining = deadline
-        ? getDaysUntilProjectDeadline(deadline)
-        : null;
     const projectLocked = deadlineLocked ||
         (state.workflowType === "admin-managed" && !deadline) ||
         projectStatus === "submitted" ||
@@ -954,199 +932,132 @@ export default function ProjectPanel() {
     //==================================================
 
     return (
-        <aside className="design-sidebar">
-            <div className="panel-card">
-                <h3 className="section-title">
-                    {
-                        projectLocked
-                            ? "Project Read Only"
-                            : isExistingProject
-                                ? "Edit Project"
-                                : isDraftProject
-                                    ? "Continue Draft"
-                                    : "Save Project"
-                    }
-                </h3>
+        <>
+            <aside
+                id="project-panel-dropdown"
+                className="project-panel-dropdown"
+                aria-label="Project panel"
+                hidden={!open}
+            >
+                    <div className="project-panel-card">
+                        <h2 className="project-panel-heading">Project</h2>
 
-                {projectLocked && (
-                    <div
-                        role="alert"
-                        className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800"
-                    >
-                        {projectStatus === "submitted"
-                            ? "This project is submitted and locked during administrative review."
-                            : projectStatus === "approved"
-                                ? "This approved project is locked against further changes."
-                                : state.workflowType === "admin-managed" && !deadline
-                                    ? "Editing is paused until an administrator sets a valid project deadline."
-                                : "The project deadline has passed. Editing and saving are disabled."}
-                    </div>
-                )}
-                {projectStatus === "approved" && (
-                    <p className="mb-3 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs leading-relaxed text-green-900">
-                        Approved as a reference for professional development. This is not construction authorization or a finalized construction agreement; consultation and final development happen separately.
-                    </p>
-                )}
-                {deadline && (
-                    <p className={`mb-3 rounded-lg border px-3 py-2 text-xs ${daysRemaining !== null && daysRemaining <= 3 ? "border-amber-200 bg-amber-50 text-amber-800" : "border-black/10 bg-white text-black/60"}`}>
-                        Deadline (Philippine time): {formatProjectDeadline(deadline)}
-                        {daysRemaining !== null && (daysRemaining < 0
-                            ? ` · ${Math.abs(daysRemaining)} day(s) overdue`
-                            : daysRemaining === 0
-                                ? " · Due today"
-                                : ` · ${daysRemaining} day(s) remaining`)}
-                    </p>
-                )}
-                {revisionFeedback && projectStatus === "revision-requested" && (
-                    <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
-                        <strong>Revision requested:</strong> {revisionFeedback}
-                    </div>
-                )}
-                {savedVersionNumber !== null && (
-                    <p className="mb-2 text-xs text-muted-foreground">Last saved design version: {savedVersionNumber}</p>
-                )}
+                        {projectLocked && (
+                            <div
+                                role="alert"
+                                className="project-panel-notice project-panel-notice-warning"
+                            >
+                                {projectStatus === "submitted"
+                                    ? "Awaiting administrative review. Editing is paused."
+                                    : projectStatus === "approved"
+                                        ? "This project is approved and read-only."
+                                        : state.workflowType === "admin-managed" && !deadline
+                                            ? "Editing is paused until an administrator sets a deadline."
+                                            : "The project deadline has passed. Editing and saving are disabled."}
+                            </div>
+                        )}
+                        {projectStatus === "approved" && (
+                            <p className="project-panel-notice project-panel-notice-success">
+                                Approved as a professional-development reference, not construction authorization.
+                            </p>
+                        )}
+                        {revisionFeedback && projectStatus === "revision-requested" && (
+                            <div className="project-panel-notice project-panel-notice-warning">
+                                <strong>Revision requested:</strong> {revisionFeedback}
+                            </div>
+                        )}
 
-                <div className="setting-group">
-                    <label
-                        className="setting-label"
-                        htmlFor="project-name"
-                    >
-                        Project Name
-                    </label>
+                        <div className="setting-group">
+                            <label
+                                className="setting-label"
+                                htmlFor="project-name"
+                            >
+                                Project Name
+                            </label>
 
-                    <input
-                        id="project-name"
-                        className="setting-input project-name-input"
-                        type="text"
-                        placeholder="Enter project name"
-                        value={projectName}
-                        onChange={event =>
-                            setProjectName(
-                                event.target.value
-                            )
-                        }
-                        readOnly={state.workflowType === "admin-managed"}
-                        aria-readonly={state.workflowType === "admin-managed"}
-                        disabled={
-                            saving ||
-                            projectLocked
-                        }
-                    />
-                </div>
-
-                {
-                    (
-                        routeProjectId ??
-                        projectId
-                    ) && (
-                        <div className="project-id-display">
-                            <span>
-                                Project ID
-                            </span>
-
-                            <span>
-                                {
-                                    routeProjectId ??
-                                    projectId
+                            <input
+                                id="project-name"
+                                className="setting-input project-name-input"
+                                type="text"
+                                placeholder="Enter project name"
+                                value={projectName}
+                                onChange={event =>
+                                    setProjectName(
+                                        event.target.value
+                                    )
                                 }
-                            </span>
+                                readOnly={state.workflowType === "admin-managed"}
+                                aria-readonly={state.workflowType === "admin-managed"}
+                                disabled={
+                                    saving ||
+                                    projectLocked
+                                }
+                            />
                         </div>
-                    )
-                }
 
-                <button
-                    type="button"
-                    className="confirm-layout-button"
-                    onClick={handleSave}
-                    disabled={
-                        saving ||
-                        projectLocked
-                    }
-                >
-                    {
-                        projectLocked
-                            ? "Read Only"
-                            : saving
-                                ? "Saving..."
-                                : isExistingProject
-                                    ? "Save Changes"
-                                    : "Save Project"
-                    }
-                </button>
-                {state.workflowType === "admin-managed" &&
-                    isExistingProject &&
-                    projectStatus !== "submitted" &&
-                    projectStatus !== "approved" && (
                         <button
                             type="button"
-                            className="confirm-layout-button mt-2"
-                            onClick={() => {
-                                setSubmissionAgreementChecked(false);
-                                setSubmissionError("");
-                                setShowSubmissionAgreement(true);
-                            }}
-                            disabled={projectLocked || saving || savedVersionNumber === null}
-                        >
-                            Submit for Review
-                        </button>
-                    )}
-                {isExistingProject && !projectLocked && (
-                    <button
-                        type="button"
-                        className="confirm-layout-button mt-2"
-                        disabled={saving}
-                        onClick={() => {
-                            if (window.confirm("Discard unsaved changes and reload the last saved design?")) {
-                                window.location.reload();
+                            className="confirm-layout-button"
+                            onClick={handleSave}
+                            disabled={
+                                saving ||
+                                projectLocked
                             }
-                        }}
-                    >
-                        Discard Unsaved Changes
-                    </button>
-                )}
-                {projectActivities.length > 0 && (
-                    <details className="mt-3 text-xs">
-                        <summary className="cursor-pointer font-medium">Recent project activity</summary>
-                        <ul className="mt-2 space-y-1 text-muted-foreground">
-                            {projectActivities.slice(0, 5).map(activity => (
-                                <li key={activity.id}>
-                                    <span className="font-medium text-foreground">
-                                        {activity.action.replaceAll("-", " ")}
-                                    </span>
-                                    {" · "}{formatActivityTimestamp(activity.createdAt)}
-                                    {" · "}{activity.actorName || (activity.actorRole === "client" ? "You" : "Admin")}
-                                    {activity.description && <p>{activity.description}</p>}
-                                    {(activity.previousValue !== undefined || activity.newValue !== undefined) && (
-                                        <p>
-                                            {activity.previousValue !== undefined
-                                                ? `Previous: ${formatActivityValue(activity.previousValue)}`
-                                                : ""}
-                                            {activity.previousValue !== undefined && activity.newValue !== undefined ? " · " : ""}
-                                            {activity.newValue !== undefined
-                                                ? `New: ${formatActivityValue(activity.newValue)}`
-                                                : ""}
-                                        </p>
-                                    )}
-                                </li>
-                            ))}
-                        </ul>
-                    </details>
-                )}
-
-                {
-                    message && (
-                        <div
-                            className="save-message"
-                            role="status"
                         >
-                            {message}
-                        </div>
-                    )
-                }
-            </div>
+                            {
+                                projectLocked
+                                    ? "Read Only"
+                                    : saving
+                                        ? "Saving..."
+                                        : isExistingProject
+                                            ? "Save Changes"
+                                            : "Save Project"
+                            }
+                        </button>
+                        {state.workflowType === "admin-managed" &&
+                            isExistingProject &&
+                            projectStatus !== "submitted" &&
+                            projectStatus !== "approved" && (
+                                <button
+                                    type="button"
+                                    className="confirm-layout-button project-panel-secondary-button"
+                                    onClick={() => {
+                                        setSubmissionAgreementChecked(false);
+                                        setSubmissionError("");
+                                        setShowSubmissionAgreement(true);
+                                    }}
+                                    disabled={projectLocked || saving || savedVersionNumber === null}
+                                >
+                                    Submit for Review
+                                </button>
+                            )}
+                        {isExistingProject && !projectLocked && (
+                            <button
+                                type="button"
+                                className="project-panel-discard-button"
+                                disabled={saving}
+                                onClick={() => {
+                                    if (window.confirm("Discard unsaved changes and reload the last saved design?")) {
+                                        window.location.reload();
+                                    }
+                                }}
+                            >
+                                Discard Unsaved Changes
+                            </button>
+                        )}
+                        {message && (
+                            <div
+                                className="save-message"
+                                role="status"
+                            >
+                                {message}
+                            </div>
+                        )}
+                    </div>
+            </aside>
             {showSubmissionAgreement && (
                 <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/50 p-4">
-                    <section role="dialog" aria-modal="true" aria-labelledby="submission-agreement-title" className="w-full max-w-xl rounded-2xl bg-white p-6 text-[#1b1b1b] shadow-xl">
+                    <section role="dialog" aria-modal="true" aria-labelledby="submission-agreement-title" className="max-h-[min(90vh,760px)] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-8 text-[#1b1b1b] shadow-xl sm:p-10">
                         <h2 id="submission-agreement-title" className="text-xl font-semibold">Project Submission Agreement</h2>
                         <p className="mt-3 text-sm leading-6 text-black/65">
                             I have completed and reviewed my proposed design and am submitting it for administrative evaluation.
@@ -1172,6 +1083,6 @@ export default function ProjectPanel() {
                     </section>
                 </div>
             )}
-        </aside>
+        </>
     );
 }

@@ -1,5 +1,4 @@
 import { useEffect, useMemo } from "react";
-import { Html } from "@react-three/drei";
 import { BoxGeometry, DoubleSide, Quaternion, Vector3 } from "three";
 import useEditor from "../../context/editor/useEditor";
 import {
@@ -152,22 +151,6 @@ function ReadOnlyStaircaseLanding({ landing }: { landing: StaircaseLandingData }
                 <boxGeometry args={[Math.min(landing.run, 0.35), 0.08, Math.min(landing.width, 0.35)]} />
                 <meshStandardMaterial color="#168bd2" />
             </mesh>
-            <Html
-                position={[landing.run / 2, 0.35, 0]}
-                center
-                distanceFactor={10}
-                style={{
-                    padding: "3px 6px",
-                    borderRadius: 4,
-                    background: "#0369a1",
-                    color: "#fff",
-                    fontSize: 11,
-                    whiteSpace: "nowrap",
-                    pointerEvents: "none"
-                }}
-            >
-                Stair arrival
-            </Html>
         </group>
     );
 }

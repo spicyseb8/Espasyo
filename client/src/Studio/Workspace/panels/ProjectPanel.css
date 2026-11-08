@@ -1,7 +1,96 @@
 /* ==========================================================
    PROJECT PANEL
-   Matches Floor Plan Panel visual style
+   Compact dropdown anchored to the editor toolbar
    ========================================================== */
+
+.project-panel-dropdown {
+    --ws-border: var(--tb-line, #e5e5e5);
+    --ws-text: var(--tb-ink, #1b1b1b);
+    --ws-text-muted: var(--tb-ink-muted, #666666);
+    --ws-input-bg: var(--tb-surface-sunken, #ffffff);
+    --ws-accent: var(--tb-ink, #1b1b1b);
+    --ws-accent-soft: rgba(27, 27, 27, 0.12);
+    --ws-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.08);
+
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    z-index: 1001;
+    box-sizing: border-box;
+    width: min(360px, calc(100vw - 24px));
+    max-height: min(70vh, 560px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 16px;
+    border: 1px solid var(--tb-line, rgba(0, 0, 0, 0.1));
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: var(--tb-shadow-dropdown, 0 18px 48px rgba(0, 0, 0, 0.12));
+}
+
+.project-panel-card {
+    width: 100%;
+}
+
+.project-panel-heading {
+    margin: 0 0 14px;
+    color: var(--tb-ink, #1b1b1b);
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.project-panel-notice {
+    margin: 0 0 12px;
+    padding: 9px 10px;
+    border: 1px solid;
+    border-radius: 9px;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.project-panel-notice-warning {
+    border-color: #f2d18a;
+    background: #fff8e8;
+    color: #7a4d00;
+}
+
+.project-panel-notice-success {
+    border-color: #a9d8b8;
+    background: #effaf2;
+    color: #245c35;
+}
+
+.project-panel-secondary-button {
+    margin-top: 8px;
+    border: 1px solid var(--tb-line-strong, rgba(0, 0, 0, 0.22));
+    background: #ffffff;
+    color: var(--tb-ink, #1b1b1b);
+    box-shadow: none;
+}
+
+.confirm-layout-button.project-panel-secondary-button:hover:not(:disabled) {
+    border-color: var(--tb-ink, #1b1b1b);
+    background: var(--tb-surface-hover, #f5f5f5);
+    color: var(--tb-ink, #1b1b1b);
+}
+
+.project-panel-discard-button {
+    display: block;
+    margin: 10px auto 0;
+    padding: 4px 8px;
+    border: 0;
+    background: transparent;
+    color: var(--tb-ink-muted, #666666);
+    font: inherit;
+    font-size: 11px;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.project-panel-discard-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
 
 .design-sidebar {
     display: flex;
