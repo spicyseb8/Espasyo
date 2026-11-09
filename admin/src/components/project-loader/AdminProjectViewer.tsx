@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUpRight, MessageCircle, Send } from "lucide-react";
+import {
+    ArrowLeft,
+    ArrowUpRight,
+    ChevronLeft,
+    ChevronRight,
+    MessageCircle,
+    MousePointerClick,
+    Send,
+    X
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AdminProjectScene from "../project-loader/AdminProjectScene";
 import type { AdminProject } from "@/services/assets/projectService";
@@ -26,100 +35,41 @@ interface AdminProjectViewerProps {
     projectData: SavedProjectData;
     unavailableAssetIds?: string[];
 }
+
 const COMMENT_CURSOR =
     `url("data:image/svg+xml,${encodeURIComponent(`
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="32"
-            height="32"
-            viewBox="0 0 32 32"
-        >
-            <path
-                d="M6 5.5
-                   C4.067 5.5 2.5 7.067 2.5 9
-                   V18
-                   C2.5 19.933 4.067 21.5 6 21.5
-                   H12
-                   L10 27
-                   L16.5 21.5
-                   H24
-                   C25.933 21.5 27.5 19.933 27.5 18
-                   V9
-                   C27.5 7.067 25.933 5.5 24 5.5
-                   Z"
-                fill="white"
-                stroke="#ff7a00"
-                stroke-width="2"
-                stroke-linejoin="round"
-            />
-
-            <circle
-                cx="10"
-                cy="13.5"
-                r="1.4"
-                fill="#ff7a00"
-            />
-
-            <circle
-                cx="15"
-                cy="13.5"
-                r="1.4"
-                fill="#ff7a00"
-            />
-
-            <circle
-                cx="20"
-                cy="13.5"
-                r="1.4"
-                fill="#ff7a00"
-            />
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+            <path d="M6 5.5 C4.067 5.5 2.5 7.067 2.5 9 V18 C2.5 19.933 4.067 21.5 6 21.5 H12 L10 27 L16.5 21.5 H24 C25.933 21.5 27.5 19.933 27.5 18 V9 C27.5 7.067 25.933 5.5 24 5.5 Z"
+                fill="white" stroke="#ff7a00" stroke-width="2" stroke-linejoin="round" />
+            <circle cx="10" cy="13.5" r="1.4" fill="#ff7a00" />
+            <circle cx="15" cy="13.5" r="1.4" fill="#ff7a00" />
+            <circle cx="20" cy="13.5" r="1.4" fill="#ff7a00" />
         </svg>
     `)}") 5 5, crosshair`;
-function formatCommentDate(
-    value: unknown
-): string {
+
+function formatCommentDate(value: unknown): string {
+    const options: Intl.DateTimeFormatOptions = {
+        dateStyle: "medium",
+        timeStyle: "short"
+    };
+
     if (
         value &&
         typeof value === "object" &&
         "toDate" in value &&
-        typeof (
-            value as {
-                toDate: () => Date;
-            }
-        ).toDate === "function"
+        typeof (value as { toDate: () => Date }).toDate === "function"
     ) {
-        return (
-            value as {
-                toDate: () => Date;
-            }
-        ).toDate().toLocaleString(
-            undefined,
-            {
-                dateStyle: "medium",
-                timeStyle: "short"
-            }
-        );
+        return (value as { toDate: () => Date }).toDate().toLocaleString(undefined, options);
     }
 
-    if (
-        value instanceof Date
-    ) {
-        return value.toLocaleString(
-            undefined,
-            {
-                dateStyle: "medium",
-                timeStyle: "short"
-            }
-        );
+    if (value instanceof Date) {
+        return value.toLocaleString(undefined, options);
     }
 
     if (typeof value === "string") {
         const date = new Date(value);
         if (!Number.isNaN(date.getTime())) {
-            return date.toLocaleString(undefined, {
-                dateStyle: "medium",
-                timeStyle: "short"
-            });
+            return date.toLocaleString(undefined, options);
         }
     }
 
@@ -134,6 +84,10 @@ export default function AdminProjectViewer({
     const navigate = useNavigate();
     const { role } = useAuth();
     const canComment = role === "admin";
+
+    //==================================================
+    // FLOORS
+    //==================================================
     const reviewFloors = useMemo(() => {
         if (projectData.floors?.length) {
             return projectData.floors.map((floor, index) => ({
@@ -147,6 +101,7 @@ export default function AdminProjectViewer({
             structure: projectData
         }];
     }, [projectData]);
+
     const [activeFloorId, setActiveFloorId] = useState(
         projectData.activeFloorId ??
         projectData.floors?.[0]?.floorId ??
@@ -183,8 +138,13 @@ export default function AdminProjectViewer({
             activeFloor.structure.floorPaintSeparators ??
             (activeFloorIndex === 0 ? projectData.floorPaintSeparators : {})
     }), [activeFloor, activeFloorIndex, projectData]);
+
+    //==================================================
+    // STATE
+    //==================================================
     const [sceneReady, setSceneReady] = useState(false);
     const [runtimeAssetFailures, setRuntimeAssetFailures] = useState<string[]>([]);
+    const [assetWarningDismissed, setAssetWarningDismissed] = useState(false);
     const reportedUnavailableAssetIds = [
         ...new Set([...unavailableAssetIds, ...runtimeAssetFailures])
     ];
@@ -192,304 +152,129 @@ export default function AdminProjectViewer({
         setSceneReady(true);
     }, []);
 
-    const [
-        comments,
-        setComments
-    ] = useState<AdminComment[]>(
-        []
-    );
+    const [comments, setComments] = useState<AdminComment[]>([]);
+    const [selectedTarget, setSelectedTarget] = useState<AdminCommentTargetDetail | null>(null);
+    const [commentMode, setCommentMode] = useState(false);
+    const [commentText, setCommentText] = useState("");
+    const [savingComment, setSavingComment] = useState(false);
+    const [commentError, setCommentError] = useState("");
+    const [focusedCommentId, setFocusedCommentId] = useState<string | null>(null);
+    const [visibleCommentId, setVisibleCommentId] = useState<string | null>(null);
+    const [panelOpen, setPanelOpen] = useState(true);
 
-    const [
-        selectedTarget,
-        setSelectedTarget
-    ] = useState<AdminCommentTargetDetail | null>(
-        null
-    );
+    const chatRef = useRef<HTMLDivElement | null>(null);
 
-    const [
-        commentMode,
-        setCommentMode
-    ] = useState(false);
-
-    const [
-        commentText,
-        setCommentText
-    ] = useState("");
-
-    const [
-        savingComment,
-        setSavingComment
-    ] = useState(false);
-
-    const [
-        commentError,
-        setCommentError
-    ] = useState("");
-
-    const [
-        focusedCommentId,
-        setFocusedCommentId
-    ] = useState<string | null>(
-        null
-    );
-
-    const [
-        visibleCommentId,
-        setVisibleCommentId
-    ] = useState<string | null>(
-        null
-    );
-
-    const chatRef =
-        useRef<HTMLDivElement | null>(
-            null
-        );
-
+    //==================================================
+    // EFFECTS
+    //==================================================
     useEffect(() => {
         return subscribeToAdminComments(
             projectData.projectId,
             setComments,
             error => {
-                setCommentError(
-                    "Unable to load comments."
-                );
-
-                console.error(
-                    error
-                );
+                setCommentError("Unable to load comments.");
+                console.error(error);
             }
         );
-    }, [
-        projectData.projectId
-    ]);
+    }, [projectData.projectId]);
 
     useEffect(() => {
-        const handleTarget = (
-            event: Event
-        ) => {
-            if (!canComment || !commentMode) {
-                return;
-            }
+        const handleTarget = (event: Event) => {
+            if (!canComment || !commentMode) return;
 
-            const customEvent =
-                event as CustomEvent<AdminCommentTargetDetail>;
+            const customEvent = event as CustomEvent<AdminCommentTargetDetail>;
+            if (!customEvent.detail) return;
 
-            if (!customEvent.detail) {
-                return;
-            }
-
-            setSelectedTarget(
-                customEvent.detail
-            );
-
-            setCommentError(
-                ""
-            );
+            setSelectedTarget(customEvent.detail);
+            setCommentError("");
         };
 
-        window.addEventListener(
-            ADMIN_COMMENT_TARGET_EVENT,
-            handleTarget
-        );
-
-        return () => {
-            window.removeEventListener(
-                ADMIN_COMMENT_TARGET_EVENT,
-                handleTarget
-            );
-        };
-    }, [
-        canComment,
-        commentMode
-    ]);
+        window.addEventListener(ADMIN_COMMENT_TARGET_EVENT, handleTarget);
+        return () => window.removeEventListener(ADMIN_COMMENT_TARGET_EVENT, handleTarget);
+    }, [canComment, commentMode]);
 
     useEffect(() => {
-        const handleMarkerClick = (
-            event: Event
-        ) => {
-            const customEvent =
-                event as CustomEvent<string>;
+        const handleMarkerClick = (event: Event) => {
+            const commentId = (event as CustomEvent<string>).detail;
+            if (!commentId) return;
 
-            const commentId =
-                customEvent.detail;
-
-            if (!commentId) {
-                return;
-            }
-
-            setVisibleCommentId(
-                commentId
-            );
-
-            setFocusedCommentId(
-                commentId
-            );
-
-            requestAdminCommentFocus(
-                commentId
-            );
+            setVisibleCommentId(commentId);
+            setFocusedCommentId(commentId);
+            requestAdminCommentFocus(commentId);
         };
 
-        window.addEventListener(
-            ADMIN_COMMENT_MARKER_CLICK_EVENT,
-            handleMarkerClick
-        );
-
-        return () => {
-            window.removeEventListener(
-                ADMIN_COMMENT_MARKER_CLICK_EVENT,
-                handleMarkerClick
-            );
-        };
+        window.addEventListener(ADMIN_COMMENT_MARKER_CLICK_EVENT, handleMarkerClick);
+        return () => window.removeEventListener(ADMIN_COMMENT_MARKER_CLICK_EVENT, handleMarkerClick);
     }, []);
 
     useEffect(() => {
-        const handleFocusComplete = (
-            event: Event
-        ) => {
-            const customEvent =
-                event as CustomEvent<string>;
-
-            if (
-                customEvent.detail ===
-                focusedCommentId
-            ) {
-                setFocusedCommentId(
-                    null
-                );
+        const handleFocusComplete = (event: Event) => {
+            if ((event as CustomEvent<string>).detail === focusedCommentId) {
+                setFocusedCommentId(null);
             }
         };
 
-        window.addEventListener(
-            ADMIN_COMMENT_FOCUS_COMPLETE_EVENT,
-            handleFocusComplete
-        );
+        window.addEventListener(ADMIN_COMMENT_FOCUS_COMPLETE_EVENT, handleFocusComplete);
+        return () => window.removeEventListener(ADMIN_COMMENT_FOCUS_COMPLETE_EVENT, handleFocusComplete);
+    }, [focusedCommentId]);
 
-        return () => {
-            window.removeEventListener(
-                ADMIN_COMMENT_FOCUS_COMPLETE_EVENT,
-                handleFocusComplete
-            );
-        };
-    }, [
-        focusedCommentId
-    ]);
-
+    // Leave "specific object" mode with a right-click or Escape.
     useEffect(() => {
-        if (!commentMode) {
-            return;
-        }
+        if (!commentMode) return;
 
-        const handlePointerDown = (
-            event: PointerEvent
-        ) => {
-            if (
-                event.button !==
-                2
-            ) {
-                return;
-            }
+        const exitMode = () => {
+            setCommentMode(false);
+            setSelectedTarget(null);
+            setCommentError("");
+        };
 
+        const handlePointerDown = (event: PointerEvent) => {
+            if (event.button !== 2) return;
             event.preventDefault();
             event.stopPropagation();
-
-            setCommentMode(
-                false
-            );
-
-            setSelectedTarget(
-                null
-            );
-
-            setCommentError(
-                ""
-            );
+            exitMode();
         };
 
-        const handleContextMenu = (
-            event: MouseEvent
-        ) => {
+        const handleContextMenu = (event: MouseEvent) => {
             event.preventDefault();
             event.stopPropagation();
         };
 
-        window.addEventListener(
-            "pointerdown",
-            handlePointerDown,
-            true
-        );
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === "Escape") exitMode();
+        };
 
-        window.addEventListener(
-            "contextmenu",
-            handleContextMenu,
-            true
-        );
+        window.addEventListener("pointerdown", handlePointerDown, true);
+        window.addEventListener("contextmenu", handleContextMenu, true);
+        window.addEventListener("keydown", handleKeyDown);
 
         return () => {
-            window.removeEventListener(
-                "pointerdown",
-                handlePointerDown,
-                true
-            );
-
-            window.removeEventListener(
-                "contextmenu",
-                handleContextMenu,
-                true
-            );
+            window.removeEventListener("pointerdown", handlePointerDown, true);
+            window.removeEventListener("contextmenu", handleContextMenu, true);
+            window.removeEventListener("keydown", handleKeyDown);
         };
-    }, [
-        commentMode
-    ]);
+    }, [commentMode]);
 
     useEffect(() => {
-        const element =
-            chatRef.current;
+        const element = chatRef.current;
+        if (!element) return;
+        element.scrollTop = element.scrollHeight;
+    }, [comments.length, panelOpen]);
 
-        if (!element) {
-            return;
-        }
-
-        element.scrollTop =
-            element.scrollHeight;
-    }, [
-        comments.length
-    ]);
-
+    //==================================================
+    // ACTIONS
+    //==================================================
     const startSpecificComment = () => {
-        if (!canComment) {
-            return;
-        }
-
-        setCommentMode(
-            true
-        );
-
-        setSelectedTarget(
-            null
-        );
-
-        setCommentText(
-            ""
-        );
-
-        setCommentError(
-            ""
-        );
+        if (!canComment) return;
+        setCommentMode(true);
+        setSelectedTarget(null);
+        setCommentError("");
     };
 
     const cancelSpecificComment = () => {
-        setCommentMode(
-            false
-        );
-
-        setSelectedTarget(
-            null
-        );
-
-        setCommentError(
-            ""
-        );
+        setCommentMode(false);
+        setSelectedTarget(null);
+        setCommentError("");
     };
 
     const handleSaveComment = async () => {
@@ -498,498 +283,417 @@ export default function AdminProjectViewer({
             return;
         }
 
-        const user =
-            auth.currentUser;
-
+        const user = auth.currentUser;
         if (!user) {
-            setCommentError(
-                "Admin authentication is required."
-            );
-
+            setCommentError("Admin authentication is required.");
             return;
         }
 
-        const text =
-            commentText.trim();
-
+        const text = commentText.trim();
         if (!text) {
-            setCommentError(
-                "Please enter a comment."
-            );
-
+            setCommentError("Please enter a comment.");
             return;
         }
 
-        if (
-            commentMode &&
-            !selectedTarget
-        ) {
-            setCommentError(
-                "Select an object in the scene first."
-            );
-
+        if (commentMode && !selectedTarget) {
+            setCommentError("Select an object in the scene first.");
             return;
         }
 
         try {
-            setSavingComment(
-                true
-            );
+            setSavingComment(true);
+            setCommentError("");
 
-            setCommentError(
-                ""
-            );
+            const target = commentMode && selectedTarget
+                ? selectedTarget
+                : {
+                    targetType: "project" as const,
+                    targetId: null,
+                    targetLabel: "Entire Project",
+                    regionId: undefined
+                };
 
-            const target =
-                commentMode &&
-                selectedTarget
-                    ? selectedTarget
-                    : {
-                        targetType:
-                            "project" as const,
-                        targetId:
-                            null,
-                        targetLabel:
-                            "Entire Project"
-                    };
+            const createdCommentId = await createAdminComment({
+                projectId: projectData.projectId,
+                targetType: target.targetType,
+                targetId: target.targetId,
+                targetLabel: target.targetLabel,
+                regionId: target.regionId,
+                text
+            });
 
-            const createdCommentId =
-                await createAdminComment({
-                    projectId:
-                        projectData.projectId,
-                    targetType:
-                        target.targetType,
-                    targetId:
-                        target.targetId,
-                    targetLabel:
-                        target.targetLabel,
-                    regionId:
-                        target.regionId,
-                    text
-                });
+            setCommentText("");
 
-            setCommentText(
-                ""
-            );
-
-            if (
-                commentMode
-            ) {
-                setSelectedTarget(
-                    null
-                );
-
-                setVisibleCommentId(
-                    createdCommentId
-                );
+            if (commentMode) {
+                setSelectedTarget(null);
+                setVisibleCommentId(createdCommentId);
             }
         } catch (error) {
-            console.error(
-                "Failed to save admin comment:",
-                error
-            );
-
-            setCommentError(
-                error instanceof Error
-                    ? error.message
-                    : "Failed to save comment."
-            );
+            console.error("Failed to save admin comment:", error);
+            setCommentError(error instanceof Error ? error.message : "Failed to save comment.");
         } finally {
-            setSavingComment(
-                false
-            );
+            setSavingComment(false);
         }
     };
 
-    const handleFocusComment = (
-        commentId: string
-    ) => {
-        setVisibleCommentId(
-            commentId
-        );
-
-        setFocusedCommentId(
-            commentId
-        );
-
-        requestAdminCommentFocus(
-            commentId
-        );
+    const handleFocusComment = (commentId: string) => {
+        setVisibleCommentId(commentId);
+        setFocusedCommentId(commentId);
+        requestAdminCommentFocus(commentId);
     };
 
-    const commentTargetLabel =
-        selectedTarget?.targetLabel ??
-        "";
+    //==================================================
+    // DERIVED
+    //==================================================
+    const snapshotLabel = metadata.reviewSnapshotType === "submitted"
+        ? `Submitted design · v${metadata.submittedVersionNumber ?? "legacy"}`
+        : metadata.reviewSnapshotType === "approved"
+            ? `Approved design · v${metadata.approvedVersionNumber ?? "legacy"}`
+            : metadata.reviewSnapshotType === "latest-saved"
+                ? `Latest saved design · v${metadata.currentDesignVersionNumber ?? "not versioned"} (not live)`
+                : "Project design";
 
+    const projectTitle = projectData.projectName || metadata.projectName;
+    const sendDisabled =
+        savingComment ||
+        !commentText.trim() ||
+        (commentMode && !selectedTarget);
+
+    //==================================================
+    // RENDER
+    //==================================================
     return (
-        <div
-    className="relative h-screen w-screen overflow-hidden bg-[#f5f5f3]"
-    style={{
-        cursor: commentMode
-            ? COMMENT_CURSOR
-            : "default"
-    }}
->
-            <AdminProjectScene
-                projectData={
-                    activeProjectData
-                }
-                onReady={
-                    handleSceneReady
-                }
-                comments={
-                    comments
-                }
-                activeTarget={
-                    selectedTarget
-                }
-                visibleCommentId={
-                    visibleCommentId
-                }
-                onAssetError={assetId => setRuntimeAssetFailures(current =>
-                    current.includes(assetId) ? current : [...current, assetId]
+        <div className="flex h-screen w-screen flex-col overflow-hidden bg-[#f5f5f3] text-[#222]">
+            {/* ================= HEADER ================= */}
+            <header className="relative z-50 flex h-14 shrink-0 items-center gap-3 border-b border-[#e4e4e1] bg-white px-4">
+                <button
+                    type="button"
+                    onClick={() => navigate(-1)}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#dededb] bg-white px-3 text-sm font-medium text-[#333] transition hover:bg-[#f5f5f3]"
+                >
+                    <ArrowLeft size={15} />
+                    Back
+                </button>
+
+                <div className="min-w-0 flex-1">
+                    <h1 className="truncate text-sm font-semibold leading-tight">
+                        {projectTitle}
+                    </h1>
+                    <p className="truncate text-xs text-[#888]">
+                        {snapshotLabel} · View only
+                    </p>
+                </div>
+
+                {reviewFloors.length > 1 && (
+                    <nav
+                        className="hidden items-center gap-1 rounded-lg bg-[#f1f1ee] p-1 sm:flex"
+                        aria-label="Floors"
+                    >
+                        {reviewFloors.map(floor => (
+                            <button
+                                key={floor.floorId}
+                                type="button"
+                                aria-pressed={floor.floorId === activeFloor.floorId}
+                                onClick={() => setActiveFloorId(floor.floorId)}
+                                className={`rounded-md px-3 py-1 text-xs font-medium transition ${
+                                    floor.floorId === activeFloor.floorId
+                                        ? "bg-white text-[#222] shadow-sm"
+                                        : "text-[#777] hover:text-[#222]"
+                                }`}
+                            >
+                                {floor.name}
+                            </button>
+                        ))}
+                    </nav>
                 )}
-            />
+
+                <div className="flex items-center gap-2">
+                    <div className="relative">
+                        <AdminCostEstimator projectData={projectData} />
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={() => setPanelOpen(open => !open)}
+                        aria-expanded={panelOpen}
+                        className="relative z-10 inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#dededb] bg-white px-3 text-sm font-medium text-[#333] transition hover:bg-[#f5f5f3]"
+                    >
+                        <MessageCircle size={15} />
+                        Comments
+                        {comments.length > 0 && (
+                            <span className="rounded-full bg-[#ff7a00] px-1.5 text-[11px] font-semibold text-white">
+                                {comments.length}
+                            </span>
+                        )}
+                        {panelOpen ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+                    </button>
+                </div>
+            </header>
+
+            {/* Floors on small screens */}
+            {reviewFloors.length > 1 && (
+                <nav
+                    className="flex shrink-0 gap-1 overflow-x-auto border-b border-[#e4e4e1] bg-white px-4 py-2 sm:hidden"
+                    aria-label="Floors"
+                >
+                    {reviewFloors.map(floor => (
+                        <button
+                            key={floor.floorId}
+                            type="button"
+                            aria-pressed={floor.floorId === activeFloor.floorId}
+                            onClick={() => setActiveFloorId(floor.floorId)}
+                            className={`shrink-0 rounded-full border px-3 py-1 text-xs ${
+                                floor.floorId === activeFloor.floorId
+                                    ? "border-[#333] bg-[#333] text-white"
+                                    : "border-[#dededb] bg-white text-[#555]"
+                            }`}
+                        >
+                            {floor.name}
+                        </button>
+                    ))}
+                </nav>
+            )}
+
+            {/* ================= BODY ================= */}
+            <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+                {/* ---------- 3D SCENE ---------- */}
+                <div
+                    className="relative isolate min-h-0 min-w-0 flex-1 overflow-hidden"
+                    style={{ cursor: commentMode ? COMMENT_CURSOR : "default" }}
+                >
+                    <AdminProjectScene
+                        projectData={activeProjectData}
+                        onReady={handleSceneReady}
+                        comments={comments}
+                        activeTarget={selectedTarget}
+                        visibleCommentId={visibleCommentId}
+                        onAssetError={assetId => setRuntimeAssetFailures(current =>
+                            current.includes(assetId) ? current : [...current, assetId]
+                        )}
+                    />
+
+                    {/* Comment-mode hint */}
+                    {commentMode && (
+                        <div className="pointer-events-none absolute left-1/2 top-4 z-20 -translate-x-1/2">
+                            <div className="pointer-events-auto flex items-center gap-3 rounded-full bg-[#222] px-4 py-2 text-sm text-white shadow-lg">
+                                <MousePointerClick size={16} className="text-[#ff9a3d]" />
+                                <span>
+                                    {selectedTarget
+                                        ? `Selected: ${selectedTarget.targetLabel}`
+                                        : "Click an object in the scene to comment on it"}
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={cancelSpecificComment}
+                                    className="rounded-full p-1 text-white/70 hover:bg-white/15 hover:text-white"
+                                    title="Exit (Esc or right-click)"
+                                    aria-label="Exit comment mode"
+                                >
+                                    <X size={14} />
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Asset warning (dismissible, details collapsed) */}
+                    {reportedUnavailableAssetIds.length > 0 && !assetWarningDismissed && (
+                        <div
+                            role="alert"
+                            className="absolute bottom-4 left-4 z-20 max-w-[340px] rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-950 shadow"
+                        >
+                            <div className="flex items-start justify-between gap-3">
+                                <p>
+                                    Some items could not be loaded. The rest of the design is still visible.
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => setAssetWarningDismissed(true)}
+                                    aria-label="Dismiss warning"
+                                    className="shrink-0 text-amber-900/70 hover:text-amber-950"
+                                >
+                                    <X size={14} />
+                                </button>
+                            </div>
+                            <details className="mt-1">
+                                <summary className="cursor-pointer text-amber-900/80">Show details</summary>
+                                <p className="mt-1 break-words">
+                                    Asset IDs: {reportedUnavailableAssetIds.join(", ")}
+                                </p>
+                            </details>
+                        </div>
+                    )}
+                </div>
+
+                {/* ---------- COMMENTS PANEL ---------- */}
+                {panelOpen && (
+                    <aside
+                        className="flex h-[45%] w-full shrink-0 flex-col border-t border-[#e4e4e1] bg-white md:h-auto md:w-[360px] md:border-l md:border-t-0"
+                        aria-label="Comments"
+                    >
+                        <div className="flex items-center justify-between border-b border-[#eeeeea] px-4 py-3">
+                            <h2 className="text-sm font-semibold">
+                                Comments{comments.length > 0 ? ` (${comments.length})` : ""}
+                            </h2>
+                            <button
+                                type="button"
+                                onClick={() => setPanelOpen(false)}
+                                className="rounded-md p-1 text-[#888] hover:bg-[#f1f1ee] hover:text-[#222]"
+                                aria-label="Close comments"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+
+                        {/* List */}
+                        <div ref={chatRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+                            {comments.length === 0 ? (
+                                <div className="flex h-full flex-col items-center justify-center text-center">
+                                    <MessageCircle size={28} className="text-[#ccc]" />
+                                    <p className="mt-3 text-sm font-medium text-[#555]">No comments yet</p>
+                                    <p className="mt-1 text-xs text-[#999]">
+                                        {canComment
+                                            ? "Write the first comment below to start the review."
+                                            : "Comments from the admin will appear here."}
+                                    </p>
+                                </div>
+                            ) : (
+                                <ul className="space-y-3">
+                                    {comments.map(comment => {
+                                        const specific = comment.targetType !== "project";
+
+                                        return (
+                                            <li
+                                                key={comment.id}
+                                                className={`rounded-xl border px-3.5 py-3 ${
+                                                    comment.id === visibleCommentId
+                                                        ? "border-[#ffb06e] bg-[#fff4e9]"
+                                                        : "border-[#eeeeea] bg-[#fafaf8]"
+                                                }`}
+                                            >
+                                                <div className="flex items-baseline justify-between gap-2">
+                                                    <p className="truncate text-sm font-medium">
+                                                        {comment.adminName}
+                                                    </p>
+                                                    <time className="shrink-0 text-xs text-[#999]">
+                                                        {formatCommentDate(comment.createdAt)}
+                                                    </time>
+                                                </div>
+
+                                                <p className="mt-1.5 whitespace-pre-wrap break-words text-sm leading-relaxed text-[#444]">
+                                                    {comment.text}
+                                                </p>
+
+                                                {specific && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleFocusComment(comment.id)}
+                                                        className="mt-2.5 inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-xs font-medium text-[#d86d00] ring-1 ring-[#ffd2a8] transition hover:bg-[#fff4e9]"
+                                                        title="Show this object in the 3D view"
+                                                    >
+                                                        {comment.targetLabel}
+                                                        <ArrowUpRight size={12} />
+                                                    </button>
+                                                )}
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+                            )}
+                        </div>
+
+                        {/* Composer (admins only) */}
+                        {canComment && (
+                            <div className="border-t border-[#eeeeea] px-4 py-3">
+                                <div
+                                    className="mb-2 grid grid-cols-2 gap-1 rounded-lg bg-[#f1f1ee] p-1"
+                                    role="group"
+                                    aria-label="Comment target"
+                                >
+                                    <button
+                                        type="button"
+                                        aria-pressed={!commentMode}
+                                        onClick={cancelSpecificComment}
+                                        className={`rounded-md py-1.5 text-xs font-medium transition ${
+                                            !commentMode
+                                                ? "bg-white text-[#222] shadow-sm"
+                                                : "text-[#777] hover:text-[#222]"
+                                        }`}
+                                    >
+                                        Whole project
+                                    </button>
+                                    <button
+                                        type="button"
+                                        aria-pressed={commentMode}
+                                        onClick={startSpecificComment}
+                                        className={`rounded-md py-1.5 text-xs font-medium transition ${
+                                            commentMode
+                                                ? "bg-[#ff7a00] text-white shadow-sm"
+                                                : "text-[#777] hover:text-[#222]"
+                                        }`}
+                                    >
+                                        Specific object
+                                    </button>
+                                </div>
+
+                                {commentMode && (
+                                    <p className="mb-2 text-xs text-[#d86d00]">
+                                        {selectedTarget
+                                            ? `Commenting on: ${selectedTarget.targetLabel}`
+                                            : "Click an object in the 3D view first."}
+                                    </p>
+                                )}
+
+                                {commentError && (
+                                    <p role="alert" className="mb-2 text-xs text-red-600">
+                                        {commentError}
+                                    </p>
+                                )}
+
+                                <div className="flex items-end gap-2">
+                                    <textarea
+                                        value={commentText}
+                                        onChange={event => setCommentText(event.target.value)}
+                                        disabled={commentMode && !selectedTarget}
+                                        placeholder={
+                                            commentMode
+                                                ? selectedTarget
+                                                    ? "Write a comment about this object..."
+                                                    : "Select an object first..."
+                                                : "Write a comment about the project..."
+                                        }
+                                        rows={3}
+                                        className="min-h-[72px] flex-1 resize-none rounded-xl border border-[#ddddda] bg-[#fafaf8] px-3 py-2.5 text-sm outline-none placeholder:text-[#aaa] focus:border-[#ffb06e] disabled:cursor-not-allowed disabled:opacity-60"
+                                    />
+
+                                    <button
+                                        type="button"
+                                        onClick={handleSaveComment}
+                                        disabled={sendDisabled}
+                                        title="Send comment"
+                                        aria-label="Send comment"
+                                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#ff7a00] text-white transition hover:bg-[#ea6f00] disabled:cursor-not-allowed disabled:opacity-40"
+                                    >
+                                        <Send size={16} />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Comment-error for non-admin loading failures */}
+                        {!canComment && commentError && (
+                            <p role="alert" className="border-t border-[#eeeeea] px-4 py-3 text-xs text-red-600">
+                                {commentError}
+                            </p>
+                        )}
+                    </aside>
+                )}
+            </div>
 
             {!sceneReady && (
                 <div className="fixed inset-0 z-[100000]">
                     <LoadingScreen label="Preparing 3D Scene" />
                 </div>
             )}
-          
-            <div className="pointer-events-none absolute left-4 top-4 z-30">
-                <div className="pointer-events-auto w-[220px] rounded-xl border border-[#e4e4e1] bg-white/95 px-3 py-2.5 shadow-lg backdrop-blur">
-                    <div className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full bg-[#5c8f62]" />
-
-                        <p className="text-[10px] font-medium text-[#777]">
-                            Admin Project Viewer
-                        </p>
-                    </div>
-
-                    <h1 className="mt-1 truncate text-sm font-semibold text-[#222]">
-                        {
-                            projectData.projectName ||
-                            metadata.projectName
-                        }
-                    </h1>
-                    {metadata.reviewSnapshotType && (
-                        <p className="mt-1 text-[10px] font-medium text-[#555]">
-                            {metadata.reviewSnapshotType === "submitted"
-                                ? `Submitted snapshot · v${metadata.submittedVersionNumber ?? "legacy"}`
-                                : metadata.reviewSnapshotType === "approved"
-                                    ? `Approved snapshot · v${metadata.approvedVersionNumber ?? "legacy"}`
-                                    : `Latest saved design · v${metadata.currentDesignVersionNumber ?? "not versioned"} · not live`}
-                        </p>
-                    )}
-
-                    <nav className="mt-2 flex max-w-[190px] gap-1 overflow-x-auto" aria-label="Review floors">
-                        {reviewFloors.map(floor => (
-                            <button
-                                key={floor.floorId}
-                                type="button"
-                                className={`shrink-0 rounded-full border px-2 py-1 text-[10px] ${
-                                    floor.floorId === activeFloor.floorId
-                                        ? "border-[#333] bg-[#333] text-white"
-                                        : "border-[#dededb] bg-white text-[#555]"
-                                }`}
-                                aria-pressed={floor.floorId === activeFloor.floorId}
-                                onClick={() => setActiveFloorId(floor.floorId)}
-                            >
-                                {floor.name}
-                            </button>
-                        ))}
-                    </nav>
-
-                    <p className="mt-0.5 text-[10px] text-[#999]">
-                        View-only
-                    </p>
-                </div>
-            </div>
-
-            {reportedUnavailableAssetIds.length > 0 && (
-                <div
-                    role="alert"
-                    className="absolute left-4 top-[92px] z-30 max-w-[360px] rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-950 shadow"
-                >
-                    Some saved furniture or material assets could not be loaded.
-                    The rest of the design remains visible.
-                    <span className="mt-1 block break-words">
-                        Asset IDs: {reportedUnavailableAssetIds.join(", ")}
-                    </span>
-                </div>
-            )}
-
-           <div
-    style={{
-        position: "fixed",
-        top: "16px",
-        right: "16px",
-        zIndex: 99999,
-        display: "flex",
-        alignItems: "flex-start",
-        gap: "8px",
-        pointerEvents: "auto"
-    }}
->
-    <AdminCostEstimator
-        projectData={projectData}
-    />
-
-    <button
-        type="button"
-        style={{
-            height: "36px",
-            padding: "0 16px",
-            borderRadius: "8px",
-            border: "1px solid #dededb",
-            background: "#ffffff",
-            color: "#333333",
-            fontSize: "12px",
-            fontWeight: 600,
-            boxShadow: "0 4px 12px rgba(0,0,0,0.10)",
-            cursor: "pointer"
-        }}
-        onClick={() =>
-            navigate(-1)
-        }
-    >
-        Back
-    </button>
-</div>
-
-            <div className="absolute bottom-4 left-4 z-40 w-[360px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-[#dfdfdb] bg-white shadow-xl">
-                <div
-                    ref={chatRef}
-                    className="max-h-[260px] overflow-y-auto px-3 py-3"
-                >
-                    {
-                        comments.length ===
-                        0 && (
-                            <div className="py-8 text-center">
-                                <p className="text-xs font-medium text-[#555]">
-                                    No comments yet
-                                </p>
-
-                                <p className="mt-1 text-[10px] text-[#999]">
-                                    Start the project review.
-                                </p>
-                            </div>
-                        )
-                    }
-
-                    {
-                        commentError && (
-                            <p className="mb-2 text-[10px] text-red-500">
-                                {
-                                    commentError
-                                }
-                            </p>
-                        )
-                    }
-
-                    <div className="space-y-2">
-                        {
-                            comments.map(
-                                comment => {
-                                    const specific =
-                                        comment.targetType !==
-                                        "project";
-
-                                    return (
-                                        <div
-                                            key={
-                                                comment.id
-                                            }
-                                            className={
-                                                specific
-                                                    ? "rounded-xl border border-[#ffd2a8] bg-[#fff4e9] px-3 py-2.5"
-                                                    : "rounded-xl border border-[#e7e7e3] bg-[#f7f7f5] px-3 py-2.5"
-                                            }
-                                        >
-                                            <div className="flex items-start justify-between gap-2">
-                                                <div className="min-w-0">
-                                                    <p className="truncate text-[10px] font-semibold text-[#333]">
-                                                        {
-                                                            comment.adminName
-                                                        }
-                                                    </p>
-
-                                                    <p className="text-[9px] text-[#999]">
-                                                        {
-                                                            formatCommentDate(
-                                                                comment.createdAt
-                                                            )
-                                                        }
-                                                    </p>
-                                                </div>
-
-                                                {
-                                                    specific && (
-                                                        <button
-                                                            type="button"
-                                                            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#ff7a00] text-white transition hover:bg-[#ea6f00]"
-                                                            title="Focus on object"
-                                                            onClick={() =>
-                                                                handleFocusComment(
-                                                                    comment.id
-                                                                )
-                                                            }
-                                                        >
-                                                            <ArrowUpRight
-                                                                size={
-                                                                    13
-                                                                }
-                                                            />
-                                                        </button>
-                                                    )
-                                                }
-                                            </div>
-
-                                            {
-                                                specific && (
-                                                    <p className="mt-2 text-[9px] font-medium text-[#d86d00]">
-                                                        {
-                                                            comment.targetLabel
-                                                        }
-                                                    </p>
-                                                )
-                                            }
-
-                                            <p className="mt-1 text-[11px] leading-4 text-[#333]">
-                                                {
-                                                    comment.text
-                                                }
-                                            </p>
-                                        </div>
-                                    );
-                                }
-                            )
-                        }
-                    </div>
-                </div>
-
-                {canComment && (
-                <div className="border-t border-[#e7e7e3] bg-white px-3 py-3">
-                    {
-                        commentMode && (
-                            <div className="mb-2 flex items-center justify-between rounded-lg bg-[#fff4e9] px-2.5 py-2">
-                                <div className="min-w-0">
-                                    <p className="text-[9px] font-semibold uppercase tracking-wide text-[#d86d00]">
-                                        Specific Comment
-                                    </p>
-
-                                    <p className="truncate text-[10px] font-medium text-[#555]">
-                                        {
-                                            selectedTarget
-                                                ? commentTargetLabel
-                                                : "Click an object in the scene"
-                                        }
-                                    </p>
-                                </div>
-
-                                <button
-                                    type="button"
-                                    className="text-[10px] font-medium text-[#d86d00] hover:text-[#b95b00]"
-                                    onClick={
-                                        cancelSpecificComment
-                                    }
-                                >
-                                    Cancel
-                                </button>
-                            </div>
-                        )
-                    }
-
-                    <div className="flex items-end gap-2">
-                        <button
-                            type="button"
-                            className={
-                                commentMode
-                                    ? "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#ff7a00] text-white transition hover:bg-[#ea6f00]"
-                                    : "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#ddddda] bg-[#fafaf8] text-[#666] transition hover:bg-[#f1f1ee]"
-                            }
-                            onClick={
-                                commentMode
-                                    ? cancelSpecificComment
-                                    : startSpecificComment
-                            }
-                            title={
-                                commentMode
-                                    ? "Exit specific comment mode"
-                                    : "Comment on a specific object"
-                            }
-                        >
-                            <MessageCircle
-                                size={
-                                    16
-                                }
-                            />
-                        </button>
-
-                        <textarea
-                            value={
-                                commentText
-                            }
-                            onChange={
-                                event =>
-                                    setCommentText(
-                                        event.target.value
-                                    )
-                            }
-                            disabled={
-                                commentMode &&
-                                !selectedTarget
-                            }
-                            placeholder={
-                                commentMode
-                                    ? (
-                                        selectedTarget
-                                            ? "Write a comment about this object..."
-                                            : "Select an object in the scene..."
-                                    )
-                                    : "Write a project comment..."
-                            }
-                            rows={
-                                2
-                            }
-                            className="min-h-[40px] flex-1 resize-none rounded-xl border border-[#ddddda] bg-[#fafaf8] px-3 py-2.5 text-[11px] text-[#333] outline-none placeholder:text-[#aaa] focus:border-[#ffb06e] disabled:cursor-not-allowed disabled:opacity-60"
-                        />
-
-                        <button
-                            type="button"
-                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#ff7a00] text-white transition hover:bg-[#ea6f00] disabled:cursor-not-allowed disabled:opacity-40"
-                            onClick={
-                                handleSaveComment
-                            }
-                            disabled={
-                                savingComment ||
-                                !commentText.trim() ||
-                                (
-                                    commentMode &&
-                                    !selectedTarget
-                                )
-                            }
-                            title="Send comment"
-                        >
-                            <Send
-                                size={
-                                    15
-                                }
-                            />
-                        </button>
-                    </div>
-
-                    {
-                        commentMode && (
-                            <p className="mt-1.5 text-[9px] text-[#aaa]">
-                                Right-click anywhere to exit specific comment mode.
-                            </p>
-                        )
-                    }
-                </div>
-                )}
-            </div>
         </div>
     );
 }
