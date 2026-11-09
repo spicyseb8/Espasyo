@@ -571,7 +571,9 @@ function FurniturePreviewModel({
                 0.01,
                 {
                     height: bounds.height,
-                    stairs: state.stairs
+                    stairs: state.stairs,
+                    stairLandings: state.stairLandings,
+                    activeFloorId: state.activeFloorId
                 }
             );
         }
@@ -718,7 +720,9 @@ function FurniturePreviewModel({
                     height: bounds.height,
                     ignoreWallId: wallHit.wall.id,
                     ignoreFurnitureId: movingFurnitureId ?? undefined,
-                    stairs: state.stairs
+                    stairs: state.stairs,
+                    stairLandings: state.stairLandings,
+                    activeFloorId: state.activeFloorId
                 }
             );
 
@@ -817,7 +821,9 @@ function FurniturePreviewModel({
                     {
                         height: bounds.height,
                         ignoreFurnitureId: movingFurnitureId ?? undefined,
-                        stairs: state.stairs
+                        stairs: state.stairs,
+                        stairLandings: state.stairLandings,
+                        activeFloorId: state.activeFloorId
                     }
                 );
             }

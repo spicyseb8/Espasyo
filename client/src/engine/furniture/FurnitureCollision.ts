@@ -19,6 +19,14 @@ export interface FurnitureStaircaseObstacle extends StaircaseDimensions {
     rotationY: number;
 }
 
+export interface FurnitureStairLandingObstacle {
+    floorId: string;
+    position: { x: number; y: number; z: number };
+    rotationY: number;
+    width: number;
+    run: number;
+}
+
 export interface FurnitureCollisionResult {
     valid: boolean;
     reason: FurnitureCollisionReason;
@@ -477,6 +485,35 @@ function collidesWithStaircase(
     return false;
 }
 
+function collidesWithStairLanding(
+    position: Vector3,
+    width: number,
+    depth: number,
+    rotationY: number,
+    landing: FurnitureStairLandingObstacle,
+    padding: number
+): boolean {
+    const cosine = Math.cos(landing.rotationY);
+    const sine = Math.sin(landing.rotationY);
+    const center = new Vector3(
+        landing.position.x + landing.run * 0.5 * cosine,
+        0,
+        landing.position.z - landing.run * 0.5 * sine
+    );
+
+    return obbOverlap(
+        position,
+        width,
+        depth,
+        rotationY,
+        center,
+        landing.run,
+        landing.width,
+        -landing.rotationY,
+        padding
+    );
+}
+
 //==================================================
 // Main collision check
 //==================================================
@@ -495,6 +532,8 @@ export function checkFurnitureCollision(
         ignoreWallId?: string | null;
         ignoreFurnitureId?: string | null;
         stairs?: FurnitureStaircaseObstacle[];
+        stairLandings?: FurnitureStairLandingObstacle[];
+        activeFloorId?: string;
     }
 ): FurnitureCollisionResult {
     const height =
@@ -544,6 +583,29 @@ export function checkFurnitureCollision(
             depth,
             rotationY,
             stair,
+            padding
+        )) {
+            return {
+                valid: false,
+                reason: "staircase"
+            };
+        }
+    }
+
+    for (const landing of options?.stairLandings ?? []) {
+        if (
+            options?.activeFloorId &&
+            landing.floorId !== options.activeFloorId
+        ) {
+            continue;
+        }
+
+        if (collidesWithStairLanding(
+            position,
+            width,
+            depth,
+            rotationY,
+            landing,
             padding
         )) {
             return {

@@ -274,7 +274,7 @@ function AvailableFloorPlanProjectsCard({
             className={`border-b-2 px-3 py-2 text-sm transition-colors ${tab === "mine" ? "border-primary font-medium text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
             onClick={() => setTab("mine")}
           >
-            Mine
+            My Drafts
           </button>
         </div>
         <div className="flex flex-wrap items-center gap-2">

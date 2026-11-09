@@ -97,3 +97,11 @@ export type EditorAction =
     | { type: "CLEAR_BLUEPRINT_CALIBRATION"; }
     | { type: "APPLY_BLUEPRINT_CALIBRATION"; payload: number; }
     | { type: "TOGGLE_WALKTHROUGH"; };
+
+export function isProjectDeadlineExemptAction(
+    action: EditorAction
+): boolean {
+    return action.type === "LOAD_PROJECT" ||
+        action.type === "TOGGLE_WALKTHROUGH" ||
+        action.type === "SWITCH_FLOOR";
+}

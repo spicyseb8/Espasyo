@@ -1518,7 +1518,13 @@ export default function SelectionToolbar() {
                         furniture.id,
 
                     stairs:
-                        state.stairs
+                        state.stairs,
+
+                    stairLandings:
+                        state.stairLandings,
+
+                    activeFloorId:
+                        state.activeFloorId
 
                 }
 

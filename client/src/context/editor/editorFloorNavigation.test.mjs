@@ -16,6 +16,7 @@ registerHooks({
 
 const { editorReducer } = await import("./editorReducer.ts");
 const { initialState } = await import("./initialState.ts");
+const { isProjectDeadlineExemptAction } = await import("./editorActions.ts");
 
 function makeFloor(floorId, wallId, wallHeight) {
     return {
@@ -68,6 +69,21 @@ function makeState(projectLocked) {
         wallHeight: 3
     };
 }
+
+test("deadline read-only policy allows floor navigation without allowing edits", () => {
+    assert.equal(isProjectDeadlineExemptAction({
+        type: "SWITCH_FLOOR",
+        payload: "floor-2"
+    }), true);
+    assert.equal(isProjectDeadlineExemptAction({
+        type: "LOAD_PROJECT",
+        payload: {}
+    }), true);
+    assert.equal(isProjectDeadlineExemptAction({
+        type: "SET_WALL_HEIGHT",
+        payload: 9
+    }), false);
+});
 
 test("locked projects can switch floors without capturing or changing floor data", () => {
     const state = makeState(true);

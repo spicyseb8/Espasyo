@@ -28,6 +28,9 @@ import type {
     EditorAction
 } from "./editor/editorActions";
 import {
+    isProjectDeadlineExemptAction
+} from "./editor/editorActions";
+import {
     PROJECT_BUDGET_ACTION_EVENT
 } from "../engine/cost/ProjectBudget";
 
@@ -533,8 +536,7 @@ export default function EditorProvider({
    
 
             if (
-                action.type !== "LOAD_PROJECT" &&
-                action.type !== "TOGGLE_WALKTHROUGH" &&
+                !isProjectDeadlineExemptAction(action) &&
                 isProjectReadOnlyByDeadline()
             ) {
                 return;

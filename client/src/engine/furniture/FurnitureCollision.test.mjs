@@ -11,17 +11,31 @@ const noFurnitureOrWalls = {
     options: { height: 1 }
 };
 
-function checkAt(x, z, width, depth, stairs) {
+function checkAt(
+    x,
+    z,
+    width,
+    depth,
+    stairs,
+    stairLandings = [],
+    rotationY = 0,
+    activeFloorId = "floor-active"
+) {
     return checkFurnitureCollision(
         new Vector3(x, 0, z),
         width,
         depth,
-        0,
+        rotationY,
         noFurnitureOrWalls.walls,
         noFurnitureOrWalls.furniture,
         noFurnitureOrWalls.wallThickness,
         noFurnitureOrWalls.padding,
-        { ...noFurnitureOrWalls.options, stairs }
+        {
+            ...noFurnitureOrWalls.options,
+            stairs,
+            stairLandings,
+            activeFloorId
+        }
     );
 }
 
@@ -88,5 +102,128 @@ test("rotated stairs use the generated flight and landing bounds", () => {
     assert.deepEqual(
         checkAt(1.4, -1.5, 0.4, 0.4, [rotated]),
         { valid: false, reason: "staircase" }
+    );
+});
+
+test("furniture collides with the exact stair arrival footprint", () => {
+    const arrival = {
+        floorId: "floor-active",
+        position: { x: 2, y: 0, z: -1 },
+        rotationY: 0,
+        width: 1,
+        run: 2
+    };
+
+    assert.deepEqual(
+        checkAt(3, -1, 0.4, 0.4, [], [arrival]),
+        { valid: false, reason: "staircase" }
+    );
+    assert.deepEqual(
+        checkAt(4.3, -1, 0.4, 0.4, [], [arrival]),
+        { valid: true, reason: "none" }
+    );
+    assert.deepEqual(
+        checkAt(3, -1.8, 0.4, 0.4, [], [arrival]),
+        { valid: true, reason: "none" }
+    );
+});
+
+test("rotated furniture footprints intersect rotated stair arrivals", () => {
+    const arrival = {
+        floorId: "floor-active",
+        position: { x: 2, y: 0, z: -1 },
+        rotationY: Math.PI / 2,
+        width: 1,
+        run: 2
+    };
+
+    assert.deepEqual(
+        checkAt(2, -2, 1, 0.3, [], [arrival], Math.PI / 2),
+        { valid: false, reason: "staircase" }
+    );
+    assert.deepEqual(
+        checkAt(2.8, -2, 0.3, 0.3, [], [arrival]),
+        { valid: true, reason: "none" }
+    );
+});
+
+test("stair arrival collision uses only the supplied active-floor landings", () => {
+    assert.deepEqual(
+        checkAt(3, -1, 0.4, 0.4, [], [{
+            floorId: "another-floor",
+            position: { x: 2, y: 0, z: -1 },
+            rotationY: 0,
+            width: 1,
+            run: 2
+        }]),
+        { valid: true, reason: "none" }
+    );
+    assert.deepEqual(
+        checkAt(3, -1, 0.4, 0.4, [], [{
+            floorId: "floor-active",
+            position: { x: 2, y: 0, z: -1 },
+            rotationY: 0,
+            width: 1,
+            run: 2
+        }]),
+        { valid: false, reason: "staircase" }
+    );
+});
+
+test("stair arrivals block moving furniture while furniture collisions remain intact", () => {
+    const arrival = {
+        floorId: "floor-active",
+        position: { x: 2, y: 0, z: -1 },
+        rotationY: 0,
+        width: 1,
+        run: 2
+    };
+    const existingFurniture = [{
+        id: "moving-furniture",
+        position: new Vector3(3, 0, -1),
+        width: 0.4,
+        depth: 0.4,
+        height: 1,
+        rotationY: 0
+    }];
+
+    assert.deepEqual(
+        checkFurnitureCollision(
+            new Vector3(3, 0, -1),
+            0.4,
+            0.4,
+            0,
+            [],
+            existingFurniture,
+            0.15,
+            0.01,
+            {
+                height: 1,
+                ignoreFurnitureId: "moving-furniture",
+                stairLandings: [arrival],
+                activeFloorId: "floor-active"
+            }
+        ),
+        { valid: false, reason: "staircase" }
+    );
+
+    assert.deepEqual(
+        checkFurnitureCollision(
+            new Vector3(0.3, 0, 0),
+            0.5,
+            0.5,
+            0,
+            [],
+            [{
+                ...existingFurniture[0],
+                position: new Vector3(0, 0, 0),
+                width: 0.5,
+                depth: 0.5
+            }],
+            0.15,
+            0.01,
+            { height: 1 }
+        ),
+        { valid: false, reason: "furniture" }
     );
 });

@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { Html } from "@react-three/drei";
 import type { ThreeEvent } from "@react-three/fiber";
-import { BoxGeometry, DoubleSide, Quaternion, Vector3 } from "three";
+import { BoxGeometry, BufferGeometry, Quaternion, Vector3 } from "three";
 import {
     calculateStaircaseGeometry,
     type ProceduralStaircaseData,
@@ -216,6 +216,38 @@ export function AdminStaircaseLandingMarker({
     selected = false,
     onSelect
 }: StaircaseLandingMarkerProps) {
+    const indicatorGeometry = useMemo(() => {
+        const halfWidth = landing.width / 2;
+        const arrowLength = Math.min(landing.run * 0.09, 0.18);
+        const arrowWidth = Math.min(landing.width * 0.16, 0.14);
+        const arrowSpacing = landing.run * 0.12;
+        const firstArrowX = landing.run / 2 - arrowSpacing / 2;
+        const secondArrowX = landing.run / 2 + arrowSpacing / 2;
+        const points = [
+            new Vector3(0, 0.045, -halfWidth),
+            new Vector3(landing.run, 0.045, -halfWidth),
+            new Vector3(landing.run, 0.045, -halfWidth),
+            new Vector3(landing.run, 0.045, halfWidth),
+            new Vector3(landing.run, 0.045, halfWidth),
+            new Vector3(0, 0.045, halfWidth),
+            new Vector3(0, 0.045, halfWidth),
+            new Vector3(0, 0.045, -halfWidth)
+        ];
+
+        for (const centerX of [firstArrowX, secondArrowX]) {
+            points.push(
+                new Vector3(centerX - arrowLength, 0.05, -arrowWidth),
+                new Vector3(centerX + arrowLength, 0.05, 0),
+                new Vector3(centerX + arrowLength, 0.05, 0),
+                new Vector3(centerX - arrowLength, 0.05, arrowWidth)
+            );
+        }
+
+        return new BufferGeometry().setFromPoints(points);
+    }, [landing.run, landing.width]);
+
+    useEffect(() => () => indicatorGeometry.dispose(), [indicatorGeometry]);
+
     const handleClick = (event: ThreeEvent<MouseEvent>) => {
         if (!onSelect) return;
         event.stopPropagation();
@@ -229,37 +261,30 @@ export function AdminStaircaseLandingMarker({
         >
             <mesh
                 rotation-x={-Math.PI / 2}
-                position={[landing.run / 2, 0.025, 0]}
+                position={[landing.run / 2, 0.018, 0]}
                 onClick={handleClick}
             >
                 <planeGeometry args={[landing.run, landing.width]} />
-                <meshBasicMaterial
-                    color={selected ? "#e89520" : "#168bd2"}
+                <meshStandardMaterial
+                    color={selected ? "#b8a17b" : "#c8bea9"}
                     transparent
-                    opacity={0.28}
-                    side={DoubleSide}
+                    opacity={selected ? 0.25 : 0.16}
+                    roughness={1}
+                    depthWrite={false}
                 />
             </mesh>
-            <mesh position={[landing.run / 2, 0.08, 0]} onClick={handleClick}>
-                <boxGeometry args={[Math.min(landing.run, 0.35), 0.08, Math.min(landing.width, 0.35)]} />
-                <meshStandardMaterial color={selected ? "#e89520" : "#168bd2"} />
-            </mesh>
-            <Html
-                position={[landing.run / 2, 0.35, 0]}
-                center
-                distanceFactor={10}
-                style={{
-                    padding: "3px 6px",
-                    borderRadius: 4,
-                    background: selected ? "#b45309" : "#0369a1",
-                    color: "#fff",
-                    fontSize: 11,
-                    whiteSpace: "nowrap",
-                    pointerEvents: "none"
-                }}
+            <lineSegments
+                geometry={indicatorGeometry}
+                renderOrder={3}
+                raycast={() => null}
             >
-                Stair arrival
-            </Html>
+                <lineBasicMaterial
+                    color={selected ? "#8f622f" : "#807765"}
+                    transparent={!selected}
+                    opacity={selected ? 0.95 : 0.68}
+                    depthTest={false}
+                />
+            </lineSegments>
         </group>
     );
 }

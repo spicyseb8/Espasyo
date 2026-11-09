@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react";
-import { BoxGeometry, DoubleSide, Quaternion, Vector3 } from "three";
+import { BoxGeometry, BufferGeometry, Quaternion, Vector3 } from "three";
 import useEditor from "../../context/editor/useEditor";
 import {
     calculateStaircaseGeometry,
@@ -132,38 +132,101 @@ function ReadOnlyStaircase({ stair }: { stair: ProceduralStaircaseData }) {
     );
 }
 
-function ReadOnlyStaircaseLanding({ landing }: { landing: StaircaseLandingData }) {
+function ReadOnlyStaircaseLanding({
+    landing,
+    isEditing
+}: {
+    landing: StaircaseLandingData;
+    isEditing: boolean;
+}) {
+    const outlineGeometry = useMemo(() => {
+        const halfRun = landing.run / 2;
+        const halfWidth = landing.width / 2;
+        const chevronHalfLength = landing.run * 0.12;
+        const chevronHalfWidth = landing.width * 0.18;
+        const chevronSpacing = landing.run * 0.12;
+        const firstChevronCenter = halfRun - chevronSpacing / 2;
+        const secondChevronCenter = halfRun + chevronSpacing / 2;
+        const geometry = new BufferGeometry().setFromPoints([
+            new Vector3(0, 0.045, -halfWidth),
+            new Vector3(landing.run, 0.045, -halfWidth),
+            new Vector3(landing.run, 0.045, -halfWidth),
+            new Vector3(landing.run, 0.045, halfWidth),
+            new Vector3(landing.run, 0.045, halfWidth),
+            new Vector3(0, 0.045, halfWidth),
+            new Vector3(0, 0.045, halfWidth),
+            new Vector3(0, 0.045, -halfWidth),
+            new Vector3(
+                firstChevronCenter - chevronHalfLength,
+                0.05,
+                -chevronHalfWidth
+            ),
+            new Vector3(firstChevronCenter + chevronHalfLength, 0.05, 0),
+            new Vector3(firstChevronCenter + chevronHalfLength, 0.05, 0),
+            new Vector3(
+                firstChevronCenter - chevronHalfLength,
+                0.05,
+                chevronHalfWidth
+            ),
+            new Vector3(
+                secondChevronCenter - chevronHalfLength,
+                0.05,
+                -chevronHalfWidth
+            ),
+            new Vector3(secondChevronCenter + chevronHalfLength, 0.05, 0),
+            new Vector3(secondChevronCenter + chevronHalfLength, 0.05, 0),
+            new Vector3(
+                secondChevronCenter - chevronHalfLength,
+                0.05,
+                chevronHalfWidth
+            )
+        ]);
+        return geometry;
+    }, [landing.run, landing.width]);
+
+    useEffect(() => () => outlineGeometry.dispose(), [outlineGeometry]);
+
     return (
         <group
             position={[landing.position.x, landing.position.y, landing.position.z]}
             rotation-y={landing.rotationY}
         >
-            <mesh rotation-x={-Math.PI / 2} position={[landing.run / 2, 0.025, 0]}>
+            <mesh rotation-x={-Math.PI / 2} position={[landing.run / 2, 0.018, 0]}>
                 <planeGeometry args={[landing.run, landing.width]} />
-                <meshBasicMaterial
-                    color="#168bd2"
+                <meshStandardMaterial
+                    color="#b4a991"
                     transparent
-                    opacity={0.28}
-                    side={DoubleSide}
+                    opacity={isEditing ? 0.24 : 0.14}
+                    roughness={1}
+                    depthWrite={false}
                 />
             </mesh>
-            <mesh position={[landing.run / 2, 0.08, 0]}>
-                <boxGeometry args={[Math.min(landing.run, 0.35), 0.08, Math.min(landing.width, 0.35)]} />
-                <meshStandardMaterial color="#168bd2" />
-            </mesh>
+            <lineSegments geometry={outlineGeometry} renderOrder={2}>
+                <lineBasicMaterial
+                    color={isEditing ? "#526875" : "#887c68"}
+                    transparent={!isEditing}
+                    opacity={isEditing ? 0.95 : 0.65}
+                    depthTest={false}
+                />
+            </lineSegments>
         </group>
     );
 }
 
 export default function Stairs() {
     const { state } = useEditor();
+    const isEditing = state.selectedAsset !== null || state.movingFurnitureId !== null;
     return (
         <>
             {state.stairs.map(stair => (
                 <ReadOnlyStaircase key={stair.id} stair={stair} />
             ))}
             {state.stairLandings.map(landing => (
-                <ReadOnlyStaircaseLanding key={landing.id} landing={landing} />
+                <ReadOnlyStaircaseLanding
+                    key={landing.id}
+                    landing={landing}
+                    isEditing={isEditing}
+                />
             ))}
         </>
     );
