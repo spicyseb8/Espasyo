@@ -158,6 +158,17 @@ function getProjectAssetIds(
     const ids =
         new Set<string>();
 
+    const projectLayers = [project];
+    if (Array.isArray(project.floors)) {
+        for (const value of project.floors) {
+            const floor = asRecord(value);
+            if (!floor) continue;
+            projectLayers.push(floor);
+            const structure = asRecord(floor.structure);
+            if (structure) projectLayers.push(structure);
+        }
+    }
+
     function collectItems(
         value: unknown
     ) {
@@ -186,9 +197,11 @@ function getProjectAssetIds(
         }
     }
 
-    collectItems(project.furniture);
-    collectItems(project.doors);
-    collectItems(project.windows);
+    for (const layer of projectLayers) {
+        collectItems(layer.furniture);
+        collectItems(layer.doors);
+        collectItems(layer.windows);
+    }
 
     return [...ids];
 }
@@ -211,6 +224,17 @@ function getProjectMaterialIds(
 
     const result =
         new Set<string>();
+
+    const projectLayers = [project];
+    if (Array.isArray(project.floors)) {
+        for (const value of project.floors) {
+            const floor = asRecord(value);
+            if (!floor) continue;
+            projectLayers.push(floor);
+            const structure = asRecord(floor.structure);
+            if (structure) projectLayers.push(structure);
+        }
+    }
 
     function collect(
         value: unknown
@@ -250,7 +274,9 @@ function getProjectMaterialIds(
         }
     }
 
-    collect(project[field]);
+    for (const layer of projectLayers) {
+        collect(layer[field]);
+    }
 
     return [...result];
 }

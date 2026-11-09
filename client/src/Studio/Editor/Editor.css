@@ -12,6 +12,55 @@
     overflow: hidden;
 }
 
+.editor.is-view-only {
+    grid-template-rows: 64px 1fr;
+}
+
+.view-only-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 0 24px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    background: #fff;
+    color: #1b1b1b;
+}
+
+.view-only-back {
+    color: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.view-only-heading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.view-only-badge {
+    flex: none;
+    padding: 5px 9px;
+    border: 1px solid #d6dbe1;
+    border-radius: 999px;
+    color: #4a5562;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.view-only-title {
+    overflow: hidden;
+    font-size: 14px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 
 .editor-body {
     position: relative;

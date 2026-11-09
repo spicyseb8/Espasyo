@@ -11,6 +11,7 @@ import {
 
 import useEditor
     from "../../../context/editor/useEditor";
+import { canPerformProjectWrite } from "../../../context/editor/viewOnly";
 
 import {
     auth,
@@ -231,7 +232,8 @@ interface Props {
 export default function ProjectPanel({ open }: Props) {
     const {
         state,
-        dispatch
+        dispatch,
+        viewOnly
     } = useEditor();
 
     const {
@@ -273,6 +275,7 @@ export default function ProjectPanel({ open }: Props) {
     const [, setProjectActivities] = useState<ProjectActivity[]>([]);
     const [showSubmissionAgreement, setShowSubmissionAgreement] = useState(false);
     const [submissionAgreementChecked, setSubmissionAgreementChecked] = useState(false);
+    const [publicConsentChecked, setPublicConsentChecked] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [submissionError, setSubmissionError] = useState("");
 
@@ -524,6 +527,8 @@ export default function ProjectPanel({ open }: Props) {
     //==================================================
 
     async function handleSave() {
+        if (!canPerformProjectWrite(viewOnly, "save")) return;
+
         const user =
             auth.currentUser;
 
@@ -897,12 +902,13 @@ export default function ProjectPanel({ open }: Props) {
     }
 
     async function handleSubmitProject() {
+        if (!canPerformProjectWrite(viewOnly, "submit")) return;
         if (!routeProjectId || !submissionAgreementChecked || submitting) return;
         setSubmitting(true);
         setSubmissionError("");
         try {
             await acknowledgeSubmissionAgreement(routeProjectId);
-            await submitClientProject(routeProjectId);
+            await submitClientProject(routeProjectId, publicConsentChecked);
             setProjectStatus("submitted");
             setShowSubmissionAgreement(false);
             setMessage("Project submitted successfully. Editing is paused while an administrator reviews it.");
@@ -1023,6 +1029,7 @@ export default function ProjectPanel({ open }: Props) {
                                     className="confirm-layout-button project-panel-secondary-button"
                                     onClick={() => {
                                         setSubmissionAgreementChecked(false);
+                                        setPublicConsentChecked(false);
                                         setSubmissionError("");
                                         setShowSubmissionAgreement(true);
                                     }}
@@ -1072,6 +1079,14 @@ export default function ProjectPanel({ open }: Props) {
                                 onChange={event => setSubmissionAgreementChecked(event.target.checked)}
                             />
                             <span>I have read and agree to the Project Submission Agreement.</span>
+                        </label>
+                        <label className="mt-4 flex items-start gap-2 text-sm leading-5 text-black/75">
+                            <input
+                                type="checkbox"
+                                checked={publicConsentChecked}
+                                onChange={event => setPublicConsentChecked(event.target.checked)}
+                            />
+                            <span>(Optional) I allow my approved design to be shared as a view-only reference for other clients. My name and personal details will not be shown.</span>
                         </label>
                         {submissionError && <p role="alert" className="mt-3 text-sm text-red-700">{submissionError}</p>}
                         <div className="mt-6 flex justify-end gap-2">

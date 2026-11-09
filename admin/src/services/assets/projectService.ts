@@ -28,6 +28,9 @@ export interface AdminProject {
     clientDesignStarted?: boolean;
     clientDesignStartedAt?: unknown;
     projectStatus?: "available" | "ongoing" | "submitted" | "revision-requested" | "approved";
+    publicConsent?: boolean;
+    publicConsentAt?: string | null;
+    isPublic?: boolean;
     currentDesignVersionId?: string;
     currentDesignVersionNumber?: number;
     submittedVersionId?: string;
@@ -357,6 +360,31 @@ export async function reviewAdminProject(
             body: JSON.stringify({ action, reason })
         }
     );
+}
+
+export async function setAdminProjectPublicVisibility(
+    projectId: string,
+    isPublic: boolean
+): Promise<{ isPublic: boolean; publicId: string | null }> {
+    const normalizedProjectId = projectId.trim();
+    if (!normalizedProjectId) {
+        throw new Error("Project ID is required.");
+    }
+
+    const response = await projectApi<{
+        isPublic: boolean;
+        publicId: string | null;
+    }>(
+        `/admin/projects/${encodeURIComponent(normalizedProjectId)}/public-visibility`,
+        {
+            method: "PATCH",
+            body: JSON.stringify({ isPublic })
+        }
+    );
+    return {
+        isPublic: response.isPublic,
+        publicId: response.publicId
+    };
 }
 
 export async function getAdminProjectActivity(projectId: string): Promise<{

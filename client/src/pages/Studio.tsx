@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowUpRight, FolderOpen, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { collection, getDocs, query, where } from "firebase/firestore";
@@ -6,6 +6,15 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../firebase/firebase";
 import NavBar from "./NavBar";
 import { isAvailableStudioProject } from "./studioProjectVisibility";
+import {
+  getDesignInspirationPage,
+  getDesignInspirationThumbnail,
+  type DesignInspiration,
+} from "../services/designInspirations";
+import {
+  getDesignInspirationsState,
+  NO_DESIGN_INSPIRATIONS_MESSAGE,
+} from "./designInspirationsState";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -244,6 +253,45 @@ function SkeletonCard() {
   );
 }
 
+function InspirationCard({
+  design,
+  onOpen,
+}: {
+  design: DesignInspiration;
+  onOpen: () => void;
+}) {
+  const [imgError, setImgError] = useState(false);
+  const thumbnail = design.thumbnailObjectUrl;
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label={`Open ${design.title}`}
+      className="group text-left outline-none"
+    >
+      <div className="aspect-[4/3] overflow-hidden rounded-xl bg-black/[0.05] ring-1 ring-black/5 transition duration-200 group-hover:ring-black/20 group-focus-visible:ring-2 group-focus-visible:ring-[#1b1b1b]">
+        {thumbnail && !imgError ? (
+          <img
+            src={thumbnail}
+            alt=""
+            loading="lazy"
+            onError={() => setImgError(true)}
+            className="h-full w-full object-cover transition duration-500 ease-out group-hover:scale-[1.03]"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-black/20">
+            <FolderOpen className="h-8 w-8" strokeWidth={1.25} />
+          </div>
+        )}
+      </div>
+      <h3 className="mt-3 truncate px-0.5 text-[13px] font-medium leading-tight text-[#1b1b1b]">
+        {design.title}
+      </h3>
+    </button>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
@@ -257,6 +305,90 @@ export default function Studio() {
 
   const [sort, setSort] = useState<SortKey>("recent");
   const [search, setSearch] = useState("");
+  const [inspirations, setInspirations] = useState<DesignInspiration[]>([]);
+  const [inspirationsLoading, setInspirationsLoading] = useState(true);
+  const [inspirationsError, setInspirationsError] = useState(false);
+  const [inspirationsRetry, setInspirationsRetry] = useState(0);
+  const [inspirationsCursor, setInspirationsCursor] = useState<string | null>(null);
+  const [inspirationsHasMore, setInspirationsHasMore] = useState(false);
+  const [inspirationsMoreLoading, setInspirationsMoreLoading] = useState(false);
+  const [inspirationsMoreError, setInspirationsMoreError] = useState(false);
+  const thumbnailObjectUrls = useRef(new Set<string>());
+  const inspirationControllers = useRef(new Set<AbortController>());
+
+  const loadInspirationPage = useCallback(async (
+    cursor: string | null,
+    append: boolean,
+    signal: AbortSignal,
+  ) => {
+    if (append) {
+      setInspirationsMoreLoading(true);
+      setInspirationsMoreError(false);
+    } else {
+      setInspirationsLoading(true);
+      setInspirationsError(false);
+      thumbnailObjectUrls.current.forEach(URL.revokeObjectURL);
+      thumbnailObjectUrls.current.clear();
+      setInspirations([]);
+      setInspirationsCursor(null);
+      setInspirationsHasMore(false);
+    }
+
+    try {
+      const page = await getDesignInspirationPage(12, cursor, signal);
+      const designsWithThumbnails = await Promise.all(page.designs.map(async design => {
+        if (!design.thumbnailUrl) return design;
+        try {
+          const thumbnail = await getDesignInspirationThumbnail(design.publicId, signal);
+          if (signal.aborted) return design;
+          const thumbnailObjectUrl = URL.createObjectURL(thumbnail);
+          thumbnailObjectUrls.current.add(thumbnailObjectUrl);
+          return { ...design, thumbnailObjectUrl };
+        } catch (error) {
+          if (!signal.aborted) {
+            console.warn("Unable to load a design inspiration thumbnail:", error);
+          }
+          return design;
+        }
+      }));
+      if (signal.aborted) return;
+      setInspirations(current =>
+        append ? [...current, ...designsWithThumbnails] : designsWithThumbnails
+      );
+      setInspirationsCursor(page.nextCursor);
+      setInspirationsHasMore(page.hasMore);
+    } catch (loadError) {
+      if (signal.aborted) return;
+      console.error("Failed to load design inspirations:", loadError);
+      if (append) {
+        setInspirationsMoreError(true);
+      } else {
+        setInspirationsError(true);
+      }
+    } finally {
+      if (!signal.aborted) {
+        if (append) setInspirationsMoreLoading(false);
+        else setInspirationsLoading(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    inspirationControllers.current.add(controller);
+    queueMicrotask(() => {
+      void loadInspirationPage(null, false, controller.signal)
+        .finally(() => inspirationControllers.current.delete(controller));
+    });
+    return () => controller.abort();
+  }, [inspirationsRetry, loadInspirationPage]);
+
+  useEffect(() => () => {
+    inspirationControllers.current.forEach(controller => controller.abort());
+    inspirationControllers.current.clear();
+    thumbnailObjectUrls.current.forEach(URL.revokeObjectURL);
+    thumbnailObjectUrls.current.clear();
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -461,6 +593,105 @@ export default function Studio() {
             )}
           </>
         )}
+
+        <section
+          aria-labelledby="design-inspirations-title"
+          className="mt-16 border-t border-black/10 pt-10"
+        >
+          <div className="mb-6 flex items-end justify-between gap-4">
+            <div>
+              <h2
+                id="design-inspirations-title"
+                className="text-xl font-semibold tracking-tight text-[#1b1b1b]"
+              >
+                Design Inspirations
+              </h2>
+              <p className="mt-1 text-[13px] text-black/50">
+                View-only designs shared by other clients.
+              </p>
+            </div>
+          </div>
+
+          {(() => {
+            const state = getDesignInspirationsState(
+              inspirationsLoading,
+              inspirationsError,
+              inspirations,
+            );
+            if (state.kind === "loading") {
+              return (
+                <div className={GRID} aria-busy="true" aria-label="Loading design inspirations">
+                  {Array.from({ length: 4 }, (_, index) => (
+                    <SkeletonCard key={index} />
+                  ))}
+                </div>
+              );
+            }
+            if (state.kind === "error") {
+              return (
+                <div className="flex min-h-[180px] flex-col items-center justify-center gap-3 rounded-xl bg-black/[0.05] px-6 text-center">
+                  <p role="alert" className="text-[13px] text-black/55">
+                    Unable to load design inspirations.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setInspirationsRetry(value => value + 1)}
+                    className="rounded-md border border-black/15 bg-white px-3 py-2 text-[12px] font-medium hover:border-black/35"
+                  >
+                    Retry
+                  </button>
+                </div>
+              );
+            }
+            if (state.kind === "empty") {
+              return (
+                <p className="py-12 text-center text-[13px] text-black/50">
+                  {NO_DESIGN_INSPIRATIONS_MESSAGE}
+                </p>
+              );
+            }
+            return (
+              <>
+                <div className={GRID}>
+                  {state.designs.map(design => (
+                    <InspirationCard
+                      key={design.publicId}
+                      design={design}
+                      onOpen={() => navigate(
+                        `/studio/inspiration/${encodeURIComponent(design.publicId)}`
+                      )}
+                    />
+                  ))}
+                </div>
+                {(inspirationsMoreError || inspirationsHasMore) && (
+                  <div className="mt-8 flex justify-center">
+                    <button
+                      type="button"
+                      disabled={inspirationsMoreLoading}
+                      onClick={() => {
+                        if (!inspirationsCursor) return;
+                        const controller = new AbortController();
+                        inspirationControllers.current.add(controller);
+                        void loadInspirationPage(
+                          inspirationsCursor,
+                          true,
+                          controller.signal,
+                        ).finally(() => inspirationControllers.current.delete(controller));
+                      }}
+                      className="rounded-md border border-black/15 bg-white px-4 py-2.5 text-[12px] font-medium hover:border-black/35 disabled:cursor-wait disabled:opacity-50"
+                    >
+                      {inspirationsMoreLoading
+                        ? "Loading…"
+                        : inspirationsMoreError
+                          ? "Retry"
+                          : "Load more"}
+                    </button>
+                  </div>
+                )}
+              </>
+            );
+          })()}
+        </section>
       </main>
     </div>
   );

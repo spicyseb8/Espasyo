@@ -32,6 +32,7 @@ import {
     isValidProjectDeadline,
     normalizeProjectDeadlineForInput,
     reviewAdminProject,
+    setAdminProjectPublicVisibility,
     updateProjectDeadline
 } from "../../../services/assets/projectService";
 
@@ -45,6 +46,7 @@ interface ProjectDetailsModalProps {
     onOpenChange: (open: boolean) => void;
     onReviewClientDesign: (project: AdminProject, snapshot?: "submitted" | "approved") => void;
     onProjectReviewed?: (projectId: string, status: string) => void;
+    onPublicVisibilityChanged?: (projectId: string, isPublic: boolean) => void;
     onDeadlineSaved?: (projectId: string, deadline: string) => void;
 }
 
@@ -82,6 +84,7 @@ function ModalBody({
     onClose,
     onReviewClientDesign,
     onProjectReviewed,
+    onPublicVisibilityChanged,
     onDeadlineSaved
 }: Omit<ProjectDetailsModalProps, "project" | "onOpenChange"> & {
     project: AdminProject;
@@ -112,6 +115,10 @@ function ModalBody({
     const [reviewReason, setReviewReason] = useState("");
     const [reviewError, setReviewError] = useState("");
     const [reviewing, setReviewing] = useState(false);
+
+    // ---- Public visibility ----
+    const [savingVisibility, setSavingVisibility] = useState(false);
+    const [visibilityError, setVisibilityError] = useState("");
 
     // ---- Activity ----
     const [activities, setActivities] = useState<Activity>([]);
@@ -209,6 +216,26 @@ function ModalBody({
             setReviewing(false);
         }
     }
+
+    async function handlePublicVisibilityChange(isPublic: boolean) {
+        if (savingVisibility) return;
+        setSavingVisibility(true);
+        setVisibilityError("");
+        try {
+            const result = await setAdminProjectPublicVisibility(project.projectId, isPublic);
+            onPublicVisibilityChanged?.(project.projectId, result.isPublic);
+        } catch (error) {
+            console.error("Failed to update project public visibility:", error);
+            setVisibilityError(
+                error instanceof Error ? error.message : "Unable to update project visibility."
+            );
+        } finally {
+            setSavingVisibility(false);
+        }
+    }
+
+    const consentGranted = project.publicConsent === true;
+    const isPublic = project.isPublic === true;
 
     // The one "open the design" button, labelled by what it will open.
     const viewDesign = isSubmitted
@@ -410,7 +437,63 @@ function ModalBody({
                             )}
                         </dd>
                     </div>
+
+                    {(isSubmitted || isApproved) && (
+                        <div>
+                            <dt className="text-xs text-muted-foreground">Public sharing consent</dt>
+                            <dd className="mt-1 text-base font-medium">
+                                {consentGranted
+                                    ? `Granted · ${project.publicConsentAt
+                                        ? formatProjectDate(project.publicConsentAt)
+                                        : "date unavailable"}`
+                                    : "No consent"}
+                            </dd>
+                        </div>
+                    )}
                 </dl>
+
+                {/* Public visibility (approved projects only) */}
+                {isApproved && (
+                    <section className="rounded-lg border border-border/60 p-4">
+                        <div className="flex items-center justify-between gap-4">
+                            <div className="min-w-0">
+                                <h3 className="text-sm font-medium">
+                                    Public visibility ·{" "}
+                                    <span className={isPublic ? "text-green-600" : "text-muted-foreground"}>
+                                        {savingVisibility ? "Updating..." : isPublic ? "Public" : "Private"}
+                                    </span>
+                                </h3>
+                                <p className="mt-1 text-xs text-muted-foreground">
+                                    {consentGranted
+                                        ? "Turn on to show this approved design publicly."
+                                        : "The client has not given consent, so this project can't be made public."}
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                role="switch"
+                                aria-checked={isPublic}
+                                aria-label="Make approved project public"
+                                onClick={() => void handlePublicVisibilityChange(!isPublic)}
+                                disabled={savingVisibility || (!isPublic && !consentGranted)}
+                                className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                                    isPublic ? "bg-green-600" : "bg-muted"
+                                }`}
+                            >
+                                <span
+                                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                                        isPublic ? "translate-x-5" : "translate-x-0.5"
+                                    }`}
+                                />
+                            </button>
+                        </div>
+                        {visibilityError && (
+                            <p role="alert" className="mt-2 text-xs text-destructive">
+                                {visibilityError}
+                            </p>
+                        )}
+                    </section>
+                )}
 
                 <ActivityTimeline activities={activities} error={activityError} />
             </div>

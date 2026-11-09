@@ -1,8 +1,10 @@
 
 import {
     useCallback,
+    useEffect,
     useState
 } from "react";
+import { Link } from "react-router-dom";
 
 import "./Editor.css";
 
@@ -40,7 +42,15 @@ import type { WorkspacePanel } from "../Workspace/WorkspaceTabs";
 // EDITOR
 //==================================================
 
-export default function Editor() {
+interface Props {
+    viewOnly?: boolean;
+    viewOnlyTitle?: string;
+}
+
+export default function Editor({
+    viewOnly = false,
+    viewOnlyTitle = ""
+}: Props) {
 
     const [activePanel, setActivePanel] =
         useState<WorkspacePanel | null>("furniture");
@@ -62,38 +72,63 @@ export default function Editor() {
 
         }, []);
 
+    useEffect(() => {
+        if (!viewOnly) return;
+        const handleEditingShortcut = (event: KeyboardEvent) => {
+            const key = event.key.toLowerCase();
+            const blockedKey = ["delete", "backspace", "r"].includes(key);
+            const blockedCommand = (event.ctrlKey || event.metaKey) &&
+                ["a", "c", "d", "p", "s", "v", "x", "y", "z"].includes(key);
+            if (!blockedKey && !blockedCommand) return;
+            event.preventDefault();
+            event.stopImmediatePropagation();
+        };
+        window.addEventListener("keydown", handleEditingShortcut, true);
+        return () => window.removeEventListener("keydown", handleEditingShortcut, true);
+    }, [viewOnly]);
+
     return (
 
         <>
 
-            <div className="editor">
+            <div className={`editor${viewOnly ? " is-view-only" : ""}`}>
 
-                <DraftLoader />
+                {!viewOnly && <DraftLoader />}
 
-                <EditorExitGuard />
+                {!viewOnly && <EditorExitGuard />}
 
-                <Topbar
-                    projectPanelOpen={activePanel === "project"}
-                    onProjectClick={() =>
-                        setActivePanel(current =>
-                            current === "project" ? null : "project"
-                        )
-                    }
-                />
+                {viewOnly ? (
+                    <header className="view-only-header">
+                        <Link className="view-only-back" to="/studio">Studio</Link>
+                        <div className="view-only-heading">
+                            <span className="view-only-badge">View only</span>
+                            <span className="view-only-title">{viewOnlyTitle}</span>
+                        </div>
+                    </header>
+                ) : (
+                    <Topbar
+                        projectPanelOpen={activePanel === "project"}
+                        onProjectClick={() =>
+                            setActivePanel(current =>
+                                current === "project" ? null : "project"
+                            )
+                        }
+                    />
+                )}
 
                 <div className="editor-body">
 
-                    <FloorSwitcher
-                        materialPanelOpen={
-                            activePanel === "flooring" ||
-                            activePanel === "paint"
-                        }
-                    />
+                    <FloorSwitcher materialPanelOpen={!viewOnly && (
+                        activePanel === "flooring" ||
+                        activePanel === "paint"
+                    )} />
 
-                    <Workspace
-                        activePanel={activePanel}
-                        onPanelChange={setActivePanel}
-                    />
+                    {!viewOnly && (
+                        <Workspace
+                            activePanel={activePanel}
+                            onPanelChange={setActivePanel}
+                        />
+                    )}
 
                     <main className="viewport">
 
@@ -104,20 +139,21 @@ export default function Editor() {
                             walkthroughSpawnConfirmed={
                                 walkthroughSpawnConfirmed
                             }
+                            viewOnly={viewOnly}
                             onSceneReady={
                                 handleSceneReady
                             }
                         />
 
-                        <BudgetWarning />
+                        {!viewOnly && <BudgetWarning />}
 
-                        <InstructionModal />
+                        {!viewOnly && <InstructionModal />}
 
-                        <WalkthroughUI
-                            spawnConfirmed={
-                                walkthroughSpawnConfirmed
-                            }
-                        />
+                        {!viewOnly && (
+                            <WalkthroughUI
+                                spawnConfirmed={walkthroughSpawnConfirmed}
+                            />
+                        )}
 
                     </main>
 
