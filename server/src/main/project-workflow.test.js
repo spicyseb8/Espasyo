@@ -6,7 +6,10 @@ import {
   canContinueAdminStructureSave,
   canTransitionProject,
   getClientEditLockReason,
+  getPublicConsentFields,
+  getPublicVisibilityUpdate,
   getProjectStatus,
+  getProjectReviewVisibilityUpdate,
   isFutureProjectDeadline,
   isCurrentProjectAcknowledgement,
   isProjectDeadlineExpired,
@@ -61,6 +64,69 @@ test("review transitions are restricted to submitted projects", () => {
   assert.equal(canTransitionProject("submitted", "request-revision"), true);
   assert.equal(canTransitionProject("ongoing", "approve"), false);
   assert.equal(canTransitionProject("approved", "request-revision"), false);
+});
+
+test("public consent fields require explicit boolean consent and server timestamp", () => {
+  const serverTimestamp = { serverTimestamp: true };
+  assert.deepEqual(getPublicConsentFields(true, serverTimestamp), {
+    publicConsent: true,
+    publicConsentAt: serverTimestamp,
+  });
+  assert.deepEqual(getPublicConsentFields(false, serverTimestamp), {
+    publicConsent: false,
+    publicConsentAt: null,
+  });
+  assert.throws(() => getPublicConsentFields(true, null), /server timestamp/);
+  assert.throws(() => getPublicConsentFields(undefined, null), /true or false/);
+});
+
+test("public visibility can only be enabled for approved projects with client consent", () => {
+  assert.equal(getPublicVisibilityUpdate({
+    projectStatus: "approved",
+    publicConsent: false,
+  }, true, "opaque-id"), null);
+  assert.equal(getPublicVisibilityUpdate({
+    projectStatus: "approved",
+    publicConsent: null,
+  }, true, "opaque-id"), null);
+  assert.equal(getPublicVisibilityUpdate({
+    projectStatus: "approved",
+  }, true, "opaque-id"), null);
+  assert.equal(getPublicVisibilityUpdate({
+    projectStatus: "submitted",
+    publicConsent: true,
+  }, true, "opaque-id"), null);
+  assert.deepEqual(getPublicVisibilityUpdate({
+    projectStatus: "approved",
+    publicConsent: true,
+  }, true, "opaque-id", 1), {
+    isPublic: true,
+    publicId: "opaque-id",
+    publicNumber: 1,
+  });
+});
+
+test("public visibility can always be disabled and keeps an existing opaque identifier", () => {
+  assert.deepEqual(getPublicVisibilityUpdate({
+    projectStatus: "submitted",
+    publicConsent: false,
+    publicId: "existing-opaque-id",
+  }, false, "new-id"), { isPublic: false });
+  assert.deepEqual(getPublicVisibilityUpdate({
+    projectStatus: "approved",
+    publicConsent: true,
+    publicId: "existing-opaque-id",
+    publicNumber: 17,
+  }, true, "new-id"), {
+    isPublic: true,
+    publicId: "existing-opaque-id",
+    publicNumber: 17,
+  });
+});
+
+test("approval and revision review transitions always force projects private", () => {
+  assert.deepEqual(getProjectReviewVisibilityUpdate("approve"), { isPublic: false });
+  assert.deepEqual(getProjectReviewVisibilityUpdate("request-revision"), { isPublic: false });
 });
 
 test("admin structure saves reject lifecycle changes that happen during upload", () => {

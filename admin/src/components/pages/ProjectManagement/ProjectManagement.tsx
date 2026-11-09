@@ -754,12 +754,27 @@ export default function ProjectManagement() {
                             ? {
                                 ...project,
                                 projectStatus: status as AdminProject["projectStatus"],
-                                lifecycleStatus: status as AdminProject["lifecycleStatus"]
+                                lifecycleStatus: status as AdminProject["lifecycleStatus"],
+                                isPublic: false
                             }
                             : project
                     ));
                     setSelectedProject(current => current?.projectId === projectId
-                        ? { ...current, projectStatus: status as AdminProject["projectStatus"] }
+                        ? {
+                            ...current,
+                            projectStatus: status as AdminProject["projectStatus"],
+                            isPublic: false
+                        }
+                        : current);
+                }}
+                onPublicVisibilityChanged={(projectId, isPublic) => {
+                    setProjects(current => current.map(project =>
+                        project.projectId === projectId
+                            ? { ...project, isPublic }
+                            : project
+                    ));
+                    setSelectedProject(current => current?.projectId === projectId
+                        ? { ...current, isPublic }
                         : current);
                 }}
                 onDeadlineSaved={(projectId, deadline) => {

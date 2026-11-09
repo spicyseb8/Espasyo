@@ -41,6 +41,7 @@ import {
     isValidProjectDeadline,
     normalizeProjectDeadlineForInput,
     reviewAdminProject,
+    setAdminProjectPublicVisibility,
     updateProjectDeadline
 } from "../../../services/assets/projectService";
 
@@ -56,6 +57,7 @@ interface ProjectDetailsModalProps {
     onOpenChange: (open: boolean) => void;
     onReviewClientDesign: (project: AdminProject, snapshot?: "submitted" | "approved") => void;
     onProjectReviewed?: (projectId: string, status: string) => void;
+    onPublicVisibilityChanged?: (projectId: string, isPublic: boolean) => void;
 
     // Allows the parent project list to update immediately after saving.
     onDeadlineSaved?: (
@@ -69,7 +71,8 @@ export default function ProjectDetailsModal({
     onOpenChange,
     onReviewClientDesign,
     onDeadlineSaved,
-    onProjectReviewed
+    onProjectReviewed,
+    onPublicVisibilityChanged
 }: ProjectDetailsModalProps) {
     const [generatingPdf, setGeneratingPdf] =
         useState(false);
@@ -125,6 +128,8 @@ export default function ProjectDetailsModal({
     const [reviewReason, setReviewReason] = useState("");
     const [reviewError, setReviewError] = useState("");
     const [reviewing, setReviewing] = useState(false);
+    const [savingVisibility, setSavingVisibility] = useState(false);
+    const [visibilityError, setVisibilityError] = useState("");
     const [activityState, setActivityState] = useState<{
         projectId: string | null;
         activities: Awaited<ReturnType<typeof getAdminProjectActivity>>;
@@ -296,6 +301,26 @@ export default function ProjectDetailsModal({
         }
     }
 
+    async function handlePublicVisibilityChange(isPublic: boolean) {
+        if (!project || savingVisibility) return;
+        setSavingVisibility(true);
+        setVisibilityError("");
+        try {
+            const result = await setAdminProjectPublicVisibility(
+                project.projectId,
+                isPublic
+            );
+            onPublicVisibilityChanged?.(project.projectId, result.isPublic);
+        } catch (error) {
+            console.error("Failed to update project public visibility:", error);
+            setVisibilityError(error instanceof Error
+                ? error.message
+                : "Unable to update project visibility.");
+        } finally {
+            setSavingVisibility(false);
+        }
+    }
+
     return (
         <Dialog
             open={project !== null}
@@ -364,6 +389,17 @@ export default function ProjectDetailsModal({
                                             icon={<Clock size={16} />}
                                             label="Submitted"
                                             value={`${formatProjectDate(project.submittedAt)} · Version ${project.submittedVersionNumber ?? "legacy"}`}
+                                        />
+                                    )}
+                                    {["submitted", "approved"].includes(project.projectStatus ?? "") && (
+                                        <InfoRow
+                                            icon={<Clock size={16} />}
+                                            label="Public sharing consent"
+                                            value={project.publicConsent === true
+                                                ? `Granted · ${project.publicConsentAt
+                                                    ? formatProjectDate(project.publicConsentAt)
+                                                    : "date unavailable"}`
+                                                : "No consent"}
                                         />
                                     )}
                                     {project.workflowType === "admin-managed" && (
@@ -537,9 +573,55 @@ export default function ProjectDetailsModal({
                                     </div>
                                 )}
                                 {project.projectStatus === "approved" && (
-                                    <Button type="button" variant="outline" className="mt-5 w-full" onClick={() => onReviewClientDesign(project, "approved")}>
-                                        Inspect approved snapshot
-                                    </Button>
+                                    <>
+                                        <Button type="button" variant="outline" className="mt-5 w-full" onClick={() => onReviewClientDesign(project, "approved")}>
+                                            Inspect approved snapshot
+                                        </Button>
+                                        <section className="mt-5 rounded-lg border border-border/60 p-3">
+                                            <div className="flex items-center justify-between gap-4">
+                                                <div>
+                                                    <h3 className="text-sm font-medium">Public visibility</h3>
+                                                    <p className="mt-1 text-xs text-muted-foreground">
+                                                        {project.publicConsent === true
+                                                            ? "Only consented approved designs can be made public."
+                                                            : "Client consent is required before this project can be public."}
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    role="switch"
+                                                    aria-checked={project.isPublic === true}
+                                                    aria-label="Make approved project public"
+                                                    onClick={() => void handlePublicVisibilityChange(project.isPublic !== true)}
+                                                    disabled={savingVisibility || (
+                                                        project.isPublic !== true &&
+                                                        project.publicConsent !== true
+                                                    )}
+                                                    className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                                                        project.isPublic === true ? "bg-green-600" : "bg-muted"
+                                                    }`}
+                                                >
+                                                    <span
+                                                        className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                                                            project.isPublic === true ? "translate-x-5" : "translate-x-0.5"
+                                                        }`}
+                                                    />
+                                                </button>
+                                            </div>
+                                            <p className="mt-2 text-xs font-medium">
+                                                {savingVisibility
+                                                    ? "Updating visibility..."
+                                                    : project.isPublic === true
+                                                        ? "Public"
+                                                        : "Private"}
+                                            </p>
+                                            {visibilityError && (
+                                                <p role="alert" className="mt-2 text-xs text-destructive">
+                                                    {visibilityError}
+                                                </p>
+                                            )}
+                                        </section>
+                                    </>
                                 )}
                                 <section className="mt-5 space-y-2 border-t border-border/60 pt-4">
                                     <h3 className="text-sm font-medium">Project activity</h3>

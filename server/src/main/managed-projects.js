@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import express from "express";
-import { FieldValue } from "firebase-admin/firestore";
+import { FieldPath, FieldValue } from "firebase-admin/firestore";
 
 import {
   adminAuth,
@@ -25,6 +25,9 @@ import {
   canTransitionProject,
   getPhilippineDateTimeKey,
   getClientEditLockReason,
+  getPublicConsentFields,
+  getPublicVisibilityUpdate,
+  getProjectReviewVisibilityUpdate,
   getProjectStatus,
   isCurrentProjectAcknowledgement,
   isFutureProjectDeadline,
@@ -36,6 +39,15 @@ import {
   resolveManagedProjectFilePath,
   stripManagedFileUrlFields,
 } from "./managed-project-file-access.js";
+import {
+  createPublicGalleryResponse,
+  createPublicGalleryItems,
+  createPublicProjectSnapshot,
+  getPublicGalleryPageOptions,
+  hasApprovedConsentSnapshot,
+  isPubliclyEligibleProject,
+  isSafePublicThumbnailPath,
+} from "./public-project-access.js";
 
 const router = express.Router();
 const PROJECTS = "projects";
@@ -410,6 +422,9 @@ function mapProject(document, ownerNames, creatorNames, assignmentByOwner, owner
     clientDesignStarted: typeof data.clientDesignStarted === "boolean" ? data.clientDesignStarted : undefined,
     clientDesignStartedAt: timestampToIso(data.clientDesignStartedAt),
     projectStatus: getProjectStatus(data),
+    publicConsent: data.publicConsent === true,
+    publicConsentAt: timestampToIso(data.publicConsentAt),
+    isPublic: data.isPublic === true,
     currentDesignVersionId: typeof data.currentDesignVersionId === "string" ? data.currentDesignVersionId : undefined,
     currentDesignVersionNumber: Number.isSafeInteger(data.currentDesignVersionNumber)
       ? data.currentDesignVersionNumber
@@ -1327,6 +1342,330 @@ async function getAdminManagedProjectFile(req, res) {
   return getManagedProjectFile(req, res, true);
 }
 
+function setPublicNoCacheHeaders(req, res, next) {
+  res.set({
+    "Cache-Control": "private, no-store, no-cache, max-age=0, must-revalidate",
+    "Pragma": "no-cache",
+    "Expires": "0",
+    "Vary": "Authorization",
+    "X-Content-Type-Options": "nosniff",
+  });
+  return next();
+}
+
+function publicProjectNotFound(res) {
+  return res.status(404).json({
+    success: false,
+    message: "Public design not found.",
+  });
+}
+
+async function getEligiblePublicProject(publicId, viewerUid) {
+  if (!publicId) return null;
+  const snapshot = await adminDb.collection(PROJECTS)
+    .where("publicId", "==", publicId)
+    .limit(2)
+    .get();
+  if (snapshot.docs.length !== 1) return null;
+  const document = snapshot.docs[0];
+  const data = document.data();
+  if (!isPubliclyEligibleProject(data, viewerUid)) return null;
+  const submissionId = normalizedString(data.approvedSubmissionId);
+  if (!submissionId) return null;
+  const submissionSnapshot = await adminDb.collection(PROJECT_SUBMISSIONS)
+    .doc(submissionId)
+    .get();
+  const submissionRecord = submissionSnapshot.exists ? submissionSnapshot.data() : null;
+  if (!hasApprovedConsentSnapshot(data, document.id, submissionRecord)) return null;
+  return { document, data, projectId: document.id, submissionRecord };
+}
+
+async function ensurePublicNumber(projectReference, publicId, viewerUid) {
+  const counterReference = adminDb.collection("idCounters").doc("public-design-inspirations");
+  return adminDb.runTransaction(async transaction => {
+    const projectSnapshot = await transaction.get(projectReference);
+    if (!projectSnapshot.exists) return null;
+    const project = projectSnapshot.data();
+    if (
+      project.publicId !== publicId ||
+      !isPubliclyEligibleProject(project, viewerUid)
+    ) {
+      return null;
+    }
+    if (Number.isSafeInteger(project.publicNumber) && project.publicNumber > 0) {
+      return project.publicNumber;
+    }
+
+    const counterSnapshot = await transaction.get(counterReference);
+    const previousNumber = counterSnapshot.exists
+      ? Number(counterSnapshot.data().lastSequence ?? 0)
+      : 0;
+    if (!Number.isSafeInteger(previousNumber) || previousNumber < 0) {
+      throw httpError(500, "The public design number counter is invalid.");
+    }
+    const publicNumber = previousNumber + 1;
+    if (!Number.isSafeInteger(publicNumber)) {
+      throw httpError(500, "Unable to generate another public design number.");
+    }
+    transaction.set(counterReference, {
+      lastSequence: publicNumber,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    transaction.set(projectReference, { publicNumber }, { merge: true });
+    return publicNumber;
+  });
+}
+
+async function listPublicProjects(req, res) {
+  try {
+    let pageOptions;
+    try {
+      pageOptions = getPublicGalleryPageOptions(req.query);
+    } catch (error) {
+      throw httpError(400, error.message);
+    }
+    const { limit, cursor } = pageOptions;
+    const pageEntries = [];
+    let scanSnapshot = null;
+    let exhausted = false;
+    const scanBatchSize = 40;
+    if (cursor) {
+      const cursorSnapshot = await adminDb.collection(PROJECTS)
+        .where("publicId", "==", cursor)
+        .limit(2)
+        .get();
+      if (cursorSnapshot.size !== 1) {
+        throw httpError(400, "Public design cursor is invalid.");
+      }
+      scanSnapshot = cursorSnapshot.docs[0];
+    }
+    while (pageEntries.length <= limit && !exhausted) {
+      let projectsQuery = adminDb.collection(PROJECTS)
+        .where("isPublic", "==", true)
+        .orderBy(FieldPath.documentId());
+      if (scanSnapshot) projectsQuery = projectsQuery.startAfter(scanSnapshot);
+      const snapshot = await projectsQuery.limit(scanBatchSize).get();
+      if (snapshot.empty) {
+        exhausted = true;
+        break;
+      }
+
+      for (const document of snapshot.docs) {
+        const data = document.data();
+        scanSnapshot = document;
+        if (!isPubliclyEligibleProject(data, req.clientUser.uid)) continue;
+        const submissionId = normalizedString(data.approvedSubmissionId);
+        if (!submissionId) continue;
+        const submission = await adminDb.collection(PROJECT_SUBMISSIONS)
+          .doc(submissionId)
+          .get();
+        if (
+          !submission.exists ||
+          !hasApprovedConsentSnapshot(data, document.id, submission.data())
+        ) {
+          continue;
+        }
+
+        const publicNumber = await ensurePublicNumber(
+          document.ref,
+          data.publicId,
+          req.clientUser.uid,
+        );
+        if (publicNumber === null) continue;
+        const [entry] = createPublicGalleryItems([{
+          projectId: document.id,
+          data: { ...data, publicNumber },
+        }], req.clientUser.uid);
+        if (entry) pageEntries.push(entry);
+        if (pageEntries.length > limit) break;
+      }
+      if (snapshot.size < scanBatchSize) exhausted = true;
+    }
+
+    const hasMore = pageEntries.length > limit;
+    const entries = pageEntries.slice(0, limit);
+    const thumbnailUrls = new Map();
+    await Promise.all(entries.map(async entry => {
+      if (isSafePublicThumbnailPath(entry.thumbnailPath, entry.ownerId, entry.projectId)) {
+        const thumbnail = adminStorage.file(entry.thumbnailPath);
+        try {
+          const [metadata] = await thumbnail.getMetadata();
+          if (
+            Number(metadata.size) > 0 &&
+            ["image/jpeg", "image/png", "image/webp"].includes(metadata.contentType)
+          ) {
+            thumbnailUrls.set(
+              entry.publicId,
+              `/api/projects/public/${encodeURIComponent(entry.publicId)}/thumbnail`,
+            );
+          }
+        } catch (error) {
+          if (
+            String(error?.code) !== "404" &&
+            error?.code !== "storage/object-not-found"
+          ) {
+            throw error;
+          }
+        }
+      }
+    }));
+    const designs = createPublicGalleryResponse(entries, thumbnailUrls);
+    return res.json({
+      success: true,
+      designs,
+      nextCursor: hasMore ? entries[entries.length - 1].publicId : null,
+      hasMore,
+    });
+  } catch (error) {
+    return sendFailure(res, error, "Unable to load public designs.");
+  }
+}
+
+async function loadPublicProjectSnapshot(path) {
+  try {
+    const file = adminStorage.file(path);
+    const [metadata] = await file.getMetadata();
+    if (
+      Number(metadata.size) > MAX_STRUCTURE_BYTES ||
+      (typeof metadata.contentType === "string" &&
+        metadata.contentType !== "application/json")
+    ) {
+      return null;
+    }
+    const [contents] = await file.download();
+    const payload = JSON.parse(contents.toString("utf8"));
+    return isRecord(payload) ? payload : null;
+  } catch (error) {
+    if (
+      String(error?.code) === "404" ||
+      error?.code === "storage/object-not-found" ||
+      error instanceof SyntaxError
+    ) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+async function getPublicProjectPreview(req, res) {
+  try {
+    const publicId = normalizedString(req.params.publicId);
+    const eligible = await getEligiblePublicProject(publicId, req.clientUser.uid);
+    if (!eligible) return publicProjectNotFound(res);
+    const publicNumber = await ensurePublicNumber(
+      eligible.document.ref,
+      publicId,
+      req.clientUser.uid,
+    );
+    if (publicNumber === null) return publicProjectNotFound(res);
+
+    const project = {
+      ...eligible.data,
+      publicNumber,
+      projectId: normalizedString(eligible.data.projectId) || eligible.projectId,
+    };
+    const submissionRecord = eligible.submissionRecord;
+    const fileContext = {
+      project,
+      projectId: eligible.projectId,
+      ownerId: project.ownerId,
+      submissionRecord,
+    };
+    const structurePath = resolveManagedProjectFilePath({
+      ...fileContext,
+      kind: "structure",
+    });
+    const approvedPath = resolveManagedProjectFilePath({
+      ...fileContext,
+      kind: "approved",
+    });
+    if (!structurePath || !approvedPath) return publicProjectNotFound(res);
+
+    const [structure, interior] = await Promise.all([
+      loadPublicProjectSnapshot(structurePath),
+      loadPublicProjectSnapshot(approvedPath),
+    ]);
+    if (
+      !structure ||
+      !interior ||
+      structure.projectId !== eligible.projectId ||
+      structure.ownerId !== project.ownerId ||
+      structure.workflowType !== "admin-managed" ||
+      structure.structuralStatus !== "published" ||
+      structure.structuralRevision !== project.publishedStructuralRevision ||
+      structure.publishedStructuralRevision !== project.publishedStructuralRevision ||
+      interior.projectId !== eligible.projectId ||
+      interior.ownerId !== project.ownerId
+    ) {
+      return publicProjectNotFound(res);
+    }
+
+    const currentSnapshot = await eligible.document.ref.get();
+    if (
+      !currentSnapshot.exists ||
+      !isPubliclyEligibleProject(currentSnapshot.data(), req.clientUser.uid) ||
+      currentSnapshot.data().publicId !== publicId ||
+      currentSnapshot.data().approvedSubmissionId !== project.approvedSubmissionId
+    ) {
+      return publicProjectNotFound(res);
+    }
+
+    const title = `Design Inspiration #${publicNumber}`;
+
+    return res.json({
+      success: true,
+      publicId,
+      title,
+      projectData: createPublicProjectSnapshot(structure, interior, title),
+    });
+  } catch (error) {
+    return sendFailure(res, error, "Unable to load public design.");
+  }
+}
+
+async function getPublicProjectThumbnail(req, res) {
+  try {
+    const eligible = await getEligiblePublicProject(
+      normalizedString(req.params.publicId),
+      req.clientUser.uid,
+    );
+    if (!eligible) return publicProjectNotFound(res);
+    const path = eligible.data.thumbnailPath;
+    if (!isSafePublicThumbnailPath(path, eligible.data.ownerId, eligible.projectId)) {
+      return publicProjectNotFound(res);
+    }
+
+    const file = adminStorage.file(path);
+    const [metadata] = await file.getMetadata();
+    const contentType = metadata.contentType;
+    if (
+      Number(metadata.size) <= 0 ||
+      Number(metadata.size) > 5 * 1024 * 1024 ||
+      !["image/jpeg", "image/png", "image/webp"].includes(contentType)
+    ) {
+      return publicProjectNotFound(res);
+    }
+    const [contents] = await file.download();
+    const currentSnapshot = await eligible.document.ref.get();
+    if (
+      !currentSnapshot.exists ||
+      !isPubliclyEligibleProject(currentSnapshot.data(), req.clientUser.uid) ||
+      currentSnapshot.data().publicId !== eligible.data.publicId
+    ) {
+      return publicProjectNotFound(res);
+    }
+    return res.type(contentType).send(contents);
+  } catch (error) {
+    if (
+      String(error?.code) === "404" ||
+      error?.code === "storage/object-not-found"
+    ) {
+      return publicProjectNotFound(res);
+    }
+    return sendFailure(res, error, "Unable to load public design thumbnail.");
+  }
+}
+
 async function acknowledgeProjectAccess(req, res) {
   const projectId = normalizedString(req.params.projectId);
   const ownerId = req.clientUser.uid;
@@ -1428,6 +1767,14 @@ async function submitClientProject(req, res) {
   let uploadedPath;
   try {
     if (!projectId) throw httpError(400, "Project ID is required.");
+    if (
+      req.body?.publicConsent !== undefined &&
+      typeof req.body.publicConsent !== "boolean"
+    ) {
+      throw httpError(400, "Public consent must be true or false.");
+    }
+    const publicConsent = req.body?.publicConsent === true;
+    const publicConsentAt = publicConsent ? FieldValue.serverTimestamp() : null;
     const [initialSnapshot, assignmentSnapshot] = await Promise.all([
       reference.get(),
       assignment.get(),
@@ -1500,6 +1847,7 @@ async function submitClientProject(req, res) {
       transaction.create(submissionReference, {
         projectId,
         ownerId,
+        ...getPublicConsentFields(publicConsent, publicConsentAt),
         submissionId,
         versionId,
         versionNumber,
@@ -1510,6 +1858,7 @@ async function submitClientProject(req, res) {
         agreementVersion: SUBMISSION_AGREEMENT_VERSION,
       });
       transaction.set(reference, {
+        ...getPublicConsentFields(publicConsent, publicConsentAt),
         projectStatus: "submitted",
         submittedVersionId: versionId,
         submittedVersionNumber: versionNumber,
@@ -1568,6 +1917,7 @@ async function reviewSubmittedProject(req, res) {
       }
       const update = {
         projectStatus: action === "approve" ? "approved" : "revision-requested",
+        ...getProjectReviewVisibilityUpdate(action),
         reviewedBy: req.adminUser.uid,
         reviewedAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
@@ -1587,6 +1937,7 @@ async function reviewSubmittedProject(req, res) {
         });
       } else {
         Object.assign(update, {
+          ...getPublicConsentFields(false, null),
           revisionFeedback: reason,
           revisionRequestedAt: FieldValue.serverTimestamp(),
           revisionRequestedBy: req.adminUser.uid,
@@ -1615,6 +1966,86 @@ async function reviewSubmittedProject(req, res) {
     return res.json({ success: true, ...result });
   } catch (error) {
     return sendFailure(res, error, "Unable to review submitted project.");
+  }
+}
+
+async function updateProjectPublicVisibility(req, res) {
+  const projectId = normalizedString(req.params.projectId);
+  const requestedVisibility = req.body?.isPublic;
+  const reference = adminDb.collection(PROJECTS).doc(projectId);
+  try {
+    if (!projectId) throw httpError(400, "Project ID is required.");
+    if (typeof requestedVisibility !== "boolean") {
+      throw httpError(400, "Public visibility must be true or false.");
+    }
+
+    const result = await adminDb.runTransaction(async transaction => {
+      const snapshot = await transaction.get(reference);
+      if (!snapshot.exists) throw httpError(404, "Project does not exist.");
+      const project = snapshot.data();
+      let generatedPublicNumber;
+      let counterReference;
+      let counterSnapshot;
+      if (
+        requestedVisibility &&
+        (!Number.isSafeInteger(project.publicNumber) || project.publicNumber < 1)
+      ) {
+        counterReference = adminDb.collection("idCounters").doc("public-design-inspirations");
+        counterSnapshot = await transaction.get(counterReference);
+        const previousNumber = counterSnapshot.exists
+          ? Number(counterSnapshot.data().lastSequence ?? 0)
+          : 0;
+        if (!Number.isSafeInteger(previousNumber) || previousNumber < 0) {
+          throw httpError(500, "The public design number counter is invalid.");
+        }
+        generatedPublicNumber = previousNumber + 1;
+        if (!Number.isSafeInteger(generatedPublicNumber)) {
+          throw httpError(500, "Unable to generate another public design number.");
+        }
+      }
+      const visibilityUpdate = getPublicVisibilityUpdate(
+        project,
+        requestedVisibility,
+        requestedVisibility ? randomUUID() : "",
+        generatedPublicNumber,
+      );
+      if (!visibilityUpdate) {
+        throw httpError(
+          409,
+          "Only an approved project with explicit client consent can be made public.",
+        );
+      }
+
+      const wasPublic = project.isPublic === true;
+      transaction.set(reference, {
+        ...visibilityUpdate,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      if (counterReference && counterSnapshot) {
+        transaction.set(counterReference, {
+          lastSequence: generatedPublicNumber,
+          updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+      }
+      recordProjectActivity(
+        transaction,
+        projectId,
+        req.adminUser,
+        requestedVisibility ? "project-made-public" : "project-made-private",
+        {
+          previousValue: { isPublic: wasPublic },
+          newValue: { isPublic: requestedVisibility },
+        },
+      );
+
+      return {
+        isPublic: requestedVisibility,
+        publicId: visibilityUpdate.publicId ?? project.publicId ?? null,
+      };
+    });
+    return res.json({ success: true, ...result });
+  } catch (error) {
+    return sendFailure(res, error, "Unable to update project public visibility.");
   }
 }
 
@@ -1779,12 +2210,16 @@ router.get("/admin/projects/:projectId/files/:kind", requireRole("admin", "super
 router.get("/admin/projects/:projectId/files/:kind/:fileId", requireRole("admin", "superadmin"), getAdminManagedProjectFile);
 router.put("/projects/:projectId/managed-interior", authenticateClient, saveClientInterior);
 router.get("/projects/:projectId/workflow", authenticateClient, getClientProjectWorkflow);
+router.get("/projects/public", setPublicNoCacheHeaders, authenticateClient, listPublicProjects);
+router.get("/projects/public/:publicId/thumbnail", setPublicNoCacheHeaders, authenticateClient, getPublicProjectThumbnail);
+router.get("/projects/public/:publicId", setPublicNoCacheHeaders, authenticateClient, getPublicProjectPreview);
 router.get("/projects/:projectId/files/:kind", authenticateClient, getClientManagedProjectFile);
 router.get("/projects/:projectId/files/:kind/:fileId", authenticateClient, getClientManagedProjectFile);
 router.post("/projects/:projectId/access-acknowledgement", authenticateClient, acknowledgeProjectAccess);
 router.post("/projects/:projectId/submission-agreement", authenticateClient, acknowledgeSubmissionAgreement);
 router.post("/projects/:projectId/submit", authenticateClient, submitClientProject);
 router.post("/admin/projects/:projectId/review", requireRole("admin", "superadmin"), reviewSubmittedProject);
+router.patch("/admin/projects/:projectId/public-visibility", requireRole("admin", "superadmin"), updateProjectPublicVisibility);
 router.get("/admin/projects/:projectId/activity", requireRole("admin", "superadmin"), getProjectActivity);
 router.get("/projects/:projectId/activity", authenticateClient, getClientProjectActivity);
 router.get("/projects/:projectId/comments", authenticateClient, getClientProjectComments);

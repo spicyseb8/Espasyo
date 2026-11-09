@@ -98,6 +98,51 @@ export function canContinueAdminStructureSave(initialProject, currentProject) {
     !["submitted", "approved"].includes(currentStatus);
 }
 
+export function getPublicConsentFields(publicConsent, publicConsentAt) {
+  if (typeof publicConsent !== "boolean") {
+    throw new TypeError("Public consent must be true or false.");
+  }
+  if (publicConsent && (publicConsentAt === null || publicConsentAt === undefined)) {
+    throw new TypeError("Granted public consent requires a server timestamp.");
+  }
+  return {
+    publicConsent,
+    publicConsentAt: publicConsent ? publicConsentAt : null,
+  };
+}
+
+export function getPublicVisibilityUpdate(project, isPublic, generatedPublicId, generatedPublicNumber) {
+  if (typeof isPublic !== "boolean") {
+    throw new TypeError("Public visibility must be true or false.");
+  }
+  if (!isPublic) {
+    return { isPublic: false };
+  }
+  if (getProjectStatus(project) !== "approved" || project.publicConsent !== true) {
+    return null;
+  }
+  const publicId = typeof project.publicId === "string" && project.publicId.trim()
+    ? project.publicId
+    : generatedPublicId;
+  if (typeof publicId !== "string" || !publicId.trim()) {
+    throw new TypeError("A public identifier is required.");
+  }
+  const publicNumber = Number.isSafeInteger(project.publicNumber) && project.publicNumber > 0
+    ? project.publicNumber
+    : generatedPublicNumber;
+  if (!Number.isSafeInteger(publicNumber) || publicNumber < 1) {
+    throw new TypeError("A public design number is required.");
+  }
+  return { isPublic: true, publicId, publicNumber };
+}
+
+export function getProjectReviewVisibilityUpdate(action) {
+  if (action !== "approve" && action !== "request-revision") {
+    throw new TypeError("Project review action is invalid.");
+  }
+  return { isPublic: false };
+}
+
 export function isCurrentProjectAcknowledgement(
   acknowledgement,
   projectId,

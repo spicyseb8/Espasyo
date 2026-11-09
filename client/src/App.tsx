@@ -28,6 +28,8 @@ import AuthPage
 
 import StudioLoadProject
     from "./pages/StudioLoadProject";
+import StudioInspirationPreview
+    from "./pages/StudioInspirationPreview";
 
 import SettingsPage
     from "./pages/Settings";
@@ -164,6 +166,17 @@ function App() {
                     element={
                         <ClientAccessRoute>
                             <StudioLoadProject />
+                        </ClientAccessRoute>
+                    }
+                />
+
+                {/* VIEW-ONLY PUBLIC DESIGN PREVIEW */}
+
+                <Route
+                    path="/studio/inspiration/:publicId"
+                    element={
+                        <ClientAccessRoute>
+                            <StudioInspirationPreview />
                         </ClientAccessRoute>
                     }
                 />

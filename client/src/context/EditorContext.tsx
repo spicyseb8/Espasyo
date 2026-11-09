@@ -41,6 +41,9 @@ export interface EditorContextValue {
 
     canRedo:
         boolean;
+
+    viewOnly:
+        boolean;
 }
 
 //==================================================

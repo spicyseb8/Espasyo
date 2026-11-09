@@ -29,6 +29,7 @@ function reduceEditorAction(
     const allowedWhileLocked = action.type === "SET_PROJECT_LOCKED" ||
         action.type === "SWITCH_FLOOR" ||
         action.type === "LOAD_PROJECT" ||
+        action.type === "CLEAR_PROJECT" ||
         action.type === "SET_ACTIVE_TAB" ||
         action.type === "SET_ACTIVE_TOOL" ||
         action.type === "CLEAR_SELECTION" ||
@@ -42,6 +43,8 @@ function reduceEditorAction(
                 ...state,
                 projectLocked: action.payload
             };
+        case "CLEAR_PROJECT":
+            return initialState;
         case "SWITCH_FLOOR": {
             const floors = state.projectLocked
                 ? state.floors

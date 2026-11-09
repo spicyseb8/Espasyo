@@ -30,6 +30,7 @@ import type {
 import {
     isProjectDeadlineExemptAction
 } from "./editor/editorActions";
+import { canDispatchInViewOnly } from "./editor/viewOnly";
 import {
     PROJECT_BUDGET_ACTION_EVENT
 } from "../engine/cost/ProjectBudget";
@@ -217,12 +218,14 @@ function isTypingTarget(
 
 export default function EditorProvider({
 
-    children
+    children,
+    viewOnly = false
 
 }: {
 
     children:
         React.ReactNode;
+    viewOnly?: boolean;
 
 }) {
 
@@ -533,7 +536,9 @@ export default function EditorProvider({
                 EditorAction
         ) => {
 
-   
+            if (viewOnly && !canDispatchInViewOnly(action.type)) {
+                return;
+            }
 
             if (
                 !isProjectDeadlineExemptAction(action) &&
@@ -561,8 +566,8 @@ export default function EditorProvider({
 
 
 if (
-    action.type ===
-    "LOAD_PROJECT"
+    action.type === "LOAD_PROJECT" ||
+    action.type === "CLEAR_PROJECT"
 ) {
 
     //--------------------------------------------------
@@ -967,6 +972,7 @@ if (
                 );
             },
             [
+                viewOnly,
                 flushPendingFloorHistory,
                 flushPendingEditorHistory,
                 pushFloorHistory,
@@ -982,6 +988,8 @@ if (
 
     const undo =
     useCallback(() => {
+
+        if (viewOnly) return;
 
         // Do not allow undo after the project deadline.
         if (isProjectReadOnlyByDeadline()) {
@@ -1138,6 +1146,7 @@ if (
             refreshHistoryUI();
 
         }, [
+            viewOnly,
             flushPendingFloorHistory,
             flushPendingEditorHistory,
             refreshHistoryUI
@@ -1149,6 +1158,8 @@ if (
 
     const redo =
     useCallback(() => {
+
+        if (viewOnly) return;
 
         // Do not allow redo after the project deadline.
         if (isProjectReadOnlyByDeadline()) {
@@ -1306,6 +1317,7 @@ if (
             refreshHistoryUI();
 
         }, [
+            viewOnly,
             flushPendingFloorHistory,
             flushPendingEditorHistory,
             refreshHistoryUI
@@ -1316,6 +1328,7 @@ if (
     //==================================================
 
     useEffect(() => {
+        if (viewOnly) return;
 
         function handleKeyDown(
             event: KeyboardEvent
@@ -1398,7 +1411,8 @@ if (
 
     }, [
         undo,
-        redo
+        redo,
+        viewOnly
     ]);
 
     //==================================================
@@ -1441,7 +1455,9 @@ if (
 
                 canUndo,
 
-                canRedo
+                canRedo,
+
+                viewOnly
 
             }}
 

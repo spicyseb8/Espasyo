@@ -71,7 +71,10 @@ export async function acknowledgeSubmissionAgreement(projectId: string): Promise
     });
 }
 
-export async function submitClientProject(projectId: string): Promise<{
+export async function submitClientProject(
+    projectId: string,
+    publicConsent: boolean
+): Promise<{
     submissionId: string;
     versionId: string;
     versionNumber: number;
@@ -82,7 +85,7 @@ export async function submitClientProject(projectId: string): Promise<{
         versionNumber: number;
     }>(`/projects/${encodeURIComponent(projectId)}/submit`, {
         method: "POST",
-        body: JSON.stringify({})
+        body: JSON.stringify({ publicConsent })
     });
 }
 

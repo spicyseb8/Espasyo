@@ -125,6 +125,8 @@ interface SceneProps {
     walkthroughSpawnConfirmed:
         boolean;
 
+    viewOnly?: boolean;
+
     onSceneReady?: () => void;
 }
 
@@ -201,7 +203,8 @@ function SceneReadySignal({
 export default function Scene({
     onSpawnConfirmed,
     walkthroughSpawnConfirmed,
-    onSceneReady
+    onSceneReady,
+    viewOnly = false
 }: SceneProps) {
     const {
         state,
@@ -224,6 +227,7 @@ export default function Scene({
     );
 
     const handlePaintApplied = (target: PaintApplyTarget) => {
+        if (viewOnly) return;
         const bounds = viewportRef.current?.getBoundingClientRect();
         if (!bounds) {
             return;
@@ -593,7 +597,7 @@ export default function Scene({
                 {/* Editing interactions */}
 
                 {
-                    !state.walkthroughMode && (
+                    !state.walkthroughMode && !viewOnly && (
                         <>
                             <SelectionToolbar />
 
@@ -617,7 +621,7 @@ export default function Scene({
                 {/* Walkthrough controller */}
 
                 {
-                    state.walkthroughMode && (
+                    !viewOnly && state.walkthroughMode && (
                         <WalkthroughController
                             onSpawnConfirmed={
                                 onSpawnConfirmed
@@ -636,7 +640,7 @@ export default function Scene({
                 </Suspense>
             </Canvas>
 
-            {roomApplyPopup && (
+            {!viewOnly && roomApplyPopup && (
                 <button
                     type="button"
                     data-apply-to-room
@@ -670,7 +674,7 @@ export default function Scene({
                 </button>
             )}
 
-            {showSeparatorReminder && (
+            {!viewOnly && showSeparatorReminder && (
                 <div
                     role="status"
                     style={{
@@ -700,6 +704,7 @@ export default function Scene({
             ==================================================*/}
 
             {
+                !viewOnly &&
                 projectDeadline &&
                 isValidProjectDeadline(projectDeadline) &&
                 !deadlinePassed && (

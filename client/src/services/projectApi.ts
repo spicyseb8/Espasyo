@@ -9,11 +9,18 @@ if (!configuredApiBaseUrl && !import.meta.env.DEV) {
 const API_BASE_URL = (configuredApiBaseUrl || "http://localhost:5000/api")
     .replace(/\/+$/, "");
 
-export async function projectApi<T>(
+export class ProjectApiError extends Error {
+    constructor(message: string, public readonly status: number) {
+        super(message);
+        this.name = "ProjectApiError";
+    }
+}
+
+async function authenticatedProjectApiRequest(
     path: string,
     init: RequestInit = {},
     user: User | null = auth.currentUser,
-): Promise<T> {
+): Promise<Response> {
     if (!user) throw new Error("Please log in before saving a project.");
 
     const token = await user.getIdToken();
@@ -26,16 +33,42 @@ export async function projectApi<T>(
         headers.set("Content-Type", "application/json");
     }
 
-    const response = await fetch(`${API_BASE_URL}${path}`, {
+    return fetch(`${API_BASE_URL}${path}`, {
         ...init,
         headers
     });
+}
+
+export async function projectApi<T>(
+    path: string,
+    init: RequestInit = {},
+    user: User | null = auth.currentUser,
+): Promise<T> {
+    const response = await authenticatedProjectApiRequest(path, init, user);
     const result = await response.json() as {
         success?: boolean;
         message?: string;
     } & T;
     if (!response.ok || result.success === false) {
-        throw new Error(result.message || "The project request failed.");
+        throw new ProjectApiError(
+            result.message || "The project request failed.",
+            response.status
+        );
     }
     return result;
+}
+
+export async function projectApiBlob(
+    path: string,
+    init: RequestInit = {},
+    user: User | null = auth.currentUser,
+): Promise<Blob> {
+    const response = await authenticatedProjectApiRequest(path, init, user);
+    if (!response.ok) {
+        throw new ProjectApiError(
+            "The public design request failed.",
+            response.status
+        );
+    }
+    return response.blob();
 }

@@ -18,6 +18,7 @@ import type {
 export type EditorAction =
     | { type: "SET_PROJECT_LOCKED"; payload: boolean; }
     | { type: "SWITCH_FLOOR"; payload: string; }
+    | { type: "CLEAR_PROJECT"; }
     | { type: "SET_PROJECT_BUDGET"; payload: number | null; }
     | { type: "SET_ACTIVE_TAB"; payload: string; }
     | { type: "SET_ACTIVE_TOOL"; payload: Tool; }
@@ -102,6 +103,7 @@ export function isProjectDeadlineExemptAction(
     action: EditorAction
 ): boolean {
     return action.type === "LOAD_PROJECT" ||
+        action.type === "CLEAR_PROJECT" ||
         action.type === "TOGGLE_WALKTHROUGH" ||
         action.type === "SWITCH_FLOOR";
 }
