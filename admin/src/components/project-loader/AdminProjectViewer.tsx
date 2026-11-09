@@ -384,29 +384,6 @@ export default function AdminProjectViewer({
                     </p>
                 </div>
 
-                {reviewFloors.length > 1 && (
-                    <nav
-                        className="hidden items-center gap-1 rounded-lg bg-[#f1f1ee] p-1 sm:flex"
-                        aria-label="Floors"
-                    >
-                        {reviewFloors.map(floor => (
-                            <button
-                                key={floor.floorId}
-                                type="button"
-                                aria-pressed={floor.floorId === activeFloor.floorId}
-                                onClick={() => setActiveFloorId(floor.floorId)}
-                                className={`rounded-md px-3 py-1 text-xs font-medium transition ${
-                                    floor.floorId === activeFloor.floorId
-                                        ? "bg-white text-[#222] shadow-sm"
-                                        : "text-[#777] hover:text-[#222]"
-                                }`}
-                            >
-                                {floor.name}
-                            </button>
-                        ))}
-                    </nav>
-                )}
-
                 <div className="flex items-center gap-2">
                     <div className="relative">
                         <AdminCostEstimator projectData={projectData} />
@@ -430,30 +407,6 @@ export default function AdminProjectViewer({
                 </div>
             </header>
 
-            {/* Floors on small screens */}
-            {reviewFloors.length > 1 && (
-                <nav
-                    className="flex shrink-0 gap-1 overflow-x-auto border-b border-[#e4e4e1] bg-white px-4 py-2 sm:hidden"
-                    aria-label="Floors"
-                >
-                    {reviewFloors.map(floor => (
-                        <button
-                            key={floor.floorId}
-                            type="button"
-                            aria-pressed={floor.floorId === activeFloor.floorId}
-                            onClick={() => setActiveFloorId(floor.floorId)}
-                            className={`shrink-0 rounded-full border px-3 py-1 text-xs ${
-                                floor.floorId === activeFloor.floorId
-                                    ? "border-[#333] bg-[#333] text-white"
-                                    : "border-[#dededb] bg-white text-[#555]"
-                            }`}
-                        >
-                            {floor.name}
-                        </button>
-                    ))}
-                </nav>
-            )}
-
             {/* ================= BODY ================= */}
             <div className="flex min-h-0 flex-1 flex-col md:flex-row">
                 {/* ---------- 3D SCENE ---------- */}
@@ -471,6 +424,35 @@ export default function AdminProjectViewer({
                             current.includes(assetId) ? current : [...current, assetId]
                         )}
                     />
+
+                    {/* Floor buttons: right side, vertically centered (1F on top, 2F below) */}
+                    {reviewFloors.length > 1 && (
+                        <nav
+                            className="absolute right-4 top-1/2 z-20 flex -translate-y-1/2 flex-col gap-2"
+                            aria-label="Floors"
+                        >
+                            {reviewFloors.map((floor, index) => {
+                                const active = floor.floorId === activeFloor.floorId;
+                                return (
+                                    <button
+                                        key={floor.floorId}
+                                        type="button"
+                                        title={floor.name}
+                                        aria-label={floor.name}
+                                        aria-pressed={active}
+                                        onClick={() => setActiveFloorId(floor.floorId)}
+                                        className={`flex h-11 w-11 items-center justify-center rounded-xl border text-sm font-semibold shadow-md transition ${
+                                            active
+                                                ? "border-[#333] bg-[#333] text-white"
+                                                : "border-[#dededb] bg-white text-[#555] hover:bg-[#f5f5f3]"
+                                        }`}
+                                    >
+                                        {index + 1}F
+                                    </button>
+                                );
+                            })}
+                        </nav>
+                    )}
 
                     {/* Comment-mode hint */}
                     {commentMode && (
