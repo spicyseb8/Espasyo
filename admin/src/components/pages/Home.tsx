@@ -581,6 +581,16 @@ function GreetingCalendarCard({
     );
   }, [viewMonth]);
 
+  // How many deadlines fall inside the month being viewed.
+  const monthDeadlineCount = useMemo(() => {
+    const prefix = `${viewMonth.getFullYear()}-${String(viewMonth.getMonth() + 1).padStart(2, "0")}-`;
+    let total = 0;
+    for (const [date, items] of deadlinesByDate) {
+      if (date.startsWith(prefix)) total += items.length;
+    }
+    return total;
+  }, [deadlinesByDate, viewMonth]);
+
   const selectedProjects = deadlinesByDate.get(selectedDate) ?? [];
   const monthLabel = viewMonth.toLocaleDateString("en-US", {
     month: "long",
@@ -613,9 +623,9 @@ function GreetingCalendarCard({
           Hello, {userName}!
         </CardTitle>
         <CardDescription className="text-xs">
-          {deadlinesByDate.size > 0
-            ? "Select a highlighted date to view due projects."
-            : "Here's what's happening in your workspace today."}
+          {monthDeadlineCount > 0
+            ? `${monthDeadlineCount} project deadline${monthDeadlineCount === 1 ? "" : "s"} in ${viewMonth.toLocaleDateString("en-US", { month: "long" })}. Select a marked date to see them.`
+            : `No project deadlines in ${viewMonth.toLocaleDateString("en-US", { month: "long" })}.`}
         </CardDescription>
       </CardHeader>
 
@@ -657,11 +667,12 @@ function GreetingCalendarCard({
           ))}
         </div>
 
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-1.5">
           {calendarDates.map((date) => {
             const dateKey = localDateKey(date);
             const isCurrentMonth = date.getMonth() === viewMonth.getMonth();
-            const hasDeadline = deadlinesByDate.has(dateKey);
+            const count = deadlinesByDate.get(dateKey)?.length ?? 0;
+            const hasDeadline = count > 0;
             const isSelected = dateKey === selectedDate;
             const isToday = dateKey === todayKey;
 
@@ -672,47 +683,78 @@ function GreetingCalendarCard({
                 onClick={() => selectDate(date)}
                 aria-label={`${formatCalendarDate(dateKey)}${
                   hasDeadline
-                    ? `, ${deadlinesByDate.get(dateKey)?.length} project deadline(s)`
+                    ? `, ${count} project deadline${count === 1 ? "" : "s"}`
                     : ""
                 }`}
                 aria-pressed={isSelected}
                 className={[
-                  "relative flex h-8 w-full items-center justify-center rounded-md text-xs transition-colors",
+                  "relative flex h-10 w-full items-center justify-center rounded-lg text-sm transition-colors",
                   isSelected
-                    ? "bg-primary font-semibold text-primary-foreground"
+                    ? "bg-primary font-semibold text-primary-foreground shadow-sm"
                     : hasDeadline
-                      ? "bg-primary/10 font-semibold text-primary hover:bg-primary/20"
-                      : "hover:bg-muted",
-                  !isCurrentMonth && !isSelected
+                      ? "bg-primary/15 font-bold text-primary ring-1 ring-primary/50 hover:bg-primary/25"
+                      : "text-foreground hover:bg-muted",
+                  !isCurrentMonth && !isSelected && !hasDeadline
                     ? "text-muted-foreground/40"
                     : "",
-                  isToday && !isSelected ? "ring-1 ring-primary/50" : "",
+                  !isCurrentMonth && hasDeadline && !isSelected
+                    ? "opacity-70"
+                    : "",
+                  isToday && !isSelected && !hasDeadline
+                    ? "ring-1 ring-foreground/30 font-semibold"
+                    : "",
                 ].join(" ")}
               >
                 {date.getDate()}
+
+                {/* Number of projects due on this date */}
                 {hasDeadline && (
                   <span
-                    className="absolute bottom-0.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-current"
                     aria-hidden="true"
-                  />
+                    className={[
+                      "absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold leading-none shadow",
+                      isSelected
+                        ? "bg-background text-primary ring-1 ring-primary"
+                        : "bg-primary text-primary-foreground",
+                    ].join(" ")}
+                  >
+                    {count > 9 ? "9+" : count}
+                  </span>
                 )}
               </button>
             );
           })}
         </div>
 
-        <div className="border-t border-border pt-2">
+        {/* Legend */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="relative inline-block h-4 w-4 rounded bg-primary/15 ring-1 ring-primary/50" />
+            Has a deadline
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+              3
+            </span>
+            Projects due that day
+          </span>
+        </div>
+
+        <div className="border-t border-border pt-3">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <p className="text-xs font-semibold">
+            <p className="text-sm font-semibold">
               {selectedDate === todayKey
                 ? "Due today"
                 : formatCalendarDate(selectedDate)}
             </p>
-            {selectedProjects.length > 0 && (
-              <Badge variant="outline" className="text-[10px]">
-                {selectedProjects.length}
-              </Badge>
-            )}
+            <Badge
+              variant={selectedProjects.length > 0 ? "default" : "outline"}
+              className="text-[11px]"
+            >
+              {selectedProjects.length === 0
+                ? "None due"
+                : `${selectedProjects.length} project${selectedProjects.length === 1 ? "" : "s"} due`}
+            </Badge>
           </div>
 
           {loading ? (
@@ -728,19 +770,19 @@ function GreetingCalendarCard({
               No project deadlines on this date.
             </p>
           ) : (
-            <ScrollArea className="h-[88px] w-full">
+            <ScrollArea className="h-[112px] w-full">
               <ul className="space-y-1 pr-2">
                 {selectedProjects.map((project) => (
                   <li key={project.projectId}>
                     <button
                       type="button"
                       onClick={() => onOpenProject(project.projectId)}
-                      className="flex h-[40px] w-full items-center gap-2 overflow-hidden rounded-md px-2 py-1 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="flex min-h-[40px] w-full items-center gap-2 overflow-hidden rounded-md border border-primary/20 bg-primary/5 px-2 py-1.5 text-left transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       title={`Open ${project.projectName}`}
                     >
-                      <CalendarDays className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                      <CalendarDays className="h-4 w-4 shrink-0 text-primary" />
                       <span className="line-clamp-2 text-xs leading-snug">
-                        <span className="font-medium">
+                        <span className="font-semibold">
                           {project.projectName}
                         </span>{" "}
                         {selectedDate === todayKey
