@@ -27,15 +27,6 @@ export default function AuthPage() {
             <LoginForm />
           </div>
         </main>
-
-        {/* Footer links: point these at your real pages */}
-        <footer className="flex justify-center gap-4 p-6 text-xs text-muted-foreground">
-          <a href="#" className="hover:text-foreground">Help</a>
-          <span aria-hidden="true">/</span>
-          <a href="#" className="hover:text-foreground">Terms</a>
-          <span aria-hidden="true">/</span>
-          <a href="#" className="hover:text-foreground">Privacy</a>
-        </footer>
       </div>
 
       {/* Right: image (hidden on small screens, stays put if the form scrolls) */}

@@ -29,8 +29,9 @@ export async function createAccountRecord(input, {
   ) {
     throw failure(400, "Enter a valid email address.");
   }
-  if (typeof password !== "string" || password.length < 6) {
-    throw failure(400, "Password must be at least 6 characters.");
+  const minimumPasswordLength = accountType === "user" ? 8 : 6;
+  if (typeof password !== "string" || password.length < minimumPasswordLength) {
+    throw failure(400, `Password must be at least ${minimumPasswordLength} characters.`);
   }
   if (accountType === "employee" && !["admin", "superadmin"].includes(role)) {
     throw failure(400, "Employee role must be admin or superadmin.");
@@ -63,7 +64,6 @@ export async function createAccountRecord(input, {
       email: normalizedEmail,
       password,
       displayName: normalizedName,
-      ...(accountType === "user" ? { emailVerified: true } : {}),
     });
   } catch (error) {
     if (error.code === "auth/email-already-exists") {

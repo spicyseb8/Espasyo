@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  confirmPasswordReset,
   reload,
   sendEmailVerification,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
   type User,
+  verifyPasswordResetCode,
 } from "firebase/auth";
 import { Check } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -24,9 +27,9 @@ import {
   FieldDescription,
   FieldGroup,
   FieldLabel,
-  FieldSeparator,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import PasswordField from "@/components/auth/PasswordField";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,10 +41,13 @@ import {
 } from "@/components/ui/alert-dialog";
 
 import { auth } from "@/firebase/firebase";
+import {
+  resendVerificationEmail,
+} from "@/firebase/auth";
 import { useAuth } from "@/context/AuthContext";
 import { getUserProfileByAuthUid } from "@/firebase/user";
 import LoadingScreen from "@/scene/LoadingScreen";
-import { validateLoginForm } from "@/utils/validators";
+import { validateEmail, validateLoginForm, validatePassword } from "@/utils/validators";
 import { ensureEmailVerified } from "../../../../shared/auth/loginVerification.mjs";
 import { getLoginErrorMessage } from "../../../../shared/auth/loginErrors.mjs";
 import {
@@ -51,6 +57,8 @@ import {
 import {
   saveLegalAcceptance,
 } from "@/services/legalAcceptance";
+
+type LoginMode = "login" | "forgot" | "reset";
 
 export function LoginForm({
   className,
@@ -63,7 +71,11 @@ export function LoginForm({
     verifyAgreement,
   } = useAuth();
   const location = useLocation();
-  const from = (location.state as { from?: unknown } | null)?.from;
+  const locationState = location.state as {
+    from?: unknown;
+    accessError?: unknown;
+  } | null;
+  const from = locationState?.from;
   const fromPath = typeof from === "string"
     ? from
     : from && typeof from === "object" && "pathname" in from
@@ -76,10 +88,38 @@ export function LoginForm({
   const requestedPath = fromPath.startsWith("/") && !fromPath.startsWith("//")
     ? fromPath
     : "/home";
+  const initialResetParams = new URLSearchParams(location.search);
+  const initialResetMode = initialResetParams.get("mode") === "resetPassword";
+  const [mode, setMode] = useState<LoginMode>(() => {
+    return initialResetMode ? "reset" : "login";
+  });
+  const [resetCode, setResetCode] = useState<string | null>(() => {
+    return initialResetMode ? initialResetParams.get("oobCode") : null;
+  });
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [resetEmail, setResetEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
 
-  const [error, setError] = useState("");
+  const [error, setError] = useState(
+    typeof locationState?.accessError === "string"
+      ? locationState.accessError
+      : initialResetMode && !initialResetParams.get("oobCode")
+        ? "This reset link is invalid or has expired."
+        : "",
+  );
+  const [statusMessage, setStatusMessage] = useState("");
+  const [showResendVerification, setShowResendVerification] = useState(false);
+  const [resendingVerification, setResendingVerification] = useState(false);
+  const [sendingPasswordReset, setSendingPasswordReset] = useState(false);
+  const [resetCooldownSeconds, setResetCooldownSeconds] = useState(0);
+  const resetCooldownUntil = useRef(0);
+  const [resetLoading, setResetLoading] = useState(() => mode === "reset" && Boolean(resetCode));
+  const [resetSaving, setResetSaving] = useState(false);
+  const [resetLinkInvalid, setResetLinkInvalid] = useState(
+    () => mode === "reset" && !resetCode,
+  );
   const [loading, setLoading] = useState(false);
   const [showSuspendedDialog, setShowSuspendedDialog] = useState(false);
   const [activeLegalDocument, setActiveLegalDocument] = useState<LegalDocument>("terms");
@@ -102,7 +142,53 @@ export function LoginForm({
   });
   const acceptanceSaveInFlight = useRef(false);
   const authenticationInFlight = useRef(false);
-  const canSubmit = !loading && !pendingAcceptanceUser;
+  const canSubmit = !loading && !resendingVerification && !pendingAcceptanceUser;
+
+  useEffect(() => {
+    if (mode !== "reset") return;
+    let cancelled = false;
+    if (!resetCode) return;
+    void verifyPasswordResetCode(auth, resetCode)
+      .then(verifiedEmail => {
+        if (!cancelled) {
+          setResetEmail(verifiedEmail);
+          setResetLinkInvalid(false);
+          setError("");
+        }
+      })
+      .catch(error => {
+        if (cancelled) return;
+        const code = typeof error === "object" && error !== null && "code" in error
+          ? error.code
+          : undefined;
+        if (code === "auth/expired-action-code" || code === "auth/invalid-action-code") {
+          setResetLinkInvalid(true);
+          setError("This reset link is invalid or has expired.");
+        } else {
+          console.error("Unable to verify the password reset link:", error);
+          setError("Unable to verify this reset link. Please try again.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setResetLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, resetCode]);
+
+  useEffect(() => {
+    if (mode !== "forgot" || resetCooldownSeconds <= 0) return;
+    const timeout = window.setTimeout(() => {
+      const remaining = Math.max(
+        0,
+        Math.ceil((resetCooldownUntil.current - Date.now()) / 1000),
+      );
+      setResetCooldownSeconds(remaining);
+    }, 1000);
+    return () => window.clearTimeout(timeout);
+  }, [mode, resetCooldownSeconds]);
 
   function openLegalDocument(document: LegalDocument) {
     if (scrollAreaRef.current) {
@@ -173,7 +259,16 @@ export function LoginForm({
     user: User,
     isCancelled: () => boolean = () => false,
   ): Promise<boolean> => {
-    await reload(user);
+    try {
+      await reload(user);
+    } catch (reloadError) {
+      if (auth.currentUser?.uid === user.uid) await signOut(auth);
+      if (!isCancelled()) {
+        console.error("Unable to refresh client authentication:", reloadError);
+        setError("We could not verify your account. Please sign in again.");
+      }
+      return false;
+    }
     if (isCancelled() || auth.currentUser?.uid !== user.uid) return false;
 
     if (!user.emailVerified) {
@@ -191,18 +286,38 @@ export function LoginForm({
         );
       }
       if (!isCancelled()) {
-        setError(
-          verification.verificationSent
-            ? "A verification email has been sent. Verify your email, then sign in again."
-            : "Your email is not verified, and a verification email could not be sent. Please try again or contact support.",
-        );
+        setShowResendVerification(true);
+        const verificationCode =
+          typeof verification.verificationError === "object" &&
+            verification.verificationError !== null &&
+            "code" in verification.verificationError &&
+            typeof verification.verificationError.code === "string"
+            ? verification.verificationError.code
+            : undefined;
+        setError(verification.verificationSent
+          ? `A verification email has been sent to ${user.email ?? "your email"}. Verify it, then sign in again.`
+          : verificationCode === "auth/too-many-requests"
+            ? "Too many verification emails were requested. Please wait before trying again."
+            : "Your email is not verified, and a verification email could not be sent. Try again later or contact support.");
       }
       return false;
     }
 
-    const profile = await getUserProfileByAuthUid(user.uid);
+    let profile: Awaited<ReturnType<typeof getUserProfileByAuthUid>>;
+    try {
+      profile = await getUserProfileByAuthUid(user.uid);
+    } catch (profileError) {
+      if (auth.currentUser?.uid === user.uid) await signOut(auth);
+      if (!isCancelled()) {
+        console.error("Unable to load the client profile:", profileError);
+        setError("We could not verify your client profile. Please sign in again or contact support.");
+      }
+      return false;
+    }
     if (isCancelled() || auth.currentUser?.uid !== user.uid) return false;
-    if (!profile || profile.account_status !== "active") {
+    const profileIsActive = profile?.isActive === true ||
+      (profile?.isActive === undefined && profile?.account_status === "active");
+    if (!profile || !profileIsActive) {
       if (auth.currentUser?.uid === user.uid) {
         await signOut(auth);
       }
@@ -253,13 +368,10 @@ export function LoginForm({
     } catch (verificationError) {
       if (isCancelled() || auth.currentUser?.uid !== user.uid) return false;
       console.error("Unable to verify client agreement acceptance:", verificationError);
-      setPendingAcceptanceUser(user);
+      await signOut(auth);
+      setPendingAcceptanceUser(null);
       setAcceptanceNeedsReview(false);
-      setAcceptanceSaveError(
-        verificationError instanceof Error
-          ? verificationError.message
-          : "We could not verify your agreement. Please retry.",
-      );
+      setError("We could not verify your agreement. Please sign in again and retry.");
       return false;
     }
   }, [continueToRequestedPath, verifyAgreement]);
@@ -268,7 +380,6 @@ export function LoginForm({
     if (authLoading || !authenticatedUser || authenticationInFlight.current) return;
 
     let cancelled = false;
-    setError("");
     void checkAuthenticatedClient(authenticatedUser, () => cancelled).catch(error => {
       console.error("Unable to verify the signed-in client account:", error);
       if (!cancelled) {
@@ -291,6 +402,7 @@ export function LoginForm({
       if (auth.currentUser?.uid !== pendingAcceptanceUser.uid) {
         throw new Error("Your session changed. Please sign in again.");
       }
+
       if (!accepted) {
         if (!termsRead || !privacyPolicyRead || !agreedToPolicies) {
           setAcceptanceNeedsReview(true);
@@ -316,11 +428,150 @@ export function LoginForm({
     }
   }
 
+  async function handleResendVerification() {
+    if (resendingVerification || !email.trim() || !password) {
+      setError("Enter your email and password to resend the verification email.");
+      return;
+    }
+
+    setResendingVerification(true);
+    setError("");
+    setStatusMessage("");
+    try {
+      const alreadyVerified = await resendVerificationEmail(email, password);
+      setShowResendVerification(!alreadyVerified);
+      setStatusMessage(alreadyVerified
+        ? "Your email is already verified. You can sign in now."
+        : `A verification email has been sent to ${email.trim()}.`);
+    } catch (resendError) {
+      console.error("Unable to resend the client verification email:", resendError);
+      const errorCode = typeof resendError === "object" && resendError !== null &&
+          "code" in resendError && typeof resendError.code === "string"
+        ? resendError.code
+        : undefined;
+      setError(errorCode === "auth/too-many-requests"
+        ? "Too many verification attempts. Please wait a while before trying again."
+        : getLoginErrorMessage(errorCode, "Unable to resend the verification email. Please try again."));
+      setShowResendVerification(true);
+    } finally {
+      setResendingVerification(false);
+    }
+  }
+
+  function showForgotPassword() {
+    setResetEmail(email);
+    setMode("forgot");
+    setError("");
+    setStatusMessage("");
+  }
+
+  function returnToLogin() {
+    setMode("login");
+    setError("");
+    setStatusMessage("");
+  }
+
+  async function handleForgotPassword(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (sendingPasswordReset || resetCooldownSeconds > 0) return;
+    const emailError = validateEmail(resetEmail);
+    if (emailError) {
+      setError(emailError);
+      return;
+    }
+
+    setSendingPasswordReset(true);
+    setError("");
+    setStatusMessage("");
+    try {
+      await sendPasswordResetEmail(auth, resetEmail.trim().toLowerCase(), {
+        url: new URL(location.pathname, window.location.origin).toString(),
+        handleCodeInApp: true,
+      });
+      setStatusMessage("If an account exists for that email, a password reset email has been sent.");
+    } catch (resetError) {
+      console.error("Unable to send a password reset email:", resetError);
+      const errorCode = typeof resetError === "object" && resetError !== null &&
+          "code" in resetError && typeof resetError.code === "string"
+        ? resetError.code
+        : undefined;
+      if (errorCode === "auth/too-many-requests") {
+        setError("Too many reset emails were requested. Please wait before trying again.");
+      } else if (errorCode === "auth/network-request-failed") {
+        setError("Network error. Please check your connection and try again.");
+      } else {
+        setStatusMessage("If an account exists for that email, a password reset email has been sent.");
+      }
+    } finally {
+      setSendingPasswordReset(false);
+      resetCooldownUntil.current = Date.now() + 30_000;
+      setResetCooldownSeconds(30);
+    }
+  }
+
+  async function handleResetPassword(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setStatusMessage("");
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) {
+      setError(passwordError);
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setError("The passwords do not match.");
+      return;
+    }
+    if (!resetCode) {
+      setResetLinkInvalid(true);
+      setError("This reset link is invalid or has expired.");
+      return;
+    }
+
+    setResetSaving(true);
+    try {
+      await confirmPasswordReset(auth, resetCode, newPassword);
+      window.history.replaceState(
+        window.history.state,
+        document.title,
+        window.location.pathname,
+      );
+      setResetCode(null);
+      setMode("login");
+      setEmail(resetEmail);
+      setPassword("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+      setResetLinkInvalid(false);
+      setStatusMessage("Password updated. You can now log in.");
+    } catch (resetError) {
+      console.error("Unable to update the client password:", resetError);
+      const errorCode = typeof resetError === "object" && resetError !== null &&
+          "code" in resetError && typeof resetError.code === "string"
+        ? resetError.code
+        : undefined;
+      if (errorCode === "auth/expired-action-code" || errorCode === "auth/invalid-action-code") {
+        setResetLinkInvalid(true);
+        setError("This reset link is invalid or has expired.");
+      } else if (errorCode === "auth/weak-password") {
+        setError("Your password must be at least 8 characters.");
+      } else if (errorCode === "auth/network-request-failed") {
+        setError("Network error. Please check your connection and try again.");
+      } else {
+        setError(getLoginErrorMessage(errorCode, "Unable to update your password. Please try again."));
+      }
+    } finally {
+      setResetSaving(false);
+    }
+  }
+
   const handleSubmit = async (e: React.SubmitEvent) => {
     e.preventDefault();
     if (authenticationInFlight.current || !canSubmit) return;
 
     setError("");
+    setStatusMessage("");
+    setShowResendVerification(false);
 
     const validationError = validateLoginForm({
       email,
@@ -378,138 +629,191 @@ export function LoginForm({
       <Card>
         <CardHeader className="text-center">
           <CardTitle className="text-xl">
-            Welcome back
+            {mode === "login"
+              ? "Welcome back"
+              : mode === "forgot"
+                ? "Forgot password"
+                : "Reset your password"}
           </CardTitle>
-
           <CardDescription>
-            Login with your Apple or Google account
+            {mode === "login"
+              ? "Sign in with your email and password."
+              : mode === "forgot"
+                ? "Enter your email and we’ll send you a password reset link."
+                : resetEmail
+                  ? `Resetting password for ${resetEmail}`
+                  : "Verifying your password reset link."}
           </CardDescription>
         </CardHeader>
 
         <CardContent>
-          <form onSubmit={handleSubmit}>
-            <FieldGroup>
+          {mode === "login" && (
+            <form onSubmit={handleSubmit}>
+              <FieldGroup>
+                <Field>
+                  <FieldLabel htmlFor="email">Email</FieldLabel>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="m@example.com"
+                    value={email}
+                    onChange={event => {
+                      const nextEmail = event.target.value;
+                      setEmail(nextEmail);
+                      setStatusMessage("");
+                      setShowResendVerification(false);
+                      if (nextEmail.trim().toLowerCase() !== acceptanceChoice.current.email) {
+                        setAgreedToPolicies(false);
+                        acceptanceChoice.current.agreedToPolicies = false;
+                      }
+                      setError("");
+                    }}
+                    autoComplete="email"
+                    required
+                  />
+                </Field>
 
-              {/* Apple */}
-              <Field>
-                <Button
-                  variant="outline"
-                  type="button"
-                  className="w-full"
-                  disabled={!canSubmit}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
+                <Field>
+                  <div className="flex items-center">
+                    <FieldLabel htmlFor="password">Password</FieldLabel>
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="ml-auto h-auto px-0 py-0 text-xs"
+                      disabled={loading}
+                      onClick={showForgotPassword}
+                    >
+                      Forgot password?
+                    </Button>
+                  </div>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={event => {
+                      setPassword(event.target.value);
+                      setError("");
+                      setStatusMessage("");
+                    }}
+                    autoComplete="current-password"
+                    required
+                  />
+                </Field>
+
+                {error && <FieldDescription className="text-destructive">{error}</FieldDescription>}
+                {statusMessage && <FieldDescription role="status">{statusMessage}</FieldDescription>}
+                {showResendVerification && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    disabled={resendingVerification || loading}
+                    onClick={() => void handleResendVerification()}
                   >
-                    <path
-                      d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"
-                      fill="currentColor"
-                    />
-                  </svg>
-
-                  Login with Apple
+                    {resendingVerification ? "Sending verification email..." : "Resend verification email"}
+                  </Button>
+                )}
+                <Button type="submit" className="w-full" disabled={!canSubmit}>
+                  {loading ? "Signing in..." : "Login"}
                 </Button>
-              </Field>
+              </FieldGroup>
+            </form>
+          )}
 
-              {/* Google */}
-              <Field>
-                <Button
-                  variant="outline"
-                  type="button"
-                  className="w-full"
-                  disabled={!canSubmit}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12.173 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"
-                      fill="currentColor"
-                    />
-                  </svg>
-
-                  Login with Google
-                </Button>
-              </Field>
-
-              <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
-                Or continue with
-              </FieldSeparator>
-
-              {/* Email */}
-              <Field>
-                <FieldLabel htmlFor="email">
-                  Email
-                </FieldLabel>
-
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="m@example.com"
-                  value={email}
-                  onChange={(e) => {
-                    const nextEmail = e.target.value;
-                    setEmail(nextEmail);
-                    if (nextEmail.trim().toLowerCase() !== acceptanceChoice.current.email) {
-                      setAgreedToPolicies(false);
-                      acceptanceChoice.current.agreedToPolicies = false;
-                    }
-                    setError("");
-                  }}
-                  autoComplete="email"
-                  required
-                />
-              </Field>
-
-              {/* Password */}
-              <Field>
-                <div className="flex items-center">
-                  <FieldLabel htmlFor="password">
-                    Password
-                  </FieldLabel>
-                </div>
-
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value)
-                    setError("");
-                  }}
-                  autoComplete="current-password"
-                  required
-                />
-              </Field>
-
-              {/* Error */}
-              {error && (
-                <FieldDescription className="text-destructive">
-                  {error}
-                </FieldDescription>
-              )}
-
-              {/* Submit */}
-              <Field>
+          {mode === "forgot" && (
+            <form onSubmit={handleForgotPassword}>
+              <FieldGroup>
+                <Field>
+                  <FieldLabel htmlFor="reset-email">Email</FieldLabel>
+                  <Input
+                    id="reset-email"
+                    type="email"
+                    value={resetEmail}
+                    onChange={event => {
+                      setResetEmail(event.target.value);
+                      setError("");
+                      setStatusMessage("");
+                    }}
+                    autoComplete="email"
+                    required
+                  />
+                </Field>
+                {error && <FieldDescription className="text-destructive" role="alert">{error}</FieldDescription>}
+                {statusMessage && <FieldDescription role="status">{statusMessage}</FieldDescription>}
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={!canSubmit}
+                  disabled={sendingPasswordReset || resetCooldownSeconds > 0}
                 >
-                  {loading
-                    ? "Signing in..."
-                    : "Login"}
+                  {sendingPasswordReset
+                    ? "Sending..."
+                    : resetCooldownSeconds > 0
+                      ? `Resend in ${resetCooldownSeconds}s`
+                      : "Send reset link"}
                 </Button>
-              </Field>
+                <Button type="button" variant="link" className="w-full" onClick={returnToLogin}>
+                  Back to login
+                </Button>
+              </FieldGroup>
+            </form>
+          )}
 
-            </FieldGroup>
-          </form>
+          {mode === "reset" && (
+            <form onSubmit={handleResetPassword}>
+              <FieldGroup>
+                {resetLoading ? (
+                  <FieldDescription role="status">Verifying reset link...</FieldDescription>
+                ) : resetLinkInvalid ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      setResetEmail(email);
+                      setMode("forgot");
+                      setError("");
+                    }}
+                  >
+                    Request a new reset link
+                  </Button>
+                ) : (
+                  <>
+                    <FieldDescription>Resetting password for {resetEmail}</FieldDescription>
+                    <PasswordField
+                      id="reset-new-password"
+                      label="New password"
+                      value={newPassword}
+                      onChange={value => {
+                        setNewPassword(value);
+                        setError("");
+                      }}
+                      autoComplete="new-password"
+                      minLength={8}
+                    />
+                    <PasswordField
+                      id="reset-confirm-password"
+                      label="Confirm password"
+                      value={confirmNewPassword}
+                      onChange={value => {
+                        setConfirmNewPassword(value);
+                        setError("");
+                      }}
+                      autoComplete="new-password"
+                      minLength={8}
+                    />
+                    <Button type="submit" className="w-full" disabled={resetSaving}>
+                      {resetSaving ? "Updating password..." : "Update password"}
+                    </Button>
+                  </>
+                )}
+                {error && <FieldDescription className="text-destructive" role="alert">{error}</FieldDescription>}
+              </FieldGroup>
+            </form>
+          )}
         </CardContent>
       </Card>
 
-      {!pendingAcceptanceUser && (
+      {mode === "login" && !pendingAcceptanceUser && (
         <div className="space-y-3 px-6 text-center">
           <FieldDescription>
             Read the{" "}
