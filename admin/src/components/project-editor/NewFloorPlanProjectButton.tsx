@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Check, Plus, Search, X } from "lucide-react";
 import {
@@ -17,6 +17,11 @@ function initials(name: string) {
         .join("") || "?";
 }
 
+function matchesClientSearch(client: AdminClient, searchQuery: string) {
+    return !searchQuery ||
+        `${client.name} ${client.email ?? ""}`.toLocaleLowerCase().includes(searchQuery);
+}
+
 export default function NewFloorPlanProjectButton() {
     const navigate = useNavigate();
     const [open, setOpen] = useState(false);
@@ -31,12 +36,44 @@ export default function NewFloorPlanProjectButton() {
     const [error, setError] = useState("");
     const [tab, setTab] = useState<"available" | "unavailable">("available");
 
-    const selectedClient = clients.find(
-        client => client.uid === selectedClientId && client.eligible
+    const clientListRef = useRef<HTMLDivElement>(null);
+    const eligibilityByClientId = useMemo(
+        () => new Map(clients.map(client => [client.uid, client.eligible])),
+        [clients]
     );
-    const availableClients = clients.filter(client => client.eligible);
-    const unavailableClients = clients.filter(client => !client.eligible);
-    const visibleClients = tab === "available" ? availableClients : unavailableClients;
+    const searchQuery = search.trim().toLocaleLowerCase();
+    const availableClients = useMemo(
+        () => clients.filter(client =>
+            eligibilityByClientId.get(client.uid) === true &&
+            matchesClientSearch(client, searchQuery)
+        ),
+        [clients, eligibilityByClientId, searchQuery]
+    );
+    const unavailableClients = useMemo(
+        () => clients.filter(client =>
+            eligibilityByClientId.get(client.uid) === false &&
+            matchesClientSearch(client, searchQuery)
+        ),
+        [clients, eligibilityByClientId, searchQuery]
+    );
+    const visibleClients = useMemo(
+        () => tab === "available" ? availableClients : unavailableClients,
+        [tab, availableClients, unavailableClients]
+    );
+    const selectedClient = tab === "available"
+        ? availableClients.find(client => client.uid === selectedClientId)
+        : undefined;
+
+    function changeTab(nextTab: "available" | "unavailable") {
+        setTab(nextTab);
+        setSelectedClientId(current =>
+            (nextTab === "available" ? availableClients : unavailableClients)
+                .some(client => client.uid === current && client.eligible)
+                ? current
+                : ""
+        );
+        if (clientListRef.current) clientListRef.current.scrollTop = 0;
+    }
 
     useEffect(() => {
         if (!open) return;
@@ -87,13 +124,15 @@ export default function NewFloorPlanProjectButton() {
         setClients([]);
         setSelectedClientId("");
         setHasIneligibleMatches(false);
+        setLoadingClients(false);
         setError("");
         setTab("available");
+        if (clientListRef.current) clientListRef.current.scrollTop = 0;
         setOpen(true);
     }
 
     async function createProject() {
-        if (!projectName.trim() || !selectedClient || creating) return;
+        if (tab !== "available" || !projectName.trim() || !selectedClient || creating) return;
 
         setCreating(true);
         setError("");
@@ -191,6 +230,41 @@ export default function NewFloorPlanProjectButton() {
                             <div className="grid gap-1.5">
                                 <span className="text-sm font-medium">Client</span>
 
+                                <div className="relative">
+                                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                                    <input
+                                        className="h-10 w-full rounded-md border border-border bg-background pl-9 pr-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                        value={search}
+                                        onChange={event => setSearch(event.target.value)}
+                                        placeholder="Search by name or email"
+                                        aria-label="Search clients by name or email"
+                                    />
+                                </div>
+                                <div className="flex gap-1 rounded-md bg-muted p-1 text-sm" role="tablist">
+                                    {([
+                                        ["available", "Available", availableClients.length],
+                                        ["unavailable", "Unavailable", unavailableClients.length]
+                                    ] as const).map(([key, label, count]) => (
+                                        <button
+                                            key={key}
+                                            type="button"
+                                            role="tab"
+                                            aria-selected={tab === key}
+                                            onClick={() => changeTab(key)}
+                                            className={`flex-1 rounded px-3 py-1.5 font-medium transition-colors ${
+                                                tab === key
+                                                    ? "bg-background shadow-sm"
+                                                    : "text-muted-foreground hover:text-foreground"
+                                            }`}
+                                        >
+                                            {label}
+                                            {!loadingClients && (
+                                                <span className="ml-1.5 text-xs text-muted-foreground">{count}</span>
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
+
                                 {selectedClient ? (
                                     <div className="flex items-center gap-3 rounded-md border border-primary bg-primary/5 px-3 py-2.5">
                                         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
@@ -213,41 +287,9 @@ export default function NewFloorPlanProjectButton() {
                                     </div>
                                 ) : (
                                     <>
-                                        <div className="relative">
-                                            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                                            <input
-                                                className="h-10 w-full rounded-md border border-border bg-background pl-9 pr-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                                                value={search}
-                                                onChange={event => setSearch(event.target.value)}
-                                                placeholder="Search by name or email"
-                                                aria-label="Search clients by name or email"
-                                            />
-                                        </div>
-                                        <div className="flex gap-1 rounded-md bg-muted p-1 text-sm" role="tablist">
-                                            {([
-                                                ["available", "Available", availableClients.length],
-                                                ["unavailable", "Unavailable", unavailableClients.length]
-                                            ] as const).map(([key, label, count]) => (
-                                                <button
-                                                    key={key}
-                                                    type="button"
-                                                    role="tab"
-                                                    aria-selected={tab === key}
-                                                    onClick={() => setTab(key)}
-                                                    className={`flex-1 rounded px-3 py-1.5 font-medium transition-colors ${
-                                                        tab === key
-                                                            ? "bg-background shadow-sm"
-                                                            : "text-muted-foreground hover:text-foreground"
-                                                    }`}
-                                                >
-                                                    {label}
-                                                    {!loadingClients && (
-                                                        <span className="ml-1.5 text-xs text-muted-foreground">{count}</span>
-                                                    )}
-                                                </button>
-                                            ))}
-                                        </div>
                                         <div
+                                            key={tab}
+                                            ref={clientListRef}
                                             className="max-h-52 overflow-auto rounded-md border border-border"
                                             role="listbox"
                                             aria-label="Clients"
@@ -265,9 +307,13 @@ export default function NewFloorPlanProjectButton() {
                                                             <button
                                                                 type="button"
                                                                 role="option"
-                                                                aria-selected={false}
+                                                                aria-selected={client.uid === selectedClientId}
                                                                 disabled={!client.eligible}
-                                                                onClick={() => setSelectedClientId(client.uid)}
+                                                                onClick={() => {
+                                                                    if (tab === "available" && client.eligible) {
+                                                                        setSelectedClientId(client.uid);
+                                                                    }
+                                                                }}
                                                                 className={`flex min-w-0 flex-1 items-center gap-3 px-3 py-2 text-left ${
                                                                     client.eligible ? "hover:bg-muted" : "cursor-not-allowed opacity-50"
                                                                 }`}

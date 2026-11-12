@@ -63,6 +63,7 @@ export default function WorkspaceTabs({
                         key={tab.id}
                         type="button"
                         aria-label={`${tab.label} panel`}
+                        aria-keyshortcuts="Tab"
                         aria-pressed={isActive}
                         title={tab.label}
                         disabled={walkthroughMode}
