@@ -5,39 +5,15 @@ import {
   getDocsFromServer,
   limit,
   query,
-  setDoc,
-  serverTimestamp,
   where,
 } from "firebase/firestore";
 import { resolveUserProfileByAuthUid } from "../../../shared/auth/userProfileLookup.mjs";
 
 import { db } from "./firebase";
 
-interface UserProfile {
-  full_name: string;
-  email: string;
-  phone_number: string;
-  address: string;
-}
-
 export interface UserProfileRecord {
   id: string;
   [field: string]: unknown;
-}
-
-export async function createUserProfile(
-  userId: string,
-  profile: UserProfile
-) {
-  await setDoc(doc(db, "users", userId), {
-    id: userId,
-    full_name: profile.full_name,
-    email: profile.email,
-    phone_number: profile.phone_number,
-    address: profile.address,
-    created_at: serverTimestamp(),
-    updated_at: serverTimestamp(),
-  });
 }
 
 export async function getUserProfileByAuthUid(
@@ -46,6 +22,14 @@ export async function getUserProfileByAuthUid(
   const uid = userUid.trim();
   if (!uid) throw new Error("A signed-in user ID is required.");
 
+  const directDocument = await getDocFromServer(doc(db, "users", uid));
+  const directProfile = directDocument.exists()
+    ? { ...directDocument.data(), id: directDocument.id }
+    : null;
+  if (directProfile) {
+    return resolveUserProfileByAuthUid(uid, [], directProfile);
+  }
+
   const matchingDocuments = await getDocsFromServer(
     query(collection(db, "users"), where("uid", "==", uid), limit(2)),
   );
@@ -53,11 +37,5 @@ export async function getUserProfileByAuthUid(
     ...accountDocument.data(),
     id: accountDocument.id,
   }));
-  const legacyDocument = matchingProfiles.length === 0
-    ? await getDocFromServer(doc(db, "users", uid))
-    : null;
-  const legacyProfile = legacyDocument?.exists()
-    ? { ...legacyDocument.data(), id: legacyDocument.id }
-    : null;
-  return resolveUserProfileByAuthUid(uid, matchingProfiles, legacyProfile);
+  return resolveUserProfileByAuthUid(uid, matchingProfiles, null);
 }

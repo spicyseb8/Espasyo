@@ -46,7 +46,9 @@ const getCreateAccountType = (type: UserTableProps["type"]): CreateAccountType =
 export default function UserTable({ type }: UserTableProps) {
   const navigate = useNavigate();
   const { role } = useAuth();
-  const canCreateAccounts = role === "superadmin";
+  const canCreateAccounts = type === "customers"
+    ? role === "admin"
+    : role === "superadmin";
   const [users, setUsers] = useState<User[]>([]);
   const [search, setSearch] = useState("");
   const [sortField, setSortField] = useState<SortField>("created");

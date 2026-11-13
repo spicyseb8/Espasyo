@@ -152,8 +152,10 @@ export function validateAccountCreationForm(
     return "Please enter a password.";
   }
 
-  if (data.password.length < 6) {
-    return "Password must be at least 6 characters.";
+  if (data.password.length < (accountType === "user" ? 8 : 6)) {
+    return accountType === "user"
+      ? "Password must be at least 8 characters."
+      : "Password must be at least 6 characters.";
   }
 
   if (!data.phoneNumber.trim()) {

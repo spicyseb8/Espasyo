@@ -87,7 +87,7 @@ test("creates a client Auth account and compatible Firestore user record", async
   assert.equal(user.uid, account.uid);
   assert.equal(user.full_name, "Client One");
   assert.equal(user.account_status, "active");
-  assert.equal(harness.authUsers.get(account.uid).emailVerified, true);
+  assert.equal(harness.authUsers.get(account.uid).emailVerified, false);
   assert.equal(harness.authUsers.size, 1);
 });
 

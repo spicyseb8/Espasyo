@@ -8,7 +8,7 @@ import {
 import { getStorage } from "firebase/storage";
 
 
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: "AIzaSyDZx9kcn14JmUhjz-2dfb8wgf1RCtlSLGo",
   authDomain: "espasyo-6072d.firebaseapp.com",
   projectId: "espasyo-6072d",

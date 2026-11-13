@@ -2,6 +2,8 @@
 import {
     useCallback,
     useEffect,
+    useLayoutEffect,
+    useRef,
     useState
 } from "react";
 import { Link } from "react-router-dom";
@@ -37,6 +39,14 @@ import DraftLoader
 import EditorExitGuard
     from "./EditorExitGuard";
 import type { WorkspacePanel } from "../Workspace/WorkspaceTabs";
+import useEditorGuide from "./InstructionModal/useEditorGuide";
+import useEditor from "../../context/editor/useEditor";
+
+type WorkspaceTabPanel = Exclude<WorkspacePanel, "project" | null>;
+
+function isWorkspaceTabPanel(panel: WorkspacePanel): panel is WorkspaceTabPanel {
+    return panel === "furniture" || panel === "flooring" || panel === "paint";
+}
 
 //==================================================
 // EDITOR
@@ -45,15 +55,22 @@ import type { WorkspacePanel } from "../Workspace/WorkspaceTabs";
 interface Props {
     viewOnly?: boolean;
     viewOnlyTitle?: string;
+    guideUserId?: string;
+    autoOpenGuide?: boolean;
 }
 
 export default function Editor({
     viewOnly = false,
-    viewOnlyTitle = ""
+    viewOnlyTitle = "",
+    guideUserId,
+    autoOpenGuide = false,
 }: Props) {
 
     const [activePanel, setActivePanel] =
-        useState<WorkspacePanel | null>("furniture");
+        useState<WorkspacePanel | null>(null);
+    const [lastPanel, setLastPanel] =
+        useState<WorkspaceTabPanel>("furniture");
+    const { state } = useEditor();
 
     const [
         walkthroughSpawnConfirmed,
@@ -64,6 +81,31 @@ export default function Editor({
         sceneReady,
         setSceneReady
     ] = useState(false);
+    const activePanelRef = useRef(activePanel);
+    const lastPanelRef = useRef(lastPanel);
+    const sceneReadyRef = useRef(sceneReady);
+    const walkthroughModeRef = useRef(state.walkthroughMode);
+
+    const handlePanelChange = useCallback((nextPanel: WorkspacePanel) => {
+        const currentPanel = activePanelRef.current;
+        if (isWorkspaceTabPanel(nextPanel)) {
+            lastPanelRef.current = nextPanel;
+            setLastPanel(nextPanel);
+        } else if (nextPanel === null && isWorkspaceTabPanel(currentPanel)) {
+            lastPanelRef.current = currentPanel;
+            setLastPanel(currentPanel);
+        }
+
+        activePanelRef.current = nextPanel;
+        setActivePanel(nextPanel);
+    }, []);
+
+    useLayoutEffect(() => {
+        activePanelRef.current = activePanel;
+        lastPanelRef.current = lastPanel;
+        sceneReadyRef.current = sceneReady;
+        walkthroughModeRef.current = state.walkthroughMode;
+    }, [activePanel, lastPanel, sceneReady, state.walkthroughMode]);
 
     const handleSceneReady =
         useCallback(() => {
@@ -71,6 +113,65 @@ export default function Editor({
             setSceneReady(true);
 
         }, []);
+
+    const {
+        autoOpen: shouldAutoOpenGuide,
+        markSeen: markEditorGuideSeen,
+    } = useEditorGuide(
+        guideUserId,
+        autoOpenGuide && sceneReady && !viewOnly,
+    );
+
+    useEffect(() => {
+        if (viewOnly) return;
+
+        const handleWorkspaceTabShortcut = (event: KeyboardEvent) => {
+            if (
+                event.key !== "Tab" ||
+                event.repeat ||
+                event.shiftKey ||
+                event.ctrlKey ||
+                event.altKey ||
+                event.metaKey ||
+                !sceneReadyRef.current ||
+                walkthroughModeRef.current
+            ) {
+                return;
+            }
+
+            const target = event.target;
+            if (
+                target instanceof Element &&
+                target.closest("input, textarea, select, [contenteditable]:not([contenteditable='false'])")
+            ) {
+                return;
+            }
+            if (document.querySelector('[role="dialog"], dialog[open], [aria-modal="true"]')) {
+                return;
+            }
+
+            event.preventDefault();
+            const currentPanel = activePanelRef.current;
+            if (currentPanel !== null) {
+                if (isWorkspaceTabPanel(currentPanel)) {
+                    lastPanelRef.current = currentPanel;
+                    setLastPanel(currentPanel);
+                }
+                activePanelRef.current = null;
+                setActivePanel(null);
+                return;
+            }
+
+            const panelToOpen = lastPanelRef.current;
+            activePanelRef.current = panelToOpen;
+            setActivePanel(panelToOpen);
+        };
+
+        window.addEventListener("keydown", handleWorkspaceTabShortcut, true);
+        return () => {
+            window.removeEventListener("keydown", handleWorkspaceTabShortcut, true);
+        };
+    }, [viewOnly]);
 
     useEffect(() => {
         if (!viewOnly) return;
@@ -109,8 +210,10 @@ export default function Editor({
                     <Topbar
                         projectPanelOpen={activePanel === "project"}
                         onProjectClick={() =>
-                            setActivePanel(current =>
-                                current === "project" ? null : "project"
+                            handlePanelChange(
+                                activePanel === "project"
+                                    ? null
+                                    : "project"
                             )
                         }
                     />
@@ -126,7 +229,7 @@ export default function Editor({
                     {!viewOnly && (
                         <Workspace
                             activePanel={activePanel}
-                            onPanelChange={setActivePanel}
+                            onPanelChange={handlePanelChange}
                         />
                     )}
 
@@ -147,7 +250,12 @@ export default function Editor({
 
                         {!viewOnly && <BudgetWarning />}
 
-                        {!viewOnly && <InstructionModal />}
+                        {!viewOnly && (
+                            <InstructionModal
+                                autoOpen={shouldAutoOpenGuide}
+                                onAutoGuideSeen={markEditorGuideSeen}
+                            />
+                        )}
 
                         {!viewOnly && (
                             <WalkthroughUI

@@ -8,10 +8,15 @@ const router = express.Router();
 
 router.post("/accounts", requireRole("superadmin"), async (req, res) => {
   try {
+    if (req.body?.accountType === "user") {
+      return res.status(410).json({
+        success: false,
+        message: "Client accounts must be created using the verified client account flow.",
+      });
+    }
+
     const account = await createAccountRecord(req.body, { adminAuth, adminDb });
-    const message = account.accountType === "user"
-      ? "User account created successfully."
-      : "Employee account created successfully.";
+    const message = "Employee account created successfully.";
     return res.status(201).json({ success: true, message, account });
   } catch (error) {
     if (error.status === 409 || error.status === 400) {

@@ -1,5 +1,5 @@
 
-import { type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
     BrowserRouter,
     Navigate,
@@ -11,6 +11,9 @@ import {
 import { useAuth } from "./context/AuthContext";
 import { ProtectedNavigationProvider } from "./context/ProtectedNavigationContext";
 import LoadingScreen from "./scene/LoadingScreen";
+import { reload } from "firebase/auth";
+import { auth } from "./firebase/firebase";
+import { getUserProfileByAuthUid } from "./firebase/user";
 import Home
     from "./pages/Home";
 
@@ -38,15 +41,86 @@ import AssetStartupGate
     from "./engine/AssetStartupGate";
 
 function ClientAccessRoute({ children }: { children: ReactNode }) {
-    const { user, loading, agreement, verifyAgreement } = useAuth();
+    const { user, loading, agreement } = useAuth();
     const location = useLocation();
+    const [clientAccess, setClientAccess] = useState<{
+        uid: string;
+        status: "valid" | "invalid";
+        message?: string;
+    } | null>(null);
+
+    useEffect(() => {
+        let cancelled = false;
+        if (!user) {
+            return;
+        }
+
+        const rejectClient = (message: string) => {
+            if (!cancelled) {
+                setClientAccess({ uid: user.uid, status: "invalid", message });
+            }
+        };
+
+        const checkClient = async () => {
+            try {
+                await reload(user);
+                if (cancelled || auth.currentUser?.uid !== user.uid) return;
+                if (!user.emailVerified) {
+                    rejectClient("Verify your email before signing in.");
+                    return;
+                }
+
+                const profile = await getUserProfileByAuthUid(user.uid);
+                if (cancelled || auth.currentUser?.uid !== user.uid) return;
+                const profileIsActive = profile?.isActive === true ||
+                    (profile?.isActive === undefined && profile?.account_status === "active");
+                if (!profile || !profileIsActive) {
+                    rejectClient("We could not find an active client profile linked to this login.");
+                    return;
+                }
+
+                setClientAccess({ uid: user.uid, status: "valid" });
+            } catch (error) {
+                console.error("Unable to verify client access:", error);
+                rejectClient("We could not verify your client account. Please sign in again.");
+            }
+        };
+
+        void checkClient();
+        return () => {
+            cancelled = true;
+        };
+    }, [user]);
 
     if (loading) {
         return <LoadingScreen label="Checking your session" />;
     }
 
     if (!user) {
+        if (clientAccess?.status === "invalid") {
+            return (
+                <Navigate
+                    to="/auth"
+                    replace
+                    state={{ from: location, accessError: clientAccess.message }}
+                />
+            );
+        }
         return <Navigate to="/auth" replace state={{ from: location }} />;
+    }
+
+    if (!clientAccess || clientAccess.uid !== user.uid) {
+        return <LoadingScreen label="Verifying your client account" />;
+    }
+
+    if (clientAccess.status === "invalid") {
+        return (
+            <Navigate
+                to="/auth"
+                replace
+                state={{ from: location, accessError: clientAccess.message }}
+            />
+        );
     }
 
     if (!agreement || agreement.uid !== user.uid || agreement.status === "checking") {
@@ -55,22 +129,14 @@ function ClientAccessRoute({ children }: { children: ReactNode }) {
 
     if (agreement.status === "error") {
         return (
-            <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
-                <p role="alert" className="max-w-md text-sm text-destructive">
-                    {agreement.error} Protected areas remain unavailable until verification succeeds.
-                </p>
-                <button
-                    type="button"
-                    className="rounded-md border px-4 py-2 text-sm"
-                    onClick={() => {
-                        void verifyAgreement(user, true).catch(error => {
-                            console.error("Unable to verify access agreement:", error);
-                        });
-                    }}
-                >
-                    Retry verification
-                </button>
-            </main>
+            <Navigate
+                to="/auth"
+                replace
+                state={{
+                    from: location,
+                    accessError: `${agreement.error} Please sign in again to retry.`,
+                }}
+            />
         );
     }
 

@@ -558,7 +558,10 @@ function LoadProjectContent() {
 
     return (
         <div className="relative h-screen w-screen">
-            <Editor />
+            <Editor
+                guideUserId={auth.currentUser?.uid}
+                autoOpenGuide={Boolean(workflow?.accessAcknowledged)}
+            />
 
             {deadlinePassed && (
                 <div

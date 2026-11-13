@@ -356,7 +356,6 @@ export default function Home() {
                           >
                             Studio
                           </Link>
-                          <Link to="/signup" tabIndex={footerOn ? 0 : -1}>Sign up</Link>
                         </nav>
                       </footer>
                     </motion.div>

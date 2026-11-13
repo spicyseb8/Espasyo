@@ -23,9 +23,12 @@ import {
 import NavBar from "./NavBar";
 import { useAuth } from "../context/AuthContext";
 import { storage } from "../firebase/firebase";
-import { getUserProfileByAuthUid } from "../firebase/user";
+import {
+  getUserProfileByAuthUid,
+} from "../firebase/user";
 import { saveUserProfile } from "../services/userSettings";
 import { LegalDocumentContent } from "../components/legal/LegalDocumentContent";
+import PasswordField from "../components/auth/PasswordField";
 
 type SettingsSection = "account" | "legal";
 type LegalDocument = "terms" | "privacy";
@@ -206,8 +209,8 @@ function AccountSettings() {
     event.preventDefault();
     clearFeedback();
     if (!user || !hasPasswordProvider) return;
-    if (newPassword.length < 6) {
-      setError("Your new password must be at least 6 characters.");
+    if (newPassword.length < 8) {
+      setError("Your new password must be at least 8 characters.");
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -345,42 +348,30 @@ function AccountSettings() {
         </div>
         {hasPasswordProvider ? (
           <form className="grid gap-4 sm:grid-cols-2" onSubmit={handlePasswordSave}>
-            <SettingField label="Current password" htmlFor="password-current">
-              <input
-                id="password-current"
-                type="password"
-                autoComplete="current-password"
-                value={currentPassword}
-                onChange={event => setCurrentPassword(event.target.value)}
-                className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                required
-              />
-            </SettingField>
+            <PasswordField
+              id="password-current"
+              label="Current password"
+              autoComplete="current-password"
+              value={currentPassword}
+              onChange={setCurrentPassword}
+            />
             <span />
-            <SettingField label="New password" htmlFor="new-password">
-              <input
-                id="new-password"
-                type="password"
-                autoComplete="new-password"
-                value={newPassword}
-                onChange={event => setNewPassword(event.target.value)}
-                className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                minLength={6}
-                required
-              />
-            </SettingField>
-            <SettingField label="Confirm new password" htmlFor="confirm-password">
-              <input
-                id="confirm-password"
-                type="password"
-                autoComplete="new-password"
-                value={confirmPassword}
-                onChange={event => setConfirmPassword(event.target.value)}
-                className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                minLength={6}
-                required
-              />
-            </SettingField>
+            <PasswordField
+              id="new-password"
+              label="New password"
+              autoComplete="new-password"
+              minLength={8}
+              value={newPassword}
+              onChange={setNewPassword}
+            />
+            <PasswordField
+              id="confirm-password"
+              label="Confirm new password"
+              autoComplete="new-password"
+              minLength={8}
+              value={confirmPassword}
+              onChange={setConfirmPassword}
+            />
             <button type="submit" disabled={savingPassword} className="h-10 w-fit rounded-md border border-border px-4 text-sm font-medium hover:bg-muted disabled:opacity-50">
               {savingPassword ? "Changing…" : "Change password"}
             </button>

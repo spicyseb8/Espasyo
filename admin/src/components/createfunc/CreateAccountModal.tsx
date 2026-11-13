@@ -17,10 +17,12 @@ import {
   MapPin,
   Shield,
   Loader2,
+  RefreshCw,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { validateAccountCreationForm } from "@/utils/validators";
 import { createAccount } from "./createAccount";
+import { createClientAccount } from "@/firebase/clientAccounts";
 
 export type CreateAccountType =
   | "user"
@@ -63,6 +65,8 @@ export default function CreateAccountModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [passwordToShare, setPasswordToShare] = useState("");
+  const [cleanupWarning, setCleanupWarning] = useState("");
   const submitLock = useRef(false);
 
   useEffect(() => {
@@ -71,11 +75,15 @@ export default function CreateAccountModal({
       setLoading(false);
       setError("");
       setSuccess("");
+      setPasswordToShare("");
+      setCleanupWarning("");
     }
 
     if (open) {
       setError("");
       setSuccess("");
+      setPasswordToShare("");
+      setCleanupWarning("");
 
       setForm((previous) => ({
         ...previous,
@@ -93,7 +101,7 @@ export default function CreateAccountModal({
 
   const title =
     accountType === "user"
-      ? "Create User Account"
+      ? "Create Client Account"
       : accountType === "superadmin"
         ? "Create Super Admin Account"
         : "Create Employee Account";
@@ -123,8 +131,15 @@ export default function CreateAccountModal({
   ) => {
     event.preventDefault();
 
-    if (role !== "superadmin" || submitLock.current) {
-      if (role !== "superadmin") setError("Only superadmins can create accounts.");
+    const canCreate = accountType === "user"
+      ? role === "admin"
+      : role === "superadmin";
+    if (!canCreate || submitLock.current) {
+      if (!canCreate) {
+        setError(accountType === "user"
+          ? "Only admins can create client accounts."
+          : "Only superadmins can create accounts.");
+      }
       return;
     }
 
@@ -145,31 +160,44 @@ export default function CreateAccountModal({
     setLoading(true);
 
     try {
-      const result = await createAccount({
-        accountType: accountType === "user" ? "user" : "employee",
-        name: form.name.trim(),
-        email: form.email.trim(),
-        password: form.password,
-        phoneNumber: form.phoneNumber.trim(),
-        address: form.address.trim(),
-        role: isEmployee ? form.role : undefined,
-      });
+      if (accountType === "user") {
+        const result = await createClientAccount({
+          name: form.name,
+          email: form.email,
+          password: form.password,
+          phoneNumber: form.phoneNumber,
+          address: form.address,
+        });
+        setCleanupWarning(result.cleanupWarning ?? "");
+        setPasswordToShare(form.password);
+        setSuccess(
+          `Client created. A verification email was sent to ${form.email.trim()}. The client must verify before signing in.`,
+        );
+      } else {
+        const result = await createAccount({
+          accountType: "employee",
+          name: form.name.trim(),
+          email: form.email.trim(),
+          password: form.password,
+          phoneNumber: form.phoneNumber.trim(),
+          address: form.address.trim(),
+          role: form.role,
+        });
 
-      const createdId =
-        result.account?.id || "";
-
-      setSuccess(
-        createdId
-          ? `Account ${createdId} was created successfully.`
-          : "Account was created successfully."
-      );
+        const createdId = result.account?.id || "";
+        setSuccess(
+          createdId
+            ? `Account ${createdId} was created successfully.`
+            : "Account was created successfully."
+        );
+      }
 
       setForm(initialForm);
       onCreated?.();
 
-      setTimeout(() => {
-        onOpenChange(false);
-      }, 1200);
+      if (accountType !== "user") {
+        setTimeout(() => onOpenChange(false), 1200);
+      }
     } catch (err) {
       console.error(
         "Create account error:",
@@ -310,38 +338,63 @@ export default function CreateAccountModal({
                       Password
                     </Label>
 
-                    <div className="relative">
-                      <Lock
-                        size={16}
-                        className="
-                          pointer-events-none
-                          absolute
-                          left-3
-                          top-1/2
-                          -translate-y-1/2
-                          text-muted-foreground
-                        "
-                      />
+                    <div className="flex gap-2">
+                      <div className="relative min-w-0 flex-1">
+                        <Lock
+                          size={16}
+                          className="
+                            pointer-events-none
+                            absolute
+                            left-3
+                            top-1/2
+                            -translate-y-1/2
+                            text-muted-foreground
+                          "
+                        />
 
-                      <Input
-                        id="account-password"
-                        type="password"
-                        value={form.password}
-                        onChange={(event) =>
-                          updateField(
-                            "password",
-                            event.target.value
-                          )
-                        }
-                        placeholder="Minimum 6 characters"
-                        className="pl-9"
-                        disabled={loading}
-                        required
-                      />
+                        <Input
+                          id="account-password"
+                          type="password"
+                          value={form.password}
+                          onChange={(event) =>
+                            updateField(
+                              "password",
+                              event.target.value
+                            )
+                          }
+                          placeholder={accountType === "user" ? "Minimum 8 characters" : "Minimum 6 characters"}
+                          className="pl-9"
+                          disabled={loading}
+                          required
+                        />
+                      </div>
+                      {accountType === "user" && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          aria-label="Generate password"
+                          title="Generate password"
+                          disabled={loading}
+                          onClick={() => {
+                            const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
+                            const randomValues = crypto.getRandomValues(new Uint32Array(16));
+                            const generated = Array.from(
+                              randomValues,
+                              value => alphabet[value % alphabet.length],
+                            ).join("");
+                            updateField("password", generated);
+                          }}
+                        >
+                          <RefreshCw size={16} />
+                          Generate
+                        </Button>
+                      )}
                     </div>
 
                     <p className="text-xs text-muted-foreground">
-                      This password will be used for Firebase Authentication.
+                      {accountType === "user"
+                        ? "Choose an initial password of at least 8 characters and share it with the client."
+                        : "This password will be used for Firebase Authentication."}
                     </p>
                   </div>
 
@@ -500,6 +553,16 @@ export default function CreateAccountModal({
                   <p className="text-sm text-green-600 dark:text-green-400">
                     {success}
                   </p>
+                  {passwordToShare && (
+                    <p className="mt-2 text-sm text-green-700 dark:text-green-300">
+                      Temporary password: <span className="select-all font-mono font-semibold">{passwordToShare}</span>
+                    </p>
+                  )}
+                  {cleanupWarning && (
+                    <p className="mt-2 text-sm text-destructive" role="alert">
+                      {cleanupWarning}
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -510,13 +573,16 @@ export default function CreateAccountModal({
                 </p>
 
                 <p className="mt-1 text-xs text-muted-foreground">
-                  The system will automatically generate a unique
-                  account ID when the account is created.
+                  {accountType === "user"
+                    ? "The Firebase Authentication UID will also identify the client profile."
+                    : "The system will automatically generate a unique account ID when the account is created."}
                 </p>
 
+                {accountType !== "user" && (
                 <p className="mt-2 font-mono text-xs text-muted-foreground">
                   {`U-${String(new Date().getFullYear()).slice(-2)}XXX`}
                 </p>
+                )}
               </div>
             </div>
 
