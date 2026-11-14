@@ -2,7 +2,7 @@
     display: grid;
 
     grid-template-rows:
-        64px
+        52px
         1fr;
 
     height: 100vh;
@@ -13,7 +13,7 @@
 }
 
 .editor.is-view-only {
-    grid-template-rows: 64px 1fr;
+    grid-template-rows: 52px 1fr;
 }
 
 .view-only-header {

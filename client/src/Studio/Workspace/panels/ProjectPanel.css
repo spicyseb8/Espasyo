@@ -39,6 +39,59 @@
     font-weight: 600;
 }
 
+.project-panel-dropdown {
+    width: min(390px, calc(100vw - 24px));
+    padding: 18px;
+    border-radius: 12px;
+}
+
+.project-panel-heading {
+    margin-bottom: 4px;
+    font-size: 16px;
+    letter-spacing: -0.02em;
+}
+
+.project-panel-description {
+    margin: 0 0 16px;
+    color: var(--tb-ink-muted, #666);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.project-panel-dropdown .setting-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--tb-ink-soft, #3f3f46);
+}
+
+.project-panel-dropdown .setting-input {
+    height: 40px;
+    border-radius: 8px;
+    font-size: 13px;
+}
+
+.project-panel-dropdown .setting-input:focus-visible {
+    outline: none;
+    box-shadow: var(--tb-ring, 0 0 0 2px rgba(27, 27, 27, 0.18));
+}
+
+.project-panel-dropdown .confirm-layout-button {
+    min-height: 38px;
+    margin-top: 14px;
+    border-radius: 8px;
+    background: #18181b;
+    font-size: 13px;
+}
+
+.project-panel-dropdown .confirm-layout-button:hover:not(:disabled) {
+    background: #27272a;
+}
+
+.project-panel-dropdown button:focus-visible {
+    outline: none;
+    box-shadow: var(--tb-ring, 0 0 0 2px rgba(27, 27, 27, 0.18));
+}
+
 .project-panel-notice {
     margin: 0 0 12px;
     padding: 9px 10px;

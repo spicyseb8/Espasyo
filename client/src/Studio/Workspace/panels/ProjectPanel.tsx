@@ -1,6 +1,8 @@
 
 import {
     useEffect,
+    useLayoutEffect,
+    useRef,
     useState
 } from "react";
 
@@ -67,6 +69,7 @@ import {
     setActiveProjectDeadline,
     subscribeToProjectDeadline
 } from "../../../services/projectDeadlineService";
+import { registerProjectSave } from "../../../services/projectSaveRegistry";
 
 import "./ProjectPanel.css";
 
@@ -268,6 +271,8 @@ export default function ProjectPanel({ open }: Props) {
         message,
         setMessage
     ] = useState("");
+    const saveHandlerRef = useRef<() => Promise<boolean>>(async () => false);
+    const saveErrorRef = useRef("");
     const [projectStatus, setProjectStatus] = useState<string>("available");
     const [revisionFeedback, setRevisionFeedback] = useState<string | null>(null);
     const [deadline, setDeadline] = useState<string | null>(null);
@@ -510,6 +515,9 @@ export default function ProjectPanel({ open }: Props) {
             localStorage.removeItem(
                 "espasyo_project_name"
             );
+            window.dispatchEvent(new CustomEvent("espasyo-project-name-change", {
+                detail: ""
+            }));
 
             return;
         }
@@ -518,6 +526,9 @@ export default function ProjectPanel({ open }: Props) {
             "espasyo_project_name",
             projectName
         );
+        window.dispatchEvent(new CustomEvent("espasyo-project-name-change", {
+            detail: projectName
+        }));
     }, [
         projectName
     ]);
@@ -526,8 +537,9 @@ export default function ProjectPanel({ open }: Props) {
     // SAVE PROJECT
     //==================================================
 
-    async function handleSave() {
-        if (!canPerformProjectWrite(viewOnly, "save")) return;
+    async function handleSave(): Promise<boolean> {
+        saveErrorRef.current = "";
+        if (!canPerformProjectWrite(viewOnly, "save")) return false;
 
         const user =
             auth.currentUser;
@@ -536,15 +548,17 @@ export default function ProjectPanel({ open }: Props) {
             setMessage(
                 "Please log in before saving a project."
             );
+            saveErrorRef.current = "Please log in before saving a project.";
 
-            return;
+            return false;
         }
         if (
             state.workflowType === "admin-managed" &&
             ["submitted", "approved"].includes(projectStatus)
         ) {
             setMessage("This project is locked during review or after approval.");
-            return;
+            saveErrorRef.current = "This project is locked during review or after approval.";
+            return false;
         }
 
         const trimmedName =
@@ -554,12 +568,13 @@ export default function ProjectPanel({ open }: Props) {
             setMessage(
                 "Please enter a project name."
             );
+            saveErrorRef.current = "Please enter a project name.";
 
-            return;
+            return false;
         }
 
         if (saving) {
-            return;
+            return false;
         }
 
         try {
@@ -651,8 +666,9 @@ export default function ProjectPanel({ open }: Props) {
                     setMessage(
                         "Deadline passed. This project is read-only, and your changes cannot be saved."
                     );
+                    saveErrorRef.current = "Deadline passed. This project is read-only, and your changes cannot be saved.";
 
-                    return;
+                    return false;
                 }
             }
 
@@ -663,8 +679,9 @@ export default function ProjectPanel({ open }: Props) {
                 setMessage(
                     "Deadline passed. This project is read-only, and your changes cannot be saved."
                 );
+                saveErrorRef.current = "Deadline passed. This project is read-only, and your changes cannot be saved.";
 
-                return;
+                return false;
             }
 
             // Existing projects keep their original ID.
@@ -875,6 +892,7 @@ export default function ProjectPanel({ open }: Props) {
                     console.error("Design saved, but project activity could not be refreshed:", activityError);
                 }
             }
+            return true;
         } catch (error: unknown) {
             console.error(
                 "Failed to save project:",
@@ -896,10 +914,26 @@ export default function ProjectPanel({ open }: Props) {
                     "Unknown error"
                 }`
             );
+            saveErrorRef.current = `Save failed: ${
+                firebaseError.code ?? "unknown"
+            } - ${firebaseError.message ?? "Unknown error"}`;
+            return false;
         } finally {
             setSaving(false);
         }
     }
+
+    useLayoutEffect(() => {
+        saveHandlerRef.current = handleSave;
+    });
+
+    useEffect(
+        () => registerProjectSave(
+            () => saveHandlerRef.current(),
+            () => saveErrorRef.current
+        ),
+        []
+    );
 
     async function handleSubmitProject() {
         if (!canPerformProjectWrite(viewOnly, "submit")) return;
@@ -947,6 +981,9 @@ export default function ProjectPanel({ open }: Props) {
             >
                     <div className="project-panel-card">
                         <h2 className="project-panel-heading">Project</h2>
+                        <p className="project-panel-description">
+                            Save your latest design or review its submission status.
+                        </p>
 
                         {projectLocked && (
                             <div

@@ -1,8 +1,7 @@
 import "./Topbar.css";
 
-import { ArrowLeft, ChevronDown, Download, FolderOpen, Undo2, Redo2 } from "lucide-react";
+import { ArrowLeft, ChevronDown, Download, FolderOpen, LockKeyhole, Undo2, Redo2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ChangeEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import useEditor from "../../context/editor/useEditor";
@@ -57,20 +56,19 @@ export default function Topbar({ projectPanelOpen, onProjectClick }: Props) {
     const [budgetDraft, setBudgetDraft] = useState("");
     const [budgetError, setBudgetError] = useState("");
     const dropdownRef = useRef<HTMLDivElement | null>(null);
-    const projectPanelRef = useRef<HTMLDivElement | null>(null);
-
     const [projectName, setProjectName] = useState<string>(() => {
         if (typeof window === "undefined") return "";
         return localStorage.getItem("espasyo_project_name") || "";
     });
 
     useEffect(() => {
-        localStorage.setItem("espasyo_project_name", projectName);
-    }, [projectName]);
-
-    const handleProjectNameChange = (event: ChangeEvent<HTMLInputElement>) => {
-        setProjectName(event.target.value);
-    };
+        const handleProjectNameChange = (event: Event) => {
+            const name = (event as CustomEvent<string>).detail;
+            if (typeof name === "string") setProjectName(name);
+        };
+        window.addEventListener("espasyo-project-name-change", handleProjectNameChange);
+        return () => window.removeEventListener("espasyo-project-name-change", handleProjectNameChange);
+    }, []);
 
     const estimate = useMemo(() => calculateCostEstimate(state), [state]);
     const budgetSummary = useMemo(
@@ -98,13 +96,6 @@ export default function Topbar({ projectPanelOpen, onProjectClick }: Props) {
             ) {
                 setOpen(false);
             }
-            if (
-                projectPanelOpen &&
-                projectPanelRef.current &&
-                !projectPanelRef.current.contains(event.target as Node)
-            ) {
-                onProjectClick();
-            }
         };
 
         const handleKey = (event: KeyboardEvent) => {
@@ -118,7 +109,7 @@ export default function Topbar({ projectPanelOpen, onProjectClick }: Props) {
             document.removeEventListener("mousedown", handleOutsideClick);
             document.removeEventListener("keydown", handleKey);
         };
-    }, [onProjectClick, projectPanelOpen]);
+    }, []);
 
     const handleDownloadReport = () => {
         try {
@@ -181,30 +172,22 @@ export default function Topbar({ projectPanelOpen, onProjectClick }: Props) {
                 <Link
                     to="/studio"
                     className="topbar-back"
-                    title="Back to Studio"
-                    aria-label="Back to Studio"
+                    title="Back to projects"
+                    aria-label="Back to projects"
                 >
                     <ArrowLeft size={15} strokeWidth={1.75} />
-                    <span>Studio</span>
                 </Link>
-            </div>
-
-            {/* Center — project name */}
-            <div className="topbar-center">
-                <input
-                    type="text"
-                    className="project-title-input"
-                    placeholder="Untitled project"
-                    value={projectName}
-                    onChange={handleProjectNameChange}
-                    aria-label="Project name"
-                    spellCheck={false}
-                />
+                <div className="topbar-project-name" title={projectName || "Untitled project"}>
+                    {state.workflowType === "admin-managed" && (
+                        <LockKeyhole size={13} aria-hidden="true" />
+                    )}
+                    <span>{projectName || "Untitled project"}</span>
+                </div>
             </div>
 
             {/* Right — history, comments, estimate */}
             <div className="topbar-actions">
-                <div className="project-panel-container" ref={projectPanelRef}>
+                <div className="project-panel-container">
                     <button
                         type="button"
                         className={`topbar-project-button${projectPanelOpen ? " active" : ""}`}

@@ -36,6 +36,28 @@
     --tb-t-micro: var(--t-micro, 10px);
 }
 
+.topbar-project-name {
+    display: flex;
+    min-width: 0;
+    max-width: min(360px, 40vw);
+    align-items: center;
+    gap: 7px;
+    color: var(--tb-ink);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.topbar-project-name svg {
+    flex: 0 0 auto;
+    color: var(--tb-ink-muted);
+}
+
+.topbar-project-name span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 
 /* ==================================================
    BAR
@@ -45,18 +67,20 @@
     position: relative;
     z-index: 1000;
 
-    display: grid;
-    grid-template-columns: 1fr minmax(0, 320px) 1fr;
+    display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 16px;
 
     width: 100%;
-    height: 64px;
-    padding: 0 clamp(12px, 2vw, 24px);
+    height: 52px;
+    padding: 0 14px;
     box-sizing: border-box;
 
     background: var(--tb-surface);
-    border-bottom: 0;
+    border-bottom: 1px solid var(--tb-line);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
 
     font-family: inherit;
     color: var(--tb-ink);
@@ -68,21 +92,19 @@
     align-items: center;
     justify-self: start;
     min-width: 0;
+    flex: 1 1 auto;
     gap: 8px;
 }
 
 .topbar-center {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 0;
+    display: none;
 }
 
 .topbar-actions {
     display: flex;
     align-items: center;
-    justify-self: end;
-    gap: 8px;
+    flex: 0 0 auto;
+    gap: 6px;
 }
 
 .project-panel-container {
@@ -97,7 +119,7 @@
     height: 34px;
     padding: 0 11px;
     border: 1px solid var(--tb-line-strong);
-    border-radius: 999px;
+    border-radius: 8px;
     background: transparent;
     color: var(--tb-ink);
     font: inherit;
@@ -125,8 +147,8 @@
 
 @media (max-width: 760px) {
     .topbar {
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
         gap: 8px;
+        padding: 0 10px;
     }
 
     .topbar-back span {
@@ -148,11 +170,14 @@
     align-items: center;
     gap: 7px;
 
+    width: 34px;
+    min-width: 34px;
     height: 34px;
-    padding: 0 14px 0 10px;
+    padding: 0;
+    justify-content: center;
 
-    border: 1px solid var(--tb-line-strong);
-    border-radius: 999px;
+    border: 1px solid var(--tb-line);
+    border-radius: 8px;
 
     background: transparent;
     color: var(--tb-ink);
@@ -231,23 +256,26 @@
     display: inline-flex;
     align-items: center;
 
-    height: 34px;
-    padding: 0 3px;
+    height: 36px;
+    gap: 2px;
+    padding: 2px;
+    box-sizing: border-box;
 
-    border: 1px solid var(--tb-line-strong);
-    border-radius: 999px;
+    border: 1px solid var(--tb-line);
+    border-radius: 10px;
+    background: #fff;
 }
 
 .history-button {
-    width: 28px;
-    height: 28px;
+    width: 30px;
+    height: 30px;
 
     display: flex;
     align-items: center;
     justify-content: center;
 
     border: none;
-    border-radius: 999px;
+    border-radius: 8px;
 
     background: transparent;
     color: var(--tb-ink);
@@ -1067,17 +1095,65 @@
 }
 
 @media (max-width: 700px) {
-    .topbar {
-        grid-template-columns: auto minmax(0, 1fr) auto;
-        gap: 8px;
-    }
-
-    .topbar-back span { display: none; }
-    .topbar-back { padding: 0 10px; }
-
     .cost-estimator-dropdown,
     .admin-comments-dropdown {
         width: min(360px, calc(100vw - 24px)) !important;
+    }
+
+    .topbar-project-name {
+        max-width: 32vw;
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 420px) {
+    .topbar {
+        gap: 4px;
+        padding: 0 6px;
+    }
+
+    .topbar-left {
+        gap: 5px;
+    }
+
+    .topbar-back {
+        width: 32px;
+        min-width: 32px;
+        height: 32px;
+    }
+
+    .topbar-project-name {
+        max-width: calc(100vw - 220px);
+        font-size: 11px;
+    }
+
+    .topbar-actions {
+        gap: 3px;
+    }
+
+    .history-group {
+        padding: 0 1px;
+    }
+
+    .history-button {
+        width: 25px;
+    }
+
+    .topbar-project-button {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+    }
+
+    .admin-comments-icon-only .admin-comments-button {
+        width: 32px;
+        min-width: 32px;
+        height: 32px !important;
+    }
+
+    .cost-estimator-button {
+        width: 32px;
+        height: 32px;
     }
 }
 

@@ -1,5 +1,6 @@
 import {
     useEffect,
+    useLayoutEffect,
     useRef,
     useState
 } from "react";
@@ -41,6 +42,11 @@ import {
     getProjectBaseline,
     getProjectFingerprint
 } from "../../services/projectEditSessionService";
+import { isProjectReadOnlyByDeadline } from "../../services/projectDeadlineService";
+import {
+    getRegisteredProjectSaveError,
+    saveRegisteredProject
+} from "../../services/projectSaveRegistry";
 
 export default function EditorExitGuard() {
     const {
@@ -74,6 +80,7 @@ export default function EditorExitGuard() {
         saving,
         setSaving
     ] = useState(false);
+    const [saveError, setSaveError] = useState("");
 
     const [
         pendingDestination,
@@ -104,17 +111,12 @@ export default function EditorExitGuard() {
     const draftIdRef =
         useRef(draftId);
 
-    stateRef.current =
-        state;
-
-    locationRef.current =
-        location;
-
-    routeProjectIdRef.current =
-        routeProjectId;
-
-    draftIdRef.current =
-        draftId;
+    useLayoutEffect(() => {
+        stateRef.current = state;
+        locationRef.current = location;
+        routeProjectIdRef.current = routeProjectId;
+        draftIdRef.current = draftId;
+    }, [state, location, routeProjectId, draftId]);
 
     function getProjectName():
         string {
@@ -520,6 +522,33 @@ export default function EditorExitGuard() {
         }
     }
 
+    async function saveProjectAndExit() {
+        setSaving(true);
+        setSaveError("");
+
+        try {
+            const saved = await saveRegisteredProject();
+            if (!saved) {
+                setSaveError(
+                    getRegisteredProjectSaveError() ||
+                    "The project could not be saved. Your changes are still here."
+                );
+                return;
+            }
+
+            allowExit.current = true;
+            navigate(pendingDestination);
+        } catch (error) {
+            setSaveError(
+                error instanceof Error
+                    ? error.message
+                    : "The project could not be saved. Your changes are still here."
+            );
+        } finally {
+            setSaving(false);
+        }
+    }
+
     function discardChanges() {
         if (
             !isSavedProjectMode()
@@ -549,6 +578,7 @@ export default function EditorExitGuard() {
         setOpen(
             false
         );
+        setSaveError("");
     }
 
     if (
@@ -557,8 +587,12 @@ export default function EditorExitGuard() {
         return null;
     }
 
-    const savedProject =
-        isSavedProjectMode();
+    const savedProjectId = routeProjectId ?? getActiveSavedProjectId();
+    const savedProject = Boolean(
+        savedProjectId &&
+        getProjectBaseline(savedProjectId) !== null
+    );
+    const projectReadOnly = state.projectLocked || isProjectReadOnlyByDeadline();
 
     return (
         <div
@@ -670,7 +704,7 @@ export default function EditorExitGuard() {
                                 "#222222"
                         }}
                     >
-                        Unsaved Changes
+                        Save your changes?
                     </h2>
 
                     <p
@@ -687,11 +721,32 @@ export default function EditorExitGuard() {
                     >
                         {
                             savedProject
-                                ? "You have unsaved changes to this project."
+                                ? projectReadOnly
+                                    ? "This project is read-only. You can discard your local changes and exit."
+                                    : "You have unsaved changes to this project."
                                 : "This project hasn't been saved to your account yet."
                         }
                     </p>
                 </div>
+
+                {saveError && (
+                    <p
+                        role="alert"
+                        style={{
+                            margin: "16px 0 0",
+                            padding: "10px 12px",
+                            border: "1px solid #e6b5b1",
+                            borderRadius: 9,
+                            background: "#fff4f2",
+                            color: "#8d3934",
+                            fontSize: 12,
+                            lineHeight: 1.5,
+                            overflowWrap: "anywhere"
+                        }}
+                    >
+                        {saveError}
+                    </p>
+                )}
 
                 <div
                     style={{
@@ -748,7 +803,7 @@ export default function EditorExitGuard() {
                                 "nowrap"
                         }}
                     >
-                        Discard
+                        Discard &amp; exit
                     </button>
 
                     {
@@ -800,6 +855,29 @@ export default function EditorExitGuard() {
                             </button>
                         )
                     }
+                    {savedProject && !projectReadOnly && (
+                        <button
+                            type="button"
+                            onClick={() => void saveProjectAndExit()}
+                            disabled={saving}
+                            style={{
+                                flex: "1 1 0",
+                                minWidth: 0,
+                                height: 42,
+                                padding: "0 16px",
+                                border: "none",
+                                borderRadius: 9,
+                                background: "#18181b",
+                                color: "#ffffff",
+                                cursor: saving ? "default" : "pointer",
+                                fontSize: 14,
+                                fontWeight: 600,
+                                whiteSpace: "nowrap"
+                            }}
+                        >
+                            {saving ? "Saving..." : "Save & exit"}
+                        </button>
+                    )}
                 </div>
             </div>
         </div>
