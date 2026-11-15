@@ -1,8 +1,31 @@
 import express from "express";
 import { adminAuth, adminDb } from "../firebase-admin.js";
 import { requireRole } from "./authorization.js";
+import { createNotification, getAdminRecipientUids } from "./notification-service.js";
 
 const router = express.Router();
+
+router.post("/accounts/:id/created-notification", requireRole("admin", "superadmin"), async (req, res) => {
+  try {
+    const accountSnapshot = await adminDb.collection("users").where("uid", "==", req.params.id).limit(1).get();
+    const account = accountSnapshot.docs[0]?.data();
+    if (!account || account.createdBy !== req.adminUser.uid) {
+      return res.status(404).json({ success: false, message: "Recently created client account was not found." });
+    }
+    await createNotification(adminDb, {
+      eventKey: `account-created:${req.params.id}`, eventType: "account-created", category: "Accounts",
+      title: "Client account created",
+      message: `${req.adminUser.name || "An admin"} created a client account for ${account.full_name || account.name || "a client"}.`,
+      actorUid: req.adminUser.uid, actorName: req.adminUser.name || "Admin",
+      targetType: "account", targetId: account.id || req.params.id,
+      recipients: await getAdminRecipientUids(adminDb),
+    });
+    return res.json({ success: true });
+  } catch (error) {
+    console.error("Client account notification failed:", error);
+    return res.status(500).json({ success: false, message: "Unable to record the client account notification." });
+  }
+});
 
 router.post(
   "/accounts/:id/suspend",
@@ -34,10 +57,21 @@ router.post(
           ? accountData.uid
           : account.id;
 
+      if (accountData.account_status === "suspended") {
+        return res.json({ success: true, message: "Customer account is already suspended." });
+      }
+
       await adminAuth.updateUser(uid, { disabled: true });
       await accountRef.update({
         account_status: "suspended",
         updated_at: new Date(),
+      });
+      await createNotification(adminDb, {
+        eventKey: `account-suspended:${uid}:${accountData.updated_at?.toMillis?.() ?? accountData.updated_at?.getTime?.() ?? "initial"}`,
+        eventType: "account-suspended", category: "Accounts", title: "Account suspended",
+        message: `${req.adminUser.name || "A superadmin"} suspended ${accountData.name || accountData.email || "a client account"}.`,
+        actorUid: req.adminUser.uid, actorName: req.adminUser.name || "Superadmin",
+        targetType: "account", targetId: accountId, recipients: await getAdminRecipientUids(adminDb),
       });
 
       return res.json({
@@ -84,6 +118,10 @@ router.post(
           ? accountData.uid
           : account.id;
 
+      if (accountData.account_status === "active") {
+        return res.json({ success: true, message: "Customer account is already active." });
+      }
+
       await accountRef.update({
         account_status: "active",
         updated_at: new Date(),
@@ -106,6 +144,13 @@ router.post(
 
         throw error;
       }
+      await createNotification(adminDb, {
+        eventKey: `account-reactivated:${uid}:${accountData.updated_at?.toMillis?.() ?? accountData.updated_at?.getTime?.() ?? "initial"}`,
+        eventType: "account-reactivated", category: "Accounts", title: "Account reactivated",
+        message: `${req.adminUser.name || "A superadmin"} reactivated ${accountData.name || accountData.email || "a client account"}.`,
+        actorUid: req.adminUser.uid, actorName: req.adminUser.name || "Superadmin",
+        targetType: "account", targetId: accountId, recipients: await getAdminRecipientUids(adminDb),
+      });
 
       return res.json({
         success: true,

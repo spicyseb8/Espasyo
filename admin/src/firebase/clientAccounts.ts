@@ -13,6 +13,7 @@ import {
 } from "firebase/firestore";
 
 import { auth, db, firebaseConfig } from "./firebase";
+import { API_BASE_URL } from "@/services/assets/projectApi";
 
 export interface CreateClientAccountData {
   name: string;
@@ -81,6 +82,16 @@ export async function createClientAccount(
       created_at: serverTimestamp(),
       updated_at: serverTimestamp(),
     });
+    try {
+      const token = await adminUser.getIdToken();
+      const response = await fetch(`${API_BASE_URL}/accounts/${encodeURIComponent(userCredential.user.uid)}/created-notification`, {
+        method: "POST", headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) cleanupWarnings.push("The client was created, but its admin notification could not be recorded.");
+    } catch (notificationError) {
+      console.error("Client account created, but its notification request failed:", notificationError);
+      cleanupWarnings.push("The client was created, but its admin notification could not be recorded.");
+    }
   } catch (error) {
     creationError = error;
     if (createdUser) {

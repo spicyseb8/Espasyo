@@ -29,6 +29,7 @@ import {
 
 import { auth, db } from "@/firebase/firebase";
 import { useAuth } from "@/context/AuthContext";
+import NotificationCenter from "@/components/layout/NotificationCenter";
 
 interface EmployeeProfile {
   name?: string;
@@ -178,6 +179,7 @@ export default function TopBar() {
 
       {/* Right side */}
       <div className="flex items-center gap-3">
+        {user && <NotificationCenter uid={user.uid} />}
         {/* Profile */}
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
           <SheetTrigger

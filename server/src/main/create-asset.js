@@ -9,6 +9,7 @@ import {
 } from "../firebase-admin.js";
 import { createFurniturePreviewRenderer } from "../assets/render-furniture-preview.js";
 import { requireRole } from "./authorization.js";
+import { createNotification, getAdminRecipientUids } from "./notification-service.js";
 
 const router = express.Router();
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
@@ -607,6 +608,19 @@ router.post(
       }
 
       await createAssetRecord(asset);
+
+      try {
+        const recipients = await getAdminRecipientUids(adminDb);
+        await createNotification(adminDb, {
+          eventKey: `asset-created:${asset.id}`,
+          eventType: "asset-created", category: "Assets", title: "New asset added",
+          message: `${req.adminUser.name || "A superadmin"} added ${asset.name} (${asset.asset_type}).`,
+          actorUid: req.adminUser.uid, actorName: req.adminUser.name || "Superadmin",
+          targetType: "asset", targetId: asset.id, assetType: asset.asset_type, recipients,
+        });
+      } catch (notificationError) {
+        console.error("Asset created, but its notification could not be saved:", notificationError);
+      }
 
       return res.status(201).json({
         success: true,

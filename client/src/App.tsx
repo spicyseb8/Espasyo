@@ -39,6 +39,7 @@ import SettingsPage
 
 import AssetStartupGate
     from "./engine/AssetStartupGate";
+import { projectApi } from "./services/projectApi";
 
 function ClientAccessRoute({ children }: { children: ReactNode }) {
     const { user, loading, agreement } = useAuth();
@@ -80,6 +81,9 @@ function ClientAccessRoute({ children }: { children: ReactNode }) {
                 }
 
                 setClientAccess({ uid: user.uid, status: "valid" });
+                void projectApi("/client/first-login", { method: "POST" }, user).catch((error) => {
+                    console.error("Unable to ensure the welcome notification:", error);
+                });
             } catch (error) {
                 console.error("Unable to verify client access:", error);
                 rejectClient("We could not verify your client account. Please sign in again.");

@@ -9,6 +9,8 @@ import projectDeadlineRoutes from "./project-deadlines.js";
 import managedProjectRoutes from "./managed-projects.js";
 import legalAcceptanceRoutes from "./legal-acceptance.js";
 import { createCorsOptions } from "./cors-config.js";
+import { adminDb } from "../firebase-admin.js";
+import { sendDeadlineNotifications } from "./deadline-notifications.js";
 
 const app = express();
 
@@ -111,3 +113,12 @@ app.listen(
     console.log("");
   }
 );
+
+// Keep deadline reminders on the same Asia/Manila calendar used by the
+// project's deadline validation. Event keys make repeated sweeps idempotent.
+const DEADLINE_SWEEP_INTERVAL_MS = 60 * 60 * 1000;
+const runDeadlineSweep = () => sendDeadlineNotifications(adminDb).catch((error) => {
+  console.error("Deadline notification sweep failed:", error);
+});
+void runDeadlineSweep();
+setInterval(runDeadlineSweep, DEADLINE_SWEEP_INTERVAL_MS).unref();

@@ -8,6 +8,7 @@ import {
   adminStorage,
 } from "../firebase-admin.js";
 import { requireRole } from "./authorization.js";
+import { createNotification, getAdminRecipientUids, getNotificationDateKey } from "./notification-service.js";
 import { findClientAccountByIdentifier } from "./client-account.js";
 import { createReservedFloorPlanDraft } from "./floorplan-reservation.js";
 import {
@@ -61,6 +62,35 @@ const PROJECT_SUBMISSIONS = "projectSubmissions";
 const MAX_STRUCTURE_BYTES = 10 * 1024 * 1024;
 const OWNER_PROJECT_CONFLICT =
   "This client already has a project or assignment. Open the existing project instead.";
+
+async function sendWorkflowNotification({ eventKey, eventType, category = "Projects", title, message, actor, projectId, recipients }) {
+  try {
+    await createNotification(adminDb, {
+      eventKey, eventType, category, title, message,
+      actorUid: actor?.uid || null, actorName: actor?.name || "Espasyo",
+      targetType: "project", targetId: projectId, projectId, recipients,
+    });
+  } catch (error) {
+    console.error(`Project ${eventType} succeeded, but its notification could not be saved:`, error);
+  }
+}
+
+async function notifyProjectAdmins(event, projectId, actor, message) {
+  await sendWorkflowNotification({ ...event, actor, projectId, message, recipients: await getAdminRecipientUids(adminDb) });
+}
+
+async function notifyProjectClient(event, projectId, ownerId, actor, message) {
+  await sendWorkflowNotification({ ...event, actor, projectId, message, recipients: [ownerId] });
+}
+
+async function getClientActor(uid) {
+  try {
+    const profile = await findClientAccountByIdentifier(adminDb, uid);
+    return { uid, name: profile?.full_name || profile?.name || "Client" };
+  } catch {
+    return { uid, name: "Client" };
+  }
+}
 
 function httpError(status, message) {
   const error = new Error(message);
@@ -261,6 +291,21 @@ async function authenticateClient(req, res, next) {
   }
 }
 
+async function createClientWelcomeNotification(req, res) {
+  try {
+    const profile = await findClientAccountByIdentifier(adminDb, req.clientUser.uid);
+    await createNotification(adminDb, {
+      eventKey: `client-welcome:${req.clientUser.uid}`, eventType: "client-welcome", category: "Accounts",
+      title: "Welcome to Espasyo!", message: "Your account has been successfully created. Welcome to Espasyo!",
+      actorUid: null, actorName: "Espasyo", targetType: "account", targetId: profile?.id || req.clientUser.uid,
+      recipients: [req.clientUser.uid],
+    });
+    return res.json({ success: true });
+  } catch (error) {
+    return sendFailure(res, error, "Unable to prepare the welcome notification.");
+  }
+}
+
 async function createDraft(req, res) {
   try {
     const requestedOwnerId = normalizedString(req.body?.ownerId);
@@ -301,6 +346,8 @@ async function createDraft(req, res) {
         ? []
         : [assignmentReference(clientAccount.id)],
     });
+    await notifyProjectClient({ eventKey: `floor-plan-created:${draftId}`, eventType: "floor-plan-created", title: "Your floor plan is being prepared" }, draftId, ownerId, req.adminUser, `${req.adminUser.name || "An admin"} is currently preparing your floor plan. Please wait.`);
+    await notifyProjectAdmins({ eventKey: `floor-plan-created-admin:${draftId}`, eventType: "floor-plan-created", title: "Floor plan preparation started" }, draftId, req.adminUser, `${req.adminUser.name || "An admin"} started a floor plan for ${clientAccount.name || "a client"}.`);
     return res.status(201).json({ success: true, draft: { ...record, draftId } });
   } catch (error) {
     return sendFailure(res, error, "Unable to create the floor-plan draft.");
@@ -863,6 +910,10 @@ async function publishDraft(req, res) {
     });
 
     if (result.alreadyPublished) await deleteStorageObject(uploadedPath);
+    if (!result.alreadyPublished) {
+      await notifyProjectClient({ eventKey: `floor-plan-published:${result.projectId}`, eventType: "floor-plan-published", title: "Your floor plan is ready" }, result.projectId, ownerId, req.adminUser, `${req.adminUser.name || "Your admin"} created a project for you. Check it out!`);
+      await notifyProjectAdmins({ eventKey: `floor-plan-published-admin:${result.projectId}`, eventType: "floor-plan-published", title: "Floor plan published" }, result.projectId, req.adminUser, `${req.adminUser.name || "An admin"} published ${projectName} for a client.`);
+    }
     return res.json({ success: true, projectId: result.projectId, alreadyPublished: result.alreadyPublished });
   } catch (error) {
     if (uploadedPath) {
@@ -906,6 +957,7 @@ async function saveProjectStructure(req, res) {
     }
     const published = req.body?.published === true;
     const firstPublication = published && existing.structuralStatus !== "published";
+    const projectRevision = published && existing.structuralStatus === "published";
     const deadline = firstPublication ? normalizedString(req.body?.deadline) : existing.deadline;
     if (
       firstPublication &&
@@ -1007,6 +1059,13 @@ async function saveProjectStructure(req, res) {
         });
       }
     });
+    if (firstPublication) {
+      await notifyProjectClient({ eventKey: `floor-plan-published:${projectId}:${revision}`, eventType: "floor-plan-published", title: "Your floor plan is ready" }, projectId, ownerId, req.adminUser, `${req.adminUser.name || "Your admin"} created a project for you. Check it out!`);
+      await notifyProjectAdmins({ eventKey: `floor-plan-published-admin:${projectId}`, eventType: "floor-plan-published", title: "Floor plan published" }, projectId, req.adminUser, `${req.adminUser.name || "An admin"} published ${projectName} for a client.`);
+    }
+    if (projectRevision) {
+      await notifyProjectClient({ eventKey: `admin-project-revised:${projectId}:${revision}`, eventType: "project-revised", title: "Your project has been revised" }, projectId, ownerId, req.adminUser, `${req.adminUser.name || "Your admin"} made revisions to your project.`);
+    }
     return res.json({ success: true, projectId, revision, published });
   } catch (error) {
     if (uploadedPath) {
@@ -1168,6 +1227,8 @@ async function saveClientInterior(req, res) {
         newValue: { versionNumber, snapshotType: "design" },
       });
     });
+    const clientActor = await getClientActor(ownerId);
+    await notifyProjectAdmins({ eventKey: `client-project-updated:${projectId}:${versionId}`, eventType: "project-updated", title: "Client updated a project" }, projectId, clientActor, `${clientActor.name} updated ${projectName || projectId}.`);
     return res.json({ success: true, versionId, versionNumber });
   } catch (error) {
     if (uploadedPath) {
@@ -1194,6 +1255,8 @@ async function getClientProjectWorkflow(req, res) {
     if (!projectSnapshot.exists) throw httpError(404, "Project does not exist.");
     const project = projectSnapshot.data();
     assertAssignedClient(project, assignmentSnapshot, projectId, ownerId);
+    const clientActor = await getClientActor(ownerId);
+    await notifyProjectAdmins({ eventKey: `client-project-opened:${projectId}:${ownerId}:${getNotificationDateKey()}`, eventType: "project-opened", title: "Client opened a project" }, projectId, clientActor, `${clientActor.name} opened ${project.projectName || projectId}.`);
     const submissionAgreement = project.submissionAgreement;
     return res.json({
       success: true,
@@ -1880,6 +1943,8 @@ async function submitClientProject(req, res) {
         },
       );
     });
+    const clientActor = await getClientActor(ownerId);
+    await notifyProjectAdmins({ eventKey: `project-submitted:${projectId}:${submissionId}`, eventType: "project-submitted", title: "Project submitted for review" }, projectId, clientActor, `${clientActor.name} submitted ${initial.projectName || projectId} for review.`);
     return res.json({ success: true, submissionId, versionId, versionNumber });
   } catch (error) {
     if (uploadedPath) {
@@ -1961,8 +2026,23 @@ async function reviewSubmittedProject(req, res) {
       return {
         projectStatus: update.projectStatus,
         submittedSubmissionId: project.submittedSubmissionId,
+        ownerId: project.ownerId,
+        projectName: project.projectName,
       };
     });
+    await notifyProjectAdmins({
+      eventKey: `admin-project-review:${action}:${projectId}:${result.submittedSubmissionId || "current"}`,
+      eventType: action === "approve" ? "project-approved" : "project-revised",
+      title: action === "approve" ? "Project approved" : "Project revision requested",
+    }, projectId, req.adminUser, `${req.adminUser.name || "An admin"} ${action === "approve" ? "approved" : "requested revisions to"} ${result.projectName || projectId}.`);
+    const recipient = result.ownerId;
+    if (recipient) {
+      await notifyProjectClient({
+        eventKey: `${action === "approve" ? "project-approved" : "project-revised"}:${projectId}:${result.submittedSubmissionId || "current"}`,
+        eventType: action === "approve" ? "project-approved" : "project-revised",
+        title: action === "approve" ? "Your project is approved" : "Your project has been revised",
+      }, projectId, recipient, req.adminUser, action === "approve" ? `${req.adminUser.name || "Your admin"} approved your project.` : `${req.adminUser.name || "Your admin"} made revisions to your project.`);
+    }
     return res.json({ success: true, ...result });
   } catch (error) {
     return sendFailure(res, error, "Unable to review submitted project.");
@@ -2201,6 +2281,7 @@ router.get("/admin/floor-plans", requireRole("admin", "superadmin"), (req, res) 
 router.get("/admin/projects/:projectId", requireRole("admin", "superadmin"), getProject);
 router.get("/admin/users/:accountId/projects", requireRole("admin", "superadmin"), getAdminAccountProjects);
 router.post("/admin/floor-plan-drafts", requireRole("admin", "superadmin"), createDraft);
+router.post("/client/first-login", authenticateClient, createClientWelcomeNotification);
 router.get("/admin/floor-plan-drafts/:draftId", requireRole("admin", "superadmin"), getDraft);
 router.put("/admin/floor-plan-drafts/:draftId", requireRole("admin", "superadmin"), saveDraft);
 router.post("/admin/floor-plan-drafts/:draftId/publish", requireRole("admin", "superadmin"), publishDraft);

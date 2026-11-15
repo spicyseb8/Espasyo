@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Check, Plus, Search, X } from "lucide-react";
 import {
@@ -34,46 +34,17 @@ export default function NewFloorPlanProjectButton() {
     const [creating, setCreating] = useState(false);
     const [openingEditor, setOpeningEditor] = useState(false);
     const [error, setError] = useState("");
-    const [tab, setTab] = useState<"available" | "unavailable">("available");
 
-    const clientListRef = useRef<HTMLDivElement>(null);
-    const eligibilityByClientId = useMemo(
-        () => new Map(clients.map(client => [client.uid, client.eligible])),
-        [clients]
-    );
     const searchQuery = search.trim().toLocaleLowerCase();
+
+    // Only clients who can still receive a floor plan are shown.
     const availableClients = useMemo(
         () => clients.filter(client =>
-            eligibilityByClientId.get(client.uid) === true &&
-            matchesClientSearch(client, searchQuery)
+            client.eligible && matchesClientSearch(client, searchQuery)
         ),
-        [clients, eligibilityByClientId, searchQuery]
+        [clients, searchQuery]
     );
-    const unavailableClients = useMemo(
-        () => clients.filter(client =>
-            eligibilityByClientId.get(client.uid) === false &&
-            matchesClientSearch(client, searchQuery)
-        ),
-        [clients, eligibilityByClientId, searchQuery]
-    );
-    const visibleClients = useMemo(
-        () => tab === "available" ? availableClients : unavailableClients,
-        [tab, availableClients, unavailableClients]
-    );
-    const selectedClient = tab === "available"
-        ? availableClients.find(client => client.uid === selectedClientId)
-        : undefined;
-
-    function changeTab(nextTab: "available" | "unavailable") {
-        setTab(nextTab);
-        setSelectedClientId(current =>
-            (nextTab === "available" ? availableClients : unavailableClients)
-                .some(client => client.uid === current && client.eligible)
-                ? current
-                : ""
-        );
-        if (clientListRef.current) clientListRef.current.scrollTop = 0;
-    }
+    const selectedClient = availableClients.find(client => client.uid === selectedClientId);
 
     useEffect(() => {
         if (!open) return;
@@ -126,13 +97,11 @@ export default function NewFloorPlanProjectButton() {
         setHasIneligibleMatches(false);
         setLoadingClients(false);
         setError("");
-        setTab("available");
-        if (clientListRef.current) clientListRef.current.scrollTop = 0;
         setOpen(true);
     }
 
     async function createProject() {
-        if (tab !== "available" || !projectName.trim() || !selectedClient || creating) return;
+        if (!projectName.trim() || !selectedClient || creating) return;
 
         setCreating(true);
         setError("");
@@ -155,15 +124,6 @@ export default function NewFloorPlanProjectButton() {
                 : "Unable to create the floor plan.");
         } finally {
             setCreating(false);
-        }
-    }
-
-    function openExistingFloorPlan(client: AdminClient) {
-        setOpen(false);
-        if (client.existingDraftId) {
-            navigate(`/projects/draft/${encodeURIComponent(client.existingDraftId)}`);
-        } else if (client.existingProjectId) {
-            navigate(`/projects/edit/${encodeURIComponent(client.existingProjectId)}`);
         }
     }
 
@@ -212,10 +172,10 @@ export default function NewFloorPlanProjectButton() {
                             </button>
                         </div>
 
-                        <div className="grid gap-5 px-5 py-5">
-                            {/* Name */}
+                        <div className="grid gap-6 px-5 py-5">
+                            {/* Step 1: Name */}
                             <label className="grid gap-1.5 text-sm font-medium">
-                                Name
+                                1. Name the floor plan
                                 <input
                                     className="h-10 rounded-md border border-border bg-background px-3 font-normal outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                                     value={projectName}
@@ -226,59 +186,36 @@ export default function NewFloorPlanProjectButton() {
                                 />
                             </label>
 
-                            {/* Client */}
-                            <div className="grid gap-1.5">
-                                <span className="text-sm font-medium">Client</span>
-
-                                <div className="relative">
-                                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                                    <input
-                                        className="h-10 w-full rounded-md border border-border bg-background pl-9 pr-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                                        value={search}
-                                        onChange={event => setSearch(event.target.value)}
-                                        placeholder="Search by name or email"
-                                        aria-label="Search clients by name or email"
-                                    />
-                                </div>
-                                <div className="flex gap-1 rounded-md bg-muted p-1 text-sm" role="tablist">
-                                    {([
-                                        ["available", "Available", availableClients.length],
-                                        ["unavailable", "Unavailable", unavailableClients.length]
-                                    ] as const).map(([key, label, count]) => (
-                                        <button
-                                            key={key}
-                                            type="button"
-                                            role="tab"
-                                            aria-selected={tab === key}
-                                            onClick={() => changeTab(key)}
-                                            className={`flex-1 rounded px-3 py-1.5 font-medium transition-colors ${
-                                                tab === key
-                                                    ? "bg-background shadow-sm"
-                                                    : "text-muted-foreground hover:text-foreground"
-                                            }`}
-                                        >
-                                            {label}
-                                            {!loadingClients && (
-                                                <span className="ml-1.5 text-xs text-muted-foreground">{count}</span>
-                                            )}
-                                        </button>
-                                    ))}
-                                </div>
+                            {/* Step 2: Client */}
+                            <div className="grid gap-2">
+                                <span className="text-sm font-medium">2. Choose a client</span>
 
                                 {selectedClient ? (
-                                    <div className="flex items-center gap-3 rounded-md border border-primary bg-primary/5 px-3 py-2.5">
-                                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+                                    /* A client is chosen: show only the confirmation, no list */
+                                    <div
+                                        className="flex items-center gap-3 rounded-lg border-2 border-primary bg-primary/5 px-3 py-3"
+                                        role="status"
+                                    >
+                                        <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
                                             {initials(selectedClient.name)}
+                                            <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-green-600 text-white ring-2 ring-background">
+                                                <Check size={10} strokeWidth={3} />
+                                            </span>
                                         </span>
                                         <span className="min-w-0 flex-1">
-                                            <span className="block truncate text-sm font-medium">{selectedClient.name}</span>
+                                            <span className="block text-[11px] font-medium uppercase tracking-wide text-primary">
+                                                Selected client
+                                            </span>
+                                            <span className="block truncate text-sm font-semibold">
+                                                {selectedClient.name}
+                                            </span>
                                             <span className="block truncate text-xs text-muted-foreground">
                                                 {selectedClient.email || "No email"}
                                             </span>
                                         </span>
                                         <button
                                             type="button"
-                                            className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10"
+                                            className="shrink-0 rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium hover:bg-muted"
                                             onClick={() => setSelectedClientId("")}
                                             disabled={creating}
                                         >
@@ -287,68 +224,60 @@ export default function NewFloorPlanProjectButton() {
                                     </div>
                                 ) : (
                                     <>
+                                        <div className="relative">
+                                            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                                            <input
+                                                className="h-10 w-full rounded-md border border-border bg-background pl-9 pr-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                                value={search}
+                                                onChange={event => setSearch(event.target.value)}
+                                                placeholder="Search by name or email"
+                                                aria-label="Search clients by name or email"
+                                            />
+                                        </div>
+
                                         <div
-                                            key={tab}
-                                            ref={clientListRef}
                                             className="max-h-52 overflow-auto rounded-md border border-border"
                                             role="listbox"
-                                            aria-label="Clients"
+                                            aria-label="Available clients"
                                         >
                                             {loadingClients ? (
                                                 <p className="p-4 text-center text-sm text-muted-foreground">Searching…</p>
-                                            ) : visibleClients.length > 0 ? (
-                                                visibleClients.map(client => {
-                                                    const hasExisting = !!(client.existingDraftId || client.existingProjectId);
-                                                    return (
-                                                        <div
-                                                            key={client.uid}
-                                                            className="flex items-center gap-2 border-b border-border last:border-b-0"
-                                                        >
-                                                            <button
-                                                                type="button"
-                                                                role="option"
-                                                                aria-selected={client.uid === selectedClientId}
-                                                                disabled={!client.eligible}
-                                                                onClick={() => {
-                                                                    if (tab === "available" && client.eligible) {
-                                                                        setSelectedClientId(client.uid);
-                                                                    }
-                                                                }}
-                                                                className={`flex min-w-0 flex-1 items-center gap-3 px-3 py-2 text-left ${
-                                                                    client.eligible ? "hover:bg-muted" : "cursor-not-allowed opacity-50"
-                                                                }`}
-                                                            >
-                                                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold">
-                                                                    {initials(client.name)}
-                                                                </span>
-                                                                <span className="min-w-0">
-                                                                    <span className="block truncate text-sm font-medium">{client.name}</span>
-                                                                    <span className="block truncate text-xs text-muted-foreground">
-                                                                        {client.email || "No email"}
-                                                                    </span>
-                                                                </span>
-                                                            </button>
-                                                            {!client.eligible && hasExisting && (
-                                                                <button
-                                                                    type="button"
-                                                                    className="mr-3 shrink-0 text-xs font-medium text-primary hover:underline"
-                                                                    onClick={() => openExistingFloorPlan(client)}
-                                                                >
-                                                                    Has plan · View
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    );
-                                                })
+                                            ) : availableClients.length > 0 ? (
+                                                availableClients.map(client => (
+                                                    <button
+                                                        key={client.uid}
+                                                        type="button"
+                                                        role="option"
+                                                        aria-selected={false}
+                                                        onClick={() => {
+                                                            setSelectedClientId(client.uid);
+                                                            setError("");
+                                                        }}
+                                                        className="flex w-full items-center gap-3 border-b border-border px-3 py-2.5 text-left last:border-b-0 hover:bg-muted"
+                                                    >
+                                                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold">
+                                                            {initials(client.name)}
+                                                        </span>
+                                                        <span className="min-w-0">
+                                                            <span className="block truncate text-sm font-medium">{client.name}</span>
+                                                            <span className="block truncate text-xs text-muted-foreground">
+                                                                {client.email || "No email"}
+                                                            </span>
+                                                        </span>
+                                                    </button>
+                                                ))
                                             ) : (
                                                 <p className="p-4 text-center text-sm text-muted-foreground">
-                                                    {tab === "available" ? "No available clients found" : "No unavailable clients"}
+                                                    {hasIneligibleMatches
+                                                        ? "Matching clients already have a floor plan."
+                                                        : "No clients found"}
                                                 </p>
                                             )}
                                         </div>
-                                        {tab === "unavailable" && hasIneligibleMatches && (
-                                            <p className="text-xs text-muted-foreground" role="status">
-                                                Some matches can't be selected.
+
+                                        {hasIneligibleMatches && availableClients.length > 0 && (
+                                            <p className="text-xs text-muted-foreground">
+                                                Clients who already have a floor plan are not shown.
                                             </p>
                                         )}
                                     </>
@@ -361,23 +290,32 @@ export default function NewFloorPlanProjectButton() {
                         </div>
 
                         {/* Footer */}
-                        <div className="flex justify-end gap-2 border-t border-border px-5 py-3">
-                            <button
-                                type="button"
-                                className="h-9 rounded-md border border-border px-3 text-sm hover:bg-muted"
-                                onClick={() => setOpen(false)}
-                                disabled={creating}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="button"
-                                className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50"
-                                disabled={!canCreate}
-                                onClick={() => void createProject()}
-                            >
-                                {creating ? "Creating…" : (<><Check size={16} />Create</>)}
-                            </button>
+                        <div className="flex items-center justify-between gap-2 border-t border-border px-5 py-3">
+                            <p className="min-w-0 truncate text-xs text-muted-foreground">
+                                {!projectName.trim()
+                                    ? "Enter a name to continue"
+                                    : !selectedClient
+                                        ? "Choose a client to continue"
+                                        : "Ready to create"}
+                            </p>
+                            <div className="flex shrink-0 gap-2">
+                                <button
+                                    type="button"
+                                    className="h-9 rounded-md border border-border px-3 text-sm hover:bg-muted"
+                                    onClick={() => setOpen(false)}
+                                    disabled={creating}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50"
+                                    disabled={!canCreate}
+                                    onClick={() => void createProject()}
+                                >
+                                    {creating ? "Creating…" : (<><Check size={16} />Create</>)}
+                                </button>
+                            </div>
                         </div>
                     </section>
                 </div>

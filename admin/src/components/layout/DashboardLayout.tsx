@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
 import TopBar from "@/components/layout/TopBar";
@@ -11,14 +10,12 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const [selectedPage, setSelectedPage] = useState("dashboard");
+  const requestedTab = new URLSearchParams(location.search).get("tab");
+  const tabs = ["dashboard", "customers", "employees", "furniture", "floors", "walls", "projects"];
+  const selectedPage = tabs.includes(requestedTab || "") ? requestedTab as string : "dashboard";
 
   const handlePageChange = (page: string) => {
-    setSelectedPage(page);
-
-    if (location.pathname !== "/") {
-      navigate("/");
-    }
+    navigate(page === "dashboard" ? "/" : `/?tab=${page}`);
   };
 
   return (

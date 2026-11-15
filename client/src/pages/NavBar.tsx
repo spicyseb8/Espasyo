@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { Bell, Loader2, LogOut, Settings } from "lucide-react";
+import { Loader2, LogOut, Settings } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 
 import { useAuth } from "@/context/AuthContext";
@@ -27,6 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "../components/ui/dropdown-menu";
 import "./NavBar.css";
+import NotificationCenter from "@/components/NotificationCenter";
 
 const SPRING = { type: "spring", bounce: 0, duration: 0.35 } as const;
 
@@ -59,8 +60,6 @@ export default function NavBar() {
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
 
-  // Hook this up to your real notification source. A dot shows when > 0.
-  const unreadCount = 0;
 
   useEffect(() => {
     introPlayed = true;
@@ -178,24 +177,7 @@ export default function NavBar() {
                   className="flex items-center gap-2"
                   {...fade}
                 >
-                  {/* Notifications */}
-                  <button
-                    type="button"
-                    aria-label={
-                      unreadCount > 0
-                        ? `Notifications (${unreadCount} unread)`
-                        : "Notifications"
-                    }
-                    className="navbar__circle relative flex size-9 items-center justify-center rounded-full text-neutral-700 transition hover:text-neutral-900 hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/30"
-                  >
-                    <Bell className="size-[18px]" strokeWidth={1.75} />
-                    {unreadCount > 0 && (
-                      <span
-                        aria-hidden="true"
-                        className="absolute right-2 top-2 size-2 rounded-full bg-red-500 ring-2 ring-[#faf7f2]"
-                      />
-                    )}
-                  </button>
+                  <NotificationCenter uid={user.uid} />
 
                   <DropdownMenu>
                     <DropdownMenuTrigger
