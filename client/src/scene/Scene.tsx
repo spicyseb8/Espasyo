@@ -699,43 +699,6 @@ export default function Scene({
                 </div>
             )}
 
-            {/*==================================================
-                PROJECT DEADLINE REMINDER
-            ==================================================*/}
-
-            {
-                !viewOnly &&
-                projectDeadline &&
-                isValidProjectDeadline(projectDeadline) &&
-                !deadlinePassed && (
-                    <div
-                        role="status"
-                        style={{
-                            position: "fixed",
-                            top: "74px",
-                            left: "50%",
-                            transform: "translateX(-50%)",
-                            zIndex: 9999,
-                            pointerEvents: "none",
-                            maxWidth: "calc(100vw - 32px)",
-                            padding: "7px 14px",
-                            background: "#FFF8E9",
-                            border: "1px solid #F1C98C",
-                            borderRadius: "8px",
-                            color: "#7A4B00",
-                            boxShadow: "0 3px 10px rgba(0, 0, 0, 0.12)",
-                            fontSize: "11px",
-                            fontWeight: 600,
-                            lineHeight: "16px",
-                            textAlign: "center",
-                            whiteSpace: "normal"
-                        }}
-                    >
-                        You may edit until{" "}
-                        {formatDeadlineDate(projectDeadline)}.
-                    </div>
-                )
-            }
         </div>
     );
 }

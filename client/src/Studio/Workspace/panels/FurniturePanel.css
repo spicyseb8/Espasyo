@@ -1,433 +1,135 @@
 /* ==========================================================
    FURNITURE PANEL
    Outer floating background is provided by Workspace.
-   Individual AssetSection cards remain visible.
+   Visual language shared with DesignPanel (search, buttons).
    ========================================================== */
 
-.furniture-panel {
-
-    width:
-        100%;
-
-    background:
-        transparent;
-
-    border:
-        0;
-
-    border-radius:
-        0;
-
-    box-shadow:
-        none;
-
-    overflow:
-        visible;
-
-    box-sizing:
-        border-box;
-
-    padding:
-        0;
-}
-
-
-/* ==========================================================
-   HEADER
-   ========================================================== */
-
-.furniture-panel-header {
-
-    display:
-        flex;
-
-    align-items:
-        center;
-
-    justify-content:
-        space-between;
-
-    padding:
-        14px 16px;
-}
-
-.furniture-panel-header h2 {
-
-    display:
-        flex;
-
-    align-items:
-        center;
-
-    gap:
-        8px;
-
-    margin:
-        0;
-
-    font-size:
-        13px;
-
-    font-weight:
-        700;
-
-    color:
-        var(--ws-text);
-}
-
-.furniture-panel-header span {
-
-    display:
-        inline-flex;
-
-    align-items:
-        center;
-
-    justify-content:
-        center;
-
-    min-width:
-        18px;
-
-    height:
-        18px;
-
-    padding:
-        0 6px;
-
-    background:
-        var(--ws-input-bg);
-
-    border-radius:
-        999px;
-
-    font-size:
-        10px;
-
-    font-weight:
-        600;
-
-    color:
-        var(--ws-text-muted);
-}
-
-.furniture-panel-chevron {
-
-    color:
-        var(--ws-text-muted);
-
-    cursor:
-        pointer;
-
-    transition:
-        color .15s ease;
-}
-
-.furniture-panel-chevron:hover {
-
-    color:
-        var(--ws-text);
-}
-
-
-/* ==========================================================
-   GRID
-   ========================================================== */
-
-.furniture-panel-grid {
-
-    display:
-        grid;
-
-    grid-template-columns:
-        repeat(
-            auto-fill,
-            minmax(
-                96px,
-                1fr
-            )
-        );
-
-    gap:
-        10px;
-
-    padding:
-        2px 16px 16px;
-}
-
-
-/* ==========================================================
-   FURNITURE CARD
-   ========================================================== */
-
-.furniture-card {
-
-    background:
-        #ffffff;
-
-    border:
-        1px solid
-        var(--ws-border);
-
-    border-radius:
-        10px;
-
-    overflow:
-        hidden;
-
-    transition:
-        border-color .15s ease,
-        box-shadow .15s ease,
-        transform .05s ease;
-}
-
-.furniture-card:hover {
-
-    border-color:
-        #d7d7d7;
-
-    box-shadow:
-        var(--ws-shadow-sm);
-}
-
-.furniture-card.active,
-.furniture-card.selected {
-
-    border-color:
-        var(--ws-accent);
-
-    box-shadow:
-        0 0 0 1px
-        var(--ws-accent);
-}
-
-
-/* ==========================================================
-   FOOTER
-   ========================================================== */
-
-.furniture-panel-footer {
-
-    display:
-        flex;
-
-    align-items:
-        center;
-
-    justify-content:
-        flex-end;
-
-    padding:
-        10px 14px;
-
-    border-top:
-        1px solid
-        var(--ws-border);
-
-    background:
-        #ffffff;
-}
-
-
-/* ==========================================================
-   APPLY BUTTON
-   ========================================================== */
-
-.furniture-apply-button {
-
-    display:
-        flex;
-
-    align-items:
-        center;
-
-    justify-content:
-        center;
-
-    gap:
-        6px;
-
-    min-width:
-        78px;
-
-    min-height:
-        34px;
-
-    padding:
-        8px 16px;
-
-    border:
-        none;
-
-    border-radius:
-        10px;
-
-    background:
-        var(--ws-accent);
-
-    color:
-        #ffffff;
-
-    font-size:
-        12px;
-
-    font-weight:
-        600;
-
-    cursor:
-        pointer;
-
-    box-shadow:
-        var(--ws-shadow-sm);
-
-    transition:
-        background .15s ease,
-        opacity .15s ease,
-        transform .05s ease;
-}
-
-.furniture-apply-button:hover:not(:disabled) {
-
-    background:
-        #f58a30;
-}
-
-.furniture-apply-button:active:not(:disabled) {
-
-    transform:
-        translateY(1px);
-}
-
-.furniture-apply-button:disabled {
-
-    opacity:
-        .5;
-
-    cursor:
-        not-allowed;
-}
-
-
-/* ==========================================================
-   FURNITURE CARD CONTENT
-   ========================================================== */
-
-.furniture-card img {
-
-    display:
-        block;
-
-    width:
-        100%;
-
-    height:
-        92px;
-
-    object-fit:
-        contain;
-
-    background:
-        #f8f8f8;
-}
-
-.furniture-card-info {
-
-    padding:
-        8px 9px;
-}
-
-.furniture-card-name {
-
-    display:
-        block;
-
-    overflow:
-        hidden;
-
-    white-space:
-        nowrap;
-
-    text-overflow:
-        ellipsis;
-
-    font-size:
-        11px;
-
-    font-weight:
-        600;
-
-    color:
-        var(--ws-text);
-}
-
-.furniture-card-price {
-
-    display:
-        block;
-
-    margin-top:
-        3px;
-
-    font-size:
-        10px;
-
-    color:
-        var(--ws-text-muted);
-}
-
-
-/* ==========================================================
-   DISABLED
-   ========================================================== */
-
-.furniture-panel button:disabled {
-
-    cursor:
-        not-allowed;
-}
 .furniture-panel {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
+    width: 100%;
+    padding: 0;
+    box-sizing: border-box;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
 }
 
-.furniture-search {
+.workspace .workspace-furniture-view .furniture-panel {
+    flex-direction: row;
+    gap: 10px;
+    height: 100%;
+    min-height: 0;
+}
+
+/* ----------------------------------------------------------
+   Category rail (icon + label)
+   ---------------------------------------------------------- */
+
+.furniture-category-nav {
     display: flex;
+    flex: 0 0 62px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    width: 62px;
+    min-height: 0;
+    padding: 1px 2px 1px 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-width: none;
+}
+
+.furniture-category-nav::-webkit-scrollbar {
+    display: none;
+}
+
+.furniture-category-button {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
     align-items: center;
-    gap: 8px;
-
+    justify-content: center;
+    gap: 3px;
     width: 100%;
+    min-height: 44px;
+    padding: 5px 2px;
     box-sizing: border-box;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    background: transparent;
+    color: rgba(0, 0, 0, 0.55);
+    cursor: pointer;
+    transition: color .15s ease, background .15s ease, border-color .15s ease;
+}
 
-    padding: 9px 11px;
+.furniture-category-label {
+    max-width: 100%;
+    overflow: hidden;
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 1.1;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 
-    border: 1px solid #d9d9d9;
-    border-radius: 8px;
+.furniture-category-button:hover {
+    background: rgba(0, 0, 0, 0.045);
+    color: #1b1b1b;
+}
 
-    background: #ffffff;
+.furniture-category-button.active {
+    border-color: rgba(27, 27, 27, 0.14);
+    background: rgba(27, 27, 27, 0.08);
+    color: #1b1b1b;
+}
+
+.furniture-category-button:focus-visible {
+    outline: 2px solid #1b1b1b;
+    outline-offset: 1px;
+}
+
+/* ----------------------------------------------------------
+   Main column
+   ---------------------------------------------------------- */
+
+.furniture-panel-main {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 7px;
+    min-width: 0;
+    min-height: 0;
 }
 
 .furniture-panel-search {
     position: relative;
     display: flex;
+    flex: 0 0 auto;
     align-items: center;
 }
 
 .furniture-panel-search-icon {
     position: absolute;
-    left: 12px;
+    left: 11px;
     color: var(--ws-text-muted, #8a8a8a);
     pointer-events: none;
 }
 
 .furniture-panel-search input {
     width: 100%;
-    background: var(--ws-input-bg, #ffffff);
+    height: 34px;
+    box-sizing: border-box;
+    padding: 0 30px 0 32px;
     border: 1px solid var(--ws-border, #e5e5e5);
-    border-radius: 12px;
-    padding: 10px 12px 10px 34px;
-    font-size: 13px;
+    border-radius: 10px;
+    background: var(--ws-input-bg, #ffffff);
     color: var(--ws-text, #1a1a1a);
+    font-size: 12px;
     outline: none;
     box-shadow: var(--ws-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.06));
     transition: border-color .15s ease, box-shadow .15s ease;
@@ -438,84 +140,58 @@
 }
 
 .furniture-panel-search input:focus {
-    border-color: var(--ws-accent, #f58a30);
-    box-shadow: 0 0 0 3px var(--ws-accent-soft, rgba(245, 138, 48, 0.2));
-}   
-
-.workspace .workspace-furniture-view .furniture-panel {
-    display: flex;
-    flex-direction: row;
-    gap: 14px;
-    width: 100%;
-    height: 100%;
-    min-height: 0;
+    border-color: var(--ws-accent, #1b1b1b);
+    box-shadow: 0 0 0 3px var(--ws-accent-soft, rgba(27, 27, 27, 0.12));
 }
 
-.furniture-category-nav {
-    display: flex;
-    flex: 0 0 92px;
-    width: 92px;
-    min-height: 0;
-    align-items: center;
-    flex-direction: column;
-    gap: 4px;
-    padding: 2px 6px;
-    overflow-x: hidden;
-    overflow-y: auto;
-}
-
-.furniture-category-button {
+.furniture-panel-search-clear {
+    position: absolute;
+    right: 6px;
     display: inline-flex;
-    flex: 0 0 42px;
-    width: 42px;
-    min-height: 42px;
     align-items: center;
     justify-content: center;
-    gap: 0;
+    width: 22px;
+    height: 22px;
     padding: 0;
-    border: 1px solid transparent;
-    border-radius: 10px;
+    border: 0;
+    border-radius: 6px;
     background: transparent;
-    color: rgba(0, 0, 0, 0.52);
+    color: var(--ws-text-muted, #8a8a8a);
     cursor: pointer;
-    transition: color .15s ease, background .15s ease, border-color .15s ease;
 }
 
-.furniture-category-button:hover {
-    background: rgba(0, 0, 0, 0.045);
-    color: #1b1b1b;
+.furniture-panel-search-clear:hover {
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--ws-text, #1a1a1a);
 }
 
-.furniture-category-button.active {
-    border-color: rgba(27, 27, 27, 0.12);
-    background: rgba(27, 27, 27, 0.07);
-    color: #1b1b1b;
-}
-
-.furniture-category-button:focus-visible {
-    outline: 2px solid #1b1b1b;
-    outline-offset: 1px;
-}
-
-.furniture-panel-main {
-    flex: 1 1 auto;
+.furniture-panel-status {
     display: flex;
-    flex-direction: column;
-    gap: 9px;
-    min-width: 0;
-    min-height: 0;
+    flex: 0 0 auto;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 0 2px;
+    font-size: 11px;
 }
 
-.furniture-panel-search {
-    position: relative;
-    flex: 0 0 auto;
+.furniture-panel-status strong {
+    color: var(--ws-text, #1a1a1a);
+    font-weight: 700;
 }
+
+.furniture-panel-status span {
+    color: var(--ws-text-muted, #8a8a8a);
+}
+
+/* ----------------------------------------------------------
+   Grid
+   ---------------------------------------------------------- */
 
 .furniture-panel-grid {
-    flex: 1 1 auto;
-    min-height: 0;
     display: flex;
+    flex: 1 1 auto;
     flex-direction: column;
+    min-height: 0;
     overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
@@ -532,25 +208,52 @@
     background: rgba(0, 0, 0, 0.16);
 }
 
-.furniture-panel-empty {
-    flex: 1 1 auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+.workspace .furniture-panel-grid-inner {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    align-content: start;
+    gap: 8px;
+    padding: 1px 5px 10px 1px;
 }
 
-.furniture-panel-actions {
-    flex: 0 0 auto;
+.furniture-panel-empty {
     display: flex;
-    justify-content: flex-end;
-    padding-top: 8px;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: center;
+    padding: 0 12px;
+    text-align: center;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+/* ----------------------------------------------------------
+   Footer
+   ---------------------------------------------------------- */
+
+.furniture-panel-actions {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-top: 7px;
     border-top: 1px solid rgba(0, 0, 0, 0.08);
 }
 
+.furniture-panel-hint {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--ws-text-muted, #8a8a8a);
+    font-size: 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .workspace .furniture-apply-button {
-    min-width: 106px;
-    min-height: 38px;
-    padding: 0 18px;
+    min-width: 84px;
+    min-height: 32px;
+    padding: 0 16px;
     border: 0;
     border-radius: 10px;
     background: #1b1b1b;
@@ -580,13 +283,65 @@
     outline-offset: 3px;
 }
 
-.workspace .furniture-panel-grid-inner {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    align-content: start;
-    gap: 8px;
-    padding: 1px 5px 10px 1px;
+.furniture-panel button:disabled {
+    cursor: not-allowed;
 }
+
+/* ----------------------------------------------------------
+   Legacy card styles (kept in case other components use them)
+   ---------------------------------------------------------- */
+
+.furniture-card {
+    overflow: hidden;
+    border: 1px solid var(--ws-border);
+    border-radius: 10px;
+    background: #ffffff;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.furniture-card:hover {
+    border-color: #d7d7d7;
+    box-shadow: var(--ws-shadow-sm);
+}
+
+.furniture-card.active,
+.furniture-card.selected {
+    border-color: var(--ws-accent);
+    box-shadow: 0 0 0 1px var(--ws-accent);
+}
+
+.furniture-card img {
+    display: block;
+    width: 100%;
+    height: 92px;
+    object-fit: contain;
+    background: #f8f8f8;
+}
+
+.furniture-card-info {
+    padding: 8px 9px;
+}
+
+.furniture-card-name {
+    display: block;
+    overflow: hidden;
+    color: var(--ws-text);
+    font-size: 11px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.furniture-card-price {
+    display: block;
+    margin-top: 3px;
+    color: var(--ws-text-muted);
+    font-size: 10px;
+}
+
+/* ----------------------------------------------------------
+   Responsive
+   ---------------------------------------------------------- */
 
 @media (max-width: 1000px) {
     .workspace .furniture-panel-grid-inner {
@@ -600,8 +355,8 @@
     }
 
     .furniture-category-nav {
-        flex-basis: 72px;
-        width: 72px;
+        flex-basis: 56px;
+        width: 56px;
     }
 
     .workspace .furniture-panel-grid-inner {
@@ -620,7 +375,6 @@
 
 @media (max-height: 640px) {
     .furniture-category-button {
-        width: 36px;
-        min-height: 36px;
+        min-height: 38px;
     }
 }

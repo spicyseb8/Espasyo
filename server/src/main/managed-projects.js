@@ -346,8 +346,8 @@ async function createDraft(req, res) {
         ? []
         : [assignmentReference(clientAccount.id)],
     });
-    await notifyProjectClient({ eventKey: `floor-plan-created:${draftId}`, eventType: "floor-plan-created", title: "Your floor plan is being prepared" }, draftId, ownerId, req.adminUser, `${req.adminUser.name || "An admin"} is currently preparing your floor plan. Please wait.`);
-    await notifyProjectAdmins({ eventKey: `floor-plan-created-admin:${draftId}`, eventType: "floor-plan-created", title: "Floor plan preparation started" }, draftId, req.adminUser, `${req.adminUser.name || "An admin"} started a floor plan for ${clientAccount.name || "a client"}.`);
+    await notifyProjectClient({ eventKey: `floor-plan-created:${draftId}`, eventType: "floor-plan-created", title: "Your floor plan is being prepared" }, draftId, ownerId, req.adminUser, `Admin ${req.adminUser.name || "Unknown"} is currently preparing your floor plan. Please wait.`);
+    await notifyProjectAdmins({ eventKey: `floor-plan-created-admin:${draftId}`, eventType: "floor-plan-created", title: "Floor plan preparation started" }, draftId, req.adminUser, `Admin ${req.adminUser.name || "Unknown"} started a floor plan for ${clientAccount.name || "a client"}.`);
     return res.status(201).json({ success: true, draft: { ...record, draftId } });
   } catch (error) {
     return sendFailure(res, error, "Unable to create the floor-plan draft.");
@@ -911,8 +911,8 @@ async function publishDraft(req, res) {
 
     if (result.alreadyPublished) await deleteStorageObject(uploadedPath);
     if (!result.alreadyPublished) {
-      await notifyProjectClient({ eventKey: `floor-plan-published:${result.projectId}`, eventType: "floor-plan-published", title: "Your floor plan is ready" }, result.projectId, ownerId, req.adminUser, `${req.adminUser.name || "Your admin"} created a project for you. Check it out!`);
-      await notifyProjectAdmins({ eventKey: `floor-plan-published-admin:${result.projectId}`, eventType: "floor-plan-published", title: "Floor plan published" }, result.projectId, req.adminUser, `${req.adminUser.name || "An admin"} published ${projectName} for a client.`);
+      await notifyProjectClient({ eventKey: `floor-plan-published:${result.projectId}`, eventType: "floor-plan-published", title: "Your floor plan is ready" }, result.projectId, ownerId, req.adminUser, `Admin ${req.adminUser.name || "Unknown"} created a project for you. Check it out!`);
+      await notifyProjectAdmins({ eventKey: `floor-plan-published-admin:${result.projectId}`, eventType: "floor-plan-published", title: "Floor plan published" }, result.projectId, req.adminUser, `Admin ${req.adminUser.name || "Unknown"} published ${projectName} for a client.`);
     }
     return res.json({ success: true, projectId: result.projectId, alreadyPublished: result.alreadyPublished });
   } catch (error) {
@@ -1060,11 +1060,11 @@ async function saveProjectStructure(req, res) {
       }
     });
     if (firstPublication) {
-      await notifyProjectClient({ eventKey: `floor-plan-published:${projectId}:${revision}`, eventType: "floor-plan-published", title: "Your floor plan is ready" }, projectId, ownerId, req.adminUser, `${req.adminUser.name || "Your admin"} created a project for you. Check it out!`);
-      await notifyProjectAdmins({ eventKey: `floor-plan-published-admin:${projectId}`, eventType: "floor-plan-published", title: "Floor plan published" }, projectId, req.adminUser, `${req.adminUser.name || "An admin"} published ${projectName} for a client.`);
+      await notifyProjectClient({ eventKey: `floor-plan-published:${projectId}:${revision}`, eventType: "floor-plan-published", title: "Your floor plan is ready" }, projectId, ownerId, req.adminUser, `Admin ${req.adminUser.name || "Unknown"} created a project for you. Check it out!`);
+      await notifyProjectAdmins({ eventKey: `floor-plan-published-admin:${projectId}`, eventType: "floor-plan-published", title: "Floor plan published" }, projectId, req.adminUser, `Admin ${req.adminUser.name || "Unknown"} published ${projectName} for a client.`);
     }
     if (projectRevision) {
-      await notifyProjectClient({ eventKey: `admin-project-revised:${projectId}:${revision}`, eventType: "project-revised", title: "Your project has been revised" }, projectId, ownerId, req.adminUser, `${req.adminUser.name || "Your admin"} made revisions to your project.`);
+      await notifyProjectClient({ eventKey: `admin-project-revised:${projectId}:${revision}`, eventType: "project-revised", title: "Your project has been revised" }, projectId, ownerId, req.adminUser, `Admin ${req.adminUser.name || "Unknown"} made revisions to your project.`);
     }
     return res.json({ success: true, projectId, revision, published });
   } catch (error) {
@@ -1228,7 +1228,7 @@ async function saveClientInterior(req, res) {
       });
     });
     const clientActor = await getClientActor(ownerId);
-    await notifyProjectAdmins({ eventKey: `client-project-updated:${projectId}:${versionId}`, eventType: "project-updated", title: "Client updated a project" }, projectId, clientActor, `${clientActor.name} updated ${projectName || projectId}.`);
+    await notifyProjectAdmins({ eventKey: `client-project-updated:${projectId}:${versionId}`, eventType: "project-updated", title: `${clientActor.name} updated a project` }, projectId, clientActor, `${clientActor.name} updated ${initial.projectName || projectId}.`);
     return res.json({ success: true, versionId, versionNumber });
   } catch (error) {
     if (uploadedPath) {
@@ -1256,7 +1256,7 @@ async function getClientProjectWorkflow(req, res) {
     const project = projectSnapshot.data();
     assertAssignedClient(project, assignmentSnapshot, projectId, ownerId);
     const clientActor = await getClientActor(ownerId);
-    await notifyProjectAdmins({ eventKey: `client-project-opened:${projectId}:${ownerId}:${getNotificationDateKey()}`, eventType: "project-opened", title: "Client opened a project" }, projectId, clientActor, `${clientActor.name} opened ${project.projectName || projectId}.`);
+    await notifyProjectAdmins({ eventKey: `client-project-opened:${projectId}:${ownerId}:${getNotificationDateKey()}`, eventType: "project-opened", title: `${clientActor.name} opened a project` }, projectId, clientActor, `${clientActor.name} opened ${project.projectName || projectId}.`);
     const submissionAgreement = project.submissionAgreement;
     return res.json({
       success: true,
@@ -2034,14 +2034,14 @@ async function reviewSubmittedProject(req, res) {
       eventKey: `admin-project-review:${action}:${projectId}:${result.submittedSubmissionId || "current"}`,
       eventType: action === "approve" ? "project-approved" : "project-revised",
       title: action === "approve" ? "Project approved" : "Project revision requested",
-    }, projectId, req.adminUser, `${req.adminUser.name || "An admin"} ${action === "approve" ? "approved" : "requested revisions to"} ${result.projectName || projectId}.`);
+    }, projectId, req.adminUser, `Admin ${req.adminUser.name || "Unknown"} ${action === "approve" ? "approved" : "requested revisions to"} ${result.projectName || projectId}.`);
     const recipient = result.ownerId;
     if (recipient) {
       await notifyProjectClient({
         eventKey: `${action === "approve" ? "project-approved" : "project-revised"}:${projectId}:${result.submittedSubmissionId || "current"}`,
         eventType: action === "approve" ? "project-approved" : "project-revised",
         title: action === "approve" ? "Your project is approved" : "Your project has been revised",
-      }, projectId, recipient, req.adminUser, action === "approve" ? `${req.adminUser.name || "Your admin"} approved your project.` : `${req.adminUser.name || "Your admin"} made revisions to your project.`);
+      }, projectId, recipient, req.adminUser, action === "approve" ? `Admin ${req.adminUser.name || "Unknown"} approved your project.` : `Admin ${req.adminUser.name || "Unknown"} made revisions to your project.`);
     }
     return res.json({ success: true, ...result });
   } catch (error) {

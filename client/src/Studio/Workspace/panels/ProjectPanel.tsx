@@ -1,5 +1,5 @@
-
 import {
+    useCallback,
     useEffect,
     useLayoutEffect,
     useRef,
@@ -225,6 +225,44 @@ function usesProjectIdFormat(
 }
 
 //======================================================
+// FORMAT THE DEADLINE FOR DISPLAY (Philippine time)
+//======================================================
+
+function formatDeadline(value: string | null): string {
+    if (!value) return "Not set yet";
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "Not set yet";
+
+    return new Intl.DateTimeFormat("en-PH", {
+        timeZone: "Asia/Manila",
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit"
+    }).format(date);
+}
+
+//======================================================
+// TOAST
+//======================================================
+
+type ToastType = "success" | "error" | "info";
+
+interface Toast {
+    id: number;
+    type: ToastType;
+    text: string;
+}
+
+const TOAST_DURATION_MS = 4500;
+
+// How long after the project loads we keep treating editor
+// changes as "initial loading" rather than user edits.
+const BASELINE_SETTLE_MS = 2000;
+
+//======================================================
 // PROJECT PANEL
 //======================================================
 
@@ -252,6 +290,8 @@ export default function ProjectPanel({ open }: Props) {
     const draftId =
         searchParams.get("draft");
 
+    // The project name is edited in the top bar. The panel only
+    // mirrors it so it can be saved with the project.
     const [
         projectName,
         setProjectName
@@ -267,10 +307,10 @@ export default function ProjectPanel({ open }: Props) {
         setSaving
     ] = useState(false);
 
-    const [
-        message,
-        setMessage
-    ] = useState("");
+    const [toast, setToast] = useState<Toast | null>(null);
+    const toastTimerRef = useRef<number | null>(null);
+    const toastIdRef = useRef(0);
+
     const saveHandlerRef = useRef<() => Promise<boolean>>(async () => false);
     const saveErrorRef = useRef("");
     const [projectStatus, setProjectStatus] = useState<string>("available");
@@ -284,6 +324,13 @@ export default function ProjectPanel({ open }: Props) {
     const [submitting, setSubmitting] = useState(false);
     const [submissionError, setSubmissionError] = useState("");
 
+    // Unsaved-change tracking
+    const [savedThisSession, setSavedThisSession] = useState(false);
+    const [currentSignature, setCurrentSignature] = useState<string | null>(null);
+    const [savedSignature, setSavedSignature] = useState<string | null>(null);
+    const loadedAtRef = useRef<number | null>(null);
+    const baselineLockedRef = useRef(false);
+
     const [
         deadlineLocked,
         setDeadlineLocked
@@ -296,6 +343,36 @@ export default function ProjectPanel({ open }: Props) {
 
     const isDraftProject =
         Boolean(draftId);
+
+    //==================================================
+    // TOASTS
+    //==================================================
+
+    const dismissToast = useCallback(() => {
+        if (toastTimerRef.current !== null) {
+            window.clearTimeout(toastTimerRef.current);
+            toastTimerRef.current = null;
+        }
+        setToast(null);
+    }, []);
+
+    const notify = useCallback((type: ToastType, text: string) => {
+        if (toastTimerRef.current !== null) {
+            window.clearTimeout(toastTimerRef.current);
+        }
+        toastIdRef.current += 1;
+        setToast({ id: toastIdRef.current, type, text });
+        toastTimerRef.current = window.setTimeout(() => {
+            toastTimerRef.current = null;
+            setToast(null);
+        }, TOAST_DURATION_MS);
+    }, []);
+
+    useEffect(() => () => {
+        if (toastTimerRef.current !== null) {
+            window.clearTimeout(toastTimerRef.current);
+        }
+    }, []);
 
     //==================================================
     // WATCH DEADLINE LOCK STATUS
@@ -409,6 +486,8 @@ export default function ProjectPanel({ open }: Props) {
                         currentDeadline
                     );
 
+                    setDeadline(currentDeadline);
+
                     setDeadlineLocked(
                         isDeadlinePassed(
                             currentDeadline
@@ -453,12 +532,17 @@ export default function ProjectPanel({ open }: Props) {
                         "Failed to load existing project:",
                         error
                     );
+                } finally {
+                    if (!cancelled) {
+                        loadedAtRef.current = Date.now();
+                    }
                 }
 
                 return;
             }
 
             if (!draftId) {
+                loadedAtRef.current = Date.now();
                 return;
             }
 
@@ -469,6 +553,7 @@ export default function ProjectPanel({ open }: Props) {
                 );
 
             if (!ownerId) {
+                loadedAtRef.current = Date.now();
                 return;
             }
 
@@ -478,6 +563,7 @@ export default function ProjectPanel({ open }: Props) {
             );
 
             if (!draft || cancelled) {
+                loadedAtRef.current = Date.now();
                 return;
             }
 
@@ -493,6 +579,7 @@ export default function ProjectPanel({ open }: Props) {
                 "espasyo_project_name",
                 draft.projectName
             );
+            loadedAtRef.current = Date.now();
         }
 
         void initializeProject();
@@ -505,6 +592,31 @@ export default function ProjectPanel({ open }: Props) {
         draftId,
         dispatch
     ]);
+
+    //==================================================
+    // KEEP THE NAME IN SYNC WITH THE TOP BAR
+    //==================================================
+
+    useEffect(() => {
+        const handleNameChange = (event: Event) => {
+            const detail = (event as CustomEvent<unknown>).detail;
+            if (typeof detail === "string") {
+                setProjectName(detail);
+            }
+        };
+
+        window.addEventListener(
+            "espasyo-project-name-change",
+            handleNameChange
+        );
+
+        return () => {
+            window.removeEventListener(
+                "espasyo-project-name-change",
+                handleNameChange
+            );
+        };
+    }, []);
 
     //==================================================
     // SAVE PROJECT NAME LOCALLY
@@ -534,55 +646,110 @@ export default function ProjectPanel({ open }: Props) {
     ]);
 
     //==================================================
+    // TRACK UNSAVED CHANGES
+    //
+    // A signature of everything that gets saved is compared
+    // against the signature captured at the last save.
+    //==================================================
+
+    const computeSignature = useCallback((): string => {
+        try {
+            return JSON.stringify({
+                project: createProjectData(
+                    state,
+                    "signature",
+                    projectName.trim(),
+                    auth.currentUser?.uid ?? ""
+                ),
+                wallFinishes: state.wallFinishes,
+                maximumBudget: state.projectBudget,
+                wallPaintSeparators: state.wallPaintSeparators,
+                floors: state.floors.map(floor => ({
+                    floorId: floor.floorId,
+                    wallPaintSeparators: floor.wallPaintSeparators
+                }))
+            });
+        } catch (error) {
+            console.error("Unable to compute the project signature:", error);
+            return "";
+        }
+    }, [state, projectName]);
+
+    useEffect(() => {
+        const timer = window.setTimeout(() => {
+            setCurrentSignature(computeSignature());
+        }, 400);
+
+        return () => window.clearTimeout(timer);
+    }, [computeSignature]);
+
+    // The first signatures after load are the saved design, not edits.
+    useEffect(() => {
+        if (currentSignature === null || baselineLockedRef.current) return;
+        if (loadedAtRef.current === null) return;
+
+        if (
+            savedSignature === null ||
+            Date.now() - loadedAtRef.current < BASELINE_SETTLE_MS
+        ) {
+            setSavedSignature(currentSignature);
+        }
+    }, [currentSignature, savedSignature]);
+
+    const hasUnsavedChanges =
+        currentSignature !== null &&
+        savedSignature !== null &&
+        currentSignature !== savedSignature;
+
+    //==================================================
     // SAVE PROJECT
     //==================================================
 
     async function handleSave(): Promise<boolean> {
         saveErrorRef.current = "";
+
+        const fail = (text: string): false => {
+            saveErrorRef.current = text;
+            notify("error", text);
+            return false;
+        };
+
         if (!canPerformProjectWrite(viewOnly, "save")) return false;
 
         const user =
             auth.currentUser;
 
         if (!user) {
-            setMessage(
-                "Please log in before saving a project."
-            );
-            saveErrorRef.current = "Please log in before saving a project.";
-
-            return false;
+            return fail("Please log in before saving a project.");
         }
         if (
             state.workflowType === "admin-managed" &&
             ["submitted", "approved"].includes(projectStatus)
         ) {
-            setMessage("This project is locked during review or after approval.");
-            saveErrorRef.current = "This project is locked during review or after approval.";
-            return false;
+            return fail("This project is locked during review or after approval.");
         }
 
         const trimmedName =
-            projectName.trim();
+            (
+                projectName.trim() ||
+                localStorage.getItem("espasyo_project_name")?.trim() ||
+                ""
+            );
 
         if (!trimmedName) {
-            setMessage(
-                "Please enter a project name."
-            );
-            saveErrorRef.current = "Please enter a project name.";
-
-            return false;
+            return fail("Please give your project a name in the top bar before saving.");
         }
 
         if (saving) {
             return false;
         }
 
+        // Capture what is being saved so edits made while the
+        // save is in flight are still detected afterwards.
+        const signatureAtSave = computeSignature();
+
         try {
             setSaving(true);
-
-            setMessage(
-                "Preparing project..."
-            );
 
             //==================================================
             // CHECK THE CURRENT FIRESTORE DEADLINE
@@ -663,12 +830,7 @@ export default function ProjectPanel({ open }: Props) {
                         currentDeadline
                     )
                 ) {
-                    setMessage(
-                        "Deadline passed. This project is read-only, and your changes cannot be saved."
-                    );
-                    saveErrorRef.current = "Deadline passed. This project is read-only, and your changes cannot be saved.";
-
-                    return false;
+                    return fail("Deadline passed. This project is read-only, and your changes cannot be saved.");
                 }
             }
 
@@ -676,12 +838,7 @@ export default function ProjectPanel({ open }: Props) {
             if (isProjectReadOnlyByDeadline()) {
                 setDeadlineLocked(true);
 
-                setMessage(
-                    "Deadline passed. This project is read-only, and your changes cannot be saved."
-                );
-                saveErrorRef.current = "Deadline passed. This project is read-only, and your changes cannot be saved.";
-
-                return false;
+                return fail("Deadline passed. This project is read-only, and your changes cannot be saved.");
             }
 
             // Existing projects keep their original ID.
@@ -737,7 +894,6 @@ export default function ProjectPanel({ open }: Props) {
                 ? async () => {
                     const path = `projects/${user.uid}/${currentProjectId}.jpg`;
                     const thumbnailRef = ref(storage, path);
-                    setMessage("Saving project thumbnail...");
                     await uploadString(thumbnailRef, thumbnailDataUrl, "data_url", {
                         contentType: "image/jpeg"
                     });
@@ -749,7 +905,6 @@ export default function ProjectPanel({ open }: Props) {
                 : undefined;
 
             if (isManaged) {
-                setMessage("Saving project...");
                 const interiorData = createManagedInteriorData(
                     state,
                     currentProjectId,
@@ -784,7 +939,6 @@ export default function ProjectPanel({ open }: Props) {
                 const json = JSON.stringify(projectData, null, 2);
                 const storagePath = `projects/${user.uid}/${currentProjectId}.json`;
                 const storageRef = ref(storage, storagePath);
-                setMessage("Saving project...");
                 await uploadString(storageRef, json, "raw", {
                     contentType: "application/json"
                 });
@@ -878,9 +1032,17 @@ export default function ProjectPanel({ open }: Props) {
                 );
             }
 
-            setMessage(
+            // Mark the saved state so the button becomes "Saved"
+            // until the next edit.
+            baselineLockedRef.current = true;
+            setCurrentSignature(signatureAtSave);
+            setSavedSignature(signatureAtSave);
+            setSavedThisSession(true);
+
+            notify(
+                "success",
                 isExistingProject
-                    ? "Project updated successfully."
+                    ? "Changes saved successfully."
                     : isDraftProject
                         ? "Draft saved successfully."
                         : "Project saved successfully."
@@ -905,19 +1067,11 @@ export default function ProjectPanel({ open }: Props) {
                     message?: string;
                 };
 
-            setMessage(
+            return fail(
                 `Save failed: ${
-                    firebaseError.code ??
-                    "unknown"
-                } - ${
-                    firebaseError.message ??
-                    "Unknown error"
-                }`
+                    firebaseError.code ?? "unknown"
+                } - ${firebaseError.message ?? "Unknown error"}`
             );
-            saveErrorRef.current = `Save failed: ${
-                firebaseError.code ?? "unknown"
-            } - ${firebaseError.message ?? "Unknown error"}`;
-            return false;
         } finally {
             setSaving(false);
         }
@@ -945,7 +1099,10 @@ export default function ProjectPanel({ open }: Props) {
             await submitClientProject(routeProjectId, publicConsentChecked);
             setProjectStatus("submitted");
             setShowSubmissionAgreement(false);
-            setMessage("Project submitted successfully. Editing is paused while an administrator reviews it.");
+            notify(
+                "success",
+                "Submitted for review. Editing is paused while an administrator reviews your design."
+            );
             dispatch({
                 type: "SET_PROJECT_LOCKED",
                 payload: true
@@ -956,7 +1113,9 @@ export default function ProjectPanel({ open }: Props) {
                 console.error("Project was submitted, but activity could not be refreshed:", activityError);
             }
         } catch (error) {
-            setSubmissionError(error instanceof Error ? error.message : "Unable to submit project.");
+            const text = error instanceof Error ? error.message : "Unable to submit project.";
+            setSubmissionError(text);
+            notify("error", text);
         } finally {
             setSubmitting(false);
         }
@@ -966,6 +1125,57 @@ export default function ProjectPanel({ open }: Props) {
         (state.workflowType === "admin-managed" && !deadline) ||
         projectStatus === "submitted" ||
         projectStatus === "approved";
+
+    //==================================================
+    // BUTTON STATE
+    //==================================================
+
+    const isManagedProject = state.workflowType === "admin-managed";
+
+    // Has this design been saved at least once?
+    const hasSavedDesign =
+        savedThisSession ||
+        (isExistingProject &&
+            (isManagedProject ? savedVersionNumber !== null : true));
+
+    // First click is always "Save Changes"; afterwards only when edited.
+    const canSave =
+        !projectLocked &&
+        !saving &&
+        (!hasSavedDesign || hasUnsavedChanges);
+
+    const saveState: "locked" | "saving" | "saved" | "idle" =
+        projectLocked
+            ? "locked"
+            : saving
+                ? "saving"
+                : canSave
+                    ? "idle"
+                    : "saved";
+
+    const saveLabel =
+        saveState === "locked"
+            ? "Read Only"
+            : saveState === "saving"
+                ? "Saving..."
+                : saveState === "saved"
+                    ? "Saved"
+                    : "Save Changes";
+
+    const canSubmit =
+        !projectLocked &&
+        !saving &&
+        hasSavedDesign &&
+        !hasUnsavedChanges;
+
+    const submitHint =
+        projectLocked || saving
+            ? ""
+            : !hasSavedDesign
+                ? "Save your design first to unlock submission."
+                : hasUnsavedChanges
+                    ? "Save your latest changes before submitting."
+                    : "";
 
     //==================================================
     // RENDER
@@ -979,126 +1189,144 @@ export default function ProjectPanel({ open }: Props) {
                 aria-label="Project panel"
                 hidden={!open}
             >
-                    <div className="project-panel-card">
-                        <h2 className="project-panel-heading">Project</h2>
-                        <p className="project-panel-description">
-                            Save your latest design or review its submission status.
-                        </p>
-
-                        {projectLocked && (
-                            <div
-                                role="alert"
-                                className="project-panel-notice project-panel-notice-warning"
-                            >
-                                {projectStatus === "submitted"
-                                    ? "Awaiting administrative review. Editing is paused."
-                                    : projectStatus === "approved"
-                                        ? "This project is approved and read-only."
-                                        : state.workflowType === "admin-managed" && !deadline
-                                            ? "Editing is paused until an administrator sets a deadline."
-                                            : "The project deadline has passed. Editing and saving are disabled."}
-                            </div>
+                <div className="project-panel-card">
+                    <div
+                        className="project-panel-deadline"
+                        data-state={
+                            !deadline
+                                ? "none"
+                                : deadlineLocked
+                                    ? "passed"
+                                    : "active"
+                        }
+                    >
+                        <span className="project-panel-deadline-label">Deadline</span>
+                        <span className="project-panel-deadline-value">
+                            {formatDeadline(deadline)}
+                        </span>
+                        {deadline && deadlineLocked && (
+                            <span className="project-panel-deadline-badge">Passed</span>
                         )}
-                        {projectStatus === "approved" && (
-                            <p className="project-panel-notice project-panel-notice-success">
-                                Approved as a professional-development reference, not construction authorization.
-                            </p>
-                        )}
-                        {revisionFeedback && projectStatus === "revision-requested" && (
-                            <div className="project-panel-notice project-panel-notice-warning">
-                                <strong>Revision requested:</strong> {revisionFeedback}
-                            </div>
-                        )}
+                    </div>
 
-                        <div className="setting-group">
-                            <label
-                                className="setting-label"
-                                htmlFor="project-name"
-                            >
-                                Project Name
-                            </label>
-
-                            <input
-                                id="project-name"
-                                className="setting-input project-name-input"
-                                type="text"
-                                placeholder="Enter project name"
-                                value={projectName}
-                                onChange={event =>
-                                    setProjectName(
-                                        event.target.value
-                                    )
-                                }
-                                readOnly={state.workflowType === "admin-managed"}
-                                aria-readonly={state.workflowType === "admin-managed"}
-                                disabled={
-                                    saving ||
-                                    projectLocked
-                                }
-                            />
-                        </div>
-
-                        <button
-                            type="button"
-                            className="confirm-layout-button"
-                            onClick={handleSave}
-                            disabled={
-                                saving ||
-                                projectLocked
-                            }
+                    {projectLocked && (
+                        <div
+                            role="alert"
+                            className="project-panel-notice project-panel-notice-warning"
                         >
-                            {
-                                projectLocked
-                                    ? "Read Only"
-                                    : saving
-                                        ? "Saving..."
-                                        : isExistingProject
-                                            ? "Save Changes"
-                                            : "Save Project"
-                            }
-                        </button>
-                        {state.workflowType === "admin-managed" &&
-                            isExistingProject &&
-                            projectStatus !== "submitted" &&
-                            projectStatus !== "approved" && (
+                            {projectStatus === "submitted"
+                                ? "Awaiting administrative review. Editing is paused."
+                                : projectStatus === "approved"
+                                    ? "This project is approved and read-only."
+                                    : isManagedProject && !deadline
+                                        ? "Editing is paused until an administrator sets a deadline."
+                                        : "The project deadline has passed. Editing and saving are disabled."}
+                        </div>
+                    )}
+                    {projectStatus === "approved" && (
+                        <p className="project-panel-notice project-panel-notice-success">
+                            Approved as a professional-development reference, not construction authorization.
+                        </p>
+                    )}
+                    {revisionFeedback && projectStatus === "revision-requested" && (
+                        <div className="project-panel-notice project-panel-notice-warning">
+                            <strong>Revision requested:</strong> {revisionFeedback}
+                        </div>
+                    )}
+
+                    <button
+                        type="button"
+                        className="project-save-button"
+                        data-state={saveState}
+                        onClick={() => void handleSave()}
+                        disabled={!canSave}
+                        aria-busy={saving}
+                    >
+                        <span className="project-save-button-icon" aria-hidden="true">
+                            {saveState === "saving" ? (
+                                <svg className="project-save-spinner" viewBox="0 0 24 24" fill="none">
+                                    <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity="0.28" strokeWidth="3" />
+                                    <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                                </svg>
+                            ) : saveState === "saved" ? (
+                                <svg viewBox="0 0 24 24" fill="none">
+                                    <path className="project-save-check" d="M5 12.5l4.5 4.5L19 7.5" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                            ) : saveState === "locked" ? (
+                                <svg viewBox="0 0 24 24" fill="none">
+                                    <rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="2" />
+                                    <path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                                </svg>
+                            ) : (
+                                <svg viewBox="0 0 24 24" fill="none">
+                                    <path d="M5 4h11l3 3v13H5V4z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+                                    <path d="M8 4v5h7V4M8 20v-6h8v6" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+                                </svg>
+                            )}
+                        </span>
+                        <span>{saveLabel}</span>
+                    </button>
+
+                    {isManagedProject &&
+                        isExistingProject &&
+                        projectStatus !== "submitted" &&
+                        projectStatus !== "approved" && (
+                            <>
                                 <button
                                     type="button"
-                                    className="confirm-layout-button project-panel-secondary-button"
+                                    className="project-submit-button"
                                     onClick={() => {
                                         setSubmissionAgreementChecked(false);
                                         setPublicConsentChecked(false);
                                         setSubmissionError("");
                                         setShowSubmissionAgreement(true);
                                     }}
-                                    disabled={projectLocked || saving || savedVersionNumber === null}
+                                    disabled={!canSubmit}
                                 >
                                     Submit for Review
                                 </button>
-                            )}
-                        {isExistingProject && !projectLocked && (
-                            <button
-                                type="button"
-                                className="project-panel-discard-button"
-                                disabled={saving}
-                                onClick={() => {
-                                    if (window.confirm("Discard unsaved changes and reload the last saved design?")) {
-                                        window.location.reload();
-                                    }
-                                }}
-                            >
-                                Discard Unsaved Changes
-                            </button>
+                                {submitHint && (
+                                    <p className="project-panel-hint">{submitHint}</p>
+                                )}
+                            </>
                         )}
-                        {message && (
-                            <div
-                                className="save-message"
-                                role="status"
-                            >
-                                {message}
-                            </div>
-                        )}
-                    </div>
+                </div>
             </aside>
+
+            {toast && (
+                <div
+                    key={toast.id}
+                    className={`project-toast project-toast-${toast.type}`}
+                    role={toast.type === "error" ? "alert" : "status"}
+                    aria-live={toast.type === "error" ? "assertive" : "polite"}
+                >
+                    <span className="project-toast-icon" aria-hidden="true">
+                        {toast.type === "success" ? (
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <path d="M5 12.5l4.5 4.5L19 7.5" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                        ) : (
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <path d="M12 7v6M12 17h.01" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />
+                            </svg>
+                        )}
+                    </span>
+                    <span className="project-toast-text">{toast.text}</span>
+                    <button
+                        type="button"
+                        className="project-toast-close"
+                        onClick={dismissToast}
+                        aria-label="Dismiss notification"
+                    >
+                        ×
+                    </button>
+                    <span
+                        className="project-toast-progress"
+                        style={{ animationDuration: `${TOAST_DURATION_MS}ms` }}
+                    />
+                </div>
+            )}
+
             {showSubmissionAgreement && (
                 <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/50 p-4">
                     <section role="dialog" aria-modal="true" aria-labelledby="submission-agreement-title" className="max-h-[min(90vh,760px)] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-8 text-[#1b1b1b] shadow-xl sm:p-10">

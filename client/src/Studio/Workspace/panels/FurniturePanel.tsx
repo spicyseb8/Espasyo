@@ -14,7 +14,7 @@ import {
     Toilet,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { Search, Star } from "lucide-react";
+import { Search, Star, X } from "lucide-react";
 import AssetCard from "./AssetCard";
 import type { Asset } from "../../../assets/Asset";
 import useEditor from "../../../context/editor/useEditor";
@@ -60,6 +60,8 @@ const FURNITURE_CATEGORIES = FURNITURE_CATEGORY_SECTIONS.filter(
     } => !ROOM_CATEGORIES.has(section.category)
 );
 
+type ActiveCategory = FurnitureAssetCategory | "all" | "favorites";
+
 function filterFurniture(
     assets: Asset[],
     query: string
@@ -87,7 +89,7 @@ export default function FurniturePanel({ onClose }: Props) {
     const [loadError, setLoadError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [activeCategory, setActiveCategory] =
-        useState<FurnitureAssetCategory | "all" | "favorites">("all");
+        useState<ActiveCategory>("all");
 
     useEffect(() => {
         let cancelled = false;
@@ -104,7 +106,7 @@ export default function FurniturePanel({ onClose }: Props) {
                 console.error("Failed to load Firebase furniture:", error);
 
                 if (!cancelled) {
-                    setLoadError("Unable to load furniture.");
+                    setLoadError("Unable to load furniture. Please try again.");
                 }
             })
             .finally(() => {
@@ -140,6 +142,20 @@ export default function FurniturePanel({ onClose }: Props) {
     const hasResults = visibleFurniture.length > 0;
     const canApply = state.selectedAsset?.type === BuildTool.Furniture;
 
+    const activeCategoryTitle =
+        activeCategory === "all"
+            ? "All furniture"
+            : activeCategory === "favorites"
+                ? "Favorites"
+                : FURNITURE_CATEGORIES.find(
+                    section => section.category === activeCategory
+                )?.title ?? "Furniture";
+
+    const emptyMessage =
+        activeCategory === "favorites" && !searchQuery.trim()
+            ? "No favorites yet. Tap the star on a piece to save it here."
+            : "No furniture found. Try a different search or category.";
+
     return (
         <div className="furniture-panel">
             <nav className="furniture-category-nav" aria-label="Furniture categories">
@@ -151,7 +167,8 @@ export default function FurniturePanel({ onClose }: Props) {
                     aria-pressed={activeCategory === "all"}
                     onClick={() => setActiveCategory("all")}
                 >
-                    <Grid2X2 size={17} aria-hidden="true" />
+                    <Grid2X2 size={16} aria-hidden="true" />
+                    <span className="furniture-category-label">All</span>
                 </button>
                 <button
                     type="button"
@@ -161,7 +178,8 @@ export default function FurniturePanel({ onClose }: Props) {
                     aria-pressed={activeCategory === "favorites"}
                     onClick={() => setActiveCategory("favorites")}
                 >
-                    <Star size={17} aria-hidden="true" />
+                    <Star size={16} aria-hidden="true" />
+                    <span className="furniture-category-label">Favorites</span>
                 </button>
                 {FURNITURE_CATEGORIES.map(section => {
                     const Icon = CATEGORY_ICONS[section.category];
@@ -175,7 +193,8 @@ export default function FurniturePanel({ onClose }: Props) {
                             aria-pressed={activeCategory === section.category}
                             onClick={() => setActiveCategory(section.category)}
                         >
-                            <Icon size={17} aria-hidden="true" />
+                            <Icon size={16} aria-hidden="true" />
+                            <span className="furniture-category-label">{section.title}</span>
                         </button>
                     );
                 })}
@@ -184,8 +203,9 @@ export default function FurniturePanel({ onClose }: Props) {
             <div className="furniture-panel-main">
                 <div className="furniture-panel-search">
                     <Search
-                        size={16}
+                        size={15}
                         className="furniture-panel-search-icon"
+                        aria-hidden="true"
                     />
                     <input
                         type="text"
@@ -194,7 +214,28 @@ export default function FurniturePanel({ onClose }: Props) {
                         onChange={e => setSearchQuery(e.target.value)}
                         aria-label="Search furniture"
                     />
+                    {searchQuery && (
+                        <button
+                            type="button"
+                            className="furniture-panel-search-clear"
+                            aria-label="Clear search"
+                            title="Clear search"
+                            onClick={() => setSearchQuery("")}
+                        >
+                            <X size={14} aria-hidden="true" />
+                        </button>
+                    )}
                 </div>
+
+                {!loading && !loadError && (
+                    <div className="furniture-panel-status" aria-live="polite">
+                        <strong>{activeCategoryTitle}</strong>
+                        <span>
+                            {visibleFurniture.length}{" "}
+                            {visibleFurniture.length === 1 ? "item" : "items"}
+                        </span>
+                    </div>
+                )}
 
                 {loading && (
                     <p className="asset-empty furniture-panel-empty">
@@ -230,11 +271,16 @@ export default function FurniturePanel({ onClose }: Props) {
 
                 {!loading && !loadError && !hasResults && (
                     <p className="asset-empty furniture-panel-empty">
-                        No furniture found.
+                        {emptyMessage}
                     </p>
                 )}
 
                 <footer className="furniture-panel-actions">
+                    <span className="furniture-panel-hint">
+                        {canApply
+                            ? "Ready to place in your design"
+                            : "Select a piece to place it"}
+                    </span>
                     <button
                         type="button"
                         className="furniture-apply-button"
