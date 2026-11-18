@@ -4,10 +4,12 @@ import {
   createNotification,
   formatNotificationId,
   getNotificationDateKey,
+  upsertNotification,
 } from "./notification-service.js";
 
 function createMemoryDb() {
   const records = new Map();
+  let transactionQueue = Promise.resolve();
   const ref = (path) => ({
     path,
     async get() { return { exists: records.has(path), data: () => records.get(path) }; },
@@ -17,18 +19,26 @@ function createMemoryDb() {
     records,
     collection(name) { return { doc: (id) => ref(`${name}/${id}`) }; },
     async runTransaction(callback) {
+      let release;
+      const previousTransaction = transactionQueue;
+      transactionQueue = new Promise(resolve => { release = resolve; });
+      await previousTransaction;
       const writes = [];
       const transaction = {
         async get(reference) { return { exists: records.has(reference.path), data: () => records.get(reference.path) }; },
-        create(reference, value) { writes.push([reference.path, value, false]); },
-        set(reference, value, options) { writes.push([reference.path, value, options?.merge === true]); },
+        create(reference, value) { writes.push([reference.path, value, "create"]); },
+        set(reference, value, options) { writes.push([reference.path, value, options?.merge === true ? "merge" : "set"]); },
       };
-      const result = await callback(transaction);
-      for (const [path, value, merge] of writes) {
-        if (!merge && records.has(path)) throw new Error(`Already exists: ${path}`);
-        records.set(path, merge ? { ...records.get(path), ...value } : value);
+      try {
+        const result = await callback(transaction);
+        for (const [path, value, operation] of writes) {
+          if (operation === "create" && records.has(path)) throw new Error(`Already exists: ${path}`);
+          records.set(path, operation === "merge" ? { ...records.get(path), ...value } : value);
+        }
+        return result;
+      } finally {
+        release();
       }
-      return result;
     },
   };
   return db;
@@ -70,4 +80,83 @@ test("separate successful events receive collision-free readable IDs", async () 
   const second = await createNotification(db, payload("asset-2"));
   assert.notEqual(first, second);
   assert.equal(db.records.get(`notificationCounters/${first.slice(4, 12)}`).lastSequence, 2);
+});
+
+test("grouped client notifications count only while unread and split by client, project, and action", async () => {
+  const db = createMemoryDb();
+  const payload = (eventKey, type, clientId, projectId, recipients = ["admin-a", "admin-b"]) => ({
+    eventKey, type, clientId, clientName: `Client ${clientId}`,
+    projectId, projectName: `Project ${projectId}`, recipients,
+  });
+
+  const notificationId = await upsertNotification(db, payload("update-1", "project_updated", "client-a", "project-1"));
+  const notificationPath = `notifications/${notificationId}`;
+  assert.equal(notificationId, "client-a_project-1_project_updated");
+  assert.equal(db.records.get(notificationPath).count, 1);
+  assert.equal(db.records.get(notificationPath).clientName, "Client client-a");
+  assert.equal(db.records.get(`${notificationPath}/recipients/admin-a`).read, false);
+  await upsertNotification(db, payload("update-1", "project_updated", "client-a", "project-1"));
+  assert.equal(db.records.get(notificationPath).count, 1);
+
+  db.records.set(`${notificationPath}/recipients/admin-a`, {
+    ...db.records.get(`${notificationPath}/recipients/admin-a`),
+    read: true,
+    isRead: true,
+  });
+  await upsertNotification(db, payload("update-2", "project_updated", "client-a", "project-1"));
+  assert.equal(db.records.get(notificationPath).count, 2);
+  assert.equal(db.records.get(notificationPath).message, "Client client-a updated Project project-1 (2 updates).");
+  assert.equal(db.records.get(`${notificationPath}/recipients/admin-a`).read, false);
+
+  await upsertNotification(db, payload("update-3", "project_updated", "client-a", "project-1"));
+  await upsertNotification(db, payload("update-4", "project_updated", "client-a", "project-1"));
+  await upsertNotification(db, payload("update-5", "project_updated", "client-a", "project-1"));
+  assert.equal(db.records.get(notificationPath).count, 5);
+
+  db.records.set(`${notificationPath}/recipients/admin-a`, {
+    ...db.records.get(`${notificationPath}/recipients/admin-a`),
+    read: true,
+    isRead: true,
+  });
+  db.records.set(`${notificationPath}/recipients/admin-b`, {
+    ...db.records.get(`${notificationPath}/recipients/admin-b`),
+    read: true,
+    isRead: true,
+  });
+  await upsertNotification(db, payload("update-after-read", "project_updated", "client-a", "project-1"));
+  assert.equal(db.records.get(notificationPath).count, 1);
+  assert.equal(db.records.get(notificationPath).message, "Client client-a updated Project project-1.");
+
+  await upsertNotification(db, payload("project-2", "project_updated", "client-a", "project-2"));
+  await upsertNotification(db, payload("client-b", "project_updated", "client-b", "project-1"));
+  await upsertNotification(db, payload("opened", "project_opened", "client-a", "project-1"));
+  await upsertNotification(db, payload("opened-again", "project_opened", "client-a", "project-1"));
+  assert.equal(db.records.get("notifications/client-a_project-2_project_updated").count, 1);
+  assert.equal(db.records.get("notifications/client-b_project-1_project_updated").count, 1);
+  const openedNotification = db.records.get("notifications/client-a_project-1_project_opened");
+  assert.equal(openedNotification.count, 2);
+  assert.equal(openedNotification.message, "Client client-a opened Project project-1 (2 opens).");
+
+  const legacyNotificationId = await upsertNotification(
+    db,
+    payload("legacy-first", "project_updated", "client-c", "project-1"),
+  );
+  delete db.records.get(`notifications/${legacyNotificationId}`).count;
+  await upsertNotification(db, payload("legacy-next", "project_updated", "client-c", "project-1"));
+  assert.equal(db.records.get(`notifications/${legacyNotificationId}`).count, 2);
+});
+
+test("simultaneous client updates atomically increment the grouped count", async () => {
+  const db = createMemoryDb();
+  const payload = eventKey => ({
+    eventKey, type: "project_updated", clientId: "client-a", clientName: "Client A",
+    projectId: "project-1", projectName: "Project One", recipients: ["admin-a"],
+  });
+
+  await Promise.all([
+    upsertNotification(db, payload("concurrent-1")),
+    upsertNotification(db, payload("concurrent-2")),
+    upsertNotification(db, payload("concurrent-3")),
+  ]);
+  assert.equal(db.records.get("notifications/client-a_project-1_project_updated").count, 3);
 });

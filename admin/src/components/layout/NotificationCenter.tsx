@@ -1,11 +1,47 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { collectionGroup, doc, onSnapshot, query, serverTimestamp, updateDoc, where } from "firebase/firestore";
+import { collectionGroup, doc, onSnapshot, query, serverTimestamp, updateDoc, where, writeBatch } from "firebase/firestore";
 import { AlertCircle, Bell, BellOff, CheckCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { db } from "@/firebase/firebase";
 
-type NotificationRecord = { notificationId: string; recipientUid: string; title: string; message: string; actorName?: string; category: string; targetType?: string; targetId?: string; projectId?: string; assetType?: string; read: boolean; createdAt?: { toDate?: () => Date } };
+type NotificationRecord = { notificationId: string; recipientUid: string; title: string; message: string; actorName?: string; clientName?: string; eventType?: string; type?: string; category: string; targetType?: string; targetId?: string; projectId?: string; assetType?: string; read?: boolean; isRead?: boolean; count?: number; createdAt?: { toDate?: () => Date }; lastActivityAt?: { toDate?: () => Date } };
 const categories = ["All", "Accounts", "Projects", "Assets", "Deadlines"];
+
+function isRead(item: NotificationRecord) {
+  return item.read ?? item.isRead ?? false;
+}
+
+function getActivityDate(item: NotificationRecord) {
+  return item.lastActivityAt?.toDate?.() ?? item.createdAt?.toDate?.();
+}
+
+function isClientProjectActivity(item: NotificationRecord) {
+  return ["project_updated", "project_opened"].includes(item.type ?? "") ||
+    ["project-updated", "project-opened"].includes(item.eventType ?? "");
+}
+
+function getClientName(item: NotificationRecord) {
+  const name = item.clientName?.trim() || item.actorName?.trim();
+  return name && !/^(client|unknown client|espasyo)$/i.test(name)
+    ? name
+    : "Unknown client";
+}
+
+function getNotificationTitle(item: NotificationRecord) {
+  if (!isClientProjectActivity(item)) return item.title;
+  const action = item.type === "project_opened" || item.eventType === "project-opened"
+    ? "opened"
+    : "updated";
+  return `${getClientName(item)} ${action} a project`;
+}
+
+function getNotificationMessage(item: NotificationRecord) {
+  if (!isClientProjectActivity(item)) return item.message;
+  const clientName = getClientName(item);
+  if (item.message.startsWith(`${clientName} `)) return item.message;
+  const match = item.message.match(/^(?:client|unknown client|espasyo)\s+(updated|opened)\s+(.+)$/i);
+  return match ? `${clientName} ${match[1].toLowerCase()} ${match[2]}` : item.message;
+}
 
 function timeAgo(date?: Date) {
   if (!date) return "Just now";
@@ -35,7 +71,9 @@ export default function NotificationCenter({ uid }: { uid: string }) {
     return onSnapshot(
       query(collectionGroup(db, "recipients"), where("recipientUid", "==", uid)),
       snapshot => {
-        setItems(snapshot.docs.map(value => value.data() as NotificationRecord).sort((a, b) => (b.createdAt?.toDate?.().getTime() || 0) - (a.createdAt?.toDate?.().getTime() || 0)));
+        setItems(snapshot.docs.map(value => value.data() as NotificationRecord).sort((a, b) =>
+          (getActivityDate(b)?.getTime() || 0) - (getActivityDate(a)?.getTime() || 0),
+        ));
         setLoadState("loaded");
       },
       error => {
@@ -55,18 +93,35 @@ export default function NotificationCenter({ uid }: { uid: string }) {
     return () => { document.removeEventListener("mousedown", onPointer); document.removeEventListener("keydown", onKey); };
   }, [open]);
 
-  const unread = items.filter(item => !item.read).length;
+  const unread = items.filter(item => !isRead(item)).length;
   const visible = useMemo(
-    () => items.filter(item => (category === "All" || item.category === category) && (tab === "all" || !item.read)),
+    () => items.filter(item => (category === "All" || item.category === category) && (tab === "all" || !isRead(item))),
     [items, category, tab]
   );
 
   const markRead = async (item: NotificationRecord) => {
-    if (item.read) return;
-    try { await updateDoc(doc(db, "notifications", item.notificationId, "recipients", uid), { read: true, readAt: serverTimestamp() }); }
+    if (isRead(item)) return;
+    try { await updateDoc(doc(db, "notifications", item.notificationId, "recipients", uid), { read: true, isRead: true, readAt: serverTimestamp() }); }
     catch (error) { console.error("Unable to mark notification as read:", error); }
   };
-  const markAll = () => Promise.all(items.filter(item => !item.read).map(markRead));
+  const markAll = async () => {
+    const unreadItems = items.filter(item => !isRead(item));
+    try {
+      for (let offset = 0; offset < unreadItems.length; offset += 500) {
+        const batch = writeBatch(db);
+        unreadItems.slice(offset, offset + 500).forEach(item => {
+          batch.update(doc(db, "notifications", item.notificationId, "recipients", uid), {
+            read: true,
+            isRead: true,
+            readAt: serverTimestamp(),
+          });
+        });
+        await batch.commit();
+      }
+    } catch (error) {
+      console.error("Unable to mark all notifications as read:", error);
+    }
+  };
 
   const openItem = async (item: NotificationRecord) => {
     await markRead(item); setOpen(false);
@@ -119,13 +174,13 @@ export default function NotificationCenter({ uid }: { uid: string }) {
           </div>
         ) : visible.map(item => (
           <button key={item.notificationId} type="button" onClick={() => void openItem(item)}
-            className={`flex w-full items-start justify-between gap-3 border-b border-border px-4 py-3 text-left transition-colors last:border-b-0 ${item.read ? "hover:bg-muted/50" : "bg-muted/40 hover:bg-muted/70"}`}>
+            className={`flex w-full items-start justify-between gap-3 border-b border-border px-4 py-3 text-left transition-colors last:border-b-0 ${isRead(item) ? "hover:bg-muted/50" : "bg-muted/40 hover:bg-muted/70"}`}>
             <span className="grid min-w-0 gap-0.5">
-              <strong className={`text-sm ${item.read ? "font-normal text-muted-foreground" : "font-semibold text-foreground"}`}>{item.title}</strong>
-              <span className={`line-clamp-2 break-words text-xs ${item.read ? "text-muted-foreground/80" : "text-muted-foreground"}`}>{item.message}</span>
-              <small className="mt-0.5 text-[11px] text-muted-foreground/70">{timeAgo(item.createdAt?.toDate?.())}</small>
+              <strong className={`text-sm ${isRead(item) ? "font-normal text-muted-foreground" : "font-semibold text-foreground"}`}>{getNotificationTitle(item)}</strong>
+              <span className={`line-clamp-2 break-words text-xs ${isRead(item) ? "text-muted-foreground/80" : "text-muted-foreground"}`}>{getNotificationMessage(item)}</span>
+              <small className="mt-0.5 text-[11px] text-muted-foreground/70">{timeAgo(getActivityDate(item))}</small>
             </span>
-            {!item.read && <span role="img" aria-label="Unread" className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-red-600" />}
+            {!isRead(item) && <span role="img" aria-label="Unread" className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-red-600" />}
           </button>
         ))}
       </div>

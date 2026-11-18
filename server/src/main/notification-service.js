@@ -70,6 +70,92 @@ export async function getAdminRecipientUids(db, roles = ["admin", "superadmin"])
     .filter(Boolean))];
 }
 
+function getGroupedNotificationId(clientId, projectId, type) {
+  const encodePart = (value) => encodeURIComponent(value).replaceAll("_", "%5F");
+  return `${encodePart(clientId)}_${encodePart(projectId)}_${type}`;
+}
+
+export async function upsertNotification(db, {
+  eventKey, type, clientId, clientName, projectId, projectName, recipients = [],
+}) {
+  if (
+    typeof eventKey !== "string" || !eventKey ||
+    !["project_updated", "project_opened"].includes(type) ||
+    typeof clientId !== "string" || !clientId ||
+    typeof projectId !== "string" || !projectId
+  ) {
+    throw new Error("Grouped client notifications require an event key, client, project, and supported type.");
+  }
+  const uniqueRecipients = [...new Set(recipients.filter((uid) => typeof uid === "string" && uid))];
+  if (!uniqueRecipients.length) return null;
+
+  const notificationId = getGroupedNotificationId(clientId, projectId, type);
+  const notificationRef = db.collection(COLLECTION).doc(notificationId);
+  const eventKeyRef = db.collection(EVENT_KEYS).doc(notificationEventKeyId(eventKey));
+  const suffix = type === "project_updated" ? "updated" : "opened";
+  const countLabel = type === "project_updated" ? "updates" : "opens";
+  const title = `${clientName} ${suffix} a project`;
+  const projectDescription = `${clientName} ${suffix} ${projectName}.`;
+
+  return db.runTransaction(async (transaction) => {
+    const recipientRefs = uniqueRecipients.map((uid) => notificationRef.collection("recipients").doc(uid));
+    const [eventKeySnapshot, notificationSnapshot, recipientSnapshots] = await Promise.all([
+      transaction.get(eventKeyRef),
+      transaction.get(notificationRef),
+      Promise.all(recipientRefs.map((ref) => transaction.get(ref))),
+    ]);
+    if (eventKeySnapshot.exists) return eventKeySnapshot.data().notificationId;
+
+    const hasUnreadRecipient = recipientSnapshots.some(snapshot =>
+      snapshot.exists && snapshot.data().read !== true && snapshot.data().isRead !== true,
+    );
+    const count = hasUnreadRecipient
+      ? Math.max(1, Number(notificationSnapshot.data()?.count) || 1) + 1
+      : 1;
+    const message = count > 1
+      ? `${clientName} ${suffix} ${projectName} (${count} ${countLabel}).`
+      : projectDescription;
+    const now = FieldValue.serverTimestamp();
+    const record = {
+      notificationId,
+      eventType: type === "project_updated" ? "project-updated" : "project-opened",
+      type,
+      category: "Projects",
+      title,
+      message,
+      clientId,
+      clientName,
+      actorUid: clientId,
+      actorName: clientName,
+      projectId,
+      projectName,
+      targetType: "project",
+      targetId: projectId,
+      count,
+      lastActivityAt: now,
+    };
+
+    if (hasUnreadRecipient) {
+      transaction.set(notificationRef, record, { merge: true });
+    } else {
+      transaction.set(notificationRef, { ...record, createdAt: now });
+    }
+    transaction.create(eventKeyRef, { notificationId, createdAt: now });
+    recipientRefs.forEach((ref, index) => {
+      const recipientRecord = {
+        ...record,
+        recipientUid: uniqueRecipients[index],
+        read: false,
+        isRead: false,
+        readAt: null,
+        ...(hasUnreadRecipient ? {} : { createdAt: now }),
+      };
+      transaction.set(ref, recipientRecord, { merge: true });
+    });
+    return notificationId;
+  });
+}
+
 export async function createNotification(db, payload) {
   const { eventKey, ...event } = payload;
   const recipients = [...new Set((event.recipients || []).filter((uid) => typeof uid === "string" && uid))];

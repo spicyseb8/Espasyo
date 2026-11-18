@@ -8,7 +8,7 @@ import {
   adminStorage,
 } from "../firebase-admin.js";
 import { requireRole } from "./authorization.js";
-import { createNotification, getAdminRecipientUids, getNotificationDateKey } from "./notification-service.js";
+import { createNotification, getAdminRecipientUids, upsertNotification } from "./notification-service.js";
 import { findClientAccountByIdentifier } from "./client-account.js";
 import { createReservedFloorPlanDraft } from "./floorplan-reservation.js";
 import {
@@ -63,13 +63,18 @@ const MAX_STRUCTURE_BYTES = 10 * 1024 * 1024;
 const OWNER_PROJECT_CONFLICT =
   "This client already has a project or assignment. Open the existing project instead.";
 
-async function sendWorkflowNotification({ eventKey, eventType, category = "Projects", title, message, actor, projectId, recipients }) {
+async function sendWorkflowNotification({ eventKey, eventType, category = "Projects", title, message, actor, projectId, recipients, clientAction }) {
   try {
-    await createNotification(adminDb, {
+    const notification = {
       eventKey, eventType, category, title, message,
       actorUid: actor?.uid || null, actorName: actor?.name || "Espasyo",
       targetType: "project", targetId: projectId, projectId, recipients,
-    });
+    };
+    if (clientAction) {
+      await upsertNotification(adminDb, { eventKey, recipients, projectId, ...clientAction });
+    } else {
+      await createNotification(adminDb, notification);
+    }
   } catch (error) {
     console.error(`Project ${eventType} succeeded, but its notification could not be saved:`, error);
   }
@@ -86,9 +91,21 @@ async function notifyProjectClient(event, projectId, ownerId, actor, message) {
 async function getClientActor(uid) {
   try {
     const profile = await findClientAccountByIdentifier(adminDb, uid);
-    return { uid, name: profile?.full_name || profile?.name || "Client" };
+    const data = profile?.data || {};
+    const fallbackId = profile?.id || uid;
+    const shortId = fallbackId.length > 6 ? fallbackId.slice(-6) : fallbackId;
+    return {
+      uid,
+      name: normalizedString(data.full_name) ||
+        normalizedString(data.name) ||
+        normalizedString(data.companyName) ||
+        normalizedString(data.company_name) ||
+        normalizedString(data.email) ||
+        `Client #${shortId}`,
+    };
   } catch {
-    return { uid, name: "Client" };
+    const shortId = uid.length > 6 ? uid.slice(-6) : uid;
+    return { uid, name: `Client #${shortId}` };
   }
 }
 
@@ -1228,7 +1245,18 @@ async function saveClientInterior(req, res) {
       });
     });
     const clientActor = await getClientActor(ownerId);
-    await notifyProjectAdmins({ eventKey: `client-project-updated:${projectId}:${versionId}`, eventType: "project-updated", title: `${clientActor.name} updated a project` }, projectId, clientActor, `${clientActor.name} updated ${initial.projectName || projectId}.`);
+    const projectName = normalizedString(initial.projectName) || projectId;
+    await notifyProjectAdmins({
+      eventKey: `client-project-updated:${projectId}:${versionId}`,
+      eventType: "project-updated",
+      title: `${clientActor.name} updated a project`,
+      clientAction: {
+        type: "project_updated",
+        clientId: ownerId,
+        clientName: clientActor.name,
+        projectName,
+      },
+    }, projectId, clientActor, `${clientActor.name} updated ${projectName}.`);
     return res.json({ success: true, versionId, versionNumber });
   } catch (error) {
     if (uploadedPath) {
@@ -1256,7 +1284,18 @@ async function getClientProjectWorkflow(req, res) {
     const project = projectSnapshot.data();
     assertAssignedClient(project, assignmentSnapshot, projectId, ownerId);
     const clientActor = await getClientActor(ownerId);
-    await notifyProjectAdmins({ eventKey: `client-project-opened:${projectId}:${ownerId}:${getNotificationDateKey()}`, eventType: "project-opened", title: `${clientActor.name} opened a project` }, projectId, clientActor, `${clientActor.name} opened ${project.projectName || projectId}.`);
+    const projectName = normalizedString(project.projectName) || projectId;
+    await notifyProjectAdmins({
+      eventKey: `client-project-opened:${projectId}:${ownerId}:${randomUUID()}`,
+      eventType: "project-opened",
+      title: `${clientActor.name} opened a project`,
+      clientAction: {
+        type: "project_opened",
+        clientId: ownerId,
+        clientName: clientActor.name,
+        projectName,
+      },
+    }, projectId, clientActor, `${clientActor.name} opened ${projectName}.`);
     const submissionAgreement = project.submissionAgreement;
     return res.json({
       success: true,
