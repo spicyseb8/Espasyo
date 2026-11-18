@@ -27,11 +27,13 @@ import {
   getUserProfileByAuthUid,
 } from "../firebase/user";
 import { saveUserProfile } from "../services/userSettings";
-import { LegalDocumentContent } from "../components/legal/LegalDocumentContent";
+import {
+  LegalDocumentContent,
+  type LegalDocument,
+} from "../components/legal/LegalDocumentContent";
 import PasswordField from "../components/auth/PasswordField";
 
 type SettingsSection = "account" | "legal";
-type LegalDocument = "terms" | "privacy";
 
 const SECTIONS: {
   id: SettingsSection;
@@ -393,6 +395,8 @@ function LegalSettings() {
         {([
           ["terms", "Terms of Service"],
           ["privacy", "Privacy Policy"],
+          ["project-participation", "Participation Agreement"],
+          ["project-adjustment", "Adjustment Policy"],
         ] as const).map(([value, label]) => (
           <button
             key={value}

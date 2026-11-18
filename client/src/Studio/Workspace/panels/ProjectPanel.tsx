@@ -319,6 +319,7 @@ export default function ProjectPanel({ open }: Props) {
     const [savedVersionNumber, setSavedVersionNumber] = useState<number | null>(null);
     const [, setProjectActivities] = useState<ProjectActivity[]>([]);
     const [showSubmissionAgreement, setShowSubmissionAgreement] = useState(false);
+    const [showAdjustmentPolicy, setShowAdjustmentPolicy] = useState(false);
     const [submissionAgreementChecked, setSubmissionAgreementChecked] = useState(false);
     const [publicConsentChecked, setPublicConsentChecked] = useState(false);
     const [submitting, setSubmitting] = useState(false);
@@ -1285,6 +1286,13 @@ export default function ProjectPanel({ open }: Props) {
                                 >
                                     Submit for Review
                                 </button>
+                                <button
+                                    type="button"
+                                    className="mt-2 text-xs font-medium underline underline-offset-4 text-black/70 hover:text-black"
+                                    onClick={() => setShowAdjustmentPolicy(true)}
+                                >
+                                    Read project adjustment policy
+                                </button>
                                 {submitHint && (
                                     <p className="project-panel-hint">{submitHint}</p>
                                 )}
@@ -1327,23 +1335,80 @@ export default function ProjectPanel({ open }: Props) {
                 </div>
             )}
 
+            {showAdjustmentPolicy && (
+                <div className="fixed inset-0 z-[100001] flex items-center justify-center bg-black/50 p-4">
+                    <section role="dialog" aria-modal="true" aria-labelledby="adjustment-policy-title" className="max-h-[min(90vh,760px)] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white p-8 text-[#1b1b1b] shadow-xl sm:p-10">
+                        <div className="flex items-start justify-between gap-4">
+                            <h2 id="adjustment-policy-title" className="text-xl font-semibold">Project Adjustment and Resolution Policy</h2>
+                            <button type="button" className="text-sm text-black/60 hover:text-black" onClick={() => setShowAdjustmentPolicy(false)} aria-label="Close project adjustment policy">
+                                Close
+                            </button>
+                        </div>
+                        <div className="mt-5 text-sm leading-6 text-black/75">
+                            <p className="mb-4">This policy explains how schedule changes, temporary pauses, and project adjustments are handled while the design remains under review or coordination.</p>
+                            <p className="mb-4">A request does not automatically become an approved change, and a missed deadline does not automatically cancel the project. The Company may approve, reject, request clarification, or propose a different arrangement after reviewing the circumstances.</p>
+                            <p className="mb-4">If the project becomes inactive, the Company may contact the client and consider a revised deadline, a temporary pause, administrative review, or a formal discontinuation process. Material changes must be documented before they are treated as effective.</p>
+                            <p className="mb-4">Technical issues, schedule delays, and platform interruptions may justify an adjustment, but the issue must be reviewed in context rather than treated as ordinary inactivity.</p>
+                        </div>
+                    </section>
+                </div>
+            )}
+
             {showSubmissionAgreement && (
                 <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/50 p-4">
                     <section role="dialog" aria-modal="true" aria-labelledby="submission-agreement-title" className="max-h-[min(90vh,760px)] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-8 text-[#1b1b1b] shadow-xl sm:p-10">
-                        <h2 id="submission-agreement-title" className="text-xl font-semibold">Project Submission Agreement</h2>
-                        <p className="mt-3 text-sm leading-6 text-black/65">
-                            I have completed and reviewed my proposed design and am submitting it for administrative evaluation.
-                            I understand that the construction company may request revisions, and that this proposal is a reference
-                            for professional development—not approval for construction. Final specifications, quotations,
-                            construction agreements, and contractual obligations are handled separately with the company.
-                        </p>
+                        <h2 id="submission-agreement-title" className="text-xl font-semibold">Client Project Participation and Coordination Agreement</h2>
+                        <div className="mt-5 space-y-4 text-sm leading-6 text-black/70">
+                            <p>
+                                This Agreement establishes the responsibilities, expectations, and coordination procedures between Jocer Construction and the assigned client when participating in an interior design project through Espasyo.
+                            </p>
+                            <p>
+                                Espasyo provides a digital environment for creating, modifying, saving, submitting, and reviewing interior design concepts and floor plans. The project record and approved updates serve as the operational reference for the work performed through the platform.
+                            </p>
+                            <div className="space-y-3">
+                                <h3 className="text-sm font-semibold uppercase tracking-wide text-black/80">Project responsibilities</h3>
+                                <p>
+                                    <strong className="font-semibold text-black">Jocer Construction</strong> will make reasonable efforts to provide project information, instructions, ongoing access subject to technical limits, review of submitted designs, communication about deadlines and administrative decisions, and appropriate records of project activity. It does not approve any construction method, structural modification, or implementation merely because a digital design has been reviewed or approved in Espasyo.
+                                </p>
+                                <p>
+                                    <strong className="font-semibold text-black">The client</strong> is responsible for providing accurate project information, reviewing the assigned project details before design work begins, using the platform responsibly, submitting the project through the designated process, saving work, and notifying the company of any change in requirements or circumstances that may affect a deadline or project scope.
+                                </p>
+                            </div>
+                            <div className="space-y-3">
+                                <h3 className="text-sm font-semibold uppercase tracking-wide text-black/80">Schedule and scope</h3>
+                                <p>
+                                    Each project has an initial deadline established by the company. If a client anticipates a delay, the client should notify the company as soon as reasonably practicable. If the deadline passes without a submission, the project may be marked as past due or awaiting client action, and the company may send reminders, consider an extension, or propose a revised schedule. Any approved adjustment must be documented in Espasyo.
+                                </p>
+                                <p>
+                                    Material changes to the agreed project scope, deliverables, or schedule must be discussed and documented before being treated as approved. The number and nature of revisions may vary by project, and this Agreement does not promise unlimited revisions. Additional work, fees, or construction-related changes must be confirmed through a separate written arrangement.
+                                </p>
+                            </div>
+                            <div className="space-y-3">
+                                <h3 className="text-sm font-semibold uppercase tracking-wide text-black/80">Submission, review, and approval</h3>
+                                <p>
+                                    The Client should submit the design through the designated Espasyo submission process. The company may approve the digital design, request revisions, or return the project for further development. Approval in Espasyo means the digital design has passed the applicable platform review stage; it does not certify structural safety, guarantee construction feasibility, confirm material availability, establish a final project price, or authorize physical construction.
+                                </p>
+                            </div>
+                            <div className="space-y-3">
+                                <h3 className="text-sm font-semibold uppercase tracking-wide text-black/80">Important limitations</h3>
+                                <p>
+                                    Digital floor plans, measurements, 3D models, furniture arrangements, material previews, and visual representations are planning and visualization references only. Before implementation, relevant dimensions, site conditions, structural requirements, building regulations, material availability, and technical feasibility must be verified independently by suitably qualified persons. The client should not treat a digital visualization as a substitute for professional architectural, engineering, structural, or construction documentation.
+                                </p>
+                                <p>
+                                    The company retains its rights in its own pre-existing materials, software, design assets, templates, libraries, and proprietary resources. Access to company-provided assets through Espasyo does not transfer ownership of those assets to the client. Use of a client’s design for public promotion, portfolio display, or marketing requires appropriate consent or authorization.
+                                </p>
+                            </div>
+                            <p>
+                                I have completed and reviewed my proposed design and am submitting it for administrative evaluation. I understand that the construction company may request revisions, and that this proposal is a reference for professional development—not approval for construction. Final specifications, quotations, construction agreements, and contractual obligations are handled separately with the company.
+                            </p>
+                        </div>
                         <label className="mt-5 flex items-start gap-2 text-sm leading-5">
                             <input
                                 type="checkbox"
                                 checked={submissionAgreementChecked}
                                 onChange={event => setSubmissionAgreementChecked(event.target.checked)}
                             />
-                            <span>I have read and agree to the Project Submission Agreement.</span>
+                            <span>I have read and agree to the Client Project Participation and Coordination Agreement.</span>
                         </label>
                         <label className="mt-4 flex items-start gap-2 text-sm leading-5 text-black/75">
                             <input

@@ -9,7 +9,6 @@ import {
   type User,
   verifyPasswordResetCode,
 } from "firebase/auth";
-import { Check } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { cn } from "cn";
@@ -50,15 +49,34 @@ import LoadingScreen from "@/scene/LoadingScreen";
 import { validateEmail, validateLoginForm, validatePassword } from "@/utils/validators";
 import { ensureEmailVerified } from "../../../../shared/auth/loginVerification.mjs";
 import { getLoginErrorMessage } from "../../../../shared/auth/loginErrors.mjs";
-import {
-  LegalDocumentContent,
-  type LegalDocument,
-} from "@/components/legal/LegalDocumentContent";
+import LegalModal from "@/components/legal/LegalModal";
+import type { LegalDocument } from "@/components/legal/LegalDocumentContent";
 import {
   saveLegalAcceptance,
 } from "@/services/legalAcceptance";
+import { LEGAL_DOCUMENT_VERSIONS } from "../../../../shared/legalDocumentVersions.mjs";
 
 type LoginMode = "login" | "forgot" | "reset";
+type LegalModalPurpose = "reading" | "login" | "acceptance";
+
+const LEGAL_ACCEPTANCE_CACHE_KEY = "espasyo.legal-acceptance";
+
+function hasCachedLegalAcceptance(email: string): boolean {
+  try {
+    const stored = window.localStorage.getItem(LEGAL_ACCEPTANCE_CACHE_KEY);
+    if (!stored) return false;
+    const acceptance: unknown = JSON.parse(stored);
+    if (!acceptance || typeof acceptance !== "object") return false;
+
+    const cached = acceptance as Record<string, unknown>;
+    return cached.email === email.trim().toLowerCase() &&
+      cached.termsVersion === LEGAL_DOCUMENT_VERSIONS.termsVersion &&
+      cached.privacyPolicyVersion === LEGAL_DOCUMENT_VERSIONS.privacyPolicyVersion;
+  } catch (error) {
+    console.warn("Unable to read cached legal acceptance:", error);
+    return false;
+  }
+}
 
 export function LoginForm({
   className,
@@ -124,8 +142,10 @@ export function LoginForm({
   const [showSuspendedDialog, setShowSuspendedDialog] = useState(false);
   const [activeLegalDocument, setActiveLegalDocument] = useState<LegalDocument>("terms");
   const [legalModalOpen, setLegalModalOpen] = useState(false);
+  const [legalModalPurpose, setLegalModalPurpose] = useState<LegalModalPurpose>("login");
   const [termsRead, setTermsRead] = useState(false);
   const [privacyPolicyRead, setPrivacyPolicyRead] = useState(false);
+  const [legalProgress, setLegalProgress] = useState(0);
   const [agreedToPolicies, setAgreedToPolicies] = useState(false);
   const [pendingAcceptanceUser, setPendingAcceptanceUser] = useState<User | null>(null);
   const [acceptanceSaveError, setAcceptanceSaveError] = useState("");
@@ -133,7 +153,12 @@ export function LoginForm({
   const [acceptanceNeedsReview, setAcceptanceNeedsReview] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const scrollPositions = useRef<Record<LegalDocument, number>>({ terms: 0, privacy: 0 });
+  const scrollPositions = useRef<Record<LegalDocument, number>>({
+    terms: 0,
+    privacy: 0,
+    "project-participation": 0,
+    "project-adjustment": 0,
+  });
   const acceptanceChoice = useRef({
     termsRead: false,
     privacyPolicyRead: false,
@@ -190,11 +215,15 @@ export function LoginForm({
     return () => window.clearTimeout(timeout);
   }, [mode, resetCooldownSeconds]);
 
-  function openLegalDocument(document: LegalDocument) {
+  function openLegalDocument(
+    document: LegalDocument,
+    purpose: LegalModalPurpose = "reading",
+  ) {
     if (scrollAreaRef.current) {
       scrollPositions.current[activeLegalDocument] = scrollAreaRef.current.scrollTop;
     }
     setActiveLegalDocument(document);
+    setLegalModalPurpose(purpose);
     setLegalModalOpen(true);
   }
 
@@ -214,10 +243,9 @@ export function LoginForm({
     scrollArea.scrollTop = scrollPositions.current[activeLegalDocument];
     const markDocumentReadAtEnd = () => {
       scrollPositions.current[activeLegalDocument] = scrollArea.scrollTop;
-      if (
-        scrollArea.scrollTop > 0 &&
-        scrollArea.scrollTop + scrollArea.clientHeight >= scrollArea.scrollHeight - 4
-      ) {
+      const maxScroll = scrollArea.scrollHeight - scrollArea.clientHeight;
+      setLegalProgress(maxScroll <= 0 ? 1 : scrollArea.scrollTop / maxScroll);
+      if (scrollArea.scrollTop + scrollArea.clientHeight >= scrollArea.scrollHeight - 4) {
         if (activeLegalDocument === "terms") {
           setTermsRead(true);
           acceptanceChoice.current.termsRead = true;
@@ -232,6 +260,7 @@ export function LoginForm({
     const resizeObserver = new ResizeObserver(markDocumentReadAtEnd);
     resizeObserver.observe(scrollArea);
     resizeObserver.observe(content);
+    markDocumentReadAtEnd();
     return () => {
       scrollArea.removeEventListener("scroll", markDocumentReadAtEnd);
       resizeObserver.disconnect();
@@ -242,11 +271,26 @@ export function LoginForm({
     setTermsRead(true);
     setPrivacyPolicyRead(true);
     setAgreedToPolicies(true);
+    const acceptedEmail = auth.currentUser?.email?.trim().toLowerCase();
+    if (acceptedEmail) {
+      try {
+        window.localStorage.setItem(
+          LEGAL_ACCEPTANCE_CACHE_KEY,
+          JSON.stringify({
+            email: acceptedEmail,
+            termsVersion: LEGAL_DOCUMENT_VERSIONS.termsVersion,
+            privacyPolicyVersion: LEGAL_DOCUMENT_VERSIONS.privacyPolicyVersion,
+          }),
+        );
+      } catch (error) {
+        console.warn("Unable to cache legal acceptance:", error);
+      }
+    }
     acceptanceChoice.current = {
       termsRead: true,
       privacyPolicyRead: true,
       agreedToPolicies: true,
-      email: auth.currentUser?.email?.trim().toLowerCase() ?? "",
+      email: acceptedEmail ?? "",
     };
     setPendingAcceptanceUser(null);
     setAcceptanceNeedsReview(false);
@@ -565,23 +609,23 @@ export function LoginForm({
     }
   }
 
-  const handleSubmit = async (e: React.SubmitEvent) => {
-    e.preventDefault();
+  async function handleLogin() {
     if (authenticationInFlight.current || !canSubmit) return;
-
-    setError("");
-    setStatusMessage("");
-    setShowResendVerification(false);
 
     const validationError = validateLoginForm({
       email,
       password,
     });
     if (validationError) {
+      setLegalModalOpen(false);
       setError(validationError);
       return;
     }
 
+    setLegalModalOpen(false);
+    setError("");
+    setStatusMessage("");
+    setShowResendVerification(false);
     setLoading(true);
     authenticationInFlight.current = true;
 
@@ -611,6 +655,30 @@ export function LoginForm({
         authenticationInFlight.current = false;
       }
     }
+  }
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (authenticationInFlight.current || !canSubmit) return;
+
+    const validationError = validateLoginForm({ email, password });
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setError("");
+    setStatusMessage("");
+    setShowResendVerification(false);
+    if (
+      (termsRead && privacyPolicyRead && agreedToPolicies) ||
+      hasCachedLegalAcceptance(email)
+    ) {
+      void handleLogin();
+      return;
+    }
+
+    openLegalDocument(termsRead ? "privacy" : "terms", "login");
   };
 
   if (loading) {
@@ -814,46 +882,25 @@ export function LoginForm({
       </Card>
 
       {mode === "login" && !pendingAcceptanceUser && (
-        <div className="space-y-3 px-6 text-center">
-          <FieldDescription>
-            Read the{" "}
-            <button
-              type="button"
-              className="underline underline-offset-4"
-              onClick={() => openLegalDocument("terms")}
-            >
-              Terms of Service
-            </button>
-            {" and "}
-            <button
-              type="button"
-              className="underline underline-offset-4"
-              onClick={() => openLegalDocument("privacy")}
-            >
-              Privacy Policy
-            </button>
-            {" before agreeing. If your account has already accepted the current versions, you can continue without reviewing them again."}
-          </FieldDescription>
-          <label className={`flex items-start gap-3 text-left text-sm leading-relaxed ${
-            termsRead && privacyPolicyRead
-              ? "cursor-pointer"
-              : "cursor-not-allowed opacity-60"
-          }`}>
-            <input
-              type="checkbox"
-              checked={agreedToPolicies}
-              disabled={!termsRead || !privacyPolicyRead}
-              onChange={event => {
-                const checked = event.target.checked;
-                setAgreedToPolicies(checked);
-                acceptanceChoice.current.agreedToPolicies = checked;
-                acceptanceChoice.current.email = email.trim().toLowerCase();
-              }}
-              className="mt-1 size-4 accent-primary"
-            />
-            <span>I have read and agree to the Terms of Service and Privacy Policy.</span>
-          </label>
-        </div>
+        <p className="px-6 text-center text-sm text-muted-foreground">
+          By continuing, you agree to our{" "}
+          <button
+            type="button"
+            className="text-foreground underline underline-offset-4"
+            onClick={() => openLegalDocument("terms")}
+          >
+            Terms of Service
+          </button>
+          {" and "}
+          <button
+            type="button"
+            className="text-foreground underline underline-offset-4"
+            onClick={() => openLegalDocument("privacy")}
+          >
+            Privacy Policy
+          </button>
+          .
+        </p>
       )}
 
       {pendingAcceptanceUser && (
@@ -867,7 +914,7 @@ export function LoginForm({
                 <button
                   type="button"
                   className="underline underline-offset-4"
-                  onClick={() => openLegalDocument("terms")}
+                  onClick={() => openLegalDocument("terms", "acceptance")}
                 >
                   Terms of Service
                 </button>
@@ -875,7 +922,7 @@ export function LoginForm({
                 <button
                   type="button"
                   className="underline underline-offset-4"
-                  onClick={() => openLegalDocument("privacy")}
+                  onClick={() => openLegalDocument("privacy", "acceptance")}
                 >
                   Privacy Policy
                 </button>
@@ -929,63 +976,46 @@ export function LoginForm({
         </div>
       )}
 
-      {legalModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-          onClick={() => setLegalModalOpen(false)}
-        >
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="login-legal-modal-title"
-            className="flex max-h-[90vh] w-full max-w-3xl flex-col rounded-lg border bg-background shadow-xl"
-            onClick={event => event.stopPropagation()}
-          >
-            <header className="flex items-center justify-between gap-4 border-b p-4">
-              <div>
-                <h2 id="login-legal-modal-title" className="text-lg font-semibold">
-                  {activeLegalDocument === "terms" ? "Terms of Service" : "Privacy Policy"}
-                </h2>
-                <div className="mt-2 flex gap-4 text-sm">
-                  <button
-                    type="button"
-                    className={activeLegalDocument === "terms" ? "font-semibold underline" : "underline"}
-                    aria-current={activeLegalDocument === "terms" ? "page" : undefined}
-                    onClick={() => switchLegalDocument("terms")}
-                  >
-                    Terms of Service
-                    {termsRead && <Check className="ml-1 inline size-4" aria-label="Read" />}
-                  </button>
-                  <button
-                    type="button"
-                    className={activeLegalDocument === "privacy" ? "font-semibold underline" : "underline"}
-                    aria-current={activeLegalDocument === "privacy" ? "page" : undefined}
-                    onClick={() => switchLegalDocument("privacy")}
-                  >
-                    Privacy Policy
-                    {privacyPolicyRead && <Check className="ml-1 inline size-4" aria-label="Read" />}
-                  </button>
-                </div>
-              </div>
-            </header>
-            <div
-              ref={scrollAreaRef}
-              className="min-h-0 flex-1 overflow-y-auto p-5"
-              tabIndex={0}
-              aria-label={`${activeLegalDocument === "terms" ? "Terms of Service" : "Privacy Policy"} content`}
-            >
-              <div ref={contentRef}>
-                <LegalDocumentContent document={activeLegalDocument} />
-              </div>
-            </div>
-            <footer className="flex justify-end border-t p-4">
-              <Button type="button" variant="outline" onClick={() => setLegalModalOpen(false)}>
-                Close
-              </Button>
-            </footer>
-          </section>
-        </div>
-      )}
+      <LegalModal
+        open={legalModalOpen}
+        documents={["terms", "privacy"]}
+        activeDocument={activeLegalDocument}
+        onSwitchDocument={switchLegalDocument}
+        onClose={() => setLegalModalOpen(false)}
+        termsRead={termsRead}
+        privacyRead={privacyPolicyRead}
+        progress={legalProgress}
+        scrollAreaRef={scrollAreaRef}
+        contentRef={contentRef}
+        agreed={agreedToPolicies}
+        onAgreedChange={checked => {
+          setAgreedToPolicies(checked);
+          acceptanceChoice.current.agreedToPolicies = checked;
+          acceptanceChoice.current.email = email.trim().toLowerCase();
+        }}
+        primaryLabel={
+          legalModalPurpose === "reading"
+            ? "Done"
+            : legalModalPurpose === "acceptance"
+              ? "Agree and continue"
+              : "Agree and log in"
+        }
+        onPrimary={() => {
+          if (legalModalPurpose === "reading") {
+            setLegalModalOpen(false);
+          } else if (legalModalPurpose === "acceptance") {
+            void retryAcceptanceSave();
+          } else {
+            void handleLogin();
+          }
+        }}
+        primaryDisabled={
+          legalModalPurpose !== "reading" &&
+          (!termsRead || !privacyPolicyRead || !agreedToPolicies || savingAcceptance)
+        }
+        showAgreement={legalModalPurpose !== "reading"}
+        error={acceptanceSaveError}
+      />
 
       <AlertDialog
         open={showSuspendedDialog}

@@ -94,12 +94,6 @@ import {
     type AdminComment
 } from "../services/adminCommentService";
 
-import {
-    getActiveProjectDeadline,
-    isDeadlinePassed,
-    isValidProjectDeadline,
-    subscribeToProjectDeadline
-} from "../services/projectDeadlineService";
 
 const PAINT_CURSOR = `url("data:image/svg+xml,${encodeURIComponent([
     '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">',
@@ -128,35 +122,6 @@ interface SceneProps {
     viewOnly?: boolean;
 
     onSceneReady?: () => void;
-}
-
-//==================================================
-// FORMAT PROJECT DEADLINE
-//==================================================
-
-function formatDeadlineDate(
-    deadline: string
-): string {
-    const [
-        year,
-        month,
-        day
-    ] = deadline
-        .split("-")
-        .map(Number);
-
-    return new Date(
-        year,
-        month - 1,
-        day
-    ).toLocaleDateString(
-        "en-US",
-        {
-            month: "long",
-            day: "numeric",
-            year: "numeric"
-        }
-    );
 }
 
 //==================================================
@@ -394,69 +359,6 @@ export default function Scene({
         state.wallSeparatorPlacement,
         state.wallSeparatorPlacementVersion
     ]);
-
-    //==================================================
-    // PROJECT DEADLINE
-    //==================================================
-
-    const [
-        projectDeadline,
-        setProjectDeadline
-    ] = useState<string | null>(
-        getActiveProjectDeadline()
-    );
-
-    const [
-        deadlinePassed,
-        setDeadlinePassed
-    ] = useState(
-        isDeadlinePassed(
-            getActiveProjectDeadline()
-        )
-    );
-
-    //==================================================
-    // WATCH PROJECT DEADLINE
-    //==================================================
-
-    useEffect(() => {
-        const updateDeadline = () => {
-            const currentDeadline =
-                getActiveProjectDeadline();
-
-            setProjectDeadline(
-                currentDeadline
-            );
-
-            setDeadlinePassed(
-                isDeadlinePassed(
-                    currentDeadline
-                )
-            );
-        };
-
-        updateDeadline();
-
-        const unsubscribe =
-            subscribeToProjectDeadline(
-                updateDeadline
-            );
-
-        // Refresh the reminder if the deadline
-        // passes while the project remains open.
-        const timer = window.setInterval(
-            updateDeadline,
-            15_000
-        );
-
-        return () => {
-            unsubscribe();
-
-            window.clearInterval(
-                timer
-            );
-        };
-    }, []);
 
     //==================================================
     // ADMIN COMMENTS

@@ -1,394 +1,155 @@
 import type { ReactNode } from "react";
 
 import { cn } from "cn";
+import {
+  LEGAL_DOCUMENTS,
+  getReadingMinutes,
+  sectionId,
+  type LegalBlock,
+  type LegalContactRow,
+  type LegalDocument,
+  type LegalDocumentData,
+  type LegalSection,
+} from "./LegalDocuments";
 
-export type LegalDocument = "terms" | "privacy";
+export type { LegalDocument } from "./LegalDocuments";
 
-/** Fill this in before release: it is shown to users on the Privacy Policy. */
-const PRIVACY_EFFECTIVE_DATE = "[Insert Date]";
+const BODY_TEXT = "text-justify hyphens-auto text-[15px] leading-7 text-foreground/80";
+const LINK = "font-medium underline underline-offset-4 hover:text-primary";
 
-const EMAIL = "jocerconstructionservices@gmail.com";
-
-/* ---------- building blocks ---------- */
-
-function DocHeader({
-  organization,
-  title,
-  meta,
-}: {
-  organization: string;
-  title: string;
-  meta: string;
-}) {
+function DocumentHeader({ data }: { data: LegalDocumentData }) {
   return (
-    <header className="mb-8 border-b pb-6">
-      <p className="text-sm text-muted-foreground">{organization}</p>
-      <h2 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
-        {title}
-      </h2>
-      <p className="mt-2 text-sm text-muted-foreground">{meta}</p>
+    <header className="mb-8">
+      <p className="text-sm text-muted-foreground">{data.organization}</p>
+      <h3 className="mt-2 text-balance text-2xl font-semibold leading-tight tracking-tight text-foreground sm:text-3xl">
+        {data.title}
+      </h3>
+      <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted-foreground">
+        <span>Effective {data.effective}</span>
+        {data.version && <span>Version {data.version}</span>}
+        <span>{getReadingMinutes(data.id)} min read</span>
+      </div>
     </header>
   );
 }
 
-function Intro({ children }: { children: ReactNode }) {
-  return <div className="mb-8 space-y-3 text-foreground/90">{children}</div>;
-}
-
-function Sections({ children }: { children: ReactNode }) {
-  return <div className="divide-y divide-border">{children}</div>;
-}
-
-/**
- * Sections are a real sequence in both documents, so they are numbered.
- * `notice` marks the one section users must not miss (cost estimates).
- */
-function Section({
-  n,
-  title,
-  notice,
-  children,
-}: {
-  n: number;
-  title: string;
-  notice?: boolean;
-  children: ReactNode;
-}) {
+function BulletList({ items }: { items: string[] }) {
   return (
-    <section
-      className={cn(
-        "grid gap-x-4 py-6 first:pt-0 last:pb-0 sm:grid-cols-[2rem_1fr]",
-        notice &&
-          "my-2 rounded-lg border-l-4 border-primary bg-muted/60 px-4 py-5 first:mt-0 sm:px-5",
-      )}
-    >
-      <span
-        aria-hidden
-        className="hidden pt-0.5 text-sm tabular-nums text-muted-foreground sm:block"
-      >
-        {n}
-      </span>
-      <div className="space-y-3">
-        <h3 className="font-semibold leading-snug text-foreground">
-          <span className="sm:hidden">{n}. </span>
-          {title}
-        </h3>
-        {children}
-      </div>
-    </section>
-  );
-}
-
-function List({ children }: { children: ReactNode }) {
-  return (
-    <ul className="list-disc space-y-2 pl-5 marker:text-muted-foreground">
-      {children}
+    <ul className={cn("space-y-2", BODY_TEXT)}>
+      {items.map(item => (
+        <li
+          key={item}
+          className="relative pl-5 before:absolute before:left-0 before:top-[0.8em] before:size-1.5 before:-translate-y-1/2 before:rounded-full before:bg-foreground/40"
+        >
+          {item}
+        </li>
+      ))}
     </ul>
   );
 }
 
-function Strong({ children }: { children: ReactNode }) {
-  return <strong className="font-semibold text-foreground">{children}</strong>;
+function contactValue(row: LegalContactRow): ReactNode {
+  if (row.kind === "email") {
+    return (
+      <a href={`mailto:${row.value}`} className={LINK}>
+        {row.value}
+      </a>
+    );
+  }
+  if (row.kind === "phone") {
+    return (
+      <a href={`tel:${row.value.replace(/\s/g, "")}`} className={LINK}>
+        {row.value}
+      </a>
+    );
+  }
+  return row.value;
 }
 
-function ExternalLink({ href, children }: { href: string; children: ReactNode }) {
+function ContactCard({ rows }: { rows: LegalContactRow[] }) {
   return (
-    <a
-      href={href}
-      className="font-medium text-foreground underline underline-offset-4 hover:text-primary"
-    >
-      {children}
-    </a>
-  );
-}
-
-function ContactCard({ rows }: { rows: [label: string, value: ReactNode][] }) {
-  return (
-    <dl className="divide-y divide-border rounded-lg border bg-muted/40 text-sm">
-      {rows.map(([label, value]) => (
-        <div key={label} className="grid gap-0.5 px-4 py-3 sm:grid-cols-[8rem_1fr] sm:gap-4">
-          <dt className="text-muted-foreground">{label}</dt>
-          <dd className="text-foreground">{value}</dd>
+    <dl className="space-y-3 rounded-xl bg-muted/50 p-4 text-sm sm:p-5">
+      {rows.map(row => (
+        <div key={row.label} className="grid gap-0.5 sm:grid-cols-[7rem_1fr] sm:gap-4">
+          <dt className="text-muted-foreground">{row.label}</dt>
+          <dd className="min-w-0 break-words text-foreground">{contactValue(row)}</dd>
         </div>
       ))}
     </dl>
   );
 }
 
-/* ---------- documents ---------- */
-
-function Terms() {
-  return (
-    <article>
-      <DocHeader
-        organization="JOCER Construction Services"
-        title="Terms and Conditions"
-        meta="Last updated October 23, 2026"
-      />
-
-      <Intro>
-        <p>
-          Welcome to JOCER Construction Services. These Terms and Conditions
-          govern your use of the ESPASYO 3D Interior Design Planning System and
-          our related design and construction services. By accessing or using
-          the platform, you agree to these terms.
+function renderBlock(block: LegalBlock, index: number) {
+  switch (block.type) {
+    case "p":
+      return (
+        <p key={index} className={BODY_TEXT}>
+          {block.lead && (
+            <>
+              <strong className="font-semibold text-foreground">{block.lead}</strong>{" "}
+            </>
+          )}
+          {block.text}
         </p>
-      </Intro>
-
-      <Sections>
-        <Section n={1} title="Use of the ESPASYO System">
-          <p>
-            <Strong>Account Responsibility:</Strong> You are responsible for
-            maintaining the confidentiality of your account details and for all
-            activities that occur under your account.
-          </p>
-          <p>
-            <Strong>Accurate Information:</Strong> You agree to input accurate
-            room dimensions, material selections, and quantities. The system’s
-            visual output and calculations rely entirely on the data you provide.
-          </p>
-        </Section>
-
-        <Section n={2} title="Preliminary Cost Estimates (Crucial Notice)" notice>
-          <p>
-            <Strong>Estimates are Not Final Quotations:</Strong> The automatic
-            cost breakdown generated by the ESPASYO system is for{" "}
-            <Strong>preliminary budgeting and planning purposes only</Strong>. It
-            is not a final, binding construction quotation.
-          </p>
-          <p>
-            <Strong>Price Fluctuations:</Strong> While JOCER updates stored unit
-            prices regularly, construction material costs can fluctuate. The
-            final price of your project will be confirmed only after a formal
-            site inspection and the issuance of a formal contract by JOCER
-            personnel.
-          </p>
-        </Section>
-
-        <Section n={3} title="Administrative Feedback and Project Review">
-          <p>
-            As part of the planning process, JOCER administrators will review
-            your 3D layout and preliminary cost report.
-          </p>
-        </Section>
-
-        <Section n={4} title="Design Modifications">
-          <p>
-            The system allows you to modify your interior layouts and furniture
-            selections at any time. However, once a formal construction contract
-            is signed, any further design modifications will be subject to
-            JOCER’s standard change-order process.
-          </p>
-        </Section>
-
-        <Section n={5} title="Intellectual Property">
-          <p>
-            All software, algorithms, and base templates used in the ESPASYO
-            system are the property of JOCER Construction Services.
-          </p>
-        </Section>
-
-        <Section n={6} title="Limitation of Liability">
-          <p>
-            JOCER Construction Services is not liable for any technical
-            glitches, data loss, or interruptions in the ESPASYO system.
-          </p>
-        </Section>
-
-        <Section n={7} title="Privacy and Data">
-          <p>
-            We collect data (such as room dimensions and furniture selections)
-            solely to provide the ESPASYO service and to help JOCER prepare for
-            your potential project. We do not sell your personal data to third
-            parties.
-          </p>
-        </Section>
-
-        <Section n={8} title="Changes to Terms">
-          <p>
-            JOCER Construction Services reserves the right to update or modify
-            these Terms and Conditions at any time. Continued use of the ESPASYO
-            system means you accept the updated terms.
-          </p>
-        </Section>
-
-        <Section n={9} title="Contact Us">
-          <p>If you have any questions about these Terms, please contact us at:</p>
-          <ContactCard
-            rows={[
-              ["Email", <ExternalLink key="e" href={`mailto:${EMAIL}`}>{EMAIL}</ExternalLink>],
-              ["Phone", <ExternalLink key="p" href="tel:09397352144">09397352144</ExternalLink>],
-              ["Office address", "#33, Santan Street, Brgy. Bagong Bayan, San Pablo City, Laguna, 4000"],
-            ]}
-          />
-        </Section>
-      </Sections>
-    </article>
-  );
+      );
+    case "list":
+      return <BulletList key={index} items={block.items} />;
+    case "contact":
+      return <ContactCard key={index} rows={block.rows} />;
+  }
 }
 
-function Privacy() {
+function SectionView({
+  document,
+  n,
+  section,
+}: {
+  document: LegalDocument;
+  n: number;
+  section: LegalSection;
+}) {
+  const id = sectionId(document, n);
+
   return (
-    <article>
-      <DocHeader
-        organization="JOCER Construction Services"
-        title="ESPASYO Privacy Policy"
-        meta={`Effective ${PRIVACY_EFFECTIVE_DATE}`}
-      />
-
-      <Intro>
-        <p>
-          ESPASYO: 3D Interior Design Planning System with Parametric Cost
-          Estimation Algorithm, developed for JOCER Construction Services, values
-          the privacy and security of its users. This Privacy Policy explains how
-          the system collects, uses, stores, and protects personal information
-          and other data provided by users while using the platform.
-        </p>
-        <p>
-          By accessing and using ESPASYO, users acknowledge that they have read
-          and understood this Privacy Policy.
-        </p>
-      </Intro>
-
-      <Sections>
-        <Section n={1} title="Information We Collect">
-          <p>ESPASYO may collect and store the following information:</p>
-          <List>
-            <li>
-              <Strong>Account Information:</Strong> Basic account details
-              provided during registration and login, such as the user’s name,
-              email address, and other required account credentials.
-            </li>
-            <li>
-              <Strong>Interior Design Projects:</Strong> Room dimensions, room
-              layouts, furniture placements, selected materials, and other
-              design-related information created by users.
-            </li>
-            <li>
-              <Strong>Cost Estimation Information:</Strong> Selected furniture,
-              materials, quantities, and generated preliminary cost estimates
-              associated with users’ projects.
-            </li>
-            <li>
-              <Strong>System Activity:</Strong> Information related to users’
-              interactions with the system, such as project creation, editing,
-              and other activities necessary for system operation.
-            </li>
-          </List>
-        </Section>
-
-        <Section n={2} title="How We Use Your Information">
-          <p>The collected information is used for the following purposes:</p>
-          <List>
-            <li>To create and manage user accounts.</li>
-            <li>To allow users to create, save, view, and modify their interior design projects.</li>
-            <li>To process selected furniture and materials for preliminary cost estimation.</li>
-            <li>To generate cost breakdown reports based on the user’s project selections.</li>
-            <li>To allow administrators to review user projects and provide comments or suggestions.</li>
-            <li>To maintain, monitor, and improve the functionality and performance of ESPASYO.</li>
-          </List>
-        </Section>
-
-        <Section n={3} title="Data Storage and Security">
-          <p>
-            ESPASYO uses Firebase services to store and manage necessary system
-            information, including user accounts and project-related data.
-          </p>
-          <p>
-            The system applies appropriate security measures to help protect
-            stored information against unauthorized access, alteration,
-            disclosure, or loss. However, users should understand that no online
-            system can guarantee absolute security.
-          </p>
-          <p>
-            Users are also responsible for keeping their account credentials
-            confidential and avoiding unauthorized access to their accounts.
-          </p>
-        </Section>
-
-        <Section n={4} title="Information Sharing and Disclosure">
-          <p>
-            ESPASYO does not intend to make users’ personal information publicly
-            available. Access to stored information is limited to authorized
-            system administrators and services that support the operation of the
-            platform.
-          </p>
-          <p>
-            Information may be disclosed when necessary to comply with applicable
-            laws, regulations, or lawful requests from authorized authorities.
-          </p>
-        </Section>
-
-        <Section n={5} title="User Projects and Administrator Access">
-          <p>
-            Interior design projects created through ESPASYO may be accessed by
-            authorized administrators for project review and management
-            purposes. Administrators may provide comments or suggestions to help
-            users improve their proposed interior layouts.
-          </p>
-          <p>
-            Users should avoid including sensitive personal information in
-            project names, descriptions, or other fields that are not intended
-            for such information.
-          </p>
-        </Section>
-
-        <Section n={6} title="Data Retention">
-          <p>
-            User account information and saved project data may be retained for
-            as long as necessary to provide the system’s services and maintain
-            its records. Information may be deleted or updated when it is no
-            longer required, subject to applicable requirements and the system’s
-            data management procedures.
-          </p>
-        </Section>
-
-        <Section n={7} title="User Rights and Responsibilities">
-          <p>
-            Users are encouraged to provide accurate information and keep their
-            account details secure. They may request access to, correction of, or
-            deletion of their personal information, subject to applicable
-            policies and requirements.
-          </p>
-          <p>
-            Users may also contact the system administrators regarding questions
-            or concerns about the handling of their information.
-          </p>
-        </Section>
-
-        <Section n={8} title="Changes to This Privacy Policy">
-          <p>
-            ESPASYO reserves the right to update or revise this Privacy Policy
-            when necessary, particularly when system features, data handling
-            procedures, or applicable requirements change. Users are encouraged
-            to review this page periodically to remain informed about how their
-            information is handled.
-          </p>
-        </Section>
-
-        <Section n={9} title="Contact Information">
-          <p>
-            For questions, concerns, or requests regarding this Privacy Policy
-            and the handling of personal information, users may contact:
-          </p>
-          <ContactCard
-            rows={[
-              ["Organization", "JOCER Construction Services"],
-              ["System", "ESPASYO"],
-              ["Email", <ExternalLink key="e" href={`mailto:${EMAIL}`}>{EMAIL}</ExternalLink>],
-            ]}
-          />
-        </Section>
-      </Sections>
-
-      <p className="mt-8 border-t pt-6 text-foreground/90">
-        By continuing to use ESPASYO, users acknowledge the information and
-        practices described in this Privacy Policy.
-      </p>
-    </article>
+    <section
+      id={id}
+      aria-labelledby={`${id}-title`}
+      className={cn("scroll-mt-6", section.callout && "rounded-xl bg-muted/60 p-5 sm:p-6")}
+    >
+      <h4
+        id={`${id}-title`}
+        className="flex items-baseline gap-2 text-base font-semibold leading-snug text-foreground sm:gap-3 sm:text-[1.0625rem]"
+      >
+        <span className="shrink-0 font-medium tabular-nums text-muted-foreground sm:w-7">
+          {n}.
+        </span>
+        <span className="min-w-0">{section.title}</span>
+      </h4>
+      <div className="mt-3 space-y-3 sm:pl-10">{section.blocks.map(renderBlock)}</div>
+    </section>
   );
 }
 
 export function LegalDocumentContent({ document }: { document: LegalDocument }) {
-  return document === "terms" ? <Terms /> : <Privacy />;
+  const data = LEGAL_DOCUMENTS[document] ?? LEGAL_DOCUMENTS.terms;
+
+  return (
+    <article>
+      <DocumentHeader data={data} />
+
+      <div className="mb-10 space-y-4 text-justify hyphens-auto text-base leading-7 text-foreground">
+        {data.intro.map(paragraph => (
+          <p key={paragraph}>{paragraph}</p>
+        ))}
+      </div>
+
+      <div className="space-y-9">
+        {data.sections.map((section, index) => (
+          <SectionView key={section.title} document={data.id} n={index + 1} section={section} />
+        ))}
+      </div>
+
+      <p className="mt-14 text-center text-sm text-muted-foreground">End of {data.navTitle}</p>
+    </article>
+  );
 }

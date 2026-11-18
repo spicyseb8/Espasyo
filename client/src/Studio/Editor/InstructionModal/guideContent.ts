@@ -266,7 +266,7 @@ export const GUIDE_PAGES: GuidePage[] = [
                 paragraphs: [
                     "Save: open Project and click Save Project (first time) or Save Changes. Your project name is set by your studio and can't be changed. Save often.",
                     "Deadline: you can edit only before the deadline shown in the Project panel.",
-                    "Submit: after saving at least once, click Submit for Review, read and tick the Project Submission Agreement, optionally allow public sharing (lets your approved design be shown to other clients as a view-only inspiration), then click Confirm Submission.",
+                    "Submit: after saving at least once, click Submit for Review, read and tick the Client Project Participation and Coordination Agreement, optionally allow public sharing (lets your approved design be shown to other clients as a view-only inspiration), then click Confirm Submission.",
                     "While under review, editing is paused.",
                     "Outcomes: the studio will approve it (read-only from then on) or request revisions (you'll see their comments under Admin comments and can edit again).",
                     "Important: approval is a design reference, not construction authorization. Final specifications, quotations, and agreements are handled separately.",
