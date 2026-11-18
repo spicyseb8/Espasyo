@@ -476,13 +476,13 @@ function ModalBody({
                                 aria-label="Make approved project public"
                                 onClick={() => void handlePublicVisibilityChange(!isPublic)}
                                 disabled={savingVisibility || (!isPublic && !consentGranted)}
-                                className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                                    isPublic ? "bg-green-600" : "bg-muted"
+                                className={`relative h-6 w-11 shrink-0 rounded-full transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50 ${
+                                    isPublic ? "bg-green-600" : "bg-gray-500"
                                 }`}
                             >
                                 <span
-                                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                                        isPublic ? "translate-x-5" : "translate-x-0.5"
+                                    className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200 ${
+                                        isPublic ? "translate-x-5" : "translate-x-0"
                                     }`}
                                 />
                             </button>
