@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronLeft, ChevronRight, Info, Search, Star } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Search, Star } from "lucide-react";
 
 import { getFurnitureAssets } from "../engine/furniture/FirebaseFurnitureLibrary";
 import { getFloorMaterials } from "../engine/materials/floors";
@@ -308,6 +308,7 @@ function CollectionCard({ item }: { item: LibraryItem }) {
   const [imgError, setImgError] = useState(false);
   const hasImage = Boolean(item.image?.trim()) && !imgError;
   const isFurniture = item.type === "furniture";
+  const hasPrice = Number.isFinite(item.priceValue);
   const favoriteType: AssetFavoriteType =
     item.type === "floors"
       ? "flooring"
@@ -325,39 +326,35 @@ function CollectionCard({ item }: { item: LibraryItem }) {
           <h3 className="truncate text-[12px] font-medium leading-tight text-[#1b1b1b]">
             {item.name}
           </h3>
-          <p className="mt-0.5 truncate text-[9px] uppercase tracking-wide text-black/45">
+          <p
+            className={`mt-1 truncate text-[12px] tabular-nums ${
+              hasPrice ? "font-bold text-emerald-600" : "text-black/45"
+            }`}
+          >
             {item.price}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-1">
-          <button
-            type="button"
-            aria-label={favorite ? "Remove from Favorites" : "Add to Favorites"}
-            title={favorite ? "Remove from Favorites" : "Add to Favorites"}
-            aria-pressed={favorite}
-            onClick={(event) => {
-              event.stopPropagation();
-              void toggleFavorite(favoriteType, item.id);
-            }}
-            className={`flex h-6 w-6 items-center justify-center rounded-full transition-colors ${
-              favorite
-                ? "text-amber-400 hover:bg-amber-400/10"
-                : "text-black/35 hover:bg-black/5 hover:text-black/65"
-            }`}
-          >
-            <Star
-              className="h-3 w-3"
-              strokeWidth={2}
-              fill={favorite ? "currentColor" : "none"}
-            />
-          </button>
-          <span
-            className="flex h-4 w-4 items-center justify-center rounded-full bg-black/5 text-black/60"
-            aria-hidden
-          >
-            <Info className="h-2.5 w-2.5" strokeWidth={2} />
-          </span>
-        </div>
+        <button
+          type="button"
+          aria-label={favorite ? "Remove from Favorites" : "Add to Favorites"}
+          title={favorite ? "Remove from Favorites" : "Add to Favorites"}
+          aria-pressed={favorite}
+          onClick={(event) => {
+            event.stopPropagation();
+            void toggleFavorite(favoriteType, item.id);
+          }}
+          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors ${
+            favorite
+              ? "text-amber-400 hover:bg-amber-400/10"
+              : "text-black/35 hover:bg-black/5 hover:text-black/65"
+          }`}
+        >
+          <Star
+            className="h-3 w-3"
+            strokeWidth={2}
+            fill={favorite ? "currentColor" : "none"}
+          />
+        </button>
       </div>
 
       {/* swatch */}
