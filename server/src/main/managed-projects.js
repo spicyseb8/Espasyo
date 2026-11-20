@@ -34,6 +34,7 @@ import {
   isCurrentProjectAcknowledgement,
   isFutureProjectDeadline,
   isValidProjectDeadline,
+  resolveDraftProjectDeadline,
 } from "./project-workflow.js";
 import {
   isClientAssignedToPublishedProject,
@@ -749,10 +750,15 @@ async function saveDraft(req, res) {
     if (!Number.isSafeInteger(revision) || revision < 1) {
       throw httpError(400, "A positive floor-plan revision is required.");
     }
-    const deadline = normalizedString(req.body?.deadline);
-    if (deadline && !isValidProjectDeadline(deadline)) {
-      throw httpError(400, "Choose a valid project date and time.");
+    const deadlineResult = resolveDraftProjectDeadline(
+      normalizedString(req.body?.deadline),
+      normalizedString(draft.deadline),
+      getTodayInManila(),
+    );
+    if (!deadlineResult.valid) {
+      throw httpError(400, "Choose a project deadline after today.");
     }
+    const deadline = deadlineResult.deadline;
     const ownerId = normalizedString(draft.intendedClientId);
     const projectData = req.body?.projectData;
     const json = validateStructure(projectData, draftId, ownerId, projectName);

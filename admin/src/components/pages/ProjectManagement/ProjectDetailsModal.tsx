@@ -389,7 +389,15 @@ function ModalBody({
                                         value={deadline}
                                         min={getTomorrowLocalDateTime()}
                                         onChange={event => {
-                                            setDeadline(event.target.value);
+                                            const nextDeadline = event.target.value;
+                                            if (
+                                                nextDeadline &&
+                                                nextDeadline.slice(0, 10) <= getTodayLocalDate()
+                                            ) {
+                                                setDeadlineError("Choose a deadline after today.");
+                                                return;
+                                            }
+                                            setDeadline(nextDeadline);
                                             setDeadlineError("");
                                         }}
                                         disabled={savingDeadline}

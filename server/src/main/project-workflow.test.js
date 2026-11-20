@@ -13,6 +13,7 @@ import {
   isFutureProjectDeadline,
   isCurrentProjectAcknowledgement,
   isProjectDeadlineExpired,
+  resolveDraftProjectDeadline,
 } from "./project-workflow.js";
 
 test("legacy managed projects map to available or ongoing without migration", () => {
@@ -33,6 +34,25 @@ test("deadline validation supports legacy dates and Philippine local date-times"
   assert.equal(isProjectDeadlineExpired("2026-11-04", "2026-11-04"), false);
   assert.equal(isProjectDeadlineExpired("2026-11-04T14:00", "2026-11-04T13:59"), false);
   assert.equal(isProjectDeadlineExpired("2026-11-04T14:00", "2026-11-04T14:00"), true);
+});
+
+test("draft deadlines preserve only future values", () => {
+  assert.deepEqual(
+    resolveDraftProjectDeadline("", "", "2026-11-04"),
+    { deadline: "", valid: true },
+  );
+  assert.deepEqual(
+    resolveDraftProjectDeadline("", "2026-11-05", "2026-11-04"),
+    { deadline: "2026-11-05", valid: true },
+  );
+  assert.deepEqual(
+    resolveDraftProjectDeadline("", "2026-11-03", "2026-11-04"),
+    { deadline: "2026-11-03", valid: false },
+  );
+  assert.deepEqual(
+    resolveDraftProjectDeadline("2026-11-03", "2026-11-05", "2026-11-04"),
+    { deadline: "2026-11-03", valid: false },
+  );
 });
 
 test("client edit lock checks time-specific deadline in Philippine local time", () => {

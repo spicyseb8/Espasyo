@@ -23,6 +23,14 @@ export function isFutureProjectDeadline(value, today) {
   return isValidProjectDeadline(value) && value.slice(0, 10) > today;
 }
 
+export function resolveDraftProjectDeadline(requested, existing, today) {
+  const deadline = requested || existing || "";
+  return {
+    deadline,
+    valid: !deadline || isFutureProjectDeadline(deadline, today),
+  };
+}
+
 export function isProjectDeadlineExpired(value, nowInManila) {
   if (!isValidProjectDeadline(value)) return false;
   const deadlineDate = value.slice(0, 10);

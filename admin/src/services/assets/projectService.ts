@@ -164,7 +164,7 @@ export async function updateProjectDeadline(
         !isValidProjectDeadline(deadline)
     ) {
         throw new Error(
-            "The deadline must be today or a future date."
+            "The deadline must be after today."
         );
     }
 

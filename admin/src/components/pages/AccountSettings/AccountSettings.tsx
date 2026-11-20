@@ -6,7 +6,6 @@ import {
 import {
   User,
   FolderKanban,
-  Clock3,
 } from "lucide-react";
 
 import {
@@ -34,8 +33,6 @@ import {
 
 import {
   useUserDetail,
-  type UserRecord,
-  type EmployeeRecord,
 } from "@/hooks/useUserDetails";
 
 import { auth } from "@/firebase/firebase";
@@ -44,7 +41,6 @@ import { useAuth } from "@/context/AuthContext";
 
 import AccountTab from "./AccountTab";
 import ProjectsTab from "./ProjectsTab";
-import RecentActivitiesTab from "./RecentActivitiesTab";
 
 
 //==================================================
@@ -100,26 +96,6 @@ export default function AccountSettings({
     type,
     id
   );
-
-
-  //==================================================
-  // DISPLAY NAME
-  //==================================================
-
-  const displayName =
-    type === "user"
-
-      ? (
-          data as
-            UserRecord |
-            null
-        )?.full_name
-
-      : (
-          data as
-            EmployeeRecord |
-            null
-        )?.name;
 
 
   //==================================================
@@ -423,23 +399,6 @@ export default function AccountSettings({
             )}
 
 
-            {/* RECENT ACTIVITIES */}
-
-            <TabsTrigger
-              value="activity"
-              className={
-                tabTriggerClass
-              }
-            >
-
-              <Clock3
-                className="h-4 w-4"
-              />
-
-              Recent Activities
-
-            </TabsTrigger>
-
           </TabsList>
 
 
@@ -497,26 +456,6 @@ export default function AccountSettings({
             </TabsContent>
 
           )}
-
-
-          {/*==================================================
-              RECENT ACTIVITIES
-          ================================================== */}
-
-          <TabsContent
-            value="activity"
-            className="mt-6"
-          >
-
-            <RecentActivitiesTab
-              key={ownerId}
-              userUid={ownerId}
-              displayName={
-                displayName
-              }
-            />
-
-          </TabsContent>
 
 
         </Tabs>

@@ -2611,16 +2611,24 @@ export default function AdminStructuralEditor() {
             if (exitAfterSave) setExitGuardError(message);
             return;
         }
-        if (published && !isPublished) {
-            if (!isValidProjectDeadline(deadline) || deadline <= getTodayLocalDate()) {
-                setDeadlineOpen(true);
-                setStatus("Choose a valid project deadline after today before publishing.");
-                return;
-            }
+        const deadlineToSave = deadline || savedDeadlineRef.current;
+        if (
+            deadlineToSave &&
+            (!isValidProjectDeadline(deadlineToSave) ||
+                deadlineToSave.slice(0, 10) <= getTodayLocalDate())
+        ) {
+            setDeadlineOpen(true);
+            setStatus("Choose a valid project deadline after today.");
+            return;
+        }
+        if (published && !isPublished && !deadlineToSave) {
+            setDeadlineOpen(true);
+            setStatus("Choose a valid project deadline after today before publishing.");
+            return;
         }
         if (published && !window.confirm(
             `Publish "${projectName.trim()}" to its assigned client with deadline ${
-                deadline ? `${formatEditorDeadline(deadline)} at 11:59 PM Philippine time` : "not set"
+                deadlineToSave ? `${formatEditorDeadline(deadlineToSave)} at 11:59 PM Philippine time` : "not set"
             }?`
         )) {
             return;
@@ -2629,9 +2637,7 @@ export default function AdminStructuralEditor() {
         try {
             setStatus(published ? "Publishing..." : "Saving draft...");
             const savedAt = new Date().toISOString();
-            const savedDeadline = draftId && deadline
-                ? deadline
-                : savedDeadlineRef.current;
+            const savedDeadline = deadlineToSave;
             const nextStructure = { ...structure, projectName, savedAt, blueprint: null };
             const projectData = serializeManagedStructureProject(
                 floorPlans,
@@ -2644,7 +2650,7 @@ export default function AdminStructuralEditor() {
                     const result = await publishManagedFloorPlanDraft({
                         draftId,
                         projectName,
-                        deadline,
+                        deadline: deadlineToSave,
                         projectData: { ...projectData }
                     });
                     setRevision(Math.max(revision, 0) + 1);
@@ -2670,10 +2676,10 @@ export default function AdminStructuralEditor() {
                     projectName,
                     projectData: { ...projectData },
                     revision: nextRevision,
-                    ...(deadline ? { deadline } : {})
+                    ...(deadlineToSave ? { deadline: deadlineToSave } : {})
                 });
                 setRevision(nextRevision);
-                if (deadline) savedDeadlineRef.current = deadline;
+                if (deadlineToSave) savedDeadlineRef.current = deadlineToSave;
                 savedEditorFingerprintRef.current = createManagedEditorExitFingerprint({
                     floors: floorPlans,
                     activeFloorId,
@@ -2709,7 +2715,7 @@ export default function AdminStructuralEditor() {
                 projectData: { ...projectData },
                 revision: nextRevision,
                 published,
-                ...(!isPublished && published ? { deadline } : {})
+                ...(!isPublished && published ? { deadline: deadlineToSave } : {})
             });
             commit(nextStructure);
             setRevision(nextRevision);
@@ -2859,9 +2865,15 @@ export default function AdminStructuralEditor() {
                                             type="date"
                                             value={deadline.slice(0, 10)}
                                             min={getTomorrowLocalDateTime().slice(0, 10)}
-                                            onChange={event => setDeadline(
-                                                event.target.value ? `${event.target.value}T23:59` : ""
-                                            )}
+                                            onChange={event => {
+                                                const nextDate = event.target.value;
+                                                if (nextDate && nextDate <= getTodayLocalDate()) {
+                                                    setStatus("Choose a project deadline after today.");
+                                                    return;
+                                                }
+                                                setDeadline(nextDate ? `${nextDate}T23:59` : "");
+                                                setStatus("");
+                                            }}
                                             disabled={isReadOnly || savingAction !== null}
                                             aria-label="Project deadline date"
                                             autoFocus
