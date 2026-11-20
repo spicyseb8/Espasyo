@@ -12,7 +12,6 @@ import {
     parseProjectBudget
 } from "../../engine/cost/ProjectBudget";
 import type { CostCategory } from "../../engine/cost/CostTypes";
-import AdminComments from "../../scene/Comment/AdminComments";
 import ProjectPanel from "../Workspace/panels/ProjectPanel";
 
 const CATEGORY_LABELS: Record<CostCategory, string> = {
@@ -226,10 +225,6 @@ export default function Topbar({ projectPanelOpen, onProjectClick }: Props) {
                     >
                         <Redo2 size={15} strokeWidth={1.75} />
                     </button>
-                </div>
-
-                <div className="admin-comments-icon-only">
-                    <AdminComments projectId={routeProjectId ?? null} />
                 </div>
 
                 <div className="cost-estimator" ref={dropdownRef}>

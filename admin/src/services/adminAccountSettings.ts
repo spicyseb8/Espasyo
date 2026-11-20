@@ -9,6 +9,7 @@ import {
 } from "firebase/firestore";
 
 import { auth, db } from "@/firebase/firebase";
+import { projectApi } from "@/services/assets/projectApi";
 import { isAdminRole, type AdminRole } from "@/lib/adminRole";
 
 export interface AdminAccountProfile {
@@ -106,6 +107,12 @@ export async function saveCurrentAdminProfile(
     avatar: changes.avatar,
     updated_at: serverTimestamp(),
   });
+  try {
+    await projectApi("/admin/profile-updated", { method: "POST" });
+  } catch (error) {
+    console.error("Admin profile was saved, but its activity could not be recorded:", error);
+    throw error;
+  }
 
   return {
     ...profile,

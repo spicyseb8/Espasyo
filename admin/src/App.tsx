@@ -12,6 +12,7 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import Login from "@/components/auth/Login";
 import UserTable from "@/components/pages/UserTable/UserTable";
 import Home from "@/components/pages/Home";
+import RecentActivitiesPage from "@/components/pages/RecentActivitiesPage";
 import { useAuth } from "@/context/AuthContext";
 import AssetStartupGate from "@/engine/AssetStartupGate";
 
@@ -103,6 +104,17 @@ function App() {
           <RequireAdmin>
             <DashboardLayout>
               {() => <AdminAccountSettings />}
+            </DashboardLayout>
+          </RequireAdmin>
+        }
+      />
+
+      <Route
+        path="/activities"
+        element={
+          <RequireAdmin>
+            <DashboardLayout>
+              {() => <RecentActivitiesPage />}
             </DashboardLayout>
           </RequireAdmin>
         }

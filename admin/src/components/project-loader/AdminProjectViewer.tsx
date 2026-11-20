@@ -1,33 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
     ArrowLeft,
-    ArrowUpRight,
-    ChevronLeft,
-    ChevronRight,
-    MessageCircle,
-    MousePointerClick,
-    Send,
     X
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AdminProjectScene from "../project-loader/AdminProjectScene";
 import type { AdminProject } from "@/services/assets/projectService";
 import type { SavedProjectData } from "./ProjectTypes";
-import { auth } from "@/firebase/firebase";
 import AdminCostEstimator from "./engine/cost/AdminCostEstimator";
-import {
-    ADMIN_COMMENT_FOCUS_COMPLETE_EVENT,
-    ADMIN_COMMENT_MARKER_CLICK_EVENT,
-    ADMIN_COMMENT_TARGET_EVENT,
-    type AdminCommentTargetDetail
-} from "@/services/assets/adminCommentEvents";
-import {
-    createAdminComment,
-    subscribeToAdminComments,
-    type AdminComment
-} from "@/services/assets/adminCommentService";
-import { requestAdminCommentFocus } from "@/services/assets/adminCommentEvents";
-import { useAuth } from "@/context/AuthContext";
 import LoadingScreen from "@/components/LoadingScreen";
 
 interface AdminProjectViewerProps {
@@ -36,54 +16,12 @@ interface AdminProjectViewerProps {
     unavailableAssetIds?: string[];
 }
 
-const COMMENT_CURSOR =
-    `url("data:image/svg+xml,${encodeURIComponent(`
-        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-            <path d="M6 5.5 C4.067 5.5 2.5 7.067 2.5 9 V18 C2.5 19.933 4.067 21.5 6 21.5 H12 L10 27 L16.5 21.5 H24 C25.933 21.5 27.5 19.933 27.5 18 V9 C27.5 7.067 25.933 5.5 24 5.5 Z"
-                fill="white" stroke="#ff7a00" stroke-width="2" stroke-linejoin="round" />
-            <circle cx="10" cy="13.5" r="1.4" fill="#ff7a00" />
-            <circle cx="15" cy="13.5" r="1.4" fill="#ff7a00" />
-            <circle cx="20" cy="13.5" r="1.4" fill="#ff7a00" />
-        </svg>
-    `)}") 5 5, crosshair`;
-
-function formatCommentDate(value: unknown): string {
-    const options: Intl.DateTimeFormatOptions = {
-        dateStyle: "medium",
-        timeStyle: "short"
-    };
-
-    if (
-        value &&
-        typeof value === "object" &&
-        "toDate" in value &&
-        typeof (value as { toDate: () => Date }).toDate === "function"
-    ) {
-        return (value as { toDate: () => Date }).toDate().toLocaleString(undefined, options);
-    }
-
-    if (value instanceof Date) {
-        return value.toLocaleString(undefined, options);
-    }
-
-    if (typeof value === "string") {
-        const date = new Date(value);
-        if (!Number.isNaN(date.getTime())) {
-            return date.toLocaleString(undefined, options);
-        }
-    }
-
-    return "Just now";
-}
-
 export default function AdminProjectViewer({
     metadata,
     projectData,
     unavailableAssetIds = []
 }: AdminProjectViewerProps) {
     const navigate = useNavigate();
-    const { role } = useAuth();
-    const canComment = role === "admin";
 
     //==================================================
     // FLOORS
@@ -152,196 +90,9 @@ export default function AdminProjectViewer({
         setSceneReady(true);
     }, []);
 
-    const [comments, setComments] = useState<AdminComment[]>([]);
-    const [selectedTarget, setSelectedTarget] = useState<AdminCommentTargetDetail | null>(null);
-    const [commentMode, setCommentMode] = useState(false);
-    const [commentText, setCommentText] = useState("");
-    const [savingComment, setSavingComment] = useState(false);
-    const [commentError, setCommentError] = useState("");
-    const [focusedCommentId, setFocusedCommentId] = useState<string | null>(null);
-    const [visibleCommentId, setVisibleCommentId] = useState<string | null>(null);
-    const [panelOpen, setPanelOpen] = useState(true);
-
-    const chatRef = useRef<HTMLDivElement | null>(null);
-
     //==================================================
     // EFFECTS
     //==================================================
-    useEffect(() => {
-        return subscribeToAdminComments(
-            projectData.projectId,
-            setComments,
-            error => {
-                setCommentError("Unable to load comments.");
-                console.error(error);
-            }
-        );
-    }, [projectData.projectId]);
-
-    useEffect(() => {
-        const handleTarget = (event: Event) => {
-            if (!canComment || !commentMode) return;
-
-            const customEvent = event as CustomEvent<AdminCommentTargetDetail>;
-            if (!customEvent.detail) return;
-
-            setSelectedTarget(customEvent.detail);
-            setCommentError("");
-        };
-
-        window.addEventListener(ADMIN_COMMENT_TARGET_EVENT, handleTarget);
-        return () => window.removeEventListener(ADMIN_COMMENT_TARGET_EVENT, handleTarget);
-    }, [canComment, commentMode]);
-
-    useEffect(() => {
-        const handleMarkerClick = (event: Event) => {
-            const commentId = (event as CustomEvent<string>).detail;
-            if (!commentId) return;
-
-            setVisibleCommentId(commentId);
-            setFocusedCommentId(commentId);
-            requestAdminCommentFocus(commentId);
-        };
-
-        window.addEventListener(ADMIN_COMMENT_MARKER_CLICK_EVENT, handleMarkerClick);
-        return () => window.removeEventListener(ADMIN_COMMENT_MARKER_CLICK_EVENT, handleMarkerClick);
-    }, []);
-
-    useEffect(() => {
-        const handleFocusComplete = (event: Event) => {
-            if ((event as CustomEvent<string>).detail === focusedCommentId) {
-                setFocusedCommentId(null);
-            }
-        };
-
-        window.addEventListener(ADMIN_COMMENT_FOCUS_COMPLETE_EVENT, handleFocusComplete);
-        return () => window.removeEventListener(ADMIN_COMMENT_FOCUS_COMPLETE_EVENT, handleFocusComplete);
-    }, [focusedCommentId]);
-
-    // Leave "specific object" mode with a right-click or Escape.
-    useEffect(() => {
-        if (!commentMode) return;
-
-        const exitMode = () => {
-            setCommentMode(false);
-            setSelectedTarget(null);
-            setCommentError("");
-        };
-
-        const handlePointerDown = (event: PointerEvent) => {
-            if (event.button !== 2) return;
-            event.preventDefault();
-            event.stopPropagation();
-            exitMode();
-        };
-
-        const handleContextMenu = (event: MouseEvent) => {
-            event.preventDefault();
-            event.stopPropagation();
-        };
-
-        const handleKeyDown = (event: KeyboardEvent) => {
-            if (event.key === "Escape") exitMode();
-        };
-
-        window.addEventListener("pointerdown", handlePointerDown, true);
-        window.addEventListener("contextmenu", handleContextMenu, true);
-        window.addEventListener("keydown", handleKeyDown);
-
-        return () => {
-            window.removeEventListener("pointerdown", handlePointerDown, true);
-            window.removeEventListener("contextmenu", handleContextMenu, true);
-            window.removeEventListener("keydown", handleKeyDown);
-        };
-    }, [commentMode]);
-
-    useEffect(() => {
-        const element = chatRef.current;
-        if (!element) return;
-        element.scrollTop = element.scrollHeight;
-    }, [comments.length, panelOpen]);
-
-    //==================================================
-    // ACTIONS
-    //==================================================
-    const startSpecificComment = () => {
-        if (!canComment) return;
-        setCommentMode(true);
-        setSelectedTarget(null);
-        setCommentError("");
-    };
-
-    const cancelSpecificComment = () => {
-        setCommentMode(false);
-        setSelectedTarget(null);
-        setCommentError("");
-    };
-
-    const handleSaveComment = async () => {
-        if (!canComment) {
-            setCommentError("Only admins can comment on projects.");
-            return;
-        }
-
-        const user = auth.currentUser;
-        if (!user) {
-            setCommentError("Admin authentication is required.");
-            return;
-        }
-
-        const text = commentText.trim();
-        if (!text) {
-            setCommentError("Please enter a comment.");
-            return;
-        }
-
-        if (commentMode && !selectedTarget) {
-            setCommentError("Select an object in the scene first.");
-            return;
-        }
-
-        try {
-            setSavingComment(true);
-            setCommentError("");
-
-            const target = commentMode && selectedTarget
-                ? selectedTarget
-                : {
-                    targetType: "project" as const,
-                    targetId: null,
-                    targetLabel: "Entire Project",
-                    regionId: undefined
-                };
-
-            const createdCommentId = await createAdminComment({
-                projectId: projectData.projectId,
-                targetType: target.targetType,
-                targetId: target.targetId,
-                targetLabel: target.targetLabel,
-                regionId: target.regionId,
-                text
-            });
-
-            setCommentText("");
-
-            if (commentMode) {
-                setSelectedTarget(null);
-                setVisibleCommentId(createdCommentId);
-            }
-        } catch (error) {
-            console.error("Failed to save admin comment:", error);
-            setCommentError(error instanceof Error ? error.message : "Failed to save comment.");
-        } finally {
-            setSavingComment(false);
-        }
-    };
-
-    const handleFocusComment = (commentId: string) => {
-        setVisibleCommentId(commentId);
-        setFocusedCommentId(commentId);
-        requestAdminCommentFocus(commentId);
-    };
-
     //==================================================
     // DERIVED
     //==================================================
@@ -354,11 +105,6 @@ export default function AdminProjectViewer({
                 : "Project design";
 
     const projectTitle = projectData.projectName || metadata.projectName;
-    const sendDisabled =
-        savingComment ||
-        !commentText.trim() ||
-        (commentMode && !selectedTarget);
-
     //==================================================
     // RENDER
     //==================================================
@@ -389,21 +135,6 @@ export default function AdminProjectViewer({
                         <AdminCostEstimator projectData={projectData} />
                     </div>
 
-                    <button
-                        type="button"
-                        onClick={() => setPanelOpen(open => !open)}
-                        aria-expanded={panelOpen}
-                        className="relative z-10 inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#dededb] bg-white px-3 text-sm font-medium text-[#333] transition hover:bg-[#f5f5f3]"
-                    >
-                        <MessageCircle size={15} />
-                        Comments
-                        {comments.length > 0 && (
-                            <span className="rounded-full bg-[#ff7a00] px-1.5 text-[11px] font-semibold text-white">
-                                {comments.length}
-                            </span>
-                        )}
-                        {panelOpen ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-                    </button>
                 </div>
             </header>
 
@@ -412,14 +143,10 @@ export default function AdminProjectViewer({
                 {/* ---------- 3D SCENE ---------- */}
                 <div
                     className="relative isolate min-h-0 min-w-0 flex-1 overflow-hidden"
-                    style={{ cursor: commentMode ? COMMENT_CURSOR : "default" }}
                 >
                     <AdminProjectScene
                         projectData={activeProjectData}
                         onReady={handleSceneReady}
-                        comments={comments}
-                        activeTarget={selectedTarget}
-                        visibleCommentId={visibleCommentId}
                         onAssetError={assetId => setRuntimeAssetFailures(current =>
                             current.includes(assetId) ? current : [...current, assetId]
                         )}
@@ -454,29 +181,6 @@ export default function AdminProjectViewer({
                         </nav>
                     )}
 
-                    {/* Comment-mode hint */}
-                    {commentMode && (
-                        <div className="pointer-events-none absolute left-1/2 top-4 z-20 -translate-x-1/2">
-                            <div className="pointer-events-auto flex items-center gap-3 rounded-full bg-[#222] px-4 py-2 text-sm text-white shadow-lg">
-                                <MousePointerClick size={16} className="text-[#ff9a3d]" />
-                                <span>
-                                    {selectedTarget
-                                        ? `Selected: ${selectedTarget.targetLabel}`
-                                        : "Click an object in the scene to comment on it"}
-                                </span>
-                                <button
-                                    type="button"
-                                    onClick={cancelSpecificComment}
-                                    className="rounded-full p-1 text-white/70 hover:bg-white/15 hover:text-white"
-                                    title="Exit (Esc or right-click)"
-                                    aria-label="Exit comment mode"
-                                >
-                                    <X size={14} />
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
                     {/* Asset warning (dismissible, details collapsed) */}
                     {reportedUnavailableAssetIds.length > 0 && !assetWarningDismissed && (
                         <div
@@ -506,169 +210,6 @@ export default function AdminProjectViewer({
                     )}
                 </div>
 
-                {/* ---------- COMMENTS PANEL ---------- */}
-                {panelOpen && (
-                    <aside
-                        className="flex h-[45%] w-full shrink-0 flex-col border-t border-[#e4e4e1] bg-white md:h-auto md:w-[360px] md:border-l md:border-t-0"
-                        aria-label="Comments"
-                    >
-                        <div className="flex items-center justify-between border-b border-[#eeeeea] px-4 py-3">
-                            <h2 className="text-sm font-semibold">
-                                Comments{comments.length > 0 ? ` (${comments.length})` : ""}
-                            </h2>
-                            <button
-                                type="button"
-                                onClick={() => setPanelOpen(false)}
-                                className="rounded-md p-1 text-[#888] hover:bg-[#f1f1ee] hover:text-[#222]"
-                                aria-label="Close comments"
-                            >
-                                <X size={16} />
-                            </button>
-                        </div>
-
-                        {/* List */}
-                        <div ref={chatRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-                            {comments.length === 0 ? (
-                                <div className="flex h-full flex-col items-center justify-center text-center">
-                                    <MessageCircle size={28} className="text-[#ccc]" />
-                                    <p className="mt-3 text-sm font-medium text-[#555]">No comments yet</p>
-                                    <p className="mt-1 text-xs text-[#999]">
-                                        {canComment
-                                            ? "Write the first comment below to start the review."
-                                            : "Comments from the admin will appear here."}
-                                    </p>
-                                </div>
-                            ) : (
-                                <ul className="space-y-3">
-                                    {comments.map(comment => {
-                                        const specific = comment.targetType !== "project";
-
-                                        return (
-                                            <li
-                                                key={comment.id}
-                                                className={`rounded-xl border px-3.5 py-3 ${
-                                                    comment.id === visibleCommentId
-                                                        ? "border-[#ffb06e] bg-[#fff4e9]"
-                                                        : "border-[#eeeeea] bg-[#fafaf8]"
-                                                }`}
-                                            >
-                                                <div className="flex items-baseline justify-between gap-2">
-                                                    <p className="truncate text-sm font-medium">
-                                                        {comment.adminName}
-                                                    </p>
-                                                    <time className="shrink-0 text-xs text-[#999]">
-                                                        {formatCommentDate(comment.createdAt)}
-                                                    </time>
-                                                </div>
-
-                                                <p className="mt-1.5 whitespace-pre-wrap break-words text-sm leading-relaxed text-[#444]">
-                                                    {comment.text}
-                                                </p>
-
-                                                {specific && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleFocusComment(comment.id)}
-                                                        className="mt-2.5 inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-xs font-medium text-[#d86d00] ring-1 ring-[#ffd2a8] transition hover:bg-[#fff4e9]"
-                                                        title="Show this object in the 3D view"
-                                                    >
-                                                        {comment.targetLabel}
-                                                        <ArrowUpRight size={12} />
-                                                    </button>
-                                                )}
-                                            </li>
-                                        );
-                                    })}
-                                </ul>
-                            )}
-                        </div>
-
-                        {/* Composer (admins only) */}
-                        {canComment && (
-                            <div className="border-t border-[#eeeeea] px-4 py-3">
-                                <div
-                                    className="mb-2 grid grid-cols-2 gap-1 rounded-lg bg-[#f1f1ee] p-1"
-                                    role="group"
-                                    aria-label="Comment target"
-                                >
-                                    <button
-                                        type="button"
-                                        aria-pressed={!commentMode}
-                                        onClick={cancelSpecificComment}
-                                        className={`rounded-md py-1.5 text-xs font-medium transition ${
-                                            !commentMode
-                                                ? "bg-white text-[#222] shadow-sm"
-                                                : "text-[#777] hover:text-[#222]"
-                                        }`}
-                                    >
-                                        Whole project
-                                    </button>
-                                    <button
-                                        type="button"
-                                        aria-pressed={commentMode}
-                                        onClick={startSpecificComment}
-                                        className={`rounded-md py-1.5 text-xs font-medium transition ${
-                                            commentMode
-                                                ? "bg-[#ff7a00] text-white shadow-sm"
-                                                : "text-[#777] hover:text-[#222]"
-                                        }`}
-                                    >
-                                        Specific object
-                                    </button>
-                                </div>
-
-                                {commentMode && (
-                                    <p className="mb-2 text-xs text-[#d86d00]">
-                                        {selectedTarget
-                                            ? `Commenting on: ${selectedTarget.targetLabel}`
-                                            : "Click an object in the 3D view first."}
-                                    </p>
-                                )}
-
-                                {commentError && (
-                                    <p role="alert" className="mb-2 text-xs text-red-600">
-                                        {commentError}
-                                    </p>
-                                )}
-
-                                <div className="flex items-end gap-2">
-                                    <textarea
-                                        value={commentText}
-                                        onChange={event => setCommentText(event.target.value)}
-                                        disabled={commentMode && !selectedTarget}
-                                        placeholder={
-                                            commentMode
-                                                ? selectedTarget
-                                                    ? "Write a comment about this object..."
-                                                    : "Select an object first..."
-                                                : "Write a comment about the project..."
-                                        }
-                                        rows={3}
-                                        className="min-h-[72px] flex-1 resize-none rounded-xl border border-[#ddddda] bg-[#fafaf8] px-3 py-2.5 text-sm outline-none placeholder:text-[#aaa] focus:border-[#ffb06e] disabled:cursor-not-allowed disabled:opacity-60"
-                                    />
-
-                                    <button
-                                        type="button"
-                                        onClick={handleSaveComment}
-                                        disabled={sendDisabled}
-                                        title="Send comment"
-                                        aria-label="Send comment"
-                                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#ff7a00] text-white transition hover:bg-[#ea6f00] disabled:cursor-not-allowed disabled:opacity-40"
-                                    >
-                                        <Send size={16} />
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Comment-error for non-admin loading failures */}
-                        {!canComment && commentError && (
-                            <p role="alert" className="border-t border-[#eeeeea] px-4 py-3 text-xs text-red-600">
-                                {commentError}
-                            </p>
-                        )}
-                    </aside>
-                )}
             </div>
 
             {!sceneReady && (

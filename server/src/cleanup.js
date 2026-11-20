@@ -1,30 +1,30 @@
 
-import { adminAuth, adminDb } from "./firebase-admin.js";
+import { getApp } from "firebase-admin/app";
+import { adminAuth, adminDb, adminStorage } from "./firebase-admin.js";
+import {
+  isAccountIdCounter,
+  isProtectedSuperadminDocument,
+  isProjectUserStoragePath,
+  parseResetOptions,
+  RESET_STORAGE_PREFIXES,
+} from "./cleanup-plan.js";
 
 // ============================================================
 // ESPASYO FULL APPLICATION DATA RESET
 // ============================================================
 
-// Protected superadmin
-const SUPERADMIN_UID = "dZvdijPVLhNXTAQjhoCDWAJ80nX2";
-const SUPERADMIN_EMAIL = "sfmaster901@gmail.com";
-
-// Protected Firestore profile
-const SUPERADMIN_EMPLOYEE_DOC_ID = "AE-26001";
-
-// Collections that must remain untouched
+// Global asset records and their counters must remain usable after the reset.
 const PRESERVED_COLLECTIONS = new Set([
   "assets",
-  "idCounters",
   "systemCounters",
 ]);
 
-// Collections that will be deleted
 const DELETE_COLLECTIONS = new Set([
   "users",
   "adminEmployees",
 
   "projects",
+  "idCounters",
   "adminManagedFloorPlanDrafts",
   "adminManagedProjectAssignments",
 
@@ -39,10 +39,6 @@ const DELETE_COLLECTIONS = new Set([
   "notifications",
 ]);
 
-const EXECUTE =
-  process.argv.includes("--execute") &&
-  process.argv.includes("--confirm-delete");
-
 // ============================================================
 // HELPERS
 // ============================================================
@@ -51,10 +47,6 @@ function printSection(title) {
   console.log("\n" + "=".repeat(70));
   console.log(title);
   console.log("=".repeat(70));
-}
-
-function normalizeEmail(email) {
-  return String(email || "").trim().toLowerCase();
 }
 
 async function getAllAuthUsers() {
@@ -86,78 +78,34 @@ async function countDocuments(collectionRef) {
 async function validateSuperadmin() {
   printSection("CHECKING SUPERADMIN PROTECTION");
 
-  const authUser = await adminAuth.getUser(SUPERADMIN_UID);
-
-  if (
-    authUser.uid !== SUPERADMIN_UID ||
-    normalizeEmail(authUser.email) !== normalizeEmail(SUPERADMIN_EMAIL) ||
-    authUser.disabled
-  ) {
-    throw new Error(
-      "Superadmin Auth verification failed. Aborting reset."
-    );
-  }
-
-  console.log("AUTHENTICATION ACCOUNT: VERIFIED");
-  console.log({
-    uid: authUser.uid,
-    email: authUser.email,
-    disabled: authUser.disabled,
-    emailVerified: authUser.emailVerified,
-  });
-
-  const employeeRef = adminDb
+  const superadminSnapshot = await adminDb
     .collection("adminEmployees")
-    .doc(SUPERADMIN_EMPLOYEE_DOC_ID);
+    .where("role", "==", "superadmin")
+    .get();
+  const superadminProfiles = superadminSnapshot.docs.filter(
+    document => typeof document.data().uid === "string" &&
+      document.data().uid.trim() !== "",
+  );
 
-  const employeeSnapshot = await employeeRef.get();
-
-  if (!employeeSnapshot.exists) {
+  if (superadminProfiles.length !== 1) {
     throw new Error(
-      "Protected superadmin employee document was not found."
+      `Expected one superadmin profile; found ${superadminProfiles.length}. Reset aborted.`,
     );
   }
 
-  const employee = employeeSnapshot.data();
-
-  if (
-    employee.uid !== SUPERADMIN_UID ||
-    normalizeEmail(employee.email) !== normalizeEmail(SUPERADMIN_EMAIL) ||
-    employee.role !== "superadmin"
-  ) {
-    throw new Error(
-      "Superadmin employee profile verification failed. Aborting reset."
-    );
+  const employeeDocument = superadminProfiles[0];
+  const employee = employeeDocument.data();
+  const uid = employee.uid.trim();
+  const authUser = await adminAuth.getUser(uid);
+  if (authUser.uid !== uid || authUser.disabled) {
+    throw new Error("Superadmin Auth verification failed. Reset aborted.");
   }
 
-  console.log("\nADMIN EMPLOYEE RECORD: VERIFIED");
-  console.log(`Document: ${SUPERADMIN_EMPLOYEE_DOC_ID}`);
-  console.log(`Role: ${employee.role}`);
-
-  const userRef = adminDb.collection("users").doc("U-26002");
-  const userSnapshot = await userRef.get();
-
-  if (userSnapshot.exists) {
-    const user = userSnapshot.data();
-
-    if (
-      user.uid === SUPERADMIN_UID &&
-      normalizeEmail(user.email) === normalizeEmail(SUPERADMIN_EMAIL)
-    ) {
-      console.log("\nSUPERADMIN USER PROFILE: VERIFIED");
-      console.log("Document: users/U-26002");
-    } else {
-      console.log(
-        "\nusers/U-26002 does not match the protected superadmin."
-      );
-      console.log("It will not receive special protection.");
-    }
-  }
-
+  console.log("Exactly one active superadmin Auth account and profile were verified.");
+  console.log(`Protected Firestore profile: adminEmployees/${employeeDocument.id}`);
   return {
-    authUser,
-    employeeRef,
-    employee,
+    uid,
+    documentId: employeeDocument.id,
   };
 }
 
@@ -179,7 +127,9 @@ async function inspectFirestore() {
 
     let status;
 
-    if (PRESERVED_COLLECTIONS.has(name)) {
+    if (name === "systemCounters") {
+      status = "PARTIAL - account ID counters deleted";
+    } else if (PRESERVED_COLLECTIONS.has(name)) {
       status = "PRESERVE";
     } else if (DELETE_COLLECTIONS.has(name)) {
       status = "DELETE CANDIDATE";
@@ -224,31 +174,30 @@ async function inspectFirestore() {
 // AUTHENTICATION DELETION PLAN
 // ============================================================
 
-async function inspectAuthentication() {
+async function inspectAuthentication(superadmin) {
   printSection("AUTHENTICATION PLAN");
 
   const users = await getAllAuthUsers();
 
   const protectedUsers = users.filter(
-    (user) => user.uid === SUPERADMIN_UID
+    user => user.uid === superadmin.uid,
   );
 
   const usersToDelete = users.filter(
-    (user) => user.uid !== SUPERADMIN_UID
+    user => user.uid !== superadmin.uid,
   );
 
   if (protectedUsers.length !== 1) {
     throw new Error(
-      "Expected exactly one protected superadmin Auth account."
+      "The verified superadmin Auth account was not found exactly once.",
     );
   }
 
   console.log(`Total Auth accounts: ${users.length}`);
-  console.log(`Superadmin Auth accounts preserved: ${protectedUsers.length}`);
+  console.log("Superadmin Auth accounts preserved: 1");
   console.log(`Auth accounts to delete: ${usersToDelete.length}`);
 
   return {
-    users,
     usersToDelete,
   };
 }
@@ -257,14 +206,17 @@ async function inspectAuthentication() {
 // FIRESTORE DELETION PLAN
 // ============================================================
 
-async function inspectDeletionPlan(inventory) {
+async function inspectDeletionPlan(inventory, superadmin) {
   printSection("FIRESTORE DELETION PLAN");
 
   const deletionPlan = [];
   let totalDocuments = 0;
 
   for (const collection of inventory) {
-    if (!DELETE_COLLECTIONS.has(collection.name)) {
+    if (
+      !DELETE_COLLECTIONS.has(collection.name) &&
+      collection.name !== "systemCounters"
+    ) {
       continue;
     }
 
@@ -272,32 +224,31 @@ async function inspectDeletionPlan(inventory) {
     const documents = [];
 
     for (const document of snapshot.docs) {
-      // Always preserve the verified superadmin employee record.
       if (
-        collection.name === "adminEmployees" &&
-        document.id === SUPERADMIN_EMPLOYEE_DOC_ID
+        collection.name === "systemCounters" &&
+        !isAccountIdCounter(document.id)
       ) {
         continue;
       }
 
-      // Preserve the superadmin user profile only when verified.
-      if (collection.name === "users") {
-        const data = document.data();
-
-        const isProtectedSuperadmin =
-          data.uid === SUPERADMIN_UID &&
-          normalizeEmail(data.email) === normalizeEmail(SUPERADMIN_EMAIL);
-
-        if (isProtectedSuperadmin) {
-          continue;
-        }
+      if (
+        isProtectedSuperadminDocument(
+          collection.name,
+          document.id,
+          document.data(),
+          superadmin,
+        )
+      ) {
+        continue;
       }
 
       documents.push(document.ref);
     }
 
     deletionPlan.push({
-      name: collection.name,
+      name: collection.name === "systemCounters"
+        ? "systemCounters/account-*"
+        : collection.name,
       documents,
     });
 
@@ -337,16 +288,11 @@ async function deleteAuthUsers(usersToDelete) {
       await adminAuth.deleteUser(user.uid);
       deleted++;
 
-      console.log(
-        `  DELETED: ${user.email || user.uid}`
-      );
+      console.log("  Deleted one Auth account.");
     } catch (error) {
       failed++;
 
-      console.error(
-        `  FAILED: ${user.email || user.uid}`,
-        error.message
-      );
+      console.error("  Auth account deletion failed:", error.message);
     }
   }
 
@@ -405,56 +351,89 @@ async function deleteFirestoreDocuments(deletionPlan) {
 }
 
 // ============================================================
+// STORAGE PLAN AND DELETION
+// ============================================================
+
+async function inspectStorage() {
+  printSection("PROJECT AND USER STORAGE PLAN");
+  const filesToDelete = [];
+
+  for (const prefix of RESET_STORAGE_PREFIXES) {
+    const [files] = await adminStorage.getFiles({ prefix });
+    const matchingFiles = files.filter(file =>
+      isProjectUserStoragePath(file.name),
+    );
+    filesToDelete.push(...matchingFiles);
+    console.log(`  ${prefix}: ${matchingFiles.length} objects to delete`);
+  }
+
+  console.log("  assets/: preserved");
+  return filesToDelete;
+}
+
+async function deleteStorageFiles(files) {
+  printSection("DELETING PROJECT AND USER STORAGE");
+  let deleted = 0;
+  let failed = 0;
+
+  for (const file of files) {
+    try {
+      await file.delete({ ignoreNotFound: true });
+      deleted++;
+    } catch (error) {
+      failed++;
+      console.error("Storage object deletion failed:", error.message);
+    }
+  }
+
+  console.log(`Deleted: ${deleted}`);
+  console.log(`Failed: ${failed}`);
+  if (failed > 0) {
+    throw new Error(`${failed} project/user Storage object(s) failed to delete.`);
+  }
+}
+
+// ============================================================
 // MAIN
 // ============================================================
 
 async function main() {
+  const { projectId, execute } = parseResetOptions(
+    process.argv.slice(2),
+    getApp().options.projectId,
+    adminStorage.name,
+  );
+
   console.log("\nESPASYO FULL APPLICATION DATA RESET");
   console.log("========================================");
 
-  console.log(`Mode: ${EXECUTE ? "LIVE EXECUTION" : "DRY RUN"}`);
-  console.log("Firebase Storage: NEVER TOUCHED");
+  console.log(`Firebase project: ${projectId}`);
+  console.log(`Storage bucket: ${adminStorage.name}`);
+  console.log(`Mode: ${execute ? "LIVE EXECUTION" : "DRY RUN"}`);
 
   console.log(
-    `Protected superadmin: ${SUPERADMIN_EMAIL} (${SUPERADMIN_UID})`
+    `Preserved collections: assets and non-account system counters`,
   );
-
-  console.log(
-    `Preserved collections: ${[...PRESERVED_COLLECTIONS].join(", ")}`
-  );
-
-  if (
-    process.argv.includes("--execute") !==
-    process.argv.includes("--confirm-delete")
-  ) {
-    throw new Error(
-      "Live execution requires BOTH --execute and --confirm-delete."
-    );
-  }
 
   // 1. Verify the superadmin before planning any deletion.
-  await validateSuperadmin();
+  const superadmin = await validateSuperadmin();
 
   // 2. Inspect all root Firestore collections.
   const { inventory, unreviewed } = await inspectFirestore();
 
   // 3. Inspect Firebase Authentication accounts.
-  const { usersToDelete } = await inspectAuthentication();
+  const { usersToDelete } = await inspectAuthentication(superadmin);
 
   // 4. Build the Firestore deletion plan.
   const { deletionPlan, totalDocuments } =
-    await inspectDeletionPlan(inventory);
+    await inspectDeletionPlan(inventory, superadmin);
+  const storageFiles = await inspectStorage();
 
   // 5. Show protected records.
   printSection("PROTECTED FIRESTORE PROFILES");
 
-  console.log(
-    `  KEEP adminEmployees/${SUPERADMIN_EMPLOYEE_DOC_ID}`
-  );
-
-  console.log(
-    "  KEEP any users profile only if its UID/email matches the protected superadmin"
-  );
+  console.log(`  KEEP adminEmployees/${superadmin.documentId}`);
+  console.log("  KEEP user profile documents associated with the same Auth UID");
 
   // 6. Show preserved collections.
   printSection("PRESERVED COLLECTIONS");
@@ -468,26 +447,23 @@ async function main() {
   }
 
   // 7. Never allow live execution with unreviewed collections.
-  if (EXECUTE && unreviewed.length > 0) {
+  if (execute && unreviewed.length > 0) {
     throw new Error(
       "LIVE EXECUTION BLOCKED: Unreviewed Firestore collections remain."
     );
   }
 
   // 8. Dry-run mode: stop without deleting anything.
-  if (!EXECUTE) {
+  if (!execute) {
     printSection("DRY RUN COMPLETE");
 
     console.log("DRY RUN ONLY — NOTHING WAS DELETED.");
 
     console.log("\nReview every collection and count above.");
 
+    console.log("To execute, pass the exact project and bucket confirmations:");
     console.log(
-      "To execute, run:"
-    );
-
-    console.log(
-      "node src/cleanup-espasyo.js --execute --confirm-delete"
+      `npm run reset:firebase -- --project-id=${projectId} --execute --confirm-project-id=${projectId} --confirm-storage-bucket=${adminStorage.name}`,
     );
 
     return;
@@ -504,28 +480,20 @@ async function main() {
     `Firestore root documents to delete: ${totalDocuments}`
   );
 
-  console.log(
-    "Protected superadmin account and profile will remain."
-  );
-
-  console.log(
-    "Preserved collections will remain untouched."
-  );
-
-  console.log(
-    "Firebase Storage will remain untouched."
-  );
+  console.log("One verified superadmin account/profile will remain.");
+  console.log(`Project/user Storage objects to delete: ${storageFiles.length}`);
+  console.log("The global assets collection and assets/ Storage remain untouched.");
 
   // 10. Execute deletion.
-  await deleteAuthUsers(usersToDelete);
   await deleteFirestoreDocuments(deletionPlan);
+  await deleteStorageFiles(storageFiles);
+  await deleteAuthUsers(usersToDelete);
 
   printSection("RESET COMPLETE");
 
   console.log("Espasyo application data reset completed.");
   console.log("Superadmin account preserved.");
-  console.log("Assets and counters preserved.");
-  console.log("Firebase Storage untouched.");
+  console.log("Global asset catalog and asset ID counters preserved.");
 }
 
 // ============================================================

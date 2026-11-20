@@ -12,9 +12,6 @@ import {
 } from "@react-three/fiber";
 
 import {
-    useParams
-} from "react-router-dom";
-import {
     getRegionWallFinishAssignments,
     getRegionWallSide
 } from "../engine/walls/WallFinishUtils";
@@ -85,15 +82,6 @@ import ModelErrorBoundary
 
 import useEditor
     from "../context/editor/useEditor";
-
-import AdminCommentMarkers
-    from "./Comment/AdminCommentMarkers";
-
-import {
-    subscribeToAdminComments,
-    type AdminComment
-} from "../services/adminCommentService";
-
 
 const PAINT_CURSOR = `url("data:image/svg+xml,${encodeURIComponent([
     '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">',
@@ -332,16 +320,6 @@ export default function Scene({
         };
     }, [dispatch]);
 
-    const {
-        projectId
-    } = useParams<{
-        projectId?: string;
-    }>();
-
-    const [
-        comments,
-        setComments
-    ] = useState<AdminComment[]>([]);
     const [showSeparatorReminder, setShowSeparatorReminder] = useState(false);
 
     useEffect(() => {
@@ -358,31 +336,6 @@ export default function Scene({
     }, [
         state.wallSeparatorPlacement,
         state.wallSeparatorPlacementVersion
-    ]);
-
-    //==================================================
-    // ADMIN COMMENTS
-    //==================================================
-
-    useEffect(() => {
-        if (!projectId) {
-            setComments([]);
-
-            return;
-        }
-
-        return subscribeToAdminComments(
-            projectId,
-            setComments,
-            error => {
-                console.error(
-                    "Failed to load admin comments:",
-                    error
-                );
-            }
-        );
-    }, [
-        projectId
     ]);
 
     //==================================================
@@ -454,11 +407,7 @@ export default function Scene({
 
                 <BlueprintScene />
 
-                <Camera
-                    adminComments={
-                        comments
-                    }
-                />
+                <Camera />
 
                 <Floors onPaintApplied={handlePaintApplied} />
 
@@ -471,12 +420,6 @@ export default function Scene({
                 <Stairs />
 
                 <FurnitureScene />
-
-                {!state.walkthroughMode && (
-    <AdminCommentMarkers
-        comments={comments}
-    />
-)}
 
                 {/* Walkthrough roof.
                     Wrapped in its own Suspense so loading the

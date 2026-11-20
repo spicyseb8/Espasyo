@@ -41,7 +41,7 @@ import { Input } from "@/components/ui/input";
 
 import { isAdminRole } from "@/lib/adminRole";
 import { auth, db } from "@/firebase/firebase";
-import { validateAdminLoginForm } from "@/utils/validators";
+import { validateAdminLoginForm, validateEmail } from "@/utils/validators";
 import { ensureEmailVerified } from "../../../../shared/auth/loginVerification.mjs";
 import { getLoginErrorMessage } from "../../../../shared/auth/loginErrors.mjs";
 
@@ -53,10 +53,21 @@ type LoginFormProps = React.ComponentProps<"div">;
 function LoginForm({ className, ...props }: LoginFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [emailTouched, setEmailTouched] = useState(false);
+  const [passwordTouched, setPasswordTouched] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [unauthorizedOpen, setUnauthorizedOpen] = useState(false);
+  const emailValidationError =
+    emailTouched || submitted ? validateEmail(email) : "";
+  const passwordValidationError =
+    passwordTouched || submitted
+      ? password
+        ? ""
+        : "Password is required."
+      : "";
 
   const handleSubmit = async (
     event: React.FormEvent<HTMLFormElement>
@@ -64,13 +75,13 @@ function LoginForm({ className, ...props }: LoginFormProps) {
     event.preventDefault();
 
     setError("");
+    setSubmitted(true);
 
     const validationError = validateAdminLoginForm({
       email,
       password,
     });
     if (validationError) {
-      setError(validationError);
       return;
     }
 
@@ -204,7 +215,7 @@ function LoginForm({ className, ...props }: LoginFormProps) {
           </CardHeader>
 
           <CardContent>
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} noValidate>
               <FieldGroup>
                 <Field>
                   <FieldLabel htmlFor="email" className="text-neutral-800">
@@ -217,13 +228,22 @@ function LoginForm({ className, ...props }: LoginFormProps) {
                     placeholder="admin@example.com"
                     value={email}
                     onChange={(event) => {
-                      setEmail(event.target.value)
+                      setEmail(event.target.value);
+                      setEmailTouched(true);
                       setError("");
                     }}
+                    onBlur={() => setEmailTouched(true)}
                     disabled={loading}
                     autoComplete="email"
-                    className={glassInput}
+                    aria-invalid={Boolean(emailValidationError)}
+                    aria-describedby={emailValidationError ? "admin-login-email-error" : undefined}
+                    className={`${glassInput} ${!emailValidationError && (emailTouched || submitted) && email.trim()
+                      ? "border-emerald-600 focus-visible:border-emerald-600 focus-visible:ring-emerald-600/30"
+                      : ""}`}
                   />
+                  <FieldDescription id="admin-login-email-error" className="min-h-5 text-red-600">
+                    {emailValidationError}
+                  </FieldDescription>
                 </Field>
 
                 <Field>
@@ -237,13 +257,22 @@ function LoginForm({ className, ...props }: LoginFormProps) {
                     placeholder="Enter your password"
                     value={password}
                     onChange={(event) => {
-                      setPassword(event.target.value)
+                      setPassword(event.target.value);
+                      setPasswordTouched(true);
                       setError("");
                     }}
+                    onBlur={() => setPasswordTouched(true)}
                     disabled={loading}
                     autoComplete="current-password"
-                    className={glassInput}
+                    aria-invalid={Boolean(passwordValidationError)}
+                    aria-describedby={passwordValidationError ? "admin-login-password-error" : undefined}
+                    className={`${glassInput} ${!passwordValidationError && (passwordTouched || submitted) && password
+                      ? "border-emerald-600 focus-visible:border-emerald-600 focus-visible:ring-emerald-600/30"
+                      : ""}`}
                   />
+                  <FieldDescription id="admin-login-password-error" className="min-h-5 text-red-600">
+                    {passwordValidationError}
+                  </FieldDescription>
                 </Field>
 
                 {error && (

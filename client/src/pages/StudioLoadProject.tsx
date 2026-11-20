@@ -57,6 +57,7 @@ import {
     acknowledgeProjectAccess,
     getClientManagedProjectFile,
     getClientProjectWorkflow,
+    recordClientProjectOpened,
     type ClientProjectWorkflow
 } from "../services/clientProjectWorkflow";
 
@@ -348,6 +349,12 @@ function LoadProjectContent() {
 
                 if (cancelled) {
                     return;
+                }
+
+                try {
+                    await recordClientProjectOpened(projectId);
+                } catch (activityError) {
+                    console.error("Project opened, but its activity could not be recorded:", activityError);
                 }
 
                 //==================================================

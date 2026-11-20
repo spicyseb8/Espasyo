@@ -11,7 +11,6 @@ import type {
 } from "./AdminWallFinishUtils";
 import AdminWallFinishSurface from "./AdminWallFinishSurface";
 import type { AdminWallPieceData } from "./AdminWallMeshBuilder";
-import { emitAdminCommentTarget } from "../../../../services/assets/adminCommentEvents";
 import { DoubleSide, Vector3 } from "three";
 import type { ThreeEvent } from "@react-three/fiber";
 import {
@@ -448,17 +447,7 @@ export default function AdminWallPiece({
 
     const handleWallClick = (event: ThreeEvent<MouseEvent>) => {
         event.stopPropagation();
-
-        if (onWallClick) {
-            onWallClick(wallId, event.point, event);
-            return;
-        }
-
-        emitAdminCommentTarget({
-            targetType: "wall",
-            targetId: wallId,
-            targetLabel: "Wall"
-        });
+        onWallClick?.(wallId, event.point, event);
     };
 
     const handleWallPointerMove = (event: ThreeEvent<PointerEvent>) => {

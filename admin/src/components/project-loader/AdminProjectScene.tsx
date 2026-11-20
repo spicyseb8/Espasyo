@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Suspense } from "react";
 import { Vector3 } from "three";
@@ -10,7 +10,6 @@ import AdminWalls from "./loader-components/AdminWalls";
 import AdminDoors from "./loader-components/AdminDoors";
 import AdminFurnitures from "./loader-components/AdminFurnitures";
 import AdminWindows from "./loader-components/AdminWindows";
-import AdminCommentMarkers from "./AdminCommentMarkers";
 import {
     AdminProceduralStaircase,
     AdminStaircaseLandingMarker
@@ -33,40 +32,17 @@ import type {
     SavedOpening
 } from "./ProjectTypes";
 
-import type { AdminComment } from "@/services/assets/adminCommentService";
-import type {
-    AdminCommentTargetDetail,
-    AdminCommentFocusRequest
-} from "@/services/assets/adminCommentEvents";
-
-import {
-    ADMIN_COMMENT_FOCUS_COMPLETE_EVENT,
-    ADMIN_COMMENT_FOCUS_REQUEST_EVENT,
-    emitAdminCommentFocus
-} from "@/services/assets/adminCommentEvents";
-
-import { getAdminCommentTargetPoint } from "./loader-components/AdminCommentTargetUtils";
-
 interface AdminProjectSceneProps {
     projectData: SavedProjectData;
-    comments: AdminComment[];
-    activeTarget: AdminCommentTargetDetail | null;
-    visibleCommentId: string | null;
     onAssetError: (assetId: string) => void;
     onReady: () => void;
 }
 
 export default function AdminProjectScene({
     projectData,
-    comments,
-    activeTarget,
-    visibleCommentId,
     onAssetError,
     onReady
 }: AdminProjectSceneProps) {
-    const [focusedCommentId, setFocusedCommentId] =
-        useState<string | null>(null);
-
     const corners: Corner[] =
         projectData.corners.map(convertCorner);
 
@@ -81,91 +57,6 @@ export default function AdminProjectScene({
 
     const openings: AdminOpeningData[] =
         projectData.openings.map(convertOpening);
-
-    useEffect(() => {
-        const handleFocusRequest = (event: Event) => {
-            const customEvent =
-                event as CustomEvent<AdminCommentFocusRequest>;
-
-            const commentId =
-                customEvent.detail?.commentId;
-
-            if (!commentId) {
-                return;
-            }
-
-            const comment =
-                comments.find(
-                    item => item.id === commentId
-                );
-
-            if (!comment) {
-                return;
-            }
-
-            const point =
-                getAdminCommentTargetPoint(
-                    projectData,
-                    {
-                        targetType: comment.targetType,
-                        targetId: comment.targetId,
-                        regionId: comment.regionId
-                    }
-                );
-
-            if (!point) {
-                return;
-            }
-
-            setFocusedCommentId(commentId);
-
-            emitAdminCommentFocus({
-                commentId,
-                position: {
-                    x: point.x,
-                    y: point.y,
-                    z: point.z
-                }
-            });
-        };
-
-        const handleFocusComplete = (event: Event) => {
-            const customEvent =
-                event as CustomEvent<string>;
-
-            if (
-                customEvent.detail === focusedCommentId
-            ) {
-                setFocusedCommentId(null);
-            }
-        };
-
-        window.addEventListener(
-            ADMIN_COMMENT_FOCUS_REQUEST_EVENT,
-            handleFocusRequest
-        );
-
-        window.addEventListener(
-            ADMIN_COMMENT_FOCUS_COMPLETE_EVENT,
-            handleFocusComplete
-        );
-
-        return () => {
-            window.removeEventListener(
-                ADMIN_COMMENT_FOCUS_REQUEST_EVENT,
-                handleFocusRequest
-            );
-
-            window.removeEventListener(
-                ADMIN_COMMENT_FOCUS_COMPLETE_EVENT,
-                handleFocusComplete
-            );
-        };
-    }, [
-        comments,
-        projectData,
-        focusedCommentId
-    ]);
 
     return (
         <Canvas
@@ -231,14 +122,6 @@ export default function AdminProjectScene({
                 <AdminFurnitures
                     furniture={projectData.furniture}
                     onAssetError={onAssetError}
-                />
-
-                <AdminCommentMarkers
-                    projectData={projectData}
-                    comments={comments}
-                    focusedCommentId={focusedCommentId}
-                    visibleCommentId={visibleCommentId}
-                    activeTarget={activeTarget}
                 />
 
                 <SceneReadySignal onReady={onReady} />

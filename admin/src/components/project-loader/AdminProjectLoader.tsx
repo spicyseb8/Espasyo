@@ -4,7 +4,10 @@ import { onAuthStateChanged } from "firebase/auth";
 
 import { auth } from "@/firebase/firebase";
 import { projectApi } from "@/services/assets/projectApi";
-import { getAdminProject } from "@/services/assets/projectService";
+import {
+    getAdminProject,
+    recordAdminProjectOpened,
+} from "@/services/assets/projectService";
 import type { AdminProject } from "@/services/assets/projectService";
 import { filterUnavailableProjectAssets } from "@/services/assets/filterUnavailableProjectAssets";
 import { preloadAdminProjectAssets } from "@/services/assets/projectAssetPreloader";
@@ -118,6 +121,12 @@ export default function AdminProjectLoader() {
                 const unavailableAssetIds = await preloadAdminProjectAssets(projectData);
 
                 if (cancelled || controller.signal.aborted) return;
+
+                try {
+                    await recordAdminProjectOpened(projectId);
+                } catch (activityError) {
+                    console.error("Project opened, but its activity could not be recorded:", activityError);
+                }
 
                 //==================================================
                 // STORE

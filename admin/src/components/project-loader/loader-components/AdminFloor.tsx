@@ -27,7 +27,6 @@ import {
     preloadFloorPatternTexture,
     preloadFloorTexture
 } from "../../../services/assets/floorsload";
-import { emitAdminCommentTarget } from "../../../services/assets/adminCommentEvents";
 import {
     clipFloorTriangleToSection,
     getWallPaintSections,
@@ -612,12 +611,6 @@ export default function AdminFloor({
     }
 
     const handleClick = (event: ThreeEvent<MouseEvent>) => {
-        emitAdminCommentTarget({
-            targetType: "floor",
-            targetId: region.id,
-            targetLabel: `Floor`,
-            regionId: region.id
-        });
         if (onSelect) {
             event.stopPropagation();
             onSelect(region.id);

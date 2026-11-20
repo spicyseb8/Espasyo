@@ -4,10 +4,10 @@ import cors from "cors";
 import accountRoutes from "./create-account.js";
 import accountActionRoutes from "./account-actions.js";
 import assetRoutes from "./create-asset.js";
-import projectCommentRoutes from "./project-comments.js";
 import projectDeadlineRoutes from "./project-deadlines.js";
 import managedProjectRoutes from "./managed-projects.js";
 import legalAcceptanceRoutes from "./legal-acceptance.js";
+import adminActivityRoutes from "./admin-activities.js";
 import { createCorsOptions } from "./cors-config.js";
 import { adminDb } from "../firebase-admin.js";
 import { sendDeadlineNotifications } from "./deadline-notifications.js";
@@ -63,11 +63,6 @@ app.use(
 
 app.use(
   "/api",
-  projectCommentRoutes
-);
-
-app.use(
-  "/api",
   projectDeadlineRoutes
 );
 
@@ -79,6 +74,11 @@ app.use(
 app.use(
   "/api",
   legalAcceptanceRoutes
+);
+
+app.use(
+  "/api",
+  adminActivityRoutes
 );
 
 // --------------------------------------------------

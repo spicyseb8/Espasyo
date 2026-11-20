@@ -348,6 +348,15 @@ export async function getAdminProject(
     return response.project;
 }
 
+export async function recordAdminProjectOpened(projectId: string): Promise<void> {
+    const normalizedProjectId = projectId.trim();
+    if (!normalizedProjectId) throw new Error("Project ID is required.");
+    await projectApi(
+        `/admin/projects/${encodeURIComponent(normalizedProjectId)}/opened`,
+        { method: "POST" }
+    );
+}
+
 export async function reviewAdminProject(
     projectId: string,
     action: "approve" | "request-revision",

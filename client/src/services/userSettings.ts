@@ -4,6 +4,7 @@ import {
   setDoc,
 } from "firebase/firestore";
 import { db } from "../firebase/firebase";
+import { projectApi } from "./projectApi";
 
 export async function saveUserProfile(
   userId: string,
@@ -23,4 +24,10 @@ export async function saveUserProfile(
     },
     { merge: true }
   );
+  try {
+    await projectApi("/client/profile-updated", { method: "POST" });
+  } catch (error) {
+    console.error("Profile was saved, but its activity could not be recorded:", error);
+    throw error;
+  }
 }

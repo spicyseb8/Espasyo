@@ -1,6 +1,24 @@
+import {
+  normalizeFullName,
+  validateEmail,
+  validateFullName,
+  validatePassword,
+} from "../../../shared/auth/formValidation.mjs";
 import { generateAccountId } from "./account-id.js";
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_CHARACTERS_PATTERN = /^[+()\d\s-]+$/;
+
+function normalizePhilippinePhone(value) {
+  if (typeof value !== "string") return "";
+  const phone = value.trim();
+  if (!phone || !PHONE_CHARACTERS_PATTERN.test(phone)) return "";
+
+  const digits = phone.replace(/\D/g, "");
+  if (/^09\d{9}$/.test(digits)) return `+63${digits.slice(1)}`;
+  if (/^9\d{9}$/.test(digits)) return `+63${digits}`;
+  if (/^639\d{9}$/.test(digits)) return `+${digits}`;
+  return "";
+}
 
 function failure(status, message) {
   const error = new Error(message);
@@ -14,27 +32,29 @@ export async function createAccountRecord(input, {
   createId = () => generateAccountId(adminDb),
 }) {
   const { accountType, name, email, password, phoneNumber, address, role } = input ?? {};
-  const normalizedName = typeof name === "string" ? name.trim() : "";
+  const normalizedName = typeof name === "string" ? normalizeFullName(name) : "";
   const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
   if (!["user", "employee"].includes(accountType)) {
     throw failure(400, "Invalid account type. Use user or employee.");
   }
-  if (!normalizedName || normalizedName.length > 120) {
-    throw failure(400, "Enter a name of 1 to 120 characters.");
+  if (validateFullName(normalizedName) || normalizedName.length > 120) {
+    throw failure(400, "Enter a valid full name with a first and last name.");
   }
-  if (
-    !normalizedEmail ||
-    normalizedEmail.length > 254 ||
-    !EMAIL_PATTERN.test(normalizedEmail)
-  ) {
+  if (validateEmail(normalizedEmail)) {
     throw failure(400, "Enter a valid email address.");
   }
-  const minimumPasswordLength = accountType === "user" ? 8 : 6;
-  if (typeof password !== "string" || password.length < minimumPasswordLength) {
-    throw failure(400, `Password must be at least ${minimumPasswordLength} characters.`);
+  if (typeof password !== "string" || validatePassword(password)) {
+    throw failure(400, "Password must meet all listed security requirements.");
   }
   if (accountType === "employee" && !["admin", "superadmin"].includes(role)) {
     throw failure(400, "Employee role must be admin or superadmin.");
+  }
+
+  const normalizedPhone = accountType === "user"
+    ? normalizePhilippinePhone(phoneNumber)
+    : "";
+  if (accountType === "user" && !normalizedPhone) {
+    throw failure(400, "Enter all 10 digits of a Philippine mobile number.");
   }
 
   const [users, employees] = await Promise.all([
@@ -86,7 +106,7 @@ export async function createAccountRecord(input, {
     ? {
         ...commonData,
         full_name: normalizedName,
-        phone_number: typeof phoneNumber === "string" ? phoneNumber.trim() : "",
+        phone_number: normalizedPhone,
         address: typeof address === "string" ? address.trim() : "",
       }
     : {

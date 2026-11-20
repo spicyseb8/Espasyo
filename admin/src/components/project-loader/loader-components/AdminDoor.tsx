@@ -4,7 +4,6 @@ import { Mesh } from "three";
 import type { ThreeEvent } from "@react-three/fiber";
 import type { Asset } from "../engine/assets/Asset";
 import type { SavedDoor } from "../ProjectTypes";
-import { emitAdminCommentTarget } from "../../../services/assets/adminCommentEvents";
 import AdminModelErrorBoundary from "./AdminModelErrorBoundary";
 import {
     fitAdminElementModelToBounds,
@@ -243,12 +242,6 @@ function AdminDoorModel({
     const handleClick = (event: ThreeEvent<MouseEvent>) => {
         event.stopPropagation();
         onSelect?.(door.id);
-
-        emitAdminCommentTarget({
-            targetType: "door",
-            targetId: door.id,
-            targetLabel: `Door: ${asset.name}`
-        });
     };
 
     return (

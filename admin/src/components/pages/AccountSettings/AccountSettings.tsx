@@ -509,6 +509,8 @@ export default function AccountSettings({
           >
 
             <RecentActivitiesTab
+              key={ownerId}
+              userUid={ownerId}
               displayName={
                 displayName
               }

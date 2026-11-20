@@ -46,7 +46,12 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { getUserProfileByAuthUid } from "@/firebase/user";
 import LoadingScreen from "@/scene/LoadingScreen";
-import { validateEmail, validateLoginForm, validatePassword } from "@/utils/validators";
+import {
+  getPasswordRequirements,
+  validateEmail,
+  validateLoginForm,
+  validatePassword,
+} from "@/utils/validators";
 import { ensureEmailVerified } from "../../../../shared/auth/loginVerification.mjs";
 import { getLoginErrorMessage } from "../../../../shared/auth/loginErrors.mjs";
 import LegalModal from "@/components/legal/LegalModal";
@@ -119,6 +124,13 @@ export function LoginForm({
   const [resetEmail, setResetEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [emailTouched, setEmailTouched] = useState(false);
+  const [passwordTouched, setPasswordTouched] = useState(false);
+  const [resetEmailTouched, setResetEmailTouched] = useState(false);
+  const [newPasswordTouched, setNewPasswordTouched] = useState(false);
+  const [confirmPasswordTouched, setConfirmPasswordTouched] = useState(false);
+  const [loginSubmitted, setLoginSubmitted] = useState(false);
+  const [resetSubmitted, setResetSubmitted] = useState(false);
 
   const [error, setError] = useState(
     typeof locationState?.accessError === "string"
@@ -151,6 +163,27 @@ export function LoginForm({
   const [acceptanceSaveError, setAcceptanceSaveError] = useState("");
   const [savingAcceptance, setSavingAcceptance] = useState(false);
   const [acceptanceNeedsReview, setAcceptanceNeedsReview] = useState(false);
+  const emailValidationError =
+    emailTouched || loginSubmitted ? validateEmail(email) : "";
+  const loginPasswordValidationError =
+    passwordTouched || loginSubmitted
+      ? password
+        ? ""
+        : "Password is required."
+      : "";
+  const resetEmailValidationError =
+    resetEmailTouched ? validateEmail(resetEmail) : "";
+  const newPasswordValidationError =
+    newPasswordTouched || resetSubmitted ? validatePassword(newPassword) : "";
+  const confirmPasswordValidationError =
+    confirmPasswordTouched || resetSubmitted
+      ? !confirmNewPassword
+        ? "Please confirm your password."
+        : confirmNewPassword !== newPassword
+          ? "Passwords do not match."
+          : ""
+      : "";
+  const newPasswordRequirements = getPasswordRequirements(newPassword);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const scrollPositions = useRef<Record<LegalDocument, number>>({
@@ -518,9 +551,9 @@ export function LoginForm({
   async function handleForgotPassword(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (sendingPasswordReset || resetCooldownSeconds > 0) return;
+    setResetEmailTouched(true);
     const emailError = validateEmail(resetEmail);
     if (emailError) {
-      setError(emailError);
       return;
     }
 
@@ -557,13 +590,14 @@ export function LoginForm({
     event.preventDefault();
     setError("");
     setStatusMessage("");
+    setResetSubmitted(true);
+    setNewPasswordTouched(true);
+    setConfirmPasswordTouched(true);
     const passwordError = validatePassword(newPassword);
     if (passwordError) {
-      setError(passwordError);
       return;
     }
     if (newPassword !== confirmNewPassword) {
-      setError("The passwords do not match.");
       return;
     }
     if (!resetCode) {
@@ -660,10 +694,12 @@ export function LoginForm({
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (authenticationInFlight.current || !canSubmit) return;
+    setLoginSubmitted(true);
+    setEmailTouched(true);
+    setPasswordTouched(true);
 
     const validationError = validateLoginForm({ email, password });
     if (validationError) {
-      setError(validationError);
       return;
     }
 
@@ -716,7 +752,7 @@ export function LoginForm({
 
         <CardContent>
           {mode === "login" && (
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} noValidate>
               <FieldGroup>
                 <Field>
                   <FieldLabel htmlFor="email">Email</FieldLabel>
@@ -728,6 +764,7 @@ export function LoginForm({
                     onChange={event => {
                       const nextEmail = event.target.value;
                       setEmail(nextEmail);
+                      setEmailTouched(true);
                       setStatusMessage("");
                       setShowResendVerification(false);
                       if (nextEmail.trim().toLowerCase() !== acceptanceChoice.current.email) {
@@ -736,9 +773,18 @@ export function LoginForm({
                       }
                       setError("");
                     }}
+                    onBlur={() => setEmailTouched(true)}
                     autoComplete="email"
                     required
+                    aria-invalid={Boolean(emailValidationError)}
+                    aria-describedby={emailValidationError ? "login-email-error" : undefined}
+                    className={!emailValidationError && (emailTouched || loginSubmitted) && email.trim()
+                      ? "border-emerald-600 focus-visible:border-emerald-600 focus-visible:ring-emerald-600/30"
+                      : ""}
                   />
+                  <FieldDescription id="login-email-error" className="min-h-5 text-destructive">
+                    {emailValidationError}
+                  </FieldDescription>
                 </Field>
 
                 <Field>
@@ -760,12 +806,22 @@ export function LoginForm({
                     value={password}
                     onChange={event => {
                       setPassword(event.target.value);
+                      setPasswordTouched(true);
                       setError("");
                       setStatusMessage("");
                     }}
+                    onBlur={() => setPasswordTouched(true)}
                     autoComplete="current-password"
                     required
+                    aria-invalid={Boolean(loginPasswordValidationError)}
+                    aria-describedby={loginPasswordValidationError ? "login-password-error" : undefined}
+                    className={!loginPasswordValidationError && (passwordTouched || loginSubmitted) && password
+                      ? "border-emerald-600 focus-visible:border-emerald-600 focus-visible:ring-emerald-600/30"
+                      : ""}
                   />
+                  <FieldDescription id="login-password-error" className="min-h-5 text-destructive">
+                    {loginPasswordValidationError}
+                  </FieldDescription>
                 </Field>
 
                 {error && <FieldDescription className="text-destructive">{error}</FieldDescription>}
@@ -789,7 +845,7 @@ export function LoginForm({
           )}
 
           {mode === "forgot" && (
-            <form onSubmit={handleForgotPassword}>
+            <form onSubmit={handleForgotPassword} noValidate>
               <FieldGroup>
                 <Field>
                   <FieldLabel htmlFor="reset-email">Email</FieldLabel>
@@ -799,12 +855,22 @@ export function LoginForm({
                     value={resetEmail}
                     onChange={event => {
                       setResetEmail(event.target.value);
+                      setResetEmailTouched(true);
                       setError("");
                       setStatusMessage("");
                     }}
+                    onBlur={() => setResetEmailTouched(true)}
                     autoComplete="email"
                     required
+                    aria-invalid={Boolean(resetEmailValidationError)}
+                    aria-describedby={resetEmailValidationError ? "reset-email-error" : undefined}
+                    className={!resetEmailValidationError && resetEmailTouched && resetEmail.trim()
+                      ? "border-emerald-600 focus-visible:border-emerald-600 focus-visible:ring-emerald-600/30"
+                      : ""}
                   />
+                  <FieldDescription id="reset-email-error" className="min-h-5 text-destructive">
+                    {resetEmailValidationError}
+                  </FieldDescription>
                 </Field>
                 {error && <FieldDescription className="text-destructive" role="alert">{error}</FieldDescription>}
                 {statusMessage && <FieldDescription role="status">{statusMessage}</FieldDescription>}
@@ -827,7 +893,7 @@ export function LoginForm({
           )}
 
           {mode === "reset" && (
-            <form onSubmit={handleResetPassword}>
+            <form onSubmit={handleResetPassword} noValidate>
               <FieldGroup>
                 {resetLoading ? (
                   <FieldDescription role="status">Verifying reset link...</FieldDescription>
@@ -853,10 +919,37 @@ export function LoginForm({
                       value={newPassword}
                       onChange={value => {
                         setNewPassword(value);
+                        setNewPasswordTouched(true);
                         setError("");
                       }}
+                      onBlur={() => setNewPasswordTouched(true)}
                       autoComplete="new-password"
                       minLength={8}
+                      ariaInvalid={Boolean(newPasswordValidationError)}
+                      ariaDescribedBy={newPasswordTouched || resetSubmitted
+                        ? "reset-password-requirements reset-password-error"
+                        : undefined}
+                      inputClassName={!newPasswordValidationError && (newPasswordTouched || resetSubmitted) && newPassword
+                        ? "border-emerald-600 focus-visible:border-emerald-600 focus-visible:ring-emerald-600/30"
+                        : ""}
+                      description={(newPasswordTouched || resetSubmitted) ? (
+                        <>
+                          <ul id="reset-password-requirements" className="space-y-1 text-xs" aria-live="polite">
+                            {newPasswordRequirements.map(requirement => (
+                              <li
+                                key={requirement.id}
+                                className={requirement.satisfied ? "text-emerald-700 dark:text-emerald-400" : "text-muted-foreground"}
+                              >
+                                <span aria-hidden="true">{requirement.satisfied ? "✓" : "○"} </span>
+                                {requirement.label}
+                              </li>
+                            ))}
+                          </ul>
+                          <p id="reset-password-error" className="min-h-5 text-xs text-destructive" aria-live="polite">
+                            {newPasswordValidationError}
+                          </p>
+                        </>
+                      ) : undefined}
                     />
                     <PasswordField
                       id="reset-confirm-password"
@@ -864,10 +957,22 @@ export function LoginForm({
                       value={confirmNewPassword}
                       onChange={value => {
                         setConfirmNewPassword(value);
+                        setConfirmPasswordTouched(true);
                         setError("");
                       }}
+                      onBlur={() => setConfirmPasswordTouched(true)}
                       autoComplete="new-password"
                       minLength={8}
+                      ariaInvalid={Boolean(confirmPasswordValidationError)}
+                      ariaDescribedBy={confirmPasswordValidationError ? "reset-confirm-password-error" : undefined}
+                      inputClassName={!confirmPasswordValidationError && confirmPasswordTouched && confirmNewPassword
+                        ? "border-emerald-600 focus-visible:border-emerald-600 focus-visible:ring-emerald-600/30"
+                        : ""}
+                      description={confirmPasswordTouched || resetSubmitted ? (
+                        <p id="reset-confirm-password-error" className="min-h-5 text-xs text-destructive" aria-live="polite">
+                          {confirmPasswordValidationError}
+                        </p>
+                      ) : undefined}
                     />
                     <Button type="submit" className="w-full" disabled={resetSaving}>
                       {resetSaving ? "Updating password..." : "Update password"}

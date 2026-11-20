@@ -73,7 +73,7 @@ const clientInput = {
   accountType: "user",
   name: "Client One",
   email: "Client@Example.com",
-  password: "password1",
+  password: "Password1!",
   phoneNumber: "09123456789",
   address: "Manila",
 };
@@ -86,6 +86,7 @@ test("creates a client Auth account and compatible Firestore user record", async
   assert.equal(account.email, "client@example.com");
   assert.equal(user.uid, account.uid);
   assert.equal(user.full_name, "Client One");
+  assert.equal(user.phone_number, "+639123456789");
   assert.equal(user.account_status, "active");
   assert.equal(harness.authUsers.get(account.uid).emailVerified, false);
   assert.equal(harness.authUsers.size, 1);
@@ -104,6 +105,18 @@ test("creates an employee account with its requested role and employee fields", 
   assert.equal(employee.name, "Client One");
   assert.equal(employee.account_status, "active");
   assert.equal(harness.authUsers.get(account.uid).emailVerified, false);
+});
+
+test("keeps an already international phone number from receiving a duplicate prefix", async () => {
+  const harness = createHarness();
+  await createAccountRecord({
+    ...clientInput,
+    phoneNumber: "+639123456789",
+  }, harness.dependencies);
+  assert.equal(
+    harness.records.get("users").get("U-26001").phone_number,
+    "+639123456789",
+  );
 });
 
 test("rejects duplicate email addresses recorded in Firestore", async () => {
@@ -145,6 +158,18 @@ test("rejects invalid form data and employee roles", async () => {
   );
   await assert.rejects(
     createAccountRecord({ ...clientInput, accountType: "employee", role: "user" }, harness.dependencies),
+    { status: 400 },
+  );
+  await assert.rejects(
+    createAccountRecord({ ...clientInput, password: "password1" }, harness.dependencies),
+    { status: 400 },
+  );
+  await assert.rejects(
+    createAccountRecord({ ...clientInput, phoneNumber: "0912345678" }, harness.dependencies),
+    { status: 400 },
+  );
+  await assert.rejects(
+    createAccountRecord({ ...clientInput, name: "Client1" }, harness.dependencies),
     { status: 400 },
   );
   assert.equal(harness.authUsers.size, 0);

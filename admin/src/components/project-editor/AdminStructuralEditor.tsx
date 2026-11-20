@@ -42,8 +42,8 @@ import { createManagedEditorExitFingerprint } from "./managedEditorExitGuard";
 import { useAuth } from "@/context/AuthContext";
 import { getDoorAssets, getWindowAssets } from "@/services/assets/FirebaseDoorWindowLibrary";
 import AdminBuildPanel from "./AdminBuildPanel";
-import AdminToolDock from "./AdminToolDock";
-import type { AdminStructuralTool } from "./AdminToolDock";
+import AdminToolDock from "./Admintooldock";
+import type { AdminStructuralTool } from "./Admintooldock";
 import AdminFloorRail from "./Adminfloorrail";
 import AdminStructureScene from "./AdminStructureScene";
 import {

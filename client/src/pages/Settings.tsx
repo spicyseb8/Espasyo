@@ -32,6 +32,12 @@ import {
   type LegalDocument,
 } from "../components/legal/LegalDocumentContent";
 import PasswordField from "../components/auth/PasswordField";
+import {
+  getPasswordRequirements,
+  normalizeFullName,
+  validateFullName,
+  validatePassword,
+} from "../utils/validators";
 
 type SettingsSection = "account" | "legal";
 
@@ -83,17 +89,41 @@ function AccountSettings() {
   const { user, loading: authLoading } = useAuth();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [nameTouched, setNameTouched] = useState(false);
+  const [nameSubmitted, setNameSubmitted] = useState(false);
   const [profileEmail, setProfileEmail] = useState("");
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [currentPassword, setCurrentPassword] = useState("");
+  const [currentPasswordTouched, setCurrentPasswordTouched] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [newPasswordTouched, setNewPasswordTouched] = useState(false);
+  const [confirmPasswordTouched, setConfirmPasswordTouched] = useState(false);
+  const [passwordSubmitted, setPasswordSubmitted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const fullName = normalizeFullName(`${firstName} ${lastName}`);
+  const nameValidationError = nameTouched || nameSubmitted
+    ? validateFullName(fullName)
+    : "";
+  const currentPasswordValidationError = (currentPasswordTouched || passwordSubmitted) && !currentPassword
+    ? "Current password is required."
+    : "";
+  const newPasswordValidationError = newPasswordTouched || passwordSubmitted
+    ? validatePassword(newPassword)
+    : "";
+  const confirmPasswordValidationError = confirmPasswordTouched || passwordSubmitted
+    ? !confirmPassword
+      ? "Please confirm your password."
+      : confirmPassword !== newPassword
+        ? "Passwords do not match."
+        : ""
+    : "";
+  const passwordRequirements = getPasswordRequirements(newPassword);
 
   useEffect(() => {
     let cancelled = false;
@@ -160,14 +190,13 @@ function AccountSettings() {
   async function handleProfileSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     clearFeedback();
+    setNameSubmitted(true);
     if (!user) {
       setError("Sign in to update your profile.");
       return;
     }
 
-    const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
-    if (!firstName.trim() || !lastName.trim()) {
-      setError("Enter both your first and last name.");
+    if (validateFullName(fullName)) {
       return;
     }
 
@@ -210,13 +239,12 @@ function AccountSettings() {
   async function handlePasswordSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     clearFeedback();
+    setPasswordSubmitted(true);
+    setCurrentPasswordTouched(true);
+    setNewPasswordTouched(true);
+    setConfirmPasswordTouched(true);
     if (!user || !hasPasswordProvider) return;
-    if (newPassword.length < 8) {
-      setError("Your new password must be at least 8 characters.");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setError("The new passwords do not match.");
+    if (validatePassword(newPassword) || !currentPassword || !confirmPassword || newPassword !== confirmPassword) {
       return;
     }
 
@@ -227,6 +255,10 @@ function AccountSettings() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
+      setCurrentPasswordTouched(false);
+      setNewPasswordTouched(false);
+      setConfirmPasswordTouched(false);
+      setPasswordSubmitted(false);
       setMessage("Your password has been changed.");
     } catch (saveError) {
       console.error("Failed to change password:", saveError);
@@ -259,7 +291,7 @@ function AccountSettings() {
             Update the name and picture shown on your account.
           </p>
         </div>
-        <form className="space-y-5" onSubmit={handleProfileSave}>
+        <form className="space-y-5" onSubmit={handleProfileSave} noValidate>
           <div className="flex items-center gap-4">
             {profilePhoto ? (
               <img src={profilePhoto} alt="Profile" className="size-16 rounded-full object-cover" />
@@ -286,10 +318,20 @@ function AccountSettings() {
                 value={firstName}
                 onChange={event => {
                   setFirstName(event.target.value);
+                  setNameTouched(true);
                   clearFeedback();
                 }}
-                className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onBlur={() => setNameTouched(true)}
+                className={`h-10 rounded-md border bg-background px-3 text-sm font-normal outline-none focus-visible:ring-2 ${
+                  nameValidationError
+                    ? "border-destructive focus-visible:ring-destructive"
+                    : (nameTouched || nameSubmitted) && fullName
+                      ? "border-emerald-600 focus-visible:border-emerald-600 focus-visible:ring-emerald-600/30"
+                      : "border-input focus-visible:ring-ring"
+                }`}
                 required
+                aria-invalid={Boolean(nameValidationError)}
+                aria-describedby={nameValidationError ? "client-profile-name-error" : undefined}
               />
             </SettingField>
             <SettingField label="Last name" htmlFor="last-name">
@@ -299,13 +341,26 @@ function AccountSettings() {
                 value={lastName}
                 onChange={event => {
                   setLastName(event.target.value);
+                  setNameTouched(true);
                   clearFeedback();
                 }}
-                className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onBlur={() => setNameTouched(true)}
+                className={`h-10 rounded-md border bg-background px-3 text-sm font-normal outline-none focus-visible:ring-2 ${
+                  nameValidationError
+                    ? "border-destructive focus-visible:ring-destructive"
+                    : (nameTouched || nameSubmitted) && fullName
+                      ? "border-emerald-600 focus-visible:border-emerald-600 focus-visible:ring-emerald-600/30"
+                      : "border-input focus-visible:ring-ring"
+                }`}
                 required
+                aria-invalid={Boolean(nameValidationError)}
+                aria-describedby={nameValidationError ? "client-profile-name-error" : undefined}
               />
             </SettingField>
           </div>
+          <p id="client-profile-name-error" className="min-h-5 text-xs text-destructive" aria-live="polite">
+            {nameValidationError}
+          </p>
           <Feedback message={error} error />
           <Feedback message={message} />
           <button type="submit" disabled={savingProfile} className="h-10 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/85 disabled:opacity-50">
@@ -349,30 +404,85 @@ function AccountSettings() {
           </p>
         </div>
         {hasPasswordProvider ? (
-          <form className="grid gap-4 sm:grid-cols-2" onSubmit={handlePasswordSave}>
+          <form className="grid gap-4 sm:grid-cols-2" onSubmit={handlePasswordSave} noValidate>
             <PasswordField
               id="password-current"
               label="Current password"
               autoComplete="current-password"
               value={currentPassword}
-              onChange={setCurrentPassword}
+              onChange={value => {
+                setCurrentPassword(value);
+                setCurrentPasswordTouched(true);
+              }}
+              onBlur={() => setCurrentPasswordTouched(true)}
+              ariaInvalid={Boolean(currentPasswordValidationError)}
+              ariaDescribedBy={currentPasswordValidationError ? "client-current-password-error" : undefined}
+              inputClassName={!currentPasswordValidationError && (currentPasswordTouched || passwordSubmitted) && currentPassword
+                ? "border-emerald-600 focus-visible:border-emerald-600 focus-visible:ring-emerald-600/30"
+                : ""}
+              description={<p id="client-current-password-error" className="min-h-5 text-xs text-destructive" aria-live="polite">
+                {currentPasswordValidationError}
+              </p>}
             />
             <span />
-            <PasswordField
-              id="new-password"
-              label="New password"
-              autoComplete="new-password"
-              minLength={8}
-              value={newPassword}
-              onChange={setNewPassword}
-            />
+            <div className="space-y-2">
+              <PasswordField
+                id="new-password"
+                label="New password"
+                autoComplete="new-password"
+                minLength={8}
+                value={newPassword}
+                onChange={value => {
+                  setNewPassword(value);
+                  setNewPasswordTouched(true);
+                }}
+                onBlur={() => setNewPasswordTouched(true)}
+                ariaInvalid={Boolean(newPasswordValidationError)}
+                ariaDescribedBy={newPasswordTouched || passwordSubmitted
+                  ? "client-password-requirements client-new-password-error"
+                  : undefined}
+                inputClassName={!newPasswordValidationError && (newPasswordTouched || passwordSubmitted) && newPassword
+                  ? "border-emerald-600 focus-visible:border-emerald-600 focus-visible:ring-emerald-600/30"
+                  : ""}
+              />
+              {(newPasswordTouched || passwordSubmitted) && (
+                <>
+                  <ul id="client-password-requirements" className="space-y-1 text-xs" aria-live="polite">
+                    {passwordRequirements.map(requirement => (
+                      <li
+                        key={requirement.id}
+                        className={requirement.satisfied ? "text-emerald-700 dark:text-emerald-400" : "text-muted-foreground"}
+                      >
+                        <span aria-hidden="true">{requirement.satisfied ? "✓" : "○"} </span>
+                        {requirement.label}
+                      </li>
+                    ))}
+                  </ul>
+                  <p id="client-new-password-error" className="min-h-5 text-xs text-destructive" aria-live="polite">
+                    {newPasswordValidationError}
+                  </p>
+                </>
+              )}
+            </div>
             <PasswordField
               id="confirm-password"
               label="Confirm new password"
               autoComplete="new-password"
               minLength={8}
               value={confirmPassword}
-              onChange={setConfirmPassword}
+              onChange={value => {
+                setConfirmPassword(value);
+                setConfirmPasswordTouched(true);
+              }}
+              onBlur={() => setConfirmPasswordTouched(true)}
+              ariaInvalid={Boolean(confirmPasswordValidationError)}
+              ariaDescribedBy={confirmPasswordValidationError ? "client-confirm-password-error" : undefined}
+              inputClassName={!confirmPasswordValidationError && (confirmPasswordTouched || passwordSubmitted) && confirmPassword
+                ? "border-emerald-600 focus-visible:border-emerald-600 focus-visible:ring-emerald-600/30"
+                : ""}
+              description={<p id="client-confirm-password-error" className="min-h-5 text-xs text-destructive" aria-live="polite">
+                {confirmPasswordValidationError}
+              </p>}
             />
             <button type="submit" disabled={savingPassword} className="h-10 w-fit rounded-md border border-border px-4 text-sm font-medium hover:bg-muted disabled:opacity-50">
               {savingPassword ? "Changing…" : "Change password"}

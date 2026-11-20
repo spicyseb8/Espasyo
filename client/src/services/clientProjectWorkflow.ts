@@ -41,6 +41,12 @@ export async function getClientProjectWorkflow(projectId: string): Promise<Clien
     return result.workflow;
 }
 
+export async function recordClientProjectOpened(projectId: string): Promise<void> {
+      await projectApi(`/projects/${encodeURIComponent(projectId)}/opened`, {
+          method: "POST",
+      });
+}
+
 export async function getClientManagedProjectFile<T = Record<string, unknown>>(
     projectId: string,
     kind: "structure" | "interior" | "version" | "submission" | "submitted" | "approved",

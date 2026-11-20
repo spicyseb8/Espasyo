@@ -80,7 +80,7 @@ export async function upsertNotification(db, {
 }) {
   if (
     typeof eventKey !== "string" || !eventKey ||
-    !["project_updated", "project_opened"].includes(type) ||
+    type !== "project_updated" ||
     typeof clientId !== "string" || !clientId ||
     typeof projectId !== "string" || !projectId
   ) {
@@ -92,8 +92,8 @@ export async function upsertNotification(db, {
   const notificationId = getGroupedNotificationId(clientId, projectId, type);
   const notificationRef = db.collection(COLLECTION).doc(notificationId);
   const eventKeyRef = db.collection(EVENT_KEYS).doc(notificationEventKeyId(eventKey));
-  const suffix = type === "project_updated" ? "updated" : "opened";
-  const countLabel = type === "project_updated" ? "updates" : "opens";
+  const suffix = "updated";
+  const countLabel = "updates";
   const title = `${clientName} ${suffix} a project`;
   const projectDescription = `${clientName} ${suffix} ${projectName}.`;
 
@@ -118,7 +118,7 @@ export async function upsertNotification(db, {
     const now = FieldValue.serverTimestamp();
     const record = {
       notificationId,
-      eventType: type === "project_updated" ? "project-updated" : "project-opened",
+      eventType: "project-updated",
       type,
       category: "Projects",
       title,

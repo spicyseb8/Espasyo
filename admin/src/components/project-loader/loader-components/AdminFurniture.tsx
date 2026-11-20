@@ -3,7 +3,6 @@ import { useGLTF } from "@react-three/drei";
 import { Mesh } from "three";
 import type { Asset } from "../engine/assets/Asset";
 import type { SavedFurniture } from "../ProjectTypes";
-import { emitAdminCommentTarget } from "../../../services/assets/adminCommentEvents";
 import AdminModelErrorBoundary from "./AdminModelErrorBoundary";
 import { useEffect } from "react";
 import { disposeClonedMaterials } from "@/lib/disposeClonedMaterials";
@@ -91,16 +90,6 @@ function AdminFurnitureModel({
         furniture.rotationY +
         (asset.rotationOffsetY ?? 0);
 
-    const handleClick = (event: any) => {
-        event.stopPropagation();
-
-        emitAdminCommentTarget({
-            targetType: "furniture",
-            targetId: furniture.id,
-            targetLabel: `Furniture: ${asset.name}`
-        });
-    };
-
     return (
         <group
             position={[
@@ -116,7 +105,6 @@ function AdminFurnitureModel({
             userData={{
                 furnitureId: furniture.id
             }}
-            onClick={handleClick}
         >
             <primitive
                 object={model}

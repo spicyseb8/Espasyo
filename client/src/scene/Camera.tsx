@@ -26,19 +26,6 @@ import {
     walkthroughSpawnState
 } from "./Walkthrough/WalkthroughSpawnState";
 
-import {
-    ADMIN_COMMENT_MARKER_CLICK_EVENT,
-    emitAdminCommentFocusComplete
-} from "../services/adminCommentEvents";
-
-import type {
-    AdminComment
-} from "../services/adminCommentService";
-
-import {
-    getAdminCommentTargetPoint
-} from "./Comment/AdminCommentTargetUtils";
-
 const MOVE_SPEED =
     0.15;
 
@@ -56,9 +43,6 @@ const WALKTHROUGH_ROTATION_SPEED =
 
 const CAMERA_FINISH_DISTANCE =
     0.03;
-
-const FOCUS_DISTANCE =
-    3.5;
 
 const MIN_POLAR_ANGLE =
     0;
@@ -299,12 +283,7 @@ function getDesignCenter(
     );
 }
 
-export default function Camera({
-    adminComments = []
-}: {
-    adminComments?:
-        AdminComment[];
-}) {
+export default function Camera() {
     const {
         camera
     } = useThree();
@@ -361,27 +340,6 @@ export default function Camera({
             endTarget:
                 new Vector3()
         });
-
-    const focusActive =
-        useRef(
-            false
-        );
-
-    const focusCommentId =
-        useRef<
-            string |
-            null
-        >(null);
-
-    const focusTarget =
-        useRef(
-            new Vector3()
-        );
-
-    const focusCameraPosition =
-        useRef(
-            new Vector3()
-        );
 
     useEffect(() => {
         const handleKeyDown =
@@ -493,112 +451,6 @@ export default function Camera({
     }, []);
 
     useEffect(() => {
-        const handleCommentFocus =
-            (
-                event:
-                    Event
-            ) => {
-                if (
-                    walkthroughMode
-                ) {
-                    return;
-                }
-
-                const customEvent =
-                    event as CustomEvent<string>;
-
-                const comment =
-                    adminComments.find(
-                        item =>
-                            item.id ===
-                            customEvent.detail
-                    );
-
-                if (
-                    !comment
-                ) {
-                    return;
-                }
-
-                const target =
-                    getAdminCommentTargetPoint(
-                        state,
-                        comment
-                    );
-
-                if (
-                    !target
-                ) {
-                    return;
-                }
-
-                const direction =
-                    new Vector3()
-                        .subVectors(
-                            camera.position,
-                            target
-                        );
-
-                if (
-                    direction.lengthSq() <
-                    0.000001
-                ) {
-                    direction.set(
-                        0,
-                        0,
-                        1
-                    );
-                }
-
-                direction.normalize();
-
-                focusTarget.current.copy(
-                    target
-                );
-
-                focusCameraPosition.current
-                    .copy(
-                        target
-                    )
-                    .add(
-                        direction.multiplyScalar(
-                            FOCUS_DISTANCE
-                        )
-                    );
-
-                focusCommentId.current =
-                    comment.id;
-
-                focusActive.current =
-                    true;
-
-                if (
-                    controlsRef.current
-                ) {
-                    controlsRef.current.enabled =
-                        false;
-                }
-            };
-
-        window.addEventListener(
-            ADMIN_COMMENT_MARKER_CLICK_EVENT,
-            handleCommentFocus
-        );
-
-        return () => {
-            window.removeEventListener(
-                ADMIN_COMMENT_MARKER_CLICK_EVENT,
-                handleCommentFocus
-            );
-        };
-    }, [
-        adminComments,
-        camera,
-        state,
-        walkthroughMode
-    ]);
-
-    useEffect(() => {
         if (
             walkthroughMode
         ) {
@@ -610,10 +462,7 @@ export default function Camera({
 
         const moveCamera =
             () => {
-                if (
-                    focusActive.current ||
-                    transition.current.active
-                ) {
+                if (transition.current.active) {
                     animationFrame =
                         requestAnimationFrame(
                             moveCamera
@@ -780,12 +629,6 @@ export default function Camera({
             walkthroughSpawnState.transitionActive =
                 true;
 
-            focusActive.current =
-                false;
-
-            focusCommentId.current =
-                null;
-
             if (
                 controlsRef.current
             ) {
@@ -881,80 +724,6 @@ export default function Camera({
             _,
             delta
         ) => {
-            if (
-                focusActive.current
-            ) {
-                const alpha =
-                    1 -
-                    Math.exp(
-                        -4.5 *
-                        delta
-                    );
-
-                camera.position.lerp(
-                    focusCameraPosition.current,
-                    alpha
-                );
-
-                if (
-                    controlsRef.current
-                ) {
-                    controlsRef.current.target.lerp(
-                        focusTarget.current,
-                        alpha
-                    );
-
-                    controlsRef.current.update();
-                }
-
-                const finished =
-                    camera.position.distanceToSquared(
-                        focusCameraPosition.current
-                    ) <=
-                    CAMERA_FINISH_DISTANCE *
-                    CAMERA_FINISH_DISTANCE;
-
-                if (
-                    finished
-                ) {
-                    camera.position.copy(
-                        focusCameraPosition.current
-                    );
-
-                    if (
-                        controlsRef.current
-                    ) {
-                        controlsRef.current.target.copy(
-                            focusTarget.current
-                        );
-
-                        controlsRef.current.update();
-
-                        controlsRef.current.enabled =
-                            true;
-                    }
-
-                    const commentId =
-                        focusCommentId.current;
-
-                    focusActive.current =
-                        false;
-
-                    focusCommentId.current =
-                        null;
-
-                    if (
-                        commentId
-                    ) {
-                        emitAdminCommentFocusComplete(
-                            commentId
-                        );
-                    }
-                }
-
-                return;
-            }
-
             if (
                 !transition.current.active
             ) {
@@ -1122,9 +891,7 @@ export default function Camera({
             }
             enabled={
                 !walkthroughMode &&
-                !separatorPlacementActive &&
-                !transition.current.active &&
-                !focusActive.current
+                !separatorPlacementActive
             }
             screenSpacePanning={
                 false

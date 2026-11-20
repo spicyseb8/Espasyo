@@ -9,6 +9,7 @@ import {
 } from "../firebase-admin.js";
 import { requireRole } from "./authorization.js";
 import { createNotification, getAdminRecipientUids, upsertNotification } from "./notification-service.js";
+import { recordActivityEvent, recordProjectOpened } from "./activity-service.js";
 import { findClientAccountByIdentifier } from "./client-account.js";
 import { createReservedFloorPlanDraft } from "./floorplan-reservation.js";
 import {
@@ -208,12 +209,20 @@ function getTodayInManila() {
 
 function recordProjectActivity(transaction, projectId, actor, action, details = {}) {
   const reference = adminDb.collection(PROJECT_ACTIVITY).doc(randomUUID());
+  const targetUserUid = details.targetUserUid ??
+    details.newValue?.ownerId ??
+    (actor.role === "client" ? actor.uid : undefined);
+  const projectName = normalizedString(details.projectName ?? details.newValue?.projectName);
   const activity = {
     projectId,
+    actorUid: actor.uid,
     actorId: actor.uid,
     actorRole: actor.role,
     ...(normalizedString(actor.name) ? { actorName: normalizedString(actor.name) } : {}),
     action,
+    activityType: action,
+    ...(projectName ? { projectName } : {}),
+    ...(targetUserUid ? { targetUserUid } : {}),
     createdAt: FieldValue.serverTimestamp(),
   };
   for (const [key, value] of Object.entries(details)) {
@@ -1072,7 +1081,18 @@ async function saveProjectStructure(req, res) {
       transaction.set(reference, metadata, { merge: true });
       if (firstPublication) {
         recordProjectActivity(transaction, projectId, req.adminUser, "floor-plan-published", {
+          targetUserUid: ownerId,
           newValue: { projectName, deadline, structuralRevision: revision },
+        });
+        recordProjectActivity(transaction, projectId, req.adminUser, "project-assigned", {
+          targetUserUid: ownerId,
+          newValue: { ownerId, projectId },
+        });
+      } else if (projectRevision) {
+        recordProjectActivity(transaction, projectId, req.adminUser, "floor-plan-updated", {
+          targetUserUid: ownerId,
+          previousValue: { structuralRevision: current.publishedStructuralRevision },
+          newValue: { projectName, structuralRevision: revision },
         });
       }
     });
@@ -1236,10 +1256,12 @@ async function saveClientInterior(req, res) {
       });
       transaction.set(reference, update, { merge: true });
       recordProjectActivity(transaction, projectId, { uid: ownerId, role: "client" }, "design-saved", {
+        targetUserUid: ownerId,
         versionId,
         newValue: { versionNumber },
       });
       recordProjectActivity(transaction, projectId, { uid: ownerId, role: "client" }, "design-version-created", {
+        targetUserUid: ownerId,
         versionId,
         newValue: { versionNumber, snapshotType: "design" },
       });
@@ -1283,19 +1305,6 @@ async function getClientProjectWorkflow(req, res) {
     if (!projectSnapshot.exists) throw httpError(404, "Project does not exist.");
     const project = projectSnapshot.data();
     assertAssignedClient(project, assignmentSnapshot, projectId, ownerId);
-    const clientActor = await getClientActor(ownerId);
-    const projectName = normalizedString(project.projectName) || projectId;
-    await notifyProjectAdmins({
-      eventKey: `client-project-opened:${projectId}:${ownerId}:${randomUUID()}`,
-      eventType: "project-opened",
-      title: `${clientActor.name} opened a project`,
-      clientAction: {
-        type: "project_opened",
-        clientId: ownerId,
-        clientName: clientActor.name,
-        projectName,
-      },
-    }, projectId, clientActor, `${clientActor.name} opened ${projectName}.`);
     const submissionAgreement = project.submissionAgreement;
     return res.json({
       success: true,
@@ -1326,6 +1335,80 @@ async function getClientProjectWorkflow(req, res) {
     });
   } catch (error) {
     return sendFailure(res, error, "Unable to load project workflow.");
+  }
+}
+
+async function recordClientProjectOpened(req, res) {
+  try {
+    const projectId = normalizedString(req.params.projectId);
+    const actorUid = req.clientUser.uid;
+    if (!projectId) throw httpError(400, "Project ID is required.");
+    const [projectSnapshot, assignmentSnapshot] = await Promise.all([
+      adminDb.collection(PROJECTS).doc(projectId).get(),
+      assignmentReference(actorUid).get(),
+    ]);
+    if (!projectSnapshot.exists) throw httpError(404, "Project does not exist.");
+    const project = projectSnapshot.data();
+    if (project.ownerId !== actorUid) {
+      throw httpError(403, "You do not have access to this project.");
+    }
+    if (project.workflowType === "admin-managed") {
+      assertAssignedClient(project, assignmentSnapshot, projectId, actorUid);
+    }
+
+    const actor = await getClientActor(actorUid);
+    const recorded = await recordProjectOpened(adminDb, {
+      actorUid,
+      actorRole: "client",
+      actorName: actor.name,
+      targetUserUid: project.ownerId,
+      projectId,
+      projectName: normalizedString(project.projectName) || projectId,
+    });
+    return res.json({ success: true, recorded });
+  } catch (error) {
+    return sendFailure(res, error, "Unable to record project opening.");
+  }
+}
+
+async function recordClientProfileUpdated(req, res) {
+  try {
+    const actorUid = req.clientUser.uid;
+    const actor = await getClientActor(actorUid);
+    await recordActivityEvent(adminDb, {
+      action: "account-updated",
+      activityType: "account-updated",
+      actorUid,
+      actorRole: "client",
+      actorName: actor.name,
+      targetUserUid: actorUid,
+      targetName: actor.name,
+      description: `${actor.name} updated their account profile.`,
+    });
+    return res.json({ success: true });
+  } catch (error) {
+    return sendFailure(res, error, "Unable to record profile activity.");
+  }
+}
+
+async function recordAdminProjectOpened(req, res) {
+  try {
+    const projectId = normalizedString(req.params.projectId);
+    if (!projectId) throw httpError(400, "Project ID is required.");
+    const projectSnapshot = await adminDb.collection(PROJECTS).doc(projectId).get();
+    if (!projectSnapshot.exists) throw httpError(404, "Project does not exist.");
+    const project = projectSnapshot.data();
+    const recorded = await recordProjectOpened(adminDb, {
+      actorUid: req.adminUser.uid,
+      actorRole: req.adminUser.role,
+      actorName: req.adminUser.name,
+      targetUserUid: normalizedString(project.ownerId) || null,
+      projectId,
+      projectName: normalizedString(project.projectName) || projectId,
+    });
+    return res.json({ success: true, recorded });
+  } catch (error) {
+    return sendFailure(res, error, "Unable to record project opening.");
   }
 }
 
@@ -1804,6 +1887,7 @@ async function acknowledgeProjectAccess(req, res) {
         updatedAt: FieldValue.serverTimestamp(),
       }, { merge: true });
       recordProjectActivity(transaction, projectId, { uid: ownerId, role: "client" }, "project-acknowledged", {
+        targetUserUid: ownerId,
         newValue: { agreementType: "project-access", agreementVersion: ACCESS_AGREEMENT_VERSION },
       });
     });
@@ -1850,6 +1934,7 @@ async function acknowledgeSubmissionAgreement(req, res) {
         },
       }, { merge: true });
       recordProjectActivity(transaction, projectId, { uid: ownerId, role: "client" }, "submission-agreement-acknowledged", {
+        targetUserUid: ownerId,
         newValue: { agreementType: "project-submission", agreementVersion: SUBMISSION_AGREEMENT_VERSION },
       });
     });
@@ -1977,6 +2062,7 @@ async function submitClientProject(req, res) {
         { uid: ownerId, role: "client" },
         currentStatus === "revision-requested" ? "project-resubmitted" : "project-submitted",
         {
+          targetUserUid: ownerId,
           versionId,
           newValue: { submissionId, versionNumber },
         },
@@ -2055,6 +2141,7 @@ async function reviewSubmittedProject(req, res) {
         req.adminUser,
         action === "approve" ? "project-approved" : "revision-requested",
         {
+          targetUserUid: project.ownerId,
           versionId: project.submittedVersionId ?? null,
           description: action === "request-revision" ? reason : undefined,
           newValue: action === "approve"
@@ -2152,6 +2239,7 @@ async function updateProjectPublicVisibility(req, res) {
         req.adminUser,
         requestedVisibility ? "project-made-public" : "project-made-private",
         {
+          targetUserUid: project.ownerId,
           previousValue: { isPublic: wasPublic },
           newValue: { isPublic: requestedVisibility },
         },
@@ -2227,40 +2315,6 @@ async function getClientProjectActivity(req, res) {
   }
 }
 
-async function getClientProjectComments(req, res) {
-  try {
-    const projectId = normalizedString(req.params.projectId);
-    const ownerId = req.clientUser.uid;
-    if (!projectId) throw httpError(400, "Project ID is required.");
-    const [project, assignment] = await Promise.all([
-      adminDb.collection(PROJECTS).doc(projectId).get(),
-      assignmentReference(ownerId).get(),
-    ]);
-    if (!project.exists) throw httpError(404, "Project does not exist.");
-    assertAssignedClient(project.data(), assignment, projectId, ownerId);
-    const snapshot = await adminDb.collection("adminComments")
-      .where("projectId", "==", projectId)
-      .get();
-    const comments = snapshot.docs
-      .map(document => {
-        const data = document.data();
-        return {
-          id: document.id,
-          ...data,
-          createdAt: timestampToIso(data.createdAt),
-        };
-      })
-      .sort((first, second) => {
-        const firstTime = first.createdAt?.toMillis?.() ?? 0;
-        const secondTime = second.createdAt?.toMillis?.() ?? 0;
-        return firstTime - secondTime;
-      });
-    return res.json({ success: true, comments });
-  } catch (error) {
-    return sendFailure(res, error, "Unable to load project comments.");
-  }
-}
-
 async function deleteDraft(req, res) {
   const draftId = normalizedString(req.params.draftId);
   const reference = adminDb.collection(DRAFTS).doc(draftId);
@@ -2330,6 +2384,9 @@ router.get("/admin/projects/:projectId/files/:kind", requireRole("admin", "super
 router.get("/admin/projects/:projectId/files/:kind/:fileId", requireRole("admin", "superadmin"), getAdminManagedProjectFile);
 router.put("/projects/:projectId/managed-interior", authenticateClient, saveClientInterior);
 router.get("/projects/:projectId/workflow", authenticateClient, getClientProjectWorkflow);
+router.post("/projects/:projectId/opened", authenticateClient, recordClientProjectOpened);
+router.post("/client/profile-updated", authenticateClient, recordClientProfileUpdated);
+router.post("/admin/projects/:projectId/opened", requireRole("admin", "superadmin"), recordAdminProjectOpened);
 router.get("/projects/public", setPublicNoCacheHeaders, authenticateClient, listPublicProjects);
 router.get("/projects/public/:publicId/thumbnail", setPublicNoCacheHeaders, authenticateClient, getPublicProjectThumbnail);
 router.get("/projects/public/:publicId", setPublicNoCacheHeaders, authenticateClient, getPublicProjectPreview);
@@ -2342,6 +2399,4 @@ router.post("/admin/projects/:projectId/review", requireRole("admin", "superadmi
 router.patch("/admin/projects/:projectId/public-visibility", requireRole("admin", "superadmin"), updateProjectPublicVisibility);
 router.get("/admin/projects/:projectId/activity", requireRole("admin", "superadmin"), getProjectActivity);
 router.get("/projects/:projectId/activity", authenticateClient, getClientProjectActivity);
-router.get("/projects/:projectId/comments", authenticateClient, getClientProjectComments);
-
 export default router;

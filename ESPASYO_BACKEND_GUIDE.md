@@ -4,8 +4,7 @@
 
 This guide documents behavior evidenced by the local source code. It does not establish that Firebase rules, production configuration, or external scheduled jobs behave the same way. No Firebase data, deployed resources, or application code was changed for this audit. Tests, builds, and runtime behavior were not verified as part of this documentation.
 
-The repository has client and admin React/Vite applications, an Express/Firebase Admin server, and a `gltf-scale` utility. The API server mounts account, asset, comment, and project-deadline routes. Client and a
-dmin code also call Firebase directly for several operations.
+The repository has client and admin React/Vite applications, an Express/Firebase Admin server, and a `gltf-scale` utility. The API server mounts account, asset, and project-deadline routes. Client and admin code also call Firebase directly for several operations.
 
 ## 1. Project management
 
@@ -28,35 +27,7 @@ There is no project deletion endpoint or project deletion operation in the inspe
 
 Admin project listing reads `projects`, `users`, and `adminEmployees` directly from Firestore and associates owners by ID/UID. See [`projectService`](admin/src/services/assets/projectService.ts#L239).
 
-## 2. Comments
-
-### Creation and storage
-
-An admin writes a comment from the admin project viewer. The client calls `POST /api/projects/:projectId/comments`; the Express server uses a Firestore transaction to create the comment and update its sequence counter. See [`handleSaveComment`](admin/src/components/project-loader/AdminProjectViewer.tsx#L432) and [`project-comments.js`](server/src/main/project-comments.js#L28).
-
-Comment IDs use a yearly counter document at `idCounters/comments-<year>` and the format `CM-<sequence><two-digit-year>`. The transaction stores these `adminComments` fields:
-
-- `id`
-- `projectId`
-- `targetType`, `targetId`, `targetLabel`, and optional `regionId`
-- `text`
-- `adminId` and `adminName`
-- `status: "open"`
-- `createdAt`
-
-The year used in the comment ID is determined in `Asia/Manila`. Admin identity comes from the authenticated Firebase token and matching `adminEmployees` record.
-
-### Retrieval and display
-
-Admin and client applications each subscribe to `adminComments` with a Firestore `onSnapshot` query filtered by `projectId`. The admin viewer displays comments and lets the reviewer create project-level or scene-targeted comments. The client comment panel displays them and can focus the scene on a targeted comment. See [`adminCommentService`](admin/src/services/assets/adminCommentService.ts#L83), [`client adminCommentService`](client/src/services/adminCommentService.ts#L28), and [`AdminComments`](client/src/scene/Comment/AdminComments.tsx#L87).
-
-The write endpoint and admin UI permit role `admin`; they do not include `superadmin` in the allowed role list. Reads are direct Firestore operations, not Express endpoints, so their authorization depends on Firebase rules.
-
-I found no comment reply/update endpoint or code that changes the stored `status`. The server validates required fields and basic types, but does not verify that the project exists or constrain `targetType` to a fixed set.
-
-Comment creation writes only the comment and its counter. It does not write a notification or recent-activity record.
-
-## 3. Deadlines and reminders
+## 2. Deadlines and reminders
 
 ### Deadline update
 
@@ -72,7 +43,7 @@ No three-day, one-day, due-date, or overdue reminder flow was found. The source 
 
 No local `firebase.json`, `.firebaserc`, Firestore rules, Storage rules, or Cloud Functions directory was found. This is not proof that no external Firebase configuration or scheduled job exists.
 
-## 4. Asset creation and management
+## 3. Asset creation and management
 
 ### Create flow and validation
 
@@ -108,19 +79,16 @@ Catalogs are cached in module memory rather than maintained as live Firestore su
 
 The client asset startup gate registers a service worker and can synchronize library files. The worker caches successful GET responses by a mapped URL/version and falls back to the network on cache misses. See [`AssetStartupGate`](client/src/engine/AssetStartupGate.tsx#L366), [`assetLibraryCache`](client/src/lib/assetLibraryCache.ts#L496), and [`asset-cache-sw.js`](client/public/asset-cache-sw.js#L130). Admin asset editing/deletion also calls cache invalidation helpers. Service-worker caching concerns file responses, not Firestore catalog metadata.
 
-## 5. Notifications and recent activity
+## 4. Notifications and recent activity
 
 No source writes or reads a `notifications` or `adminActivity` collection. No recipient selection, read/unread state, or notification subscription was found.
 
 - Client navigation contains a placeholder to connect a notification indicator to a real source: [`NavBar.tsx`](client/src/pages/NavBar.tsx#L60).
 - Admin Home displays sample activity items: [`Home.tsx`](admin/src/components/pages/Home.tsx#L57).
 - Account Settings displays mock recent activities: [`RecentActivitiesTab.tsx`](admin/src/components/pages/AccountSettings/RecentActivitiesTab.tsx#L8).
-- Comment creation writes `adminComments` and its ID counter only.
 - Project save, account changes, and asset create/edit/delete do not call activity or notification handlers in the inspected source.
 
-Consequently, comments are displayed through Firestore subscriptions but do not trigger a separate notification or activity record.
-
-## 6. Accounts and permissions
+## 5. Accounts and permissions
 
 ### Account creation
 
@@ -144,7 +112,7 @@ The admin UI AuthContext checks email verification and an admin role but does no
 
 The suspension route does not explicitly call `revokeRefreshTokens`. The local source supports blocking future logins for disabled accounts, but does not alone establish that an already-open client session is immediately terminated. That depends on Firebase Auth token behavior and deployed rules/runtime behavior.
 
-## 7. Main algorithms and examples
+## 6. Main algorithms and examples
 
 ### Room detection and area
 
@@ -176,7 +144,7 @@ The item records two topcoat coats, but the topcoat subtotal is not multiplied b
 
 This is a client-side material estimate, not a complete construction quotation. Taxes, labor, delivery, and a general waste allowance are not included in the aggregation.
 
-## 8. Express API reference
+## 7. Express API reference
 
 Protected routes require `Authorization: Bearer <Firebase ID token>`. The middleware responds with 401 for missing or invalid credentials, 403 for unverified or unauthorized accounts, and 500 if role lookup fails. CORS origins and route mounts are configured in [`server.js`](server/src/main/server.js#L1).
 
@@ -188,12 +156,11 @@ Protected routes require `Authorization: Bearer <Firebase ID token>`. The middle
 | `POST /api/accounts/:id/reactivate` | `superadmin` | `id` is the user document ID | 400/404/200/500. Updates status, enables Auth, attempts status rollback on Auth failure. [`account-actions.js`](server/src/main/account-actions.js#L57) |
 | `POST /api/assets` | `superadmin` | Multipart fields: `asset_type`, `name`, `category`, status, price/`pricePerPiece`; floor `length`/`width` in metres; optional files `modelFile`, `diffuseFile`, `normalFile`, `roughnessFile`, `aoFile`; optional color/material settings | 400 validation/upload error, 413 file too large, 409 duplicate, 201 success, otherwise error JSON. Writes Storage objects and then an `assets` document; deletes uploaded objects on caught failure. [`create-asset.js`](server/src/main/create-asset.js#L268) |
 | `DELETE /api/assets/:id` | `superadmin` | Asset ID path parameter | 400 missing ID, 404 missing asset, 200 success, or 500 failure. Deletes known Storage objects then the Firestore asset record. [`create-asset.js`](server/src/main/create-asset.js#L613) |
-| `POST /api/projects/:projectId/comments` | `admin` only | JSON `targetType`, `targetId` (string or null), `targetLabel`, optional `regionId`, nonempty `text` | 400 invalid/missing fields, 201 with `commentId`, or 500 failure. Transaction creates `adminComments` record and updates yearly counter. No notification/activity write. [`project-comments.js`](server/src/main/project-comments.js#L28) |
 | `PATCH /api/projects/:projectId/deadline` | `admin` or `superadmin` | JSON body must contain `deadline`: valid `YYYY-MM-DD` or `null` | 400 missing/invalid/past date, 404 missing project, 200 `{ success: true }`, or 500 failure. Updates project `deadline` and `updatedAt`. [`project-deadlines.js`](server/src/main/project-deadlines.js#L11) |
 
-Project save/load, project listing, asset updates, comment reads, and catalog reads use direct Firebase SDK calls; they are not Express endpoints.
+Project save/load, project listing, asset updates, and catalog reads use direct Firebase SDK calls; they are not Express endpoints.
 
-## 9. Firebase collections, Storage, and local configuration
+## 8. Firebase collections, Storage, and local configuration
 
 Collections evidenced in source:
 
@@ -204,20 +171,26 @@ Collections evidenced in source:
 | `adminEmployees` | `name`, `email`, `role`, Auth `uid`, `account_status`, timestamps |
 | `assets` | `id`, `name`, `asset_type`, `category`, `asset_status`, prices, floor dimensions, material settings, Storage paths |
 | `systemCounters` | Asset ID sequence values |
-| `idCounters` | Project/comment sequence values and year metadata |
-| `adminComments` | Comment fields described above |
+| `idCounters` | Project sequence values and year metadata |
 
 Storage paths evidenced in source:
 
 - `projects/<uid>/<projectId>.json`
 - `projects/<uid>/<projectId>.jpg` (optional thumbnail)
 - `assets/<type>/<category>/<assetId>/<role>.<extension>`
+- `users/<uid>/profile/avatar`
+
+### Fresh-start reset utility
+
+From `server`, `npm run reset:firebase -- --project-id=<exact-id>` runs a dry-run inventory and deletion plan. The Firebase Admin SDK project must match that ID. A live reset additionally requires `--execute`, `--confirm-project-id=<exact-id>`, and `--confirm-storage-bucket=<exact-bucket>`.
+
+The reset preserves one verified superadmin account/profile, the global `assets` collection, and non-account asset counters. It removes project and user records, account ID counters, related activity/notification records, and Storage objects only under `projects/`, `adminManagedFloorPlanDrafts/`, and `users/`. It does not delete global `assets/` files. Live execution is blocked if any Firestore root collection is unreviewed or if the superadmin cannot be verified. No live reset was run for this change.
 
 Client and admin Firebase initialization identify project ID `espasyo-6072d`: [`client Firebase setup`](client/src/firebase/firebase.ts#L1) and [`admin Firebase setup`](admin/src/firebase/firebase.ts#L1). The server reads a local service-account JSON file in [`firebase-admin.js`](server/src/firebase-admin.js#L1); its contents are intentionally not reproduced here.
 
 The server source references `NODE_ENV`. A separate storage-inventory script references `FIREBASE_STORAGE_BUCKET` and `STORAGE_BUCKET`. I found no Firebase rules files, `firebase.json`, `.firebaserc`, or Cloud Functions source in the local repository. The server package includes a local `dev` script; that is not evidence of production deployment.
 
-## 10. Findings and unverified behavior
+## 9. Findings and unverified behavior
 
 ### Missing or incomplete connections
 
@@ -225,7 +198,6 @@ The server source references `NODE_ENV`. A separate storage-inventory script ref
 - No project deletion implementation was found.
 - Deadline enforcement is client-side for saves; server-side project write enforcement was not found.
 - No reminder scheduler or notification/activity pipeline was found.
-- Comments can be created and read, but no reply/status-update flow was found.
 - Asset edits are direct Firestore writes, while creation and deletion use Express.
 - Asset catalogs are cached in memory and are not real-time subscriptions.
 - Asset deletion does not update project references that may contain the deleted asset ID.

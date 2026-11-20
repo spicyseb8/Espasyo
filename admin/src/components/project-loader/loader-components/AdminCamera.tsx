@@ -3,11 +3,6 @@ import { OrbitControls } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { MathUtils, Vector3 } from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
-import {
-    ADMIN_COMMENT_FOCUS_COMPLETE_EVENT,
-    ADMIN_COMMENT_FOCUS_EVENT,
-    type AdminCommentFocusDetail
-} from "@/services/assets/adminCommentEvents";
 
 const MIN_DISTANCE = 2;
 const MAX_DISTANCE = 100;
@@ -17,8 +12,6 @@ const MAX_POLAR_ANGLE =
     MathUtils.degToRad(2);
 const MOVE_SPEED = 4;
 const FAST_MOVE_MULTIPLIER = 2;
-const FOCUS_DISTANCE = 3.5;
-const FOCUS_SPEED = 7;
 
 export default function AdminCamera({
     leftOrbitEnabled = true
@@ -42,15 +35,6 @@ export default function AdminCamera({
 
     const up =
         useRef(new Vector3(0, 1, 0));
-
-    const focusTarget =
-        useRef<Vector3 | null>(null);
-
-    const focusPosition =
-        useRef<Vector3 | null>(null);
-
-    const activeFocusCommentId =
-        useRef<string | null>(null);
 
     useEffect(() => {
         function isTypingTarget(
@@ -120,76 +104,6 @@ export default function AdminCamera({
             keys.current.clear();
         }
 
-        function handleFocus(
-            event: Event
-        ) {
-            const customEvent =
-                event as CustomEvent<AdminCommentFocusDetail>;
-
-            const point =
-                customEvent.detail?.position;
-
-            const commentId =
-                customEvent.detail?.commentId;
-
-            const controls =
-                controlsRef.current;
-
-            if (
-                !point ||
-                !commentId ||
-                !controls
-            ) {
-                return;
-            }
-
-            const camera =
-                controls.object;
-
-            const target =
-                new Vector3(
-                    point.x,
-                    point.y,
-                    point.z
-                );
-
-            const direction =
-                new Vector3()
-                    .subVectors(
-                        camera.position,
-                        target
-                    );
-
-            if (
-                direction.lengthSq() <
-                0.000001
-            ) {
-                direction.set(
-                    0,
-                    1,
-                    1
-                );
-            }
-
-            direction.normalize();
-
-            focusTarget.current =
-                target;
-
-            focusPosition.current =
-                target.clone().add(
-                    direction.multiplyScalar(
-                        FOCUS_DISTANCE
-                    )
-                );
-
-            activeFocusCommentId.current =
-                commentId;
-
-            controls.enabled =
-                false;
-        }
-
         window.addEventListener(
             "keydown",
             handleKeyDown
@@ -203,11 +117,6 @@ export default function AdminCamera({
         window.addEventListener(
             "blur",
             handleBlur
-        );
-
-        window.addEventListener(
-            ADMIN_COMMENT_FOCUS_EVENT,
-            handleFocus
         );
 
         return () => {
@@ -226,10 +135,6 @@ export default function AdminCamera({
                 handleBlur
             );
 
-            window.removeEventListener(
-                ADMIN_COMMENT_FOCUS_EVENT,
-                handleFocus
-            );
         };
     }, []);
 
@@ -244,92 +149,6 @@ export default function AdminCamera({
                 controlsRef.current;
 
             if (!controls) return;
-
-            if (
-                focusTarget.current &&
-                focusPosition.current
-            ) {
-                const target =
-                    focusTarget.current;
-
-                const position =
-                    focusPosition.current;
-
-                const alpha =
-                    1 -
-                    Math.exp(
-                        -FOCUS_SPEED *
-                        delta
-                    );
-
-                camera.position.lerp(
-                    position,
-                    alpha
-                );
-
-                controls.target.lerp(
-                    target,
-                    alpha
-                );
-
-                controls.update();
-
-                const cameraFinished =
-                    camera.position.distanceToSquared(
-                        position
-                    ) <
-                    0.0025;
-
-                const targetFinished =
-                    controls.target.distanceToSquared(
-                        target
-                    ) <
-                    0.0025;
-
-                if (
-                    cameraFinished &&
-                    targetFinished
-                ) {
-                    camera.position.copy(
-                        position
-                    );
-
-                    controls.target.copy(
-                        target
-                    );
-
-                    controls.update();
-
-                    focusTarget.current =
-                        null;
-
-                    focusPosition.current =
-                        null;
-
-                    controls.enabled =
-                        true;
-
-                    const commentId =
-                        activeFocusCommentId.current;
-
-                    activeFocusCommentId.current =
-                        null;
-
-                    if (commentId) {
-                        window.dispatchEvent(
-                            new CustomEvent<string>(
-                                ADMIN_COMMENT_FOCUS_COMPLETE_EVENT,
-                                {
-                                    detail:
-                                        commentId
-                                }
-                            )
-                        );
-                    }
-                }
-
-                return;
-            }
 
             const w =
                 keys.current.has("w");

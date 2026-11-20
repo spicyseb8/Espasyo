@@ -55,6 +55,7 @@ const menuItems = [
   {
     icon: Activity,
     label: "Recent activities",
+    path: "/activities",
   },
   {
     icon: Box,

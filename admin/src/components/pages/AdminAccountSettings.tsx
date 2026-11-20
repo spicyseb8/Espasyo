@@ -48,6 +48,12 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  getPasswordRequirements,
+  normalizeFullName,
+  validateFullName,
+  validatePassword,
+} from "@/utils/validators";
 
 const MAX_PROFILE_IMAGE_SIZE = 5 * 1024 * 1024;
 const PROFILE_IMAGE_TYPES = new Map([
@@ -147,6 +153,8 @@ export default function AdminAccountSettings() {
   } | null>(null);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [nameTouched, setNameTouched] = useState(false);
+  const [nameSubmitted, setNameSubmitted] = useState(false);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
@@ -154,8 +162,12 @@ export default function AdminAccountSettings() {
   const [profileError, setProfileError] = useState("");
   const [profileMessage, setProfileMessage] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
+  const [currentPasswordTouched, setCurrentPasswordTouched] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [newPasswordTouched, setNewPasswordTouched] = useState(false);
+  const [confirmPasswordTouched, setConfirmPasswordTouched] = useState(false);
+  const [passwordSubmitted, setPasswordSubmitted] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState("");
   const [passwordMessage, setPasswordMessage] = useState("");
@@ -189,6 +201,8 @@ export default function AdminAccountSettings() {
         const name = splitName(loadedProfile.name);
         setFirstName(name.firstName);
         setLastName(name.lastName);
+        setNameTouched(false);
+        setNameSubmitted(false);
       })
       .catch((error: unknown) => {
         console.error("Failed to load admin account profile:", error);
@@ -227,7 +241,24 @@ export default function AdminAccountSettings() {
       : "";
   const loadingProfile =
     Boolean(user && role) && !profile && !profileLoadError;
-  const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
+  const fullName = normalizeFullName(`${firstName} ${lastName}`);
+  const nameValidationError = nameTouched || nameSubmitted
+    ? validateFullName(fullName)
+    : "";
+  const currentPasswordValidationError = (currentPasswordTouched || passwordSubmitted) && !currentPassword
+    ? "Current password is required."
+    : "";
+  const newPasswordValidationError = newPasswordTouched || passwordSubmitted
+    ? validatePassword(newPassword)
+    : "";
+  const confirmPasswordValidationError = confirmPasswordTouched || passwordSubmitted
+    ? !confirmPassword
+      ? "Please confirm your password."
+      : confirmPassword !== newPassword
+        ? "Passwords do not match."
+        : ""
+    : "";
+  const passwordRequirements = getPasswordRequirements(newPassword);
   const hasProfileChanges =
     Boolean(profile) &&
     (fullName !== profile?.name.trim() || Boolean(photoFile));
@@ -294,6 +325,8 @@ export default function AdminAccountSettings() {
     const name = splitName(profile.name);
     setFirstName(name.firstName);
     setLastName(name.lastName);
+    setNameTouched(false);
+    setNameSubmitted(false);
     setPhotoFile(null);
     setPhotoPreview("");
     clearProfileFeedback();
@@ -305,13 +338,13 @@ export default function AdminAccountSettings() {
   async function handleProfileSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     clearProfileFeedback();
+    setNameSubmitted(true);
 
     if (!user || !role || !profile) {
       setProfileError("Your admin profile is not available. Reload and try again.");
       return;
     }
-    if (!firstName.trim() || !lastName.trim()) {
-      setProfileError("Enter both your first and last name.");
+    if (validateFullName(fullName)) {
       return;
     }
 
@@ -387,17 +420,16 @@ export default function AdminAccountSettings() {
     event.preventDefault();
     setPasswordError("");
     setPasswordMessage("");
+    setPasswordSubmitted(true);
+    setCurrentPasswordTouched(true);
+    setNewPasswordTouched(true);
+    setConfirmPasswordTouched(true);
 
     if (!user || !hasPasswordProvider) {
       setPasswordError("Password changes are unavailable for this sign-in method.");
       return;
     }
-    if (newPassword.length < 6) {
-      setPasswordError("Your new password must be at least 6 characters.");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setPasswordError("The new passwords do not match.");
+    if (validatePassword(newPassword) || !confirmPassword || newPassword !== confirmPassword || !currentPassword) {
       return;
     }
 
@@ -417,6 +449,10 @@ export default function AdminAccountSettings() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
+      setCurrentPasswordTouched(false);
+      setNewPasswordTouched(false);
+      setConfirmPasswordTouched(false);
+      setPasswordSubmitted(false);
       setPasswordMessage("Your password has been changed.");
     } catch (error) {
       console.error("Failed to change admin password:", error);
@@ -475,7 +511,7 @@ export default function AdminAccountSettings() {
               </div>
             </CardHeader>
             <CardContent className="pt-5">
-              <form className="space-y-5" onSubmit={handleProfileSave}>
+              <form className="space-y-5" onSubmit={handleProfileSave} noValidate>
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                   <Avatar className="h-20 w-20">
                     <AvatarImage src={avatarUrl} alt={fullName || profile.name} />
@@ -514,10 +550,17 @@ export default function AdminAccountSettings() {
                       value={firstName}
                       onChange={(event) => {
                         setFirstName(event.target.value);
+                        setNameTouched(true);
                         clearProfileFeedback();
                       }}
+                      onBlur={() => setNameTouched(true)}
                       disabled={savingProfile}
                       required
+                      aria-invalid={Boolean(nameValidationError)}
+                      aria-describedby={nameValidationError ? "admin-profile-name-error" : undefined}
+                      className={!nameValidationError && (nameTouched || nameSubmitted) && fullName
+                        ? "border-emerald-600 focus-visible:border-emerald-600 focus-visible:ring-emerald-600/30"
+                        : ""}
                     />
                   </div>
                   <div className="space-y-2">
@@ -528,14 +571,24 @@ export default function AdminAccountSettings() {
                       value={lastName}
                       onChange={(event) => {
                         setLastName(event.target.value);
+                        setNameTouched(true);
                         clearProfileFeedback();
                       }}
+                      onBlur={() => setNameTouched(true)}
                       disabled={savingProfile}
                       required
+                      aria-invalid={Boolean(nameValidationError)}
+                      aria-describedby={nameValidationError ? "admin-profile-name-error" : undefined}
+                      className={!nameValidationError && (nameTouched || nameSubmitted) && fullName
+                        ? "border-emerald-600 focus-visible:border-emerald-600 focus-visible:ring-emerald-600/30"
+                        : ""}
                     />
                   </div>
                 </div>
 
+                <p id="admin-profile-name-error" className="min-h-5 text-xs text-destructive" aria-live="polite">
+                  {nameValidationError}
+                </p>
                 {profileError && (
                   <p role="alert" className="text-sm text-destructive">
                     {profileError}
@@ -553,9 +606,7 @@ export default function AdminAccountSettings() {
                     disabled={
                       savingProfile ||
                       validatingPhoto ||
-                      !hasProfileChanges ||
-                      !firstName.trim() ||
-                      !lastName.trim()
+                      !hasProfileChanges
                     }
                   >
                     {savingProfile ? (
@@ -640,7 +691,7 @@ export default function AdminAccountSettings() {
             </CardHeader>
             <CardContent className="pt-5">
               {hasPasswordProvider ? (
-                <form className="space-y-4" onSubmit={handlePasswordSave}>
+                <form className="space-y-4" onSubmit={handlePasswordSave} noValidate>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2 sm:col-span-2">
                       <Label htmlFor="admin-current-password">Current password</Label>
@@ -651,12 +702,22 @@ export default function AdminAccountSettings() {
                         value={currentPassword}
                         onChange={(event) => {
                           setCurrentPassword(event.target.value);
+                          setCurrentPasswordTouched(true);
                           setPasswordError("");
                           setPasswordMessage("");
                         }}
+                        onBlur={() => setCurrentPasswordTouched(true)}
                         disabled={savingPassword}
                         required
+                        aria-invalid={Boolean(currentPasswordValidationError)}
+                        aria-describedby={currentPasswordValidationError ? "admin-current-password-error" : undefined}
+                        className={!currentPasswordValidationError && (currentPasswordTouched || passwordSubmitted) && currentPassword
+                          ? "border-emerald-600 focus-visible:border-emerald-600 focus-visible:ring-emerald-600/30"
+                          : ""}
                       />
+                      <p id="admin-current-password-error" className="min-h-5 text-xs text-destructive" aria-live="polite">
+                        {currentPasswordValidationError}
+                      </p>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="admin-new-password">New password</Label>
@@ -664,17 +725,42 @@ export default function AdminAccountSettings() {
                         id="admin-new-password"
                         type="password"
                         autoComplete="new-password"
-                        minLength={6}
+                        minLength={8}
                         value={newPassword}
                         onChange={(event) => {
                           setNewPassword(event.target.value);
+                          setNewPasswordTouched(true);
                           setPasswordError("");
                           setPasswordMessage("");
                         }}
                         disabled={savingPassword}
                         required
+                        aria-invalid={Boolean(newPasswordValidationError)}
+                        aria-describedby={newPasswordTouched || passwordSubmitted
+                          ? "admin-password-requirements admin-new-password-error"
+                          : undefined}
+                        className={!newPasswordValidationError && (newPasswordTouched || passwordSubmitted) && newPassword
+                          ? "border-emerald-600 focus-visible:border-emerald-600 focus-visible:ring-emerald-600/30"
+                          : ""}
                       />
-                      <p className="text-xs text-muted-foreground">At least 6 characters.</p>
+                      {(newPasswordTouched || passwordSubmitted) && (
+                        <>
+                          <ul id="admin-password-requirements" className="space-y-1 text-xs" aria-live="polite">
+                            {passwordRequirements.map((requirement) => (
+                              <li
+                                key={requirement.id}
+                                className={requirement.satisfied ? "text-emerald-700 dark:text-emerald-400" : "text-muted-foreground"}
+                              >
+                                <span aria-hidden="true">{requirement.satisfied ? "✓" : "○"} </span>
+                                {requirement.label}
+                              </li>
+                            ))}
+                          </ul>
+                          <p id="admin-new-password-error" className="min-h-5 text-xs text-destructive" aria-live="polite">
+                            {newPasswordValidationError}
+                          </p>
+                        </>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="admin-confirm-password">Confirm new password</Label>
@@ -682,16 +768,27 @@ export default function AdminAccountSettings() {
                         id="admin-confirm-password"
                         type="password"
                         autoComplete="new-password"
-                        minLength={6}
+                        minLength={8}
                         value={confirmPassword}
                         onChange={(event) => {
                           setConfirmPassword(event.target.value);
+                          setConfirmPasswordTouched(true);
                           setPasswordError("");
                           setPasswordMessage("");
                         }}
                         disabled={savingPassword}
                         required
+                        aria-invalid={Boolean(confirmPasswordValidationError)}
+                        aria-describedby={confirmPasswordValidationError
+                          ? "admin-confirm-password-error"
+                          : undefined}
+                        className={!confirmPasswordValidationError && (confirmPasswordTouched || passwordSubmitted) && confirmPassword
+                          ? "border-emerald-600 focus-visible:border-emerald-600 focus-visible:ring-emerald-600/30"
+                          : ""}
                       />
+                      <p id="admin-confirm-password-error" className="min-h-5 text-xs text-destructive" aria-live="polite">
+                        {confirmPasswordValidationError}
+                      </p>
                     </div>
                   </div>
                   {passwordError && (

@@ -2,6 +2,7 @@ import express from "express";
 import { adminAuth, adminDb } from "../firebase-admin.js";
 import { requireRole } from "./authorization.js";
 import { createNotification, getAdminRecipientUids } from "./notification-service.js";
+import { createActivityEventId, recordActivityEvent } from "./activity-service.js";
 
 const router = express.Router();
 
@@ -12,6 +13,17 @@ router.post("/accounts/:id/created-notification", requireRole("admin", "superadm
     if (!account || account.createdBy !== req.adminUser.uid) {
       return res.status(404).json({ success: false, message: "Recently created client account was not found." });
     }
+    await recordActivityEvent(adminDb, {
+      action: "account-created",
+      activityType: "account-created",
+      actorUid: req.adminUser.uid,
+      actorRole: req.adminUser.role,
+      actorName: req.adminUser.name || "Admin",
+      targetUserUid: req.params.id,
+      targetName: account.full_name || account.name || "",
+      accountId: account.id || req.params.id,
+      description: `${req.adminUser.name || "An administrator"} created an account for ${account.full_name || account.name || "a client"}.`,
+    }, createActivityEventId("account-created", req.params.id));
     await createNotification(adminDb, {
       eventKey: `account-created:${req.params.id}`, eventType: "account-created", category: "Accounts",
       title: "Client account created",
@@ -65,6 +77,17 @@ router.post(
       await accountRef.update({
         account_status: "suspended",
         updated_at: new Date(),
+      });
+      await recordActivityEvent(adminDb, {
+        action: "account-suspended",
+        activityType: "account-suspended",
+        actorUid: req.adminUser.uid,
+        actorRole: req.adminUser.role,
+        actorName: req.adminUser.name || "Superadmin",
+        targetUserUid: uid,
+        targetName: accountData.name || accountData.full_name || "",
+        accountId,
+        description: `${req.adminUser.name || "A superadmin"} suspended ${accountData.name || accountData.full_name || accountData.email || "a client account"}.`,
       });
       await createNotification(adminDb, {
         eventKey: `account-suspended:${uid}:${accountData.updated_at?.toMillis?.() ?? accountData.updated_at?.getTime?.() ?? "initial"}`,
@@ -144,6 +167,17 @@ router.post(
 
         throw error;
       }
+      await recordActivityEvent(adminDb, {
+        action: "account-reactivated",
+        activityType: "account-reactivated",
+        actorUid: req.adminUser.uid,
+        actorRole: req.adminUser.role,
+        actorName: req.adminUser.name || "Superadmin",
+        targetUserUid: uid,
+        targetName: accountData.name || accountData.full_name || "",
+        accountId,
+        description: `${req.adminUser.name || "A superadmin"} reactivated ${accountData.name || accountData.full_name || accountData.email || "a client account"}.`,
+      });
       await createNotification(adminDb, {
         eventKey: `account-reactivated:${uid}:${accountData.updated_at?.toMillis?.() ?? accountData.updated_at?.getTime?.() ?? "initial"}`,
         eventType: "account-reactivated", category: "Accounts", title: "Account reactivated",

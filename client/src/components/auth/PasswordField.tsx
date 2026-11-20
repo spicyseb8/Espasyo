@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Eye, EyeOff } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -9,9 +9,14 @@ interface PasswordFieldProps {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  onBlur?: () => void;
   autoComplete: string;
   minLength?: number;
   required?: boolean;
+  ariaInvalid?: boolean;
+  ariaDescribedBy?: string;
+  inputClassName?: string;
+  description?: ReactNode;
 }
 
 export default function PasswordField({
@@ -19,9 +24,14 @@ export default function PasswordField({
   label,
   value,
   onChange,
+  onBlur,
   autoComplete,
   minLength,
   required = true,
+  ariaInvalid,
+  ariaDescribedBy,
+  inputClassName,
+  description,
 }: PasswordFieldProps) {
   const [visible, setVisible] = useState(false);
 
@@ -35,9 +45,12 @@ export default function PasswordField({
           autoComplete={autoComplete}
           value={value}
           onChange={event => onChange(event.target.value)}
+          onBlur={onBlur}
           minLength={minLength}
           required={required}
-          className="h-10 pr-11 text-sm"
+          aria-invalid={ariaInvalid}
+          aria-describedby={ariaDescribedBy}
+          className={`h-10 pr-11 text-sm ${inputClassName ?? ""}`}
         />
         <Button
           type="button"
@@ -50,6 +63,7 @@ export default function PasswordField({
           {visible ? <EyeOff /> : <Eye />}
         </Button>
       </span>
+      {description}
     </div>
   );
 }

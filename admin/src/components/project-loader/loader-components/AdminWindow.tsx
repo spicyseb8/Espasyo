@@ -4,7 +4,6 @@ import { Mesh } from "three";
 import type { ThreeEvent } from "@react-three/fiber";
 import type { Asset } from "../engine/assets/Asset";
 import type { SavedWindow } from "../ProjectTypes";
-import { emitAdminCommentTarget } from "../../../services/assets/adminCommentEvents";
 import AdminModelErrorBoundary from "./AdminModelErrorBoundary";
 import {
     fitAdminElementModelToBounds,
@@ -292,12 +291,6 @@ function AdminWindowModel({
     const handleClick = (event: ThreeEvent<MouseEvent>) => {
         event.stopPropagation();
         onSelect?.(window.id);
-
-        emitAdminCommentTarget({
-            targetType: "window",
-            targetId: window.id,
-            targetLabel: `Window: ${asset.name}`
-        });
     };
 
     return (

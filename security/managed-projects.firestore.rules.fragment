@@ -154,8 +154,3 @@ match /projectSubmissions/{submissionId} {
   allow read: if ownsManagedProject(resource.data.projectId);
   allow create, update, delete: if false;
 }
-
-match /adminComments/{commentId} {
-  allow read: if ownsManagedProject(resource.data.projectId);
-  allow create, update, delete: if false;
-}

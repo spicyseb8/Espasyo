@@ -255,6 +255,7 @@ function AvailableFloorPlanProjectsCard({
               Unpublished plans stay here until they are published from the editor.
             </CardDescription>
           </div>
+          {/* The only New Floor Plan button on this card. */}
           <NewFloorPlanProjectButton />
         </div>
         <div className="flex items-center gap-1 border-b border-border" role="tablist" aria-label="Floor-plan drafts">
@@ -320,10 +321,9 @@ function AvailableFloorPlanProjectsCard({
                   ? "Try a different search."
                   : tab === "mine"
                     ? "Drafts you create will appear here."
-                    : "Create a floor plan to get started."}
+                    : "Use New Floor Plan above to get started."}
               </p>
             </div>
-            {!search && tab === "all" && <NewFloorPlanProjectButton />}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -591,6 +591,17 @@ function GreetingCalendarCard({
     return total;
   }, [deadlinesByDate, viewMonth]);
 
+  // Largest number of projects due on a single day in the viewed month.
+  // Used for the legend sample so it reflects real data instead of a fixed "3".
+  const maxDueInMonth = useMemo(() => {
+    const prefix = `${viewMonth.getFullYear()}-${String(viewMonth.getMonth() + 1).padStart(2, "0")}-`;
+    let max = 1;
+    for (const [date, items] of deadlinesByDate) {
+      if (date.startsWith(prefix)) max = Math.max(max, items.length);
+    }
+    return max;
+  }, [deadlinesByDate, viewMonth]);
+
   const selectedProjects = deadlinesByDate.get(selectedDate) ?? [];
   const monthLabel = viewMonth.toLocaleDateString("en-US", {
     month: "long",
@@ -707,15 +718,15 @@ function GreetingCalendarCard({
               >
                 {date.getDate()}
 
-                {/* Number of projects due on this date */}
+                {/* Number of projects due on this date (red notification badge) */}
                 {hasDeadline && (
                   <span
                     aria-hidden="true"
                     className={[
                       "absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold leading-none shadow",
                       isSelected
-                        ? "bg-background text-primary ring-1 ring-primary"
-                        : "bg-primary text-primary-foreground",
+                        ? "bg-background text-red-600 ring-1 ring-red-500"
+                        : "bg-red-500 text-white",
                     ].join(" ")}
                   >
                     {count > 9 ? "9+" : count}
@@ -733,8 +744,8 @@ function GreetingCalendarCard({
             Has a deadline
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
-              3
+            <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+              {maxDueInMonth > 9 ? "9+" : maxDueInMonth}
             </span>
             Projects due that day
           </span>
@@ -749,7 +760,11 @@ function GreetingCalendarCard({
             </p>
             <Badge
               variant={selectedProjects.length > 0 ? "default" : "outline"}
-              className="text-[11px]"
+              className={
+                selectedProjects.length > 0
+                  ? "border-transparent bg-red-500 text-[11px] text-white hover:bg-red-500"
+                  : "text-[11px]"
+              }
             >
               {selectedProjects.length === 0
                 ? "None due"

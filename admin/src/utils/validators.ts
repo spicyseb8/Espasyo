@@ -1,3 +1,10 @@
+import {
+  validateEmail as validateEmailFormat,
+  validateFullName as validateNameFormat,
+  validatePassword as validateStrongPassword,
+  validatePhilippinePhone,
+} from "../../../shared/auth/formValidation.mjs";
+
 export interface SignupFormData {
   fullName: string;
   email: string;
@@ -20,61 +27,37 @@ export interface AccountCreationFormData {
   role: string;
 }
 
+export {
+  getPasswordRequirements,
+  normalizeFullName,
+  normalizePhilippinePhone,
+  sanitizePhilippineSubscriberNumber,
+  validatePhilippinePhone,
+} from "../../../shared/auth/formValidation.mjs";
+
 export function validateFullName(value: string): string {
-  const name = value.trim();
-
-  if (!name) return "Please enter your full name.";
-
-  if (!/^[\p{L}\s]+$/u.test(name)) {
-    return "Use letters and spaces only.";
-  }
-
-  if (!/\p{L}/u.test(name)) {
-    return "Please enter a valid full name.";
-  }
-
-  return "";
+  return validateNameFormat(value);
 }
 
 export function validateEmail(value: string): string {
-  const email = value.trim();
-
-  if (!email) return "Please enter your email.";
-
-  if (
-    email.length > 254 ||
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-  ) {
-    return "Please enter a valid email address.";
-  }
-
-  return "";
+  return validateEmailFormat(value);
 }
 
 export function validateContact(value: string): string {
   const contact = value.trim();
-  if (!contact) return "Please enter your contact number.";
+  if (!contact) return "Phone number is required.";
 
-  if (!/^\+?\d+(?:[ -]\d+)*$/.test(contact)) {
-    return "Enter a valid Philippine mobile number.";
-  }
-
-  const normalized = contact.replace(/[ -]/g, "");
-  if (!/^(09\d{9}|\+639\d{9})$/.test(normalized)) {
-    return "Enter a valid Philippine mobile number starting with 09 or +639.";
-  }
-
-  return "";
+  const digits = contact.replace(/\D/g, "");
+  const subscriberNumber = digits.startsWith("63")
+    ? digits.slice(2)
+    : digits.startsWith("0")
+      ? digits.slice(1)
+      : digits;
+  return validatePhilippinePhone(subscriberNumber);
 }
 
 export function validatePassword(value: string): string {
-  if (!value) return "Please enter your password.";
-
-  if (value.length < 8) {
-    return "Password must be at least 8 characters long.";
-  }
-
-  return "";
+  return validateStrongPassword(value);
 }
 
 export function validateConfirmPassword(
@@ -110,10 +93,7 @@ export function validateSignupForm(
 export function validateLoginForm(
   data: LoginFormData
 ): string {
-  return (
-    validateEmail(data.email) ||
-    validatePassword(data.password)
-  );
+  return validateEmail(data.email) || (data.password ? "" : "Password is required.");
 }
 
 export function validateAdminLoginForm(
@@ -137,30 +117,17 @@ export function validateAccountCreationForm(
   data: AccountCreationFormData,
   accountType: "user" | "employee" | "superadmin"
 ): string {
-  if (!data.name.trim()) {
-    return "Please enter the person's name.";
-  }
-
-  if (!data.email.trim()) {
-    return "Please enter an email address.";
-  }
+  const nameError = validateFullName(data.name);
+  if (nameError) return nameError;
 
   const emailError = validateEmail(data.email);
   if (emailError) return emailError;
 
-  if (!data.password) {
-    return "Please enter a password.";
-  }
+  const passwordError = validatePassword(data.password);
+  if (passwordError) return passwordError;
 
-  if (data.password.length < (accountType === "user" ? 8 : 6)) {
-    return accountType === "user"
-      ? "Password must be at least 8 characters."
-      : "Password must be at least 6 characters.";
-  }
-
-  if (!data.phoneNumber.trim()) {
-    return "Please enter a phone number.";
-  }
+  const phoneError = validatePhilippinePhone(data.phoneNumber);
+  if (phoneError) return phoneError;
 
   if (accountType === "user" && !data.address.trim()) {
     return "Please enter an address.";

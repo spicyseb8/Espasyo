@@ -17,6 +17,7 @@ export interface CreateAccountData {
 export interface CreateAccountResponse {
   success: boolean;
   message: string;
+  activityRecorded?: boolean;
   account?: {
     id: string;
     uid: string;

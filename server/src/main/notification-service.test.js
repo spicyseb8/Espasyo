@@ -129,13 +129,13 @@ test("grouped client notifications count only while unread and split by client, 
 
   await upsertNotification(db, payload("project-2", "project_updated", "client-a", "project-2"));
   await upsertNotification(db, payload("client-b", "project_updated", "client-b", "project-1"));
-  await upsertNotification(db, payload("opened", "project_opened", "client-a", "project-1"));
-  await upsertNotification(db, payload("opened-again", "project_opened", "client-a", "project-1"));
   assert.equal(db.records.get("notifications/client-a_project-2_project_updated").count, 1);
   assert.equal(db.records.get("notifications/client-b_project-1_project_updated").count, 1);
-  const openedNotification = db.records.get("notifications/client-a_project-1_project_opened");
-  assert.equal(openedNotification.count, 2);
-  assert.equal(openedNotification.message, "Client client-a opened Project project-1 (2 opens).");
+  await assert.rejects(
+    () => upsertNotification(db, payload("opened", "project_opened", "client-a", "project-1")),
+    /supported type/,
+  );
+  assert.equal(db.records.has("notifications/client-a_project-1_project_opened"), false);
 
   const legacyNotificationId = await upsertNotification(
     db,

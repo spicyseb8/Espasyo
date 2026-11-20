@@ -13,14 +13,23 @@ import {
   UserPlus,
   Mail,
   Lock,
-  Phone,
   MapPin,
   Shield,
   Loader2,
   RefreshCw,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { validateAccountCreationForm } from "@/utils/validators";
+import {
+  getPasswordRequirements,
+  normalizeFullName,
+  normalizePhilippinePhone,
+  sanitizePhilippineSubscriberNumber,
+  validateAccountCreationForm,
+  validateEmail,
+  validateFullName,
+  validatePassword,
+  validatePhilippinePhone,
+} from "@/utils/validators";
 import { createAccount } from "./createAccount";
 import { createClientAccount } from "@/firebase/clientAccounts";
 
@@ -67,6 +76,8 @@ export default function CreateAccountModal({
   const [success, setSuccess] = useState("");
   const [passwordToShare, setPasswordToShare] = useState("");
   const [cleanupWarning, setCleanupWarning] = useState("");
+  const [touched, setTouched] = useState<Partial<Record<keyof FormData, boolean>>>({});
+  const [submitted, setSubmitted] = useState(false);
   const submitLock = useRef(false);
 
   useEffect(() => {
@@ -77,6 +88,8 @@ export default function CreateAccountModal({
       setSuccess("");
       setPasswordToShare("");
       setCleanupWarning("");
+      setTouched({});
+      setSubmitted(false);
     }
 
     if (open) {
@@ -84,6 +97,8 @@ export default function CreateAccountModal({
       setSuccess("");
       setPasswordToShare("");
       setCleanupWarning("");
+      setTouched({});
+      setSubmitted(false);
 
       setForm((previous) => ({
         ...previous,
@@ -117,6 +132,7 @@ export default function CreateAccountModal({
     field: keyof FormData,
     value: string
   ) => {
+    setTouched((previous) => ({ ...previous, [field]: true }));
     setForm((previous) => ({
       ...previous,
       [field]: value,
@@ -125,6 +141,18 @@ export default function CreateAccountModal({
     if (error) setError("");
     if (success) setSuccess("");
   };
+
+  const fieldError = (
+    field: keyof FormData,
+    value: string,
+    validator: (value: string) => string
+  ) => submitted || touched[field] ? validator(value) : "";
+
+  const nameError = fieldError("name", form.name, validateFullName);
+  const emailError = fieldError("email", form.email, validateEmail);
+  const passwordError = fieldError("password", form.password, validatePassword);
+  const phoneError = fieldError("phoneNumber", form.phoneNumber, validatePhilippinePhone);
+  const passwordRequirements = getPasswordRequirements(form.password);
 
   const handleSubmit = async (
     event: React.FormEvent<HTMLFormElement>
@@ -145,6 +173,7 @@ export default function CreateAccountModal({
 
     setError("");
     setSuccess("");
+    setSubmitted(true);
 
     const validationError = validateAccountCreationForm(
       form,
@@ -152,7 +181,14 @@ export default function CreateAccountModal({
     );
 
     if (validationError) {
-      setError(validationError);
+      if (![
+        validateFullName(form.name),
+        validateEmail(form.email),
+        validatePassword(form.password),
+        validatePhilippinePhone(form.phoneNumber),
+      ].includes(validationError)) {
+        setError(validationError);
+      }
       return;
     }
 
@@ -162,10 +198,10 @@ export default function CreateAccountModal({
     try {
       if (accountType === "user") {
         const result = await createClientAccount({
-          name: form.name,
-          email: form.email,
+          name: normalizeFullName(form.name),
+          email: form.email.trim().toLowerCase(),
           password: form.password,
-          phoneNumber: form.phoneNumber,
+          phoneNumber: normalizePhilippinePhone(form.phoneNumber),
           address: form.address,
         });
         setCleanupWarning(result.cleanupWarning ?? "");
@@ -176,23 +212,27 @@ export default function CreateAccountModal({
       } else {
         const result = await createAccount({
           accountType: "employee",
-          name: form.name.trim(),
-          email: form.email.trim(),
+          name: normalizeFullName(form.name),
+          email: form.email.trim().toLowerCase(),
           password: form.password,
-          phoneNumber: form.phoneNumber.trim(),
+          phoneNumber: normalizePhilippinePhone(form.phoneNumber),
           address: form.address.trim(),
           role: form.role,
         });
 
         const createdId = result.account?.id || "";
         setSuccess(
-          createdId
+          result.activityRecorded === false
+            ? result.message
+            : createdId
             ? `Account ${createdId} was created successfully.`
             : "Account was created successfully."
         );
       }
 
       setForm(initialForm);
+      setTouched({});
+      setSubmitted(false);
       onCreated?.();
 
       if (accountType !== "user") {
@@ -258,6 +298,7 @@ export default function CreateAccountModal({
           {/* FORM */}
           <form
             onSubmit={handleSubmit}
+            noValidate
             className="flex flex-col"
           >
             <div className="space-y-8 px-8 py-8">
@@ -289,10 +330,19 @@ export default function CreateAccountModal({
                           event.target.value
                         )
                       }
+                      onBlur={() => setTouched((previous) => ({ ...previous, name: true }))}
                       placeholder="Enter full name"
                       disabled={loading}
                       required
+                      aria-invalid={Boolean(nameError)}
+                      aria-describedby={nameError ? "account-name-error" : undefined}
+                      className={!nameError && (touched.name || submitted) && form.name.trim()
+                        ? "border-emerald-600 focus-visible:border-emerald-600 focus-visible:ring-emerald-600/30"
+                        : ""}
                     />
+                    <p id="account-name-error" className="min-h-5 text-xs text-destructive" aria-live="polite">
+                      {nameError}
+                    </p>
                   </div>
 
                   {/* EMAIL */}
@@ -324,12 +374,20 @@ export default function CreateAccountModal({
                             event.target.value
                           )
                         }
+                        onBlur={() => setTouched((previous) => ({ ...previous, email: true }))}
                         placeholder="example@email.com"
-                        className="pl-9"
+                        className={`pl-9 ${!emailError && (touched.email || submitted) && form.email.trim()
+                          ? "border-emerald-600 focus-visible:border-emerald-600 focus-visible:ring-emerald-600/30"
+                          : ""}`}
                         disabled={loading}
                         required
+                        aria-invalid={Boolean(emailError)}
+                        aria-describedby={emailError ? "account-email-error" : undefined}
                       />
                     </div>
+                    <p id="account-email-error" className="min-h-5 text-xs text-destructive" aria-live="polite">
+                      {emailError}
+                    </p>
                   </div>
 
                   {/* PASSWORD */}
@@ -362,10 +420,17 @@ export default function CreateAccountModal({
                               event.target.value
                             )
                           }
-                          placeholder={accountType === "user" ? "Minimum 8 characters" : "Minimum 6 characters"}
-                          className="pl-9"
+                          onBlur={() => setTouched((previous) => ({ ...previous, password: true }))}
+                          placeholder="Choose a secure password"
+                          className={`pl-9 ${!passwordError && (touched.password || submitted) && form.password
+                            ? "border-emerald-600 focus-visible:border-emerald-600 focus-visible:ring-emerald-600/30"
+                            : ""}`}
                           disabled={loading}
                           required
+                          aria-invalid={Boolean(passwordError)}
+                          aria-describedby={touched.password || submitted
+                            ? "account-password-requirements account-password-error"
+                            : undefined}
                         />
                       </div>
                       {accountType === "user" && (
@@ -376,12 +441,28 @@ export default function CreateAccountModal({
                           title="Generate password"
                           disabled={loading}
                           onClick={() => {
-                            const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
-                            const randomValues = crypto.getRandomValues(new Uint32Array(16));
-                            const generated = Array.from(
-                              randomValues,
-                              value => alphabet[value % alphabet.length],
-                            ).join("");
+                            const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+                            const lower = "abcdefghijkmnopqrstuvwxyz";
+                            const numbers = "23456789";
+                            const special = "!@#$%";
+                            const alphabet = `${upper}${lower}${numbers}${special}`;
+                            const randomValues = crypto.getRandomValues(new Uint32Array(32));
+                            let randomIndex = 0;
+                            const pick = (characters: string) =>
+                              characters[randomValues[randomIndex++] % characters.length];
+                            const characters = [
+                              pick(upper),
+                              pick(lower),
+                              pick(numbers),
+                              pick(special),
+                              ...Array.from({ length: 12 }, () => pick(alphabet)),
+                            ];
+                            for (let index = characters.length - 1; index > 0; index--) {
+                              const swapIndex = randomValues[randomIndex++] % (index + 1);
+                              [characters[index], characters[swapIndex]] =
+                                [characters[swapIndex], characters[index]];
+                            }
+                            const generated = characters.join("");
                             updateField("password", generated);
                           }}
                         >
@@ -391,10 +472,28 @@ export default function CreateAccountModal({
                       )}
                     </div>
 
+                    {(touched.password || submitted) && (
+                      <>
+                        <ul id="account-password-requirements" className="space-y-1 text-xs" aria-live="polite">
+                          {passwordRequirements.map((requirement) => (
+                            <li
+                              key={requirement.id}
+                              className={requirement.satisfied ? "text-emerald-700 dark:text-emerald-400" : "text-muted-foreground"}
+                            >
+                              <span aria-hidden="true">{requirement.satisfied ? "✓" : "○"} </span>
+                              {requirement.label}
+                            </li>
+                          ))}
+                        </ul>
+                        <p id="account-password-error" className="min-h-5 text-xs text-destructive" aria-live="polite">
+                          {passwordError}
+                        </p>
+                      </>
+                    )}
                     <p className="text-xs text-muted-foreground">
                       {accountType === "user"
-                        ? "Choose an initial password of at least 8 characters and share it with the client."
-                        : "This password will be used for Firebase Authentication."}
+                        ? "Choose a secure initial password and share it with the client."
+                          : "Use a secure password for Firebase Authentication."}
                     </p>
                   </div>
 
@@ -404,34 +503,40 @@ export default function CreateAccountModal({
                       Phone Number
                     </Label>
 
-                    <div className="relative">
-                      <Phone
-                        size={16}
-                        className="
-                          pointer-events-none
-                          absolute
-                          left-3
-                          top-1/2
-                          -translate-y-1/2
-                          text-muted-foreground
-                        "
-                      />
-
+                    <div className={`flex h-10 items-center overflow-hidden rounded-md border bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 ${
+                      phoneError
+                        ? "border-destructive"
+                        : (touched.phoneNumber || submitted) && form.phoneNumber
+                          ? "border-emerald-600"
+                          : "border-input"
+                    }`}>
+                      <span className="flex h-full shrink-0 items-center border-r border-input px-3 text-sm text-muted-foreground" aria-hidden="true">
+                        +63
+                      </span>
                       <Input
                         id="account-phone"
+                        type="tel"
+                        inputMode="numeric"
+                        autoComplete="tel-national"
+                        maxLength={10}
                         value={form.phoneNumber}
-                        onChange={(event) =>
-                          updateField(
-                            "phoneNumber",
-                            event.target.value
-                          )
-                        }
-                        placeholder="09123456789"
-                        className="pl-9"
+                        onChange={(event) => updateField(
+                          "phoneNumber",
+                          sanitizePhilippineSubscriberNumber(event.target.value)
+                        )}
+                        onBlur={() => setTouched((previous) => ({ ...previous, phoneNumber: true }))}
+                        placeholder="9123456789"
+                        className="h-full rounded-none border-0 bg-transparent px-3 shadow-none focus-visible:border-0 focus-visible:ring-0"
                         disabled={loading}
                         required
+                        aria-label="Philippine mobile number, 10 digit subscriber number"
+                        aria-invalid={Boolean(phoneError)}
+                        aria-describedby={phoneError ? "account-phone-error" : undefined}
                       />
                     </div>
+                    <p id="account-phone-error" className="min-h-5 text-xs text-destructive" aria-live="polite">
+                      {phoneError}
+                    </p>
                   </div>
 
                   {/* ADDRESS (moved here, right after phone) */}

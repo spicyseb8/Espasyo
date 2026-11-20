@@ -105,19 +105,23 @@ export async function saveProjectDeadline(db, projectId, deadline, actor, reason
   return db.runTransaction(async (transaction) => {
     const projectSnapshot = await transaction.get(projectReference);
     if (!projectSnapshot.exists) return false;
-    const previousDeadline = projectSnapshot.data().deadline ?? null;
+    const project = projectSnapshot.data();
+    const previousDeadline = project.deadline ?? null;
     transaction.update(projectReference, {
       deadline,
       updatedAt: new Date(),
     });
     transaction.create(activityReference, {
       projectId,
+      actorUid: actor.uid,
       actorId: actor.uid,
       actorRole: actor.role,
+      targetUserUid: project.ownerId ?? null,
       ...(typeof actor.name === "string" && actor.name.trim()
         ? { actorName: actor.name.trim() }
         : {}),
       action: previousDeadline ? "deadline-changed" : "deadline-created",
+      activityType: previousDeadline ? "deadline-changed" : "deadline-created",
       previousValue: { deadline: previousDeadline },
       newValue: { deadline },
       ...(reason ? { description: reason } : {}),
