@@ -6,14 +6,9 @@ import {
   sendEmailVerification,
   signOut,
 } from "firebase/auth";
-import {
-  doc,
-  serverTimestamp,
-  setDoc,
-} from "firebase/firestore";
-
-import { auth, db, firebaseConfig } from "./firebase";
+import { auth, firebaseConfig } from "./firebase";
 import { API_BASE_URL } from "@/services/assets/projectApi";
+import { isAdminRole } from "@/lib/adminRole";
 
 export interface CreateClientAccountData {
   name: string;
@@ -45,10 +40,15 @@ function mapCreateClientAccountError(error: unknown): unknown {
 
 export async function createClientAccount(
   data: CreateClientAccountData,
+  creatorRole: unknown,
 ): Promise<{ cleanupWarning?: string }> {
+  if (!isAdminRole(creatorRole)) {
+    throw new Error("Only admins and superadmins can create client accounts.");
+  }
+
   const adminUser = auth.currentUser;
   if (!adminUser) {
-    throw new Error("Sign in with an admin account to create a client account.");
+    throw new Error("Sign in with an admin or superadmin account to create a client account.");
   }
 
   const secondaryApp = initializeApp(firebaseConfig, "client-creator");
@@ -66,24 +66,32 @@ export async function createClientAccount(
     createdUser = userCredential.user;
 
     await sendEmailVerification(userCredential.user);
-    await setDoc(doc(db, "users", userCredential.user.uid), {
-      id: userCredential.user.uid,
-      uid: userCredential.user.uid,
-      full_name: data.name.trim(),
-      email: data.email.trim().toLowerCase(),
-      phone_number: data.phoneNumber.trim(),
-      address: data.address.trim(),
-      avatar: `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(data.name.trim())}`,
-      account_status: "active",
-      isActive: true,
-      role: "client",
-      createdBy: adminUser.uid,
-      createdAt: serverTimestamp(),
-      created_at: serverTimestamp(),
-      updated_at: serverTimestamp(),
+    const token = await adminUser.getIdToken();
+    const profileResponse = await fetch(`${API_BASE_URL}/client-accounts`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        uid: userCredential.user.uid,
+        name: data.name,
+        email: data.email,
+        phoneNumber: data.phoneNumber,
+        address: data.address,
+      }),
     });
+    const profileResult = await profileResponse.json().catch(() => null) as {
+      success?: boolean;
+      message?: string;
+    } | null;
+    if (!profileResponse.ok || profileResult?.success !== true) {
+      throw new Error(
+        profileResult?.message || "Failed to create the client profile.",
+      );
+    }
+
     try {
-      const token = await adminUser.getIdToken();
       const response = await fetch(`${API_BASE_URL}/accounts/${encodeURIComponent(userCredential.user.uid)}/created-notification`, {
         method: "POST", headers: { Authorization: `Bearer ${token}` },
       });

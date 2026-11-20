@@ -1,6 +1,7 @@
 import path from "node:path";
 
 import express from "express";
+import { FieldValue } from "firebase-admin/firestore";
 import multer from "multer";
 
 import {
@@ -8,6 +9,7 @@ import {
   adminStorage,
 } from "../firebase-admin.js";
 import { createFurniturePreviewRenderer } from "../assets/render-furniture-preview.js";
+import { buildAssetUpdate } from "./asset-update.js";
 import { requireRole } from "./authorization.js";
 import { createNotification, getAdminRecipientUids } from "./notification-service.js";
 
@@ -652,6 +654,55 @@ router.post(
       }
     }
   }
+);
+
+router.put(
+  "/assets/:id",
+  requireRole("superadmin"),
+  async (req, res) => {
+    const assetId =
+      typeof req.params.id === "string" ? req.params.id.trim() : "";
+
+    if (!assetId) {
+      return res.status(400).json({
+        success: false,
+        message: "Asset ID is required.",
+      });
+    }
+
+    try {
+      const assetRef = adminDb.collection("assets").doc(assetId);
+      const assetSnapshot = await assetRef.get();
+
+      if (!assetSnapshot.exists) {
+        return res.status(404).json({
+          success: false,
+          message: "Asset was not found.",
+        });
+      }
+
+      const update = buildAssetUpdate(assetSnapshot.data(), req.body, {
+        deleteField: () => FieldValue.delete(),
+        serverTimestamp: () => FieldValue.serverTimestamp(),
+      });
+      await assetRef.update(update);
+
+      return res.json({ success: true });
+    } catch (error) {
+      if (error.status === 400) {
+        return res.status(400).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      console.error("Asset update failed:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to update asset.",
+      });
+    }
+  },
 );
 
 router.delete(

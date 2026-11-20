@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import CreateAccountModal, { type CreateAccountType } from "@/components/createfunc/CreateAccountModal";
 import { useAuth } from "@/context/AuthContext";
+import { isAdminRole } from "@/lib/adminRole";
 
 interface User { id: string; full_name: string; email: string; phone_number: string; created_at: string; created_ts: number; avatar?: string; }
 interface FirestoreUser { full_name?: string | null; name?: string | null; email?: string | null; phone_number?: string | null; created_at?: Timestamp | string | null; profile_picture?: string | null; avatar?: string | null; role?: string | null; }
@@ -47,7 +48,7 @@ export default function UserTable({ type }: UserTableProps) {
   const navigate = useNavigate();
   const { role } = useAuth();
   const canCreateAccounts = type === "customers"
-    ? role === "admin"
+    ? isAdminRole(role)
     : role === "superadmin";
   const [users, setUsers] = useState<User[]>([]);
   const [search, setSearch] = useState("");

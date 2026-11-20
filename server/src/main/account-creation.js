@@ -26,6 +26,94 @@ function failure(status, message) {
   return error;
 }
 
+export async function createClientProfileRecord(input, {
+  adminAuth,
+  adminDb,
+  actorUid,
+}) {
+  const { uid, name, email, phoneNumber, address } = input ?? {};
+  const normalizedName = typeof name === "string" ? normalizeFullName(name) : "";
+  const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+  const normalizedPhone = normalizePhilippinePhone(phoneNumber);
+  const normalizedAddress = typeof address === "string" ? address.trim() : "";
+
+  if (typeof uid !== "string" || !uid.trim() || typeof actorUid !== "string" || !actorUid) {
+    throw failure(400, "Client account identity is invalid.");
+  }
+  if (validateFullName(normalizedName) || normalizedName.length > 120) {
+    throw failure(400, "Enter a valid full name with a first and last name.");
+  }
+  if (validateEmail(normalizedEmail)) {
+    throw failure(400, "Enter a valid email address.");
+  }
+  if (!normalizedPhone) {
+    throw failure(400, "Enter all 10 digits of a Philippine mobile number.");
+  }
+  if (!normalizedAddress) {
+    throw failure(400, "Client address is required.");
+  }
+
+  let firebaseUser;
+  try {
+    firebaseUser = await adminAuth.getUser(uid);
+  } catch (error) {
+    if (error.code === "auth/user-not-found") {
+      throw failure(400, "The client sign-in account could not be verified.");
+    }
+    throw error;
+  }
+  if (firebaseUser.email?.trim().toLowerCase() !== normalizedEmail) {
+    throw failure(400, "Client email does not match the sign-in account.");
+  }
+
+  const [users, employees] = await Promise.all([
+    adminDb.collection("users").get(),
+    adminDb.collection("adminEmployees").get(),
+  ]);
+  const duplicateInFirestore = [...users.docs, ...employees.docs].some(document =>
+    typeof document.data().email === "string" &&
+    document.data().email.trim().toLowerCase() === normalizedEmail
+  );
+  if (duplicateInFirestore) {
+    throw failure(409, "An account with this email already exists.");
+  }
+
+  const now = new Date();
+  const record = {
+    id: uid,
+    uid,
+    full_name: normalizedName,
+    email: normalizedEmail,
+    phone_number: normalizedPhone,
+    address: normalizedAddress,
+    avatar: `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(normalizedName)}`,
+    account_status: "active",
+    isActive: true,
+    role: "client",
+    createdBy: actorUid,
+    createdAt: now,
+    created_at: now,
+    updated_at: now,
+  };
+
+  try {
+    await adminDb.collection("users").doc(uid).create(record);
+  } catch (error) {
+    if (error.code === "already-exists") {
+      throw failure(409, "A client profile already exists for this account.");
+    }
+    throw error;
+  }
+
+  return {
+    id: uid,
+    uid,
+    name: normalizedName,
+    email: normalizedEmail,
+    accountType: "user",
+  };
+}
+
 export async function createAccountRecord(input, {
   adminAuth,
   adminDb,

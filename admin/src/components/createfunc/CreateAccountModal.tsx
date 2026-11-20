@@ -19,6 +19,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { isAdminRole } from "@/lib/adminRole";
 import {
   getPasswordRequirements,
   normalizeFullName,
@@ -160,12 +161,12 @@ export default function CreateAccountModal({
     event.preventDefault();
 
     const canCreate = accountType === "user"
-      ? role === "admin"
+      ? isAdminRole(role)
       : role === "superadmin";
     if (!canCreate || submitLock.current) {
       if (!canCreate) {
         setError(accountType === "user"
-          ? "Only admins can create client accounts."
+          ? "Only admins and superadmins can create client accounts."
           : "Only superadmins can create accounts.");
       }
       return;
@@ -203,7 +204,7 @@ export default function CreateAccountModal({
           password: form.password,
           phoneNumber: normalizePhilippinePhone(form.phoneNumber),
           address: form.address,
-        });
+        }, role);
         setCleanupWarning(result.cleanupWarning ?? "");
         setPasswordToShare(form.password);
         setSuccess(

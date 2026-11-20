@@ -2,10 +2,41 @@ import express from "express";
 
 import { adminAuth, adminDb } from "../firebase-admin.js";
 import { requireRole } from "./authorization.js";
-import { createAccountRecord } from "./account-creation.js";
+import {
+  createAccountRecord,
+  createClientProfileRecord,
+} from "./account-creation.js";
 import { createActivityEventId, recordActivityEvent } from "./activity-service.js";
 
 const router = express.Router();
+
+router.post(
+  "/client-accounts",
+  requireRole("admin", "superadmin"),
+  async (req, res) => {
+    try {
+      const account = await createClientProfileRecord(req.body, {
+        adminAuth,
+        adminDb,
+        actorUid: req.adminUser.uid,
+      });
+      return res.status(201).json({ success: true, account });
+    } catch (error) {
+      if (error.status === 400 || error.status === 409) {
+        return res.status(error.status).json({
+          success: false,
+          message: error.message,
+        });
+      }
+
+      console.error("Client profile creation failed:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to create the client profile. Please try again.",
+      });
+    }
+  },
+);
 
 router.post("/accounts", requireRole("superadmin"), async (req, res) => {
   try {

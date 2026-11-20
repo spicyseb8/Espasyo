@@ -109,7 +109,7 @@ export default function AssetLibrary({
 }: AssetLibraryProps) {
   const { role } = useAuth();
 
-  const canCreateAssets = role === "superadmin";
+  const canManageAssets = role === "superadmin";
 
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -424,7 +424,7 @@ export default function AssetLibrary({
   //==================================================
 
   const handleSave = async () => {
-    if (!selectedAsset) return;
+    if (!selectedAsset || !canManageAssets) return;
 
     const trimmedName = editName.trim();
     const numericPrice = Number(editPrice);
@@ -605,7 +605,7 @@ export default function AssetLibrary({
   };
 
   const handleDelete = async () => {
-    if (!selectedAsset || !canCreateAssets) return;
+    if (!selectedAsset || !canManageAssets) return;
 
     const assetToDelete = selectedAsset;
     setDeleteError(null);
@@ -677,7 +677,7 @@ export default function AssetLibrary({
         </div>
 
         <div className="flex items-center gap-2">
-          {canCreateAssets && (
+          {canManageAssets && (
             <Button
               type="button"
               size="sm"
@@ -831,7 +831,7 @@ export default function AssetLibrary({
 
               <div className="mt-auto pt-4">
                 <div className="flex gap-2">
-                  {canCreateAssets && (
+                  {canManageAssets && (
                     <button
                       type="button"
                       onClick={() => {
@@ -849,7 +849,7 @@ export default function AssetLibrary({
                     onClick={handleNext}
                     className="flex-1 rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background transition-opacity hover:opacity-90"
                   >
-                    Edit
+                    {canManageAssets ? "Edit" : "View details"}
                   </button>
                 </div>
               </div>
@@ -858,7 +858,7 @@ export default function AssetLibrary({
             <div className="flex h-full min-h-0 flex-col">
               <div className="mb-3 flex shrink-0 items-center justify-between">
                 <h3 className="text-base font-semibold">
-                  Edit Asset
+                  {canManageAssets ? "Edit Asset" : "Asset Details"}
                 </h3>
 
                 <button
@@ -870,7 +870,10 @@ export default function AssetLibrary({
                 </button>
               </div>
 
-              <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+              <fieldset
+                disabled={!canManageAssets || saving}
+                className="min-h-0 min-w-0 flex-1 overflow-y-auto border-0 p-0 pr-1"
+              >
                 <div className="mb-4">
                   <label className="mb-2 block text-xs font-medium">
                     Asset Preview
@@ -1229,7 +1232,7 @@ export default function AssetLibrary({
                     </div>
                   </div>
                 )}
-              </div>
+              </fieldset>
 
               {saveError && (
                 <p className="mt-3 shrink-0 text-xs text-destructive">
@@ -1237,25 +1240,31 @@ export default function AssetLibrary({
                 </p>
               )}
 
-              <div className="mt-3 flex shrink-0 gap-2 border-t border-border pt-3">
-                <button
-                  type="button"
-                  disabled={saving}
-                  onClick={handleDiscard}
-                  className="flex-1 rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-muted disabled:opacity-50"
-                >
-                  Discard
-                </button>
+              {canManageAssets ? (
+                <div className="mt-3 flex shrink-0 gap-2 border-t border-border pt-3">
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={handleDiscard}
+                    className="flex-1 rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-muted disabled:opacity-50"
+                  >
+                    Discard
+                  </button>
 
-                <button
-                  type="button"
-                  disabled={saving}
-                  onClick={() => setConfirmOpen(true)}
-                  className="flex-1 rounded-lg bg-foreground px-3 py-2 text-sm font-medium text-background hover:opacity-90 disabled:opacity-50"
-                >
-                  Confirm
-                </button>
-              </div>
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={() => setConfirmOpen(true)}
+                    className="flex-1 rounded-lg bg-foreground px-3 py-2 text-sm font-medium text-background hover:opacity-90 disabled:opacity-50"
+                  >
+                    Confirm
+                  </button>
+                </div>
+              ) : (
+                <p className="mt-3 shrink-0 border-t border-border pt-3 text-xs text-muted-foreground">
+                  View-only details. Only superadmins can edit assets.
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -1438,7 +1447,7 @@ export default function AssetLibrary({
       </AlertDialog>
 
       {/* Create asset modal */}
-      {canCreateAssets && (
+      {canManageAssets && (
         <CreateAssetModal
           open={createOpen}
           onOpenChange={setCreateOpen}

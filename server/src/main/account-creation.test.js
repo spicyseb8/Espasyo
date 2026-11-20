@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createAccountRecord } from "./account-creation.js";
+import {
+  createAccountRecord,
+  createClientProfileRecord,
+} from "./account-creation.js";
 
 function createHarness({ firestoreError, existingEmail } = {}) {
   const records = new Map([
@@ -43,6 +46,13 @@ function createHarness({ firestoreError, existingEmail } = {}) {
       if (existingEmail === email || [...authUsers.values()].some(user => user.email === email)) {
         return { uid: "existing" };
       }
+      const error = new Error("not found");
+      error.code = "auth/user-not-found";
+      throw error;
+    },
+    async getUser(uid) {
+      const user = authUsers.get(uid);
+      if (user) return user;
       const error = new Error("not found");
       error.code = "auth/user-not-found";
       throw error;
@@ -105,6 +115,55 @@ test("creates an employee account with its requested role and employee fields", 
   assert.equal(employee.name, "Client One");
   assert.equal(employee.account_status, "active");
   assert.equal(harness.authUsers.get(account.uid).emailVerified, false);
+});
+
+test("creates a client profile for an existing Auth account and records the creator", async () => {
+  const harness = createHarness();
+  harness.authUsers.set("client-uid", {
+    uid: "client-uid",
+    email: "client@example.com",
+  });
+
+  const account = await createClientProfileRecord({
+    uid: "client-uid",
+    name: "Client One",
+    email: "Client@Example.com",
+    phoneNumber: "+639123456789",
+    address: "Manila",
+  }, {
+    ...harness.dependencies,
+    actorUid: "admin-uid",
+  });
+
+  const profile = harness.records.get("users").get("client-uid");
+  assert.equal(account.accountType, "user");
+  assert.equal(profile.uid, "client-uid");
+  assert.equal(profile.phone_number, "+639123456789");
+  assert.equal(profile.createdBy, "admin-uid");
+  assert.equal(profile.role, "client");
+});
+
+test("rejects a client profile that does not match the existing Auth account", async () => {
+  const harness = createHarness();
+  harness.authUsers.set("client-uid", {
+    uid: "client-uid",
+    email: "different@example.com",
+  });
+
+  await assert.rejects(
+    createClientProfileRecord({
+      uid: "client-uid",
+      name: "Client One",
+      email: "client@example.com",
+      phoneNumber: "+639123456789",
+      address: "Manila",
+    }, {
+      ...harness.dependencies,
+      actorUid: "admin-uid",
+    }),
+    { status: 400 },
+  );
+  assert.equal(harness.records.get("users").size, 0);
 });
 
 test("keeps an already international phone number from receiving a duplicate prefix", async () => {

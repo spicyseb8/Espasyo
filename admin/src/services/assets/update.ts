@@ -1,11 +1,4 @@
-import {
-  doc,
-  deleteField,
-  updateDoc,
-  serverTimestamp,
-} from "firebase/firestore";
-
-import { db } from "../../firebase/firebase";
+import { projectApi } from "./projectApi";
 import { isOptionalFurniturePrice } from "./furnitureCategories";
 import {
   DEFAULT_FLOOR_GROUT_WIDTH_M,
@@ -35,12 +28,6 @@ export async function updateAsset(
   assetId: string,
   data: UpdateAssetData
 ): Promise<void> {
-  const assetRef = doc(
-    db,
-    "assets",
-    assetId
-  );
-
   const hasLength = data.length !== undefined;
   const hasWidth = data.width !== undefined;
 
@@ -126,31 +113,11 @@ export async function updateAsset(
     );
   }
 
-  await updateDoc(assetRef, {
-    name: data.name,
-    category: data.category,
-    ...(data.price !== undefined
-      ? { price: data.price }
-      : data.pricePerPiece === undefined &&
-          data.asset_type === "furniture" &&
-          isOptionalFurniturePrice(data.category)
-        ? { price: deleteField() }
-        : {}),
-    ...(data.pricePerPiece !== undefined
-      ? { pricePerPiece: data.pricePerPiece }
-      : {}),
-    asset_status: data.asset_status,
-
-    ...(hasLength && hasWidth
-      ? {
-          length: data.length,
-          width: data.width,
-        }
-      : {}),
-    ...(data.floorPattern !== undefined
-      ? { floorPattern: data.floorPattern }
-      : {}),
-
-    updated_at: serverTimestamp(),
-  });
+  await projectApi(
+    `/assets/${encodeURIComponent(assetId)}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(data),
+    },
+  );
 }
