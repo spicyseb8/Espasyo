@@ -6,11 +6,9 @@ import {
   onSnapshot,
   orderBy,
   query,
-  serverTimestamp,
   startAfter,
   Timestamp,
   where,
-  writeBatch,
   type DocumentData,
   type Firestore,
   type QueryConstraint,
@@ -19,6 +17,7 @@ import {
 } from "firebase/firestore";
 
 import { getManilaDateBounds, getManilaDateKey } from "../../../shared/notifications/manilaTime.mjs";
+import { projectApi } from "../services/assets/projectApi";
 
 export type RecipientFeedMode = "today" | "recent";
 export type RecipientFeedRow = Record<string, unknown> & {
@@ -61,11 +60,9 @@ function createRecipientFeedQuery(
   mode: RecipientFeedMode,
   pageSize: number,
   cursor?: QueryDocumentSnapshot<DocumentData> | null,
-  unreadOnly = false,
 ) {
   const { start, end } = getManilaDateBounds();
   const constraints: QueryConstraint[] = [where("recipientUid", "==", uid)];
-  if (unreadOnly) constraints.push(where("read", "==", false));
   if (mode === "today") {
     constraints.push(
       where("createdAt", ">=", Timestamp.fromDate(start)),
@@ -265,23 +262,10 @@ export function useRecipientNotificationFeed<T extends RecipientFeedRow>(
     if (!uid || currentFeed.markingAllRead) return;
     updateFeedState(previous => ({ ...previous, markingAllRead: true, actionError: "" }));
     try {
-      let cursor: QueryDocumentSnapshot<DocumentData> | null = null;
-      while (true) {
-        const page: QuerySnapshot<DocumentData> = await getDocs(
-          createRecipientFeedQuery(db, uid, mode, 450, cursor, true),
-        );
-        if (!page.docs.length) break;
-        const batch = writeBatch(db);
-        page.docs.forEach((snapshot: QueryDocumentSnapshot<DocumentData>) => {
-          batch.update(snapshot.ref, {
-            read: true,
-            readAt: serverTimestamp(),
-          });
-        });
-        await batch.commit();
-        cursor = page.docs[page.docs.length - 1];
-        if (page.docs.length < 450) break;
-      }
+      await projectApi<{ success: boolean }>("/notifications/mark-all-read", {
+        method: "POST",
+        body: JSON.stringify({ mode }),
+      });
     } catch (error) {
       console.error("[Notifications] Unable to mark all as read:", error);
       updateFeedState(previous => ({
@@ -291,7 +275,26 @@ export function useRecipientNotificationFeed<T extends RecipientFeedRow>(
     } finally {
       updateFeedState(previous => ({ ...previous, markingAllRead: false }));
     }
-  }, [db, uid, mode, currentFeed.markingAllRead, updateFeedState]);
+  }, [uid, mode, currentFeed.markingAllRead, updateFeedState]);
+
+  const markNotificationRead = useCallback(async (notificationId: string) => {
+    if (!uid || !notificationId) return false;
+    updateFeedState(previous => ({ ...previous, actionError: "" }));
+    try {
+      await projectApi<{ success: boolean }>(
+        `/notifications/${encodeURIComponent(notificationId)}/read`,
+        { method: "PATCH" },
+      );
+      return true;
+    } catch (error) {
+      console.error("[Notifications] Unable to mark notification as read:", error);
+      updateFeedState(previous => ({
+        ...previous,
+        actionError: "Couldn't mark this notification as read. Please try again.",
+      }));
+      return false;
+    }
+  }, [uid, updateFeedState]);
 
   const todayBadgeItems = todayBadgeState.key === todayBadgeKey
     ? todayBadgeState.items
@@ -313,5 +316,6 @@ export function useRecipientNotificationFeed<T extends RecipientFeedRow>(
     hasMore: currentFeed.hasMore,
     loadMore,
     markAllRead,
+    markNotificationRead,
   };
 }

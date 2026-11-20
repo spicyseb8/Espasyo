@@ -8,6 +8,7 @@ import projectDeadlineRoutes from "./project-deadlines.js";
 import managedProjectRoutes from "./managed-projects.js";
 import legalAcceptanceRoutes from "./legal-acceptance.js";
 import adminActivityRoutes from "./admin-activities.js";
+import notificationActionRoutes from "./notification-actions.js";
 import { createCorsOptions } from "./cors-config.js";
 import { adminDb } from "../firebase-admin.js";
 import { sendDeadlineNotifications } from "./deadline-notifications.js";
@@ -79,6 +80,11 @@ app.use(
 app.use(
   "/api",
   adminActivityRoutes
+);
+
+app.use(
+  "/api",
+  notificationActionRoutes
 );
 
 // --------------------------------------------------

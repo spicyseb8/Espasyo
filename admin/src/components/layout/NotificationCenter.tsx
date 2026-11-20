@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { AlertCircle, Bell, BellOff, CheckCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { db } from "@/firebase/firebase";
@@ -93,6 +92,7 @@ export default function NotificationCenter({ uid }: { uid: string }) {
     hasMore,
     loadMore,
     markAllRead,
+    markNotificationRead,
   } = useRecipientNotificationFeed<NotificationRecord>(db, uid, 20);
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState("All");
@@ -113,15 +113,11 @@ export default function NotificationCenter({ uid }: { uid: string }) {
     [items, category, tab]
   );
 
-  const markRead = async (item: NotificationRecord) => {
-    if (isRead(item)) return;
-    try { await updateDoc(doc(db, "notifications", item.notificationId, "recipients", uid), { read: true, readAt: serverTimestamp() }); }
-    catch (error) { console.error("Unable to mark notification as read:", error); }
-  };
   const hasUnreadInCurrentFeed = items.some(item => !isRead(item));
 
   const openItem = async (item: NotificationRecord) => {
-    await markRead(item); setOpen(false);
+    if (!isRead(item) && !await markNotificationRead(item.notificationId)) return;
+    setOpen(false);
     const target = item.targetType === "account" ? "customers" : item.targetType === "asset" ? (item.assetType === "floor" ? "floors" : item.assetType === "wall" ? "walls" : "furniture") : item.category === "Projects" || item.category === "Deadlines" ? "projects" : "dashboard";
     navigate(target === "dashboard" ? "/" : `/?tab=${target}`);
   };
