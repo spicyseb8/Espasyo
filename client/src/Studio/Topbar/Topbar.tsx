@@ -7,6 +7,7 @@ import { Link, useParams } from "react-router-dom";
 import useEditor from "../../context/editor/useEditor";
 import { calculateCostEstimate } from "../../engine/cost/CostEstimator";
 import { downloadCostBreakdownPdf } from "../../engine/cost/CostBreakdownPDF";
+import type { CostEstimate } from "../../engine/cost/CostTypes";
 import {
     getProjectBudgetSummary,
     parseProjectBudget
@@ -41,10 +42,17 @@ const formatCurrency = (amount: number, decimals = 2) =>
 interface Props {
     projectPanelOpen: boolean;
     onProjectClick: () => void;
+    viewOnlyTitle?: string;
+    savedEstimate?: CostEstimate | null;
 }
 
-export default function Topbar({ projectPanelOpen, onProjectClick }: Props) {
-    const { state, dispatch, undo, redo, canUndo, canRedo } = useEditor();
+export default function Topbar({
+    projectPanelOpen,
+    onProjectClick,
+    viewOnlyTitle = "",
+    savedEstimate = null
+}: Props) {
+    const { state, dispatch, undo, redo, canUndo, canRedo, viewOnly } = useEditor();
 
     const { projectId: routeProjectId } = useParams<{ projectId?: string }>();
 
@@ -69,7 +77,11 @@ export default function Topbar({ projectPanelOpen, onProjectClick }: Props) {
         return () => window.removeEventListener("espasyo-project-name-change", handleProjectNameChange);
     }, []);
 
-    const estimate = useMemo(() => calculateCostEstimate(state), [state]);
+    const calculatedEstimate = useMemo(() => calculateCostEstimate(state), [state]);
+    const estimate = viewOnly
+        ? savedEstimate ?? calculatedEstimate
+        : calculatedEstimate;
+    const savedEstimateUnavailable = viewOnly && savedEstimate === null;
     const budgetSummary = useMemo(
         () => getProjectBudgetSummary(state.projectBudget, estimate.total),
         [state.projectBudget, estimate.total]
@@ -180,8 +192,13 @@ export default function Topbar({ projectPanelOpen, onProjectClick }: Props) {
                     {state.workflowType === "admin-managed" && (
                         <LockKeyhole size={13} aria-hidden="true" />
                     )}
-                    <span>{projectName || "Untitled project"}</span>
+                    <span>{viewOnlyTitle || projectName || "Untitled project"}</span>
                 </div>
+                {viewOnly && (
+                    <span className="topbar-view-only-badge" role="status">
+                        View only
+                    </span>
+                )}
             </div>
 
             {/* Right — history, comments, estimate */}
@@ -203,6 +220,7 @@ export default function Topbar({ projectPanelOpen, onProjectClick }: Props) {
                     </button>
                     <ProjectPanel open={projectPanelOpen} />
                 </div>
+                {!viewOnly && (
                 <div className="history-group" role="group" aria-label="History">
                     <button
                         type="button"
@@ -226,6 +244,7 @@ export default function Topbar({ projectPanelOpen, onProjectClick }: Props) {
                         <Redo2 size={15} strokeWidth={1.75} />
                     </button>
                 </div>
+                )}
 
                 <div className="cost-estimator" ref={dropdownRef}>
                     <button
@@ -237,7 +256,9 @@ export default function Topbar({ projectPanelOpen, onProjectClick }: Props) {
                     >
                         <span className="cost-estimator-label">Estimate</span>
                         <span className="cost-estimator-amount">
-                            {formatCurrency(estimate.total)}
+                            {savedEstimateUnavailable
+                                ? "Unavailable"
+                                : formatCurrency(estimate.total)}
                         </span>
                         <ChevronDown
                             size={14}
@@ -248,6 +269,12 @@ export default function Topbar({ projectPanelOpen, onProjectClick }: Props) {
 
                     {open && (
                         <div className="cost-estimator-dropdown">
+                            {savedEstimateUnavailable ? (
+                                <div className="cost-empty" role="status">
+                                    Saved estimate is unavailable for this version.
+                                </div>
+                            ) : (
+                            <>
                             <div className="cost-estimator-header">
                                 <p className="cost-eyebrow">Cost estimate</p>
                                 <p className="cost-summary">
@@ -290,7 +317,7 @@ export default function Topbar({ projectPanelOpen, onProjectClick }: Props) {
                                             className="project-budget-details"
                                             id="project-budget-details"
                                         >
-                                            {budgetEditing ? (
+                                            {budgetEditing && !viewOnly ? (
                                                 <div className="project-budget-form">
                                                     <label htmlFor="project-budget-input">
                                                         Maximum budget
@@ -367,27 +394,33 @@ export default function Topbar({ projectPanelOpen, onProjectClick }: Props) {
                                                             {estimate.incompleteItems?.join(", ")}. Actual costs may be higher.
                                                         </p>
                                                     )}
-                                                    <div className="project-budget-actions">
-                                                        <button type="button" className="primary" onClick={startBudgetEdit}>
-                                                            Edit Budget
-                                                        </button>
-                                                        <button type="button" className="remove" onClick={removeBudget}>
-                                                            Remove Budget
-                                                        </button>
-                                                    </div>
+                                                    {!viewOnly && (
+                                                        <div className="project-budget-actions">
+                                                            <button type="button" className="primary" onClick={startBudgetEdit}>
+                                                                Edit Budget
+                                                            </button>
+                                                            <button type="button" className="remove" onClick={removeBudget}>
+                                                                Remove Budget
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </>
                                             ) : (
                                                 <>
                                                     <p className="project-budget-empty">
-                                                        Set one budget for the entire project.
+                                                        {viewOnly
+                                                            ? "No project budget has been set."
+                                                            : "Set one budget for the entire project."}
                                                     </p>
-                                                    <button
-                                                        type="button"
-                                                        className="project-budget-set"
-                                                        onClick={startBudgetEdit}
-                                                    >
-                                                        Set Budget
-                                                    </button>
+                                                    {!viewOnly && (
+                                                        <button
+                                                            type="button"
+                                                            className="project-budget-set"
+                                                            onClick={startBudgetEdit}
+                                                        >
+                                                            Set Budget
+                                                        </button>
+                                                    )}
                                                 </>
                                             )}
                                         </div>
@@ -496,6 +529,8 @@ export default function Topbar({ projectPanelOpen, onProjectClick }: Props) {
                                     <span>Download cost breakdown PDF</span>
                                 </button>
                             </div>
+                            </>
+                            )}
                         </div>
                     )}
                 </div>

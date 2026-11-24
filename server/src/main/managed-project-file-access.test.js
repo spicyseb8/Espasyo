@@ -46,6 +46,22 @@ test("resolves only the project's published and editable structures", () => {
     project.jsonPath,
   );
   assert.equal(
+    resolveManagedProjectFilePath({
+      ...context,
+      kind: "structure",
+      project: { ...project, projectStatus: "approved" },
+    }),
+    project.jsonPath,
+  );
+  assert.equal(
+    resolveManagedProjectFilePath({
+      ...context,
+      ownerId: "another-client",
+      kind: "structure",
+    }),
+    null,
+  );
+  assert.equal(
     resolveManagedProjectFilePath({ ...context, kind: "editable-structure" }),
     project.draftJsonPath,
   );

@@ -472,6 +472,9 @@ export function mergeManagedInteriorData<T extends object>(
             firstInteriorFloor?.floorPaintSeparators ??
             publishedInteriorFields.floorPaintSeparators ??
             {},
+        ...(interiorPayload?.costEstimate !== undefined
+            ? { costEstimate: interiorPayload.costEstimate }
+            : {}),
         maximumBudget: isValidProjectBudget(interiorPayload?.maximumBudget)
             ? interiorPayload.maximumBudget
             : null

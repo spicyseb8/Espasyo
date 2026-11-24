@@ -1332,12 +1332,12 @@ export default function ProjectPanel({ open }: Props) {
                         <span className="project-panel-deadline-value">
                             {formatDeadline(deadline)}
                         </span>
-                        {deadline && deadlineLocked && (
+                        {!viewOnly && deadline && deadlineLocked && (
                             <span className="project-panel-deadline-badge">Passed</span>
                         )}
                     </div>
 
-                    {projectLocked && (
+                    {!viewOnly && projectLocked && (
                         <div
                             role="alert"
                             className="project-panel-notice project-panel-notice-warning"
@@ -1356,46 +1356,51 @@ export default function ProjectPanel({ open }: Props) {
                             Approved as a professional-development reference, not construction authorization.
                         </p>
                     )}
-                    {revisionFeedback && projectStatus === "revision-requested" && (
+                    {!viewOnly &&
+                        revisionFeedback &&
+                        projectStatus === "revision-requested" && (
                         <div className="project-panel-notice project-panel-notice-warning">
                             <strong>Revision requested:</strong> {revisionFeedback}
                         </div>
                     )}
 
-                    <button
-                        type="button"
-                        className="project-save-button"
-                        data-state={saveState}
-                        onClick={() => void handleSave()}
-                        disabled={!canSave}
-                        aria-busy={saving}
-                    >
-                        <span className="project-save-button-icon" aria-hidden="true">
-                            {saveState === "saving" ? (
-                                <svg className="project-save-spinner" viewBox="0 0 24 24" fill="none">
-                                    <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity="0.28" strokeWidth="3" />
-                                    <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-                                </svg>
-                            ) : saveState === "saved" ? (
-                                <svg viewBox="0 0 24 24" fill="none">
-                                    <path className="project-save-check" d="M5 12.5l4.5 4.5L19 7.5" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
-                            ) : saveState === "locked" ? (
-                                <svg viewBox="0 0 24 24" fill="none">
-                                    <rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="2" />
-                                    <path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                                </svg>
-                            ) : (
-                                <svg viewBox="0 0 24 24" fill="none">
-                                    <path d="M5 4h11l3 3v13H5V4z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-                                    <path d="M8 4v5h7V4M8 20v-6h8v6" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-                                </svg>
-                            )}
-                        </span>
-                        <span>{saveLabel}</span>
-                    </button>
+                    {!viewOnly && (
+                        <button
+                            type="button"
+                            className="project-save-button"
+                            data-state={saveState}
+                            onClick={() => void handleSave()}
+                            disabled={!canSave}
+                            aria-busy={saving}
+                        >
+                            <span className="project-save-button-icon" aria-hidden="true">
+                                {saveState === "saving" ? (
+                                    <svg className="project-save-spinner" viewBox="0 0 24 24" fill="none">
+                                        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity="0.28" strokeWidth="3" />
+                                        <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                                    </svg>
+                                ) : saveState === "saved" ? (
+                                    <svg viewBox="0 0 24 24" fill="none">
+                                        <path className="project-save-check" d="M5 12.5l4.5 4.5L19 7.5" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                ) : saveState === "locked" ? (
+                                    <svg viewBox="0 0 24 24" fill="none">
+                                        <rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="2" />
+                                        <path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                                    </svg>
+                                ) : (
+                                    <svg viewBox="0 0 24 24" fill="none">
+                                        <path d="M5 4h11l3 3v13H5V4z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+                                        <path d="M8 4v5h7V4M8 20v-6h8v6" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+                                    </svg>
+                                )}
+                            </span>
+                            <span>{saveLabel}</span>
+                        </button>
+                    )}
 
-                    {isManagedProject &&
+                    {!viewOnly &&
+                        isManagedProject &&
                         isExistingProject &&
                         projectStatus !== "submitted" &&
                         projectStatus !== "approved" && (

@@ -34,10 +34,18 @@ test("managed interior merge preserves published structure", () => {
         structuralRevision: 7,
         publishedStructuralRevision: 7
     };
+    const savedEstimate = {
+        items: [],
+        floors: [],
+        subtotal: 0,
+        total: 0,
+        incompleteItems: []
+    };
     const merged = mergeManagedInteriorData(published, {
         furniture: [{ id: "chair-1" }],
         floorFinishes: { room: "tile" },
-        wallFinishes: { room: { "wall-1": "paint" } }
+        wallFinishes: { room: { "wall-1": "paint" } },
+        costEstimate: savedEstimate
     });
 
     test("managed interior data stays associated with each published floor", () => {
@@ -131,6 +139,7 @@ test("managed interior merge preserves published structure", () => {
     assert.deepEqual(merged.furniture, [{ id: "chair-1" }]);
     assert.deepEqual(merged.floorFinishes, { room: "tile" });
     assert.deepEqual(merged.wallFinishes, { room: { "wall-1": "paint" } });
+    assert.deepEqual(merged.costEstimate, savedEstimate);
     assert.equal(merged.structuralRevision, 7);
     assert.equal(merged.publishedStructuralRevision, 7);
 });
@@ -199,6 +208,13 @@ test("separator-only legacy interior data merges per floor without replacing oth
 });
 
 test("managed serializer stores furniture references, placement, finishes, and client identity", () => {
+    const savedEstimate = {
+        items: [],
+        floors: [],
+        subtotal: 0,
+        total: 0,
+        incompleteItems: []
+    };
     const state = {
         furniture: [{
             id: "placed-chair",
@@ -225,7 +241,7 @@ test("managed serializer stores furniture references, placement, finishes, and c
         state,
         "PRJ-00126",
         "client-uid",
-        { total: 0 }
+        savedEstimate
     );
 
     assert.equal(interior.projectId, "PRJ-00126");
@@ -233,6 +249,7 @@ test("managed serializer stores furniture references, placement, finishes, and c
     assert.deepEqual(interior.furniture[0], state.furniture[0]);
     assert.deepEqual(interior.floorFinishes, state.floorFinishes);
     assert.deepEqual(interior.wallFinishes, state.wallFinishes);
+    assert.deepEqual(interior.costEstimate, savedEstimate);
     assert.equal(interior.furniture[0].assetId, "furniture-asset-42");
     assert.equal(interior.furniture[0].rotationY, 1.2);
     assert.equal("stairs" in interior, false);

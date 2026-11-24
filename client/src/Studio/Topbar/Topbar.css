@@ -58,6 +58,18 @@
     white-space: nowrap;
 }
 
+.topbar-view-only-badge {
+    flex: none;
+    padding: 4px 8px;
+    border: 1px solid var(--tb-line);
+    border-radius: var(--tb-radius-md);
+    color: var(--tb-ink-muted);
+    font-size: var(--tb-t-micro);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
 
 /* ==================================================
    BAR

@@ -109,6 +109,8 @@ interface SceneProps {
 
     viewOnly?: boolean;
 
+    walkthroughEnabled?: boolean;
+
     onSceneReady?: () => void;
 }
 
@@ -157,7 +159,8 @@ export default function Scene({
     onSpawnConfirmed,
     walkthroughSpawnConfirmed,
     onSceneReady,
-    viewOnly = false
+    viewOnly = false,
+    walkthroughEnabled = false
 }: SceneProps) {
     const {
         state,
@@ -466,7 +469,8 @@ export default function Scene({
                 {/* Walkthrough controller */}
 
                 {
-                    !viewOnly && state.walkthroughMode && (
+                    (!viewOnly || walkthroughEnabled) &&
+                    state.walkthroughMode && (
                         <WalkthroughController
                             onSpawnConfirmed={
                                 onSpawnConfirmed

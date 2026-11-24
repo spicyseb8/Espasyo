@@ -12,10 +12,6 @@
     overflow: hidden;
 }
 
-.editor.is-view-only {
-    grid-template-rows: 52px 1fr;
-}
-
 .view-only-header {
     display: flex;
     align-items: center;

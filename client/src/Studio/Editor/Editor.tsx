@@ -41,6 +41,7 @@ import EditorExitGuard
 import type { WorkspacePanel } from "../Workspace/WorkspaceTabs";
 import useEditorGuide from "./InstructionModal/useEditorGuide";
 import useEditor from "../../context/editor/useEditor";
+import type { CostEstimate } from "../../engine/cost/CostTypes";
 
 type WorkspaceTabPanel = Exclude<WorkspacePanel, "project" | null>;
 
@@ -55,6 +56,8 @@ function isWorkspaceTabPanel(panel: WorkspacePanel): panel is WorkspaceTabPanel 
 interface Props {
     viewOnly?: boolean;
     viewOnlyTitle?: string;
+    useSharedHeader?: boolean;
+    savedEstimate?: CostEstimate | null;
     guideUserId?: string;
     autoOpenGuide?: boolean;
 }
@@ -62,6 +65,8 @@ interface Props {
 export default function Editor({
     viewOnly = false,
     viewOnlyTitle = "",
+    useSharedHeader = false,
+    savedEstimate,
     guideUserId,
     autoOpenGuide = false,
 }: Props) {
@@ -198,15 +203,7 @@ export default function Editor({
 
                 {!viewOnly && <EditorExitGuard />}
 
-                {viewOnly ? (
-                    <header className="view-only-header">
-                        <Link className="view-only-back" to="/studio">Studio</Link>
-                        <div className="view-only-heading">
-                            <span className="view-only-badge">View only</span>
-                            <span className="view-only-title">{viewOnlyTitle}</span>
-                        </div>
-                    </header>
-                ) : (
+                {!viewOnly || useSharedHeader ? (
                     <Topbar
                         projectPanelOpen={activePanel === "project"}
                         onProjectClick={() =>
@@ -216,7 +213,17 @@ export default function Editor({
                                     : "project"
                             )
                         }
+                        viewOnlyTitle={viewOnlyTitle}
+                        savedEstimate={savedEstimate}
                     />
+                ) : (
+                    <header className="view-only-header">
+                        <Link className="view-only-back" to="/studio">Back to projects</Link>
+                        <div className="view-only-heading">
+                            <span className="view-only-badge">View only</span>
+                            <span className="view-only-title">{viewOnlyTitle}</span>
+                        </div>
+                    </header>
                 )}
 
                 <div className="editor-body">
@@ -243,6 +250,7 @@ export default function Editor({
                                 walkthroughSpawnConfirmed
                             }
                             viewOnly={viewOnly}
+                            walkthroughEnabled={useSharedHeader}
                             onSceneReady={
                                 handleSceneReady
                             }
@@ -257,7 +265,7 @@ export default function Editor({
                             />
                         )}
 
-                        {!viewOnly && (
+                        {(!viewOnly || useSharedHeader) && (
                             <WalkthroughUI
                                 spawnConfirmed={walkthroughSpawnConfirmed}
                             />

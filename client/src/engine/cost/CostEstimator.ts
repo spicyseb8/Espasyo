@@ -103,6 +103,61 @@ export interface CostAssetLookups {
     findWallMaterial?: (materialId: string) => Material | undefined;
 }
 
+const COST_CATEGORIES: ReadonlySet<string> = new Set([
+    "furniture",
+    "flooring",
+    "wallFinish",
+    "doors",
+    "windows"
+]);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function isCostItem(value: unknown): value is CostItem {
+    if (!isRecord(value)) return false;
+    return typeof value.category === "string" &&
+        COST_CATEGORIES.has(value.category) &&
+        typeof value.name === "string" &&
+        (value.floorId === undefined || typeof value.floorId === "string") &&
+        typeof value.quantity === "number" &&
+        Number.isFinite(value.quantity) &&
+        typeof value.unit === "string" &&
+        typeof value.rate === "number" &&
+        Number.isFinite(value.rate) &&
+        typeof value.subtotal === "number" &&
+        Number.isFinite(value.subtotal) &&
+        (value.coats === undefined || (typeof value.coats === "number" && Number.isFinite(value.coats))) &&
+        (value.length === undefined || (typeof value.length === "number" && Number.isFinite(value.length))) &&
+        (value.width === undefined || (typeof value.width === "number" && Number.isFinite(value.width)));
+}
+
+function isCostFloorEstimate(value: unknown): value is CostFloorEstimate {
+    return isRecord(value) &&
+        typeof value.floorId === "string" &&
+        typeof value.name === "string" &&
+        Array.isArray(value.items) &&
+        value.items.every(isCostItem) &&
+        typeof value.subtotal === "number" &&
+        Number.isFinite(value.subtotal);
+}
+
+export function isCostEstimateSnapshot(value: unknown): value is CostEstimate {
+    return isRecord(value) &&
+        Array.isArray(value.items) &&
+        value.items.every(isCostItem) &&
+        Array.isArray(value.floors) &&
+        value.floors.every(isCostFloorEstimate) &&
+        typeof value.subtotal === "number" &&
+        Number.isFinite(value.subtotal) &&
+        typeof value.total === "number" &&
+        Number.isFinite(value.total) &&
+        (value.incompleteItems === undefined ||
+            (Array.isArray(value.incompleteItems) &&
+                value.incompleteItems.every(item => typeof item === "string")));
+}
+
 function hasValidPrice(value: unknown): value is number {
     return typeof value === "number" &&
         Number.isFinite(value) &&

@@ -1,6 +1,7 @@
 
 import {
     useEffect,
+    useRef,
     useState
 } from "react";
 
@@ -28,6 +29,16 @@ import useEditor
 
 import Editor
     from "../Studio/Editor/Editor";
+import {
+    isProjectStatusViewOnly,
+    shouldShowDeadlinePassedNotice
+} from "../context/editor/viewOnly";
+import {
+    isCostEstimateSnapshot
+} from "../engine/cost/CostEstimator";
+import type {
+    CostEstimate
+} from "../engine/cost/CostTypes";
 
 import LoadingScreen
     from "../scene/LoadingScreen";
@@ -61,7 +72,11 @@ import {
     type ClientProjectWorkflow
 } from "../services/clientProjectWorkflow";
 
-function LoadProjectContent() {
+function LoadProjectContent({
+    onViewOnlyChange
+}: {
+    onViewOnlyChange: (viewOnly: boolean) => void;
+}) {
     const {
         projectId
     } = useParams<{
@@ -94,8 +109,15 @@ function LoadProjectContent() {
         setDeadlinePassed
     ] = useState(false);
     const [workflow, setWorkflow] = useState<ClientProjectWorkflow | null>(null);
+    const [savedEstimate, setSavedEstimate] = useState<CostEstimate | null>(null);
     const [acknowledgingAccess, setAcknowledgingAccess] = useState(false);
     const [acknowledgementError, setAcknowledgementError] = useState("");
+    const [viewProjectRequested, setViewProjectRequested] = useState(false);
+    const dispatchRef = useRef(dispatch);
+
+    useEffect(() => {
+        dispatchRef.current = dispatch;
+    }, [dispatch]);
 
     //==================================================
     // UPDATE DEADLINE STATUS
@@ -139,6 +161,9 @@ function LoadProjectContent() {
         const controller = new AbortController();
 
         async function loadProject() {
+            setViewProjectRequested(false);
+            setSavedEstimate(null);
+            onViewOnlyChange(false);
             if (!projectId) {
                 setError(
                     "No project was selected."
@@ -205,8 +230,10 @@ function LoadProjectContent() {
                     currentWorkflow = await getClientProjectWorkflow(projectId);
                     if (cancelled) return;
                     setWorkflow(currentWorkflow);
+                    onViewOnlyChange(isProjectStatusViewOnly(currentWorkflow.projectStatus));
                 } else {
                     setWorkflow(null);
+                    onViewOnlyChange(false);
                 }
 
                 if (
@@ -300,6 +327,7 @@ function LoadProjectContent() {
                     }
                 }
 
+                let savedEstimatePayload: unknown = null;
                 if (
                     projectMetadata.workflowType === "admin-managed" &&
                     projectData.workflowType === "admin-managed"
@@ -309,6 +337,7 @@ function LoadProjectContent() {
                         ownerId: user.uid,
                         workflowType: "admin-managed"
                     });
+                    savedEstimatePayload = interiorData?.costEstimate;
                     Object.assign(projectData, mergeManagedInteriorData(
                         projectData,
                         interiorData
@@ -337,6 +366,12 @@ function LoadProjectContent() {
                     return;
                 }
 
+                setSavedEstimate(
+                    isCostEstimateSnapshot(savedEstimatePayload)
+                        ? savedEstimatePayload
+                        : null
+                );
+
                 const savedProjectData = projectData as unknown as SavedProjectData;
 
                 //==================================================
@@ -363,7 +398,7 @@ function LoadProjectContent() {
 
                 clearProjectSession();
 
-                dispatch({
+                dispatchRef.current({
                     type: "LOAD_PROJECT",
                     payload: savedProjectData
                 });
@@ -428,7 +463,7 @@ function LoadProjectContent() {
         };
     }, [
         projectId,
-        dispatch
+        onViewOnlyChange
     ]);
 
     async function handleAcknowledgeAccess() {
@@ -489,7 +524,8 @@ function LoadProjectContent() {
         );
     }
 
-    if (workflow?.projectStatus === "submitted" || workflow?.projectStatus === "approved") {
+    const statusViewOnly = isProjectStatusViewOnly(workflow?.projectStatus);
+    if (workflow && statusViewOnly && !viewProjectRequested) {
         const approved = workflow.projectStatus === "approved";
         return (
             <div className="flex min-h-screen items-center justify-center bg-[#f7f7f5] p-6 text-[#1b1b1b]">
@@ -510,19 +546,28 @@ function LoadProjectContent() {
                             Submitted {new Date(workflow.submittedAt).toLocaleString()} · Version {workflow.submittedVersionNumber ?? "saved"}
                         </p>
                     )}
-                    <button
-                        type="button"
-                        className="mt-6 rounded-lg bg-[#1b1b1b] px-4 py-2.5 text-sm font-medium text-white"
-                        onClick={() => navigate("/studio")}
-                    >
-                        Back to projects
-                    </button>
+                    <div className="mt-6 flex flex-wrap gap-3">
+                        <button
+                            type="button"
+                            className="rounded-lg bg-[#1b1b1b] px-4 py-2.5 text-sm font-medium text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                            onClick={() => navigate("/studio")}
+                        >
+                            Back to projects
+                        </button>
+                        <button
+                            type="button"
+                            className="rounded-lg border border-black/15 bg-white px-4 py-2.5 text-sm font-medium text-[#1b1b1b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                            onClick={() => setViewProjectRequested(true)}
+                        >
+                            View project
+                        </button>
+                    </div>
                 </section>
             </div>
         );
     }
 
-    if (workflow && !workflow.accessAcknowledged) {
+    if (workflow && !workflow.accessAcknowledged && !statusViewOnly) {
         return (
             <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/50 p-4">
                 <section className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 text-[#1b1b1b] shadow-xl">
@@ -566,11 +611,15 @@ function LoadProjectContent() {
     return (
         <div className="relative h-screen w-screen">
             <Editor
+                viewOnly={statusViewOnly}
+                viewOnlyTitle={workflow?.projectName ?? ""}
+                useSharedHeader
+                savedEstimate={savedEstimate}
                 guideUserId={auth.currentUser?.uid}
                 autoOpenGuide={Boolean(workflow?.accessAcknowledged)}
             />
 
-            {deadlinePassed && (
+            {shouldShowDeadlinePassedNotice(workflow?.projectStatus, deadlinePassed) && (
                 <div
                     role="alert"
                     style={{
@@ -605,9 +654,10 @@ function LoadProjectContent() {
 //==================================================
 
 export default function StudioLoadProject() {
+    const [viewOnly, setViewOnly] = useState(false);
     return (
-        <EditorProvider>
-            <LoadProjectContent />
+        <EditorProvider viewOnly={viewOnly}>
+            <LoadProjectContent onViewOnlyChange={setViewOnly} />
         </EditorProvider>
     );
 }

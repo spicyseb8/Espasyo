@@ -136,6 +136,19 @@ test("calculates every floor with floor-specific furniture, finishes, and geomet
     assert.ok(second.items.every(item => item.floorId === "floor-2"));
 });
 
+test("validates saved cost estimate snapshots for read-only display", () => {
+    const savedEstimate = costEstimator.calculateCostEstimateForFloors(floors, lookups);
+    assert.equal(costEstimator.isCostEstimateSnapshot(savedEstimate), true);
+    assert.equal(costEstimator.isCostEstimateSnapshot({
+        ...savedEstimate,
+        total: "7945"
+    }), false);
+    assert.equal(costEstimator.isCostEstimateSnapshot({
+        ...savedEstimate,
+        items: [{ ...savedEstimate.items[0], rate: "invalid" }]
+    }), false);
+});
+
 test("keeps flooring piece pricing and liter-based paint coverage rules", () => {
     const estimate = costEstimator.calculateCostEstimateForFloors(floors, lookups);
     const firstFlooring = estimate.floors[0].items.find(

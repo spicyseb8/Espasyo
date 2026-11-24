@@ -79,6 +79,18 @@ test("client editability blocks submitted, approved, and overdue projects", () =
   );
 });
 
+test("server write lock rejects submitted and approved project changes", () => {
+  for (const projectStatus of ["submitted", "approved"]) {
+    assert.match(
+      getClientEditLockReason({
+        projectStatus,
+        deadline: "2026-11-05",
+      }, "2026-11-04"),
+      /locked during administrative review or after approval/,
+    );
+  }
+});
+
 test("review transitions are restricted to submitted projects", () => {
   assert.equal(canTransitionProject("submitted", "approve"), true);
   assert.equal(canTransitionProject("submitted", "request-revision"), true);
