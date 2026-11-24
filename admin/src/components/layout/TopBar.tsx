@@ -44,14 +44,10 @@ const menuItems = [
     label: "Home",
   },
   {
-    icon: User,
-    label: "Profile",
-  },
-  {
     icon: Settings,
     label: "Account Settings",
     path: "/account-settings",
-  },
+  },  
   {
     icon: Activity,
     label: "Recent activities",

@@ -79,6 +79,14 @@
     overflow: hidden;
 }
 
+.instruction-trigger-button {
+    position: absolute;
+    right: 20px;
+    bottom: 20px;
+    z-index: 31;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.14);
+}
+
 .budget-warning {
     position: absolute;
     top: 12px;
