@@ -4,6 +4,9 @@ import test from "node:test";
 import {
   commitPublishedFloorPlan,
   createPublishedFloorPlanRecord,
+  hasProjectIdCollision,
+  isDraftPublishSnapshotCurrent,
+  isProjectStructureSnapshotCurrent,
 } from "./floorplan-publishing.js";
 import { resolveManagedProjectFilePath } from "./managed-project-file-access.js";
 
@@ -15,6 +18,56 @@ const OWNER_ID = "client-auth-uid";
 const DEADLINE = "2026-12-01T18:00";
 const PUBLISHED_PATH =
   `projects/${OWNER_ID}/${PROJECT_ID}/published-r3-123e4567-e89b-42d3-a456-426614174000.json`;
+let activitySequence = 0;
+
+test("publishing rejects a stale draft revision or storage path", () => {
+  const initial = { structuralRevision: 3, draftJsonPath: "draft-r3.json" };
+  assert.equal(isDraftPublishSnapshotCurrent(initial, { ...initial }), true);
+  assert.equal(
+    isDraftPublishSnapshotCurrent(initial, { ...initial, structuralRevision: 4 }),
+    false,
+  );
+  assert.equal(
+    isDraftPublishSnapshotCurrent(initial, { ...initial, draftJsonPath: "draft-r4.json" }),
+    false,
+  );
+});
+
+test("structure saves reject a stale revision, lifecycle, or draft path", () => {
+  const initial = {
+    structuralRevision: 3,
+    publishedStructuralRevision: 2,
+    structuralStatus: "published",
+    draftJsonPath: "draft-r3.json",
+  };
+  assert.equal(isProjectStructureSnapshotCurrent(initial, { ...initial }), true);
+  for (const change of [
+    { structuralRevision: 4 },
+    { publishedStructuralRevision: 3 },
+    { structuralStatus: "draft" },
+    { draftJsonPath: "draft-r4.json" },
+  ]) {
+    assert.equal(
+      isProjectStructureSnapshotCurrent(initial, { ...initial, ...change }),
+      false,
+    );
+  }
+});
+
+test("publishing rejects a project ID already used by either record", () => {
+  assert.equal(
+    hasProjectIdCollision({ exists: false }, { exists: false }),
+    false,
+  );
+  assert.equal(
+    hasProjectIdCollision({ exists: true }, { exists: false }),
+    true,
+  );
+  assert.equal(
+    hasProjectIdCollision({ exists: false }, { exists: true }),
+    true,
+  );
+});
 
 function createProjectRecord() {
   return createPublishedFloorPlanRecord({
@@ -53,13 +106,18 @@ function createTransactionHarness(seed = {}) {
           }
           pending.push({ type: "create", reference, data });
         },
+        delete(reference) {
+          pending.push({ type: "delete", reference });
+        },
       };
 
       const result = await callback(transaction);
       for (const operation of pending) {
         operations.push(operation);
         const key = operation.reference;
-        if (operation.type === "create") {
+        if (operation.type === "delete") {
+          records.delete(key);
+        } else if (operation.type === "create") {
           if (records.has(key)) throw new Error(`Document already exists: ${key}`);
           records.set(key, operation.data);
         } else {
@@ -76,24 +134,38 @@ function createTransactionHarness(seed = {}) {
   return { db, records, operations };
 }
 
-function writePublication(transaction, projectRecord = createProjectRecord()) {
-  let activityIndex = 0;
+function writePublication(transaction, {
+  projectId = PROJECT_ID,
+  draftId = DRAFT_ID,
+  ownerId = OWNER_ID,
+  projectName = "Sample floor plan",
+  projectRecord = createProjectRecord(),
+} = {}) {
   commitPublishedFloorPlan(transaction, {
-    projectReference: `projects/${PROJECT_ID}`,
-    assignmentReference: `adminManagedProjectAssignments/${OWNER_ID}`,
-    draftReference: `adminManagedFloorPlanDrafts/${DRAFT_ID}`,
+    projectReference: `projects/${projectId}`,
+    draftAssignmentReference: `adminManagedProjectAssignments/draft_${draftId}`,
+    projectAssignmentReference: `adminManagedProjectAssignments/project_${projectId}`,
+    draftReference: `adminManagedFloorPlanDrafts/${draftId}`,
     projectRecord,
-    projectId: PROJECT_ID,
-    ownerId: OWNER_ID,
-    projectName: "Sample floor plan",
+    assignmentRecord: {
+      ownerId,
+      projectId,
+      status: "published",
+      createdBy: "admin-uid",
+      creatorName: "Admin",
+      createdAt: TIMESTAMP,
+      updatedAt: TIMESTAMP,
+    },
+    projectId,
+    ownerId,
+    projectName,
     deadline: DEADLINE,
     revision: 3,
     actor: { uid: "admin-uid", role: "admin", name: "Admin" },
     timestamp: TIMESTAMP,
-    deleteField: DELETE_FIELD,
     recordActivity: (currentTransaction, projectId, actor, action, details) => {
-      activityIndex += 1;
-      currentTransaction.create(`projectActivity/${activityIndex}`, {
+      activitySequence += 1;
+      currentTransaction.create(`projectActivity/${activitySequence}`, {
         projectId,
         actorId: actor.uid,
         actorRole: actor.role,
@@ -106,10 +178,14 @@ function writePublication(transaction, projectRecord = createProjectRecord()) {
 
 test("publishing creates a project without the legacy jsonUrl delete sentinel", async () => {
   const { db, records } = createTransactionHarness({
-    [`adminManagedProjectAssignments/${OWNER_ID}`]: {
+    [`adminManagedProjectAssignments/draft_${DRAFT_ID}`]: {
       ownerId: OWNER_ID,
       draftId: DRAFT_ID,
       status: "draft",
+      createdBy: "admin-uid",
+      creatorName: "Admin",
+      createdAt: TIMESTAMP,
+      updatedAt: TIMESTAMP,
     },
     [`adminManagedFloorPlanDrafts/${DRAFT_ID}`]: {
       projectName: "Sample floor plan",
@@ -145,12 +221,16 @@ test("publishing creates a project without the legacy jsonUrl delete sentinel", 
     createdAt: TIMESTAMP,
     updatedAt: TIMESTAMP,
   });
-  assert.deepEqual(records.get(`adminManagedProjectAssignments/${OWNER_ID}`), {
+  assert.deepEqual(records.get(`adminManagedProjectAssignments/project_${PROJECT_ID}`), {
     ownerId: OWNER_ID,
     projectId: PROJECT_ID,
     status: "published",
+    createdBy: "admin-uid",
+    creatorName: "Admin",
+    createdAt: TIMESTAMP,
     updatedAt: TIMESTAMP,
   });
+  assert.equal(records.has(`adminManagedProjectAssignments/draft_${DRAFT_ID}`), false);
   assert.equal(
     records.get(`adminManagedFloorPlanDrafts/${DRAFT_ID}`).publishedProjectId,
     PROJECT_ID,
@@ -167,10 +247,14 @@ test("publishing creates a project without the legacy jsonUrl delete sentinel", 
 
 test("failed publication transaction leaves the draft reservation intact and creates no project", async () => {
   const seed = {
-    [`adminManagedProjectAssignments/${OWNER_ID}`]: {
+    [`adminManagedProjectAssignments/draft_${DRAFT_ID}`]: {
       ownerId: OWNER_ID,
       draftId: DRAFT_ID,
       status: "draft",
+      createdBy: "admin-uid",
+      creatorName: "Admin",
+      createdAt: TIMESTAMP,
+      updatedAt: TIMESTAMP,
     },
     [`adminManagedFloorPlanDrafts/${DRAFT_ID}`]: {
       projectName: "Sample floor plan",
@@ -187,6 +271,51 @@ test("failed publication transaction leaves the draft reservation intact and cre
   assert.deepEqual(Object.fromEntries(records), seed);
   assert.equal(operations.length, 0);
   assert.equal([...records.keys()].filter(key => key.startsWith("projectActivity/")).length, 0);
+});
+
+test("publishing one plan leaves another draft intact and both plans can publish", async () => {
+  const secondDraftId = "draft-2";
+  const secondProjectId = "PRJ-26002";
+  const { db, records } = createTransactionHarness({
+    [`adminManagedProjectAssignments/draft_${DRAFT_ID}`]: {
+      ownerId: OWNER_ID,
+      draftId: DRAFT_ID,
+      status: "draft",
+    },
+    [`adminManagedProjectAssignments/draft_${secondDraftId}`]: {
+      ownerId: OWNER_ID,
+      draftId: secondDraftId,
+      status: "draft",
+    },
+    [`adminManagedFloorPlanDrafts/${DRAFT_ID}`]: { projectName: "Ground floor" },
+    [`adminManagedFloorPlanDrafts/${secondDraftId}`]: { projectName: "Second floor" },
+  });
+
+  await db.runTransaction(transaction => writePublication(transaction, {
+    projectName: "Ground floor",
+  }));
+  assert.equal(records.has(`adminManagedProjectAssignments/draft_${secondDraftId}`), true);
+
+  await db.runTransaction(transaction => writePublication(transaction, {
+    projectId: secondProjectId,
+    draftId: secondDraftId,
+    projectName: "Second floor",
+    projectRecord: createPublishedFloorPlanRecord({
+      projectId: secondProjectId,
+      projectName: "Second floor",
+      ownerId: OWNER_ID,
+      revision: 3,
+      deadline: DEADLINE,
+      jsonPath: `projects/${OWNER_ID}/${secondProjectId}/published-r3-file.json`,
+      createdBy: "admin-uid",
+      creatorName: "Admin",
+      timestamp: TIMESTAMP,
+    }),
+  }));
+
+  assert.equal(records.get(`adminManagedProjectAssignments/project_${PROJECT_ID}`).ownerId, OWNER_ID);
+  assert.equal(records.get(`adminManagedProjectAssignments/project_${secondProjectId}`).ownerId, OWNER_ID);
+  assert.equal(records.get(`adminManagedFloorPlanDrafts/${secondDraftId}`).publishedProjectId, secondProjectId);
 });
 
 test("legacy project documents remain readable when jsonUrl is absent", () => {

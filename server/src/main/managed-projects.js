@@ -13,11 +13,19 @@ import { recordActivityEvent, recordProjectOpened } from "./activity-service.js"
 import { findClientAccountByIdentifier } from "./client-account.js";
 import { createReservedFloorPlanDraft } from "./floorplan-reservation.js";
 import {
+  createPlanAssignmentRecord,
+  getAssignmentForPlan,
+  planAssignmentReference,
+} from "./managed-project-assignment.js";
+import {
   commitPublishedFloorPlan,
   createPublishedFloorPlanRecord,
+  hasProjectIdCollision,
+  isDraftPublishSnapshotCurrent,
+  isProjectStructureSnapshotCurrent,
 } from "./floorplan-publishing.js";
 import {
-  findExistingFloorPlan,
+  countExistingFloorPlans,
   isFloorPlanClientAccount,
 } from "./floorplan-client-eligibility.js";
 import {
@@ -62,8 +70,6 @@ const PROJECT_ACTIVITY = "projectActivity";
 const PROJECT_VERSIONS = "projectVersions";
 const PROJECT_SUBMISSIONS = "projectSubmissions";
 const MAX_STRUCTURE_BYTES = 10 * 1024 * 1024;
-const OWNER_PROJECT_CONFLICT =
-  "This client already has a project or assignment. Open the existing project instead.";
 
 async function sendWorkflowNotification({ eventKey, eventType, category = "Projects", title, message, actor, projectId, recipients, clientAction }) {
   try {
@@ -133,10 +139,12 @@ function isRecord(value) {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
 
-function validateName(value) {
+function validateName(value, maximumLength = 120) {
   const name = normalizedString(value);
   if (!name) throw httpError(400, "A floor-plan name is required.");
-  if (name.length > 120) throw httpError(400, "The floor-plan name must be 120 characters or fewer.");
+  if (name.length > maximumLength) {
+    throw httpError(400, `The floor-plan name must be ${maximumLength} characters or fewer.`);
+  }
   return name;
 }
 
@@ -189,10 +197,6 @@ async function loadJson(path) {
   } catch (error) {
     throw httpError(500, "Saved floor-plan JSON is invalid.");
   }
-}
-
-function assignmentReference(ownerId) {
-  return adminDb.collection(ASSIGNMENTS).doc(encodeURIComponent(ownerId));
 }
 
 function getTodayInManila() {
@@ -336,7 +340,7 @@ async function createClientWelcomeNotification(req, res) {
 async function createDraft(req, res) {
   try {
     const requestedOwnerId = normalizedString(req.body?.ownerId);
-    const projectName = validateName(req.body?.projectName);
+    const projectName = validateName(req.body?.projectName, 80);
     if (!requestedOwnerId) throw httpError(400, "A client account is required.");
     const clientAccount = await findClientAccountByIdentifier(
       adminDb,
@@ -367,13 +371,8 @@ async function createDraft(req, res) {
       ownerId,
       draftId,
       draftRecord: record,
-      assignmentReference: assignmentReference(ownerId),
-      additionalOwnerIds: clientAccount.id === ownerId ? [] : [clientAccount.id],
-      additionalAssignmentReferences: clientAccount.id === ownerId
-        ? []
-        : [assignmentReference(clientAccount.id)],
     });
-    await notifyProjectClient({ eventKey: `floor-plan-created:${draftId}`, eventType: "floor-plan-created", title: "Your floor plan is being prepared" }, draftId, ownerId, req.adminUser, `Admin ${req.adminUser.name || "Unknown"} is currently preparing your floor plan. Please wait.`);
+    await notifyProjectClient({ eventKey: `floor-plan-created:${draftId}`, eventType: "floor-plan-created", title: `${projectName} is being prepared` }, draftId, ownerId, req.adminUser, `Admin ${req.adminUser.name || "Unknown"} is preparing "${projectName}". Please wait.`);
     await notifyProjectAdmins({ eventKey: `floor-plan-created-admin:${draftId}`, eventType: "floor-plan-created", title: "Floor plan preparation started" }, draftId, req.adminUser, `Admin ${req.adminUser.name || "Unknown"} started a floor plan for ${clientAccount.name || "a client"}.`);
     return res.status(201).json({ success: true, draft: { ...record, draftId } });
   } catch (error) {
@@ -384,10 +383,9 @@ async function createDraft(req, res) {
 async function searchClients(req, res) {
   try {
     const search = normalizedString(req.query.search).toLocaleLowerCase();
-    const [usersSnapshot, projectsSnapshot, assignmentSnapshot, employeesSnapshot, draftsSnapshot] = await Promise.all([
+    const [usersSnapshot, projectsSnapshot, employeesSnapshot, draftsSnapshot] = await Promise.all([
       adminDb.collection(USERS).get(),
       adminDb.collection(PROJECTS).get(),
-      adminDb.collection(ASSIGNMENTS).get(),
       adminDb.collection(EMPLOYEES).get(),
       adminDb.collection(DRAFTS).get(),
     ]);
@@ -408,9 +406,7 @@ async function searchClients(req, res) {
         ])
         .filter(Boolean)
     );
-    const assignmentRecords = assignmentSnapshot.docs.map(document => document.data());
     const clients = [];
-    let hasIneligibleMatches = false;
 
     for (const document of usersSnapshot.docs) {
       const data = document.data();
@@ -420,29 +416,20 @@ async function searchClients(req, res) {
       if (search && !`${name} ${email}`.toLocaleLowerCase().includes(search)) continue;
 
       const ownerIdentifiers = [...new Set([uid, document.id])];
-      const existing = findExistingFloorPlan({
+      const projectCount = countExistingFloorPlans({
         identifiers: ownerIdentifiers,
         projects: projectRecords,
         drafts: draftRecords,
-        assignments: assignmentRecords,
       });
       if (!isFloorPlanClientAccount(data, ownerIdentifiers, employeeUids)) {
-        hasIneligibleMatches = true;
         continue;
       }
-      const projectId = existing.projectId;
-      const existingDraftId = existing.draftId;
-      const hasFloorPlan = Boolean(projectId || existingDraftId);
-      const isEligible = !hasFloorPlan;
-      if (!isEligible) hasIneligibleMatches = true;
       clients.push({
         id: document.id,
         uid,
         name,
         email: email || undefined,
-        eligible: isEligible,
-        existingProjectId: projectId ?? undefined,
-        existingDraftId: existingDraftId ?? undefined,
+        projectCount,
       });
     }
 
@@ -450,14 +437,13 @@ async function searchClients(req, res) {
     return res.json({
       success: true,
       clients,
-      hasIneligibleMatches,
     });
   } catch (error) {
     return sendFailure(res, error, "Unable to search eligible client accounts.");
   }
 }
 
-function mapProject(document, ownerNames, creatorNames, assignmentByOwner, ownerEmails = new Map()) {
+function mapProject(document, ownerNames, creatorNames, assignmentByPlan, ownerEmails = new Map()) {
   const data = document.data();
   const projectId = typeof data.projectId === "string" ? data.projectId : document.id;
   const isManaged = data.workflowType === "admin-managed";
@@ -525,7 +511,7 @@ function mapProject(document, ownerNames, creatorNames, assignmentByOwner, owner
     approvedVersionId: typeof data.approvedVersionId === "string" ? data.approvedVersionId : undefined,
     revisionFeedback: typeof data.revisionFeedback === "string" ? data.revisionFeedback : undefined,
     revisionRequestedAt: timestampToIso(data.revisionRequestedAt),
-    lifecycleAssignmentId: assignmentByOwner.get(data.ownerId) ?? null,
+    lifecycleAssignmentId: assignmentByPlan.get(projectId) ?? null,
     thumbnailPath: typeof data.thumbnailPath === "string" ? data.thumbnailPath : undefined,
     thumbnailUrl: typeof data.thumbnailUrl === "string" ? data.thumbnailUrl : undefined,
     schemaVersion: typeof data.schemaVersion === "number" ? data.schemaVersion : 1,
@@ -563,11 +549,18 @@ async function getAdminProjects(req, res, includeDrafts) {
       const displayName = normalizedString(data.name) || normalizedString(data.full_name);
       if (uid && displayName) creatorNames.set(uid, displayName);
     }
-    const assignmentByOwner = new Map(
-      assignmentsSnapshot.docs.map(document => [document.data().ownerId, document.data().projectId])
-    );
+    const assignmentByPlan = new Map();
+    for (const document of assignmentsSnapshot.docs) {
+      const assignment = document.data();
+      if (typeof assignment.projectId === "string" && assignment.projectId) {
+        assignmentByPlan.set(assignment.projectId, assignment.projectId);
+      }
+      if (typeof assignment.draftId === "string" && assignment.draftId) {
+        assignmentByPlan.set(assignment.draftId, assignment.draftId);
+      }
+    }
     const projects = projectsSnapshot.docs
-      .map(document => mapProject(document, ownerNames, creatorNames, assignmentByOwner, ownerEmails))
+      .map(document => mapProject(document, ownerNames, creatorNames, assignmentByPlan, ownerEmails))
       .filter(project =>
         !includeDrafts ||
         (project.workflowType === "admin-managed" && project.structuralStatus === "draft")
@@ -606,6 +599,7 @@ async function getAdminProjects(req, res, includeDrafts) {
           createdAt: timestampToIso(draft.createdAt),
           updatedAt: timestampToIso(draft.updatedAt),
           deadline: typeof draft.deadline === "string" ? draft.deadline : null,
+          lifecycleAssignmentId: assignmentByPlan.get(document.id) ?? null,
         });
       }
     }
@@ -632,7 +626,9 @@ async function getProject(req, res) {
     const [usersSnapshot, employeesSnapshot, assignmentSnapshot] = await Promise.all([
       adminDb.collection(USERS).get(),
       adminDb.collection(EMPLOYEES).get(),
-      assignmentReference(snapshot.data().ownerId ?? "").get(),
+      getAssignmentForPlan(adminDb, projectId, normalizedString(snapshot.data().ownerId), {
+        planType: "project",
+      }),
     ]);
     const ownerNames = new Map();
     for (const document of usersSnapshot.docs) {
@@ -645,8 +641,8 @@ async function getProject(req, res) {
       if (typeof data.uid === "string") creatorNames.set(data.uid, data.name ?? data.full_name ?? "Unknown Administrator");
     }
     const ownerId = snapshot.data().ownerId;
-    const assignmentByOwner = new Map([[ownerId, assignmentSnapshot.exists ? assignmentSnapshot.data().projectId : null]]);
-    return res.json({ success: true, project: mapProject(snapshot, ownerNames, creatorNames, assignmentByOwner) });
+    const assignmentByPlan = new Map([[projectId, assignmentSnapshot.exists ? projectId : null]]);
+    return res.json({ success: true, project: mapProject(snapshot, ownerNames, creatorNames, assignmentByPlan) });
   } catch (error) {
     return sendFailure(res, error, "Unable to load project.");
   }
@@ -665,11 +661,18 @@ async function getAdminAccountProjects(req, res) {
     if (!userDocument) throw httpError(404, "Client account does not exist.");
     const userData = userDocument.data();
     const ownerId = normalizedString(userData.uid) || userDocument.id;
-    const [projectsSnapshot, employeesSnapshot, assignmentSnapshot] = await Promise.all([
+    const [projectsSnapshot, employeesSnapshot] = await Promise.all([
       adminDb.collection(PROJECTS).where("ownerId", "==", ownerId).get(),
       adminDb.collection(EMPLOYEES).get(),
-      assignmentReference(ownerId).get(),
     ]);
+    const assignmentSnapshots = await Promise.all(projectsSnapshot.docs.map(document =>
+      getAssignmentForPlan(
+        adminDb,
+        typeof document.data().projectId === "string" ? document.data().projectId : document.id,
+        ownerId,
+        { planType: "project" },
+      )
+    ));
     const ownerNames = new Map([[ownerId, normalizedString(userData.full_name) || normalizedString(userData.name) || "Unknown User"]]);
     const creatorNames = new Map();
     for (const document of employeesSnapshot.docs) {
@@ -678,11 +681,14 @@ async function getAdminAccountProjects(req, res) {
         creatorNames.set(data.uid, data.name ?? data.full_name ?? "Unknown Administrator");
       }
     }
-    const assignmentByOwner = new Map([
-      [ownerId, assignmentSnapshot.exists ? assignmentSnapshot.data().projectId : null],
-    ]);
+    const assignmentByPlan = new Map(projectsSnapshot.docs.map((document, index) => {
+      const projectId = typeof document.data().projectId === "string"
+        ? document.data().projectId
+        : document.id;
+      return [projectId, assignmentSnapshots[index].exists ? projectId : null];
+    }));
     const projects = projectsSnapshot.docs
-      .map(document => mapProject(document, ownerNames, creatorNames, assignmentByOwner))
+      .map(document => mapProject(document, ownerNames, creatorNames, assignmentByPlan))
       .sort((first, second) =>
         new Date(second.updatedAt ?? 0).getTime() - new Date(first.updatedAt ?? 0).getTime()
       );
@@ -853,29 +859,25 @@ async function publishDraft(req, res) {
     uploadedPath = `projects/${ownerId}/${reservedId}/published-r${revision}-${randomUUID()}.json`;
     await uploadJson(uploadedPath, finalJson);
     const destinationReference = adminDb.collection(PROJECTS).doc(reservedId);
-    const lockReference = assignmentReference(ownerId);
-    const ownerAccount = await findClientAccountByIdentifier(
-      adminDb,
-      ownerId,
-      { requireActive: false },
-    );
-    const ownerIdentifiers = [...new Set([
-      ownerId,
-      normalizedString(initial.intendedClientAccountId) || ownerAccount?.id || ownerId,
-    ])];
-    const assignmentReferences = ownerIdentifiers.map(assignmentReference);
-    const ownerProjectsQueries = ownerIdentifiers.map(id =>
-      adminDb.collection(PROJECTS).where("ownerId", "==", id).limit(1)
-    );
+    const draftAssignmentReference = planAssignmentReference(adminDb, draftId, "draft");
+    const projectAssignmentReference = planAssignmentReference(adminDb, reservedId, "project");
 
     const result = await adminDb.runTransaction(async transaction => {
-      const [currentDraftSnapshot, assignmentSnapshots, ownerProjectsSnapshots, destinationSnapshot] =
-        await Promise.all([
-          transaction.get(reference),
-          Promise.all(assignmentReferences.map(ref => transaction.get(ref))),
-          Promise.all(ownerProjectsQueries.map(query => transaction.get(query))),
-          transaction.get(destinationReference),
-        ]);
+      const [
+        currentDraftSnapshot,
+        draftAssignmentSnapshot,
+        destinationSnapshot,
+        projectAssignmentSnapshot,
+      ] = await Promise.all([
+        transaction.get(reference),
+        getAssignmentForPlan(adminDb, draftId, ownerId, {
+          planType: "draft",
+          legacyOwnerIds: [normalizedString(initial.intendedClientAccountId)],
+          transaction,
+        }),
+        transaction.get(destinationReference),
+        transaction.get(projectAssignmentReference),
+      ]);
       if (!currentDraftSnapshot.exists) throw httpError(404, "Floor-plan draft was removed during publishing.");
       const currentDraft = currentDraftSnapshot.data();
       if (currentDraft.createdBy !== req.adminUser.uid) {
@@ -890,28 +892,23 @@ async function publishDraft(req, res) {
       if (currentDraft.projectName !== initial.projectName) {
         throw httpError(409, "The draft name changed while publishing. Reload and try again.");
       }
-      if (
-        currentDraft.structuralRevision !== initial.structuralRevision ||
-        currentDraft.draftJsonPath !== initial.draftJsonPath
-      ) {
+      if (!isDraftPublishSnapshotCurrent(initial, currentDraft)) {
         throw httpError(409, "The floor-plan draft changed while publishing. Reload and try again.");
       }
-      const primaryAssignment = assignmentSnapshots[0];
-      const currentReservation = primaryAssignment.exists ? primaryAssignment.data() : null;
-      const ownsDraftReservation = currentReservation?.status === "draft" &&
-        currentReservation.draftId === draftId &&
-        currentReservation.ownerId === ownerId;
-      if (
-        assignmentSnapshots.some((assignment, index) =>
-          assignment.exists && !(index === 0 && ownsDraftReservation)
-        ) ||
-        ownerProjectsSnapshots.some(snapshot => snapshot.docs.length > 0)
-      ) {
-        throw httpError(409, OWNER_PROJECT_CONFLICT);
+      if (draftAssignmentSnapshot.exists) {
+        const currentReservation = draftAssignmentSnapshot.data();
+        if (
+          currentReservation?.status !== "draft" ||
+          currentReservation.draftId !== draftId ||
+          currentReservation.ownerId !== ownerId
+        ) {
+          throw httpError(409, "The draft assignment changed while publishing.");
+        }
       }
-      if (destinationSnapshot.exists) {
+      if (hasProjectIdCollision(destinationSnapshot, projectAssignmentSnapshot)) {
         throw httpError(409, "The generated project ID is already in use.");
       }
+      const timestamp = FieldValue.serverTimestamp();
       const projectRecord = createPublishedFloorPlanRecord({
         projectId: reservedId,
         projectName,
@@ -921,11 +918,12 @@ async function publishDraft(req, res) {
         jsonPath: uploadedPath,
         createdBy: req.adminUser.uid,
         creatorName: req.adminUser.name,
-        timestamp: FieldValue.serverTimestamp(),
+        timestamp,
       });
       commitPublishedFloorPlan(transaction, {
         projectReference: destinationReference,
-        assignmentReference: lockReference,
+        draftAssignmentReference,
+        projectAssignmentReference,
         draftReference: reference,
         projectRecord,
         projectId: reservedId,
@@ -934,8 +932,16 @@ async function publishDraft(req, res) {
         deadline,
         revision,
         actor: req.adminUser,
-        timestamp: FieldValue.serverTimestamp(),
-        deleteField: FieldValue.delete(),
+        timestamp,
+        assignmentRecord: createPlanAssignmentRecord({
+          planId: reservedId,
+          planType: "project",
+          ownerId,
+          createdBy: req.adminUser.uid,
+          creatorName: req.adminUser.name,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        }),
         recordActivity: recordProjectActivity,
       });
       return { projectId: reservedId, alreadyPublished: false };
@@ -943,7 +949,7 @@ async function publishDraft(req, res) {
 
     if (result.alreadyPublished) await deleteStorageObject(uploadedPath);
     if (!result.alreadyPublished) {
-      await notifyProjectClient({ eventKey: `floor-plan-published:${result.projectId}`, eventType: "floor-plan-published", title: "Your floor plan is ready" }, result.projectId, ownerId, req.adminUser, `Admin ${req.adminUser.name || "Unknown"} created a project for you. Check it out!`);
+      await notifyProjectClient({ eventKey: `floor-plan-published:${result.projectId}`, eventType: "floor-plan-published", title: `${projectName} is ready` }, result.projectId, ownerId, req.adminUser, `Admin ${req.adminUser.name || "Unknown"} published "${projectName}". Check it out!`);
       await notifyProjectAdmins({ eventKey: `floor-plan-published-admin:${result.projectId}`, eventType: "floor-plan-published", title: "Floor plan published" }, result.projectId, req.adminUser, `Admin ${req.adminUser.name || "Unknown"} published ${projectName} for a client.`);
     }
     return res.json({ success: true, projectId: result.projectId, alreadyPublished: result.alreadyPublished });
@@ -1014,12 +1020,10 @@ async function saveProjectStructure(req, res) {
     const storagePath = `projects/${ownerId}/${projectId}/${published ? "published" : "draft"}-r${revision}-${randomUUID()}.json`;
     uploadedPath = storagePath;
     await uploadJson(storagePath, json);
-    const lockReference = assignmentReference(ownerId);
-
     await adminDb.runTransaction(async transaction => {
       const [currentSnapshot, lockSnapshot] = await Promise.all([
         transaction.get(reference),
-        transaction.get(lockReference),
+        getAssignmentForPlan(adminDb, projectId, ownerId, { transaction }),
       ]);
       if (!currentSnapshot.exists) throw httpError(404, "Project was removed during save.");
       const current = currentSnapshot.data();
@@ -1034,12 +1038,7 @@ async function saveProjectStructure(req, res) {
       ) {
         throw httpError(409, "Project assignment or ownership changed during save.");
       }
-      if (
-        current.structuralRevision !== existing.structuralRevision ||
-        current.publishedStructuralRevision !== existing.publishedStructuralRevision ||
-        current.structuralStatus !== existing.structuralStatus ||
-        current.draftJsonPath !== existing.draftJsonPath
-      ) {
+      if (!isProjectStructureSnapshotCurrent(existing, current)) {
         throw httpError(409, "The project changed during save. Reload before trying again.");
       }
       if (!canContinueAdminStructureSave(existing, current)) {
@@ -1103,11 +1102,11 @@ async function saveProjectStructure(req, res) {
       }
     });
     if (firstPublication) {
-      await notifyProjectClient({ eventKey: `floor-plan-published:${projectId}:${revision}`, eventType: "floor-plan-published", title: "Your floor plan is ready" }, projectId, ownerId, req.adminUser, `Admin ${req.adminUser.name || "Unknown"} created a project for you. Check it out!`);
+      await notifyProjectClient({ eventKey: `floor-plan-published:${projectId}:${revision}`, eventType: "floor-plan-published", title: `${projectName} is ready` }, projectId, ownerId, req.adminUser, `Admin ${req.adminUser.name || "Unknown"} published "${projectName}". Check it out!`);
       await notifyProjectAdmins({ eventKey: `floor-plan-published-admin:${projectId}`, eventType: "floor-plan-published", title: "Floor plan published" }, projectId, req.adminUser, `Admin ${req.adminUser.name || "Unknown"} published ${projectName} for a client.`);
     }
     if (projectRevision) {
-      await notifyProjectClient({ eventKey: `admin-project-revised:${projectId}:${revision}`, eventType: "project-revised", title: "Your project has been revised" }, projectId, ownerId, req.adminUser, `Admin ${req.adminUser.name || "Unknown"} made revisions to your project.`);
+      await notifyProjectClient({ eventKey: `admin-project-revised:${projectId}:${revision}`, eventType: "project-revised", title: `"${projectName}" has been revised` }, projectId, ownerId, req.adminUser, `Admin ${req.adminUser.name || "Unknown"} made revisions to "${projectName}".`);
     }
     return res.json({ success: true, projectId, revision, published });
   } catch (error) {
@@ -1154,7 +1153,6 @@ async function saveClientInterior(req, res) {
   const projectId = normalizedString(req.params.projectId);
   const ownerId = req.clientUser.uid;
   const reference = adminDb.collection(PROJECTS).doc(projectId);
-  const lockReference = assignmentReference(ownerId);
   const versionId = randomUUID();
   const versionReference = adminDb.collection(PROJECT_VERSIONS).doc(versionId);
   let uploadedPath;
@@ -1182,7 +1180,7 @@ async function saveClientInterior(req, res) {
     }
     const [initialSnapshot, initialAssignment] = await Promise.all([
       reference.get(),
-      lockReference.get(),
+      getAssignmentForPlan(adminDb, projectId, ownerId),
     ]);
     if (!initialSnapshot.exists) throw httpError(404, "Project does not exist.");
     const initial = initialSnapshot.data();
@@ -1208,7 +1206,7 @@ async function saveClientInterior(req, res) {
     await adminDb.runTransaction(async transaction => {
       const [projectSnapshot, assignmentSnapshot] = await Promise.all([
         transaction.get(reference),
-        transaction.get(lockReference),
+        getAssignmentForPlan(adminDb, projectId, ownerId, { transaction }),
       ]);
       if (!projectSnapshot.exists) throw httpError(404, "Project does not exist.");
       const current = projectSnapshot.data();
@@ -1306,7 +1304,7 @@ async function getClientProjectWorkflow(req, res) {
     if (!projectId) throw httpError(400, "Project ID is required.");
     const [projectSnapshot, assignmentSnapshot] = await Promise.all([
       adminDb.collection(PROJECTS).doc(projectId).get(),
-      assignmentReference(ownerId).get(),
+      getAssignmentForPlan(adminDb, projectId, ownerId),
     ]);
     if (!projectSnapshot.exists) throw httpError(404, "Project does not exist.");
     const project = projectSnapshot.data();
@@ -1351,7 +1349,7 @@ async function recordClientProjectOpened(req, res) {
     if (!projectId) throw httpError(400, "Project ID is required.");
     const [projectSnapshot, assignmentSnapshot] = await Promise.all([
       adminDb.collection(PROJECTS).doc(projectId).get(),
-      assignmentReference(actorUid).get(),
+      getAssignmentForPlan(adminDb, projectId, actorUid),
     ]);
     if (!projectSnapshot.exists) throw httpError(404, "Project does not exist.");
     const project = projectSnapshot.data();
@@ -1443,7 +1441,7 @@ async function getManagedProjectFile(req, res, isAdmin) {
     };
 
     if (!isAdmin) {
-      const assignmentSnapshot = await assignmentReference(ownerId).get();
+      const assignmentSnapshot = await getAssignmentForPlan(adminDb, projectId, ownerId);
       assertAssignedClient(project, assignmentSnapshot, projectId, ownerId);
     }
 
@@ -1861,7 +1859,6 @@ async function acknowledgeProjectAccess(req, res) {
   const projectId = normalizedString(req.params.projectId);
   const ownerId = req.clientUser.uid;
   const reference = adminDb.collection(PROJECTS).doc(projectId);
-  const assignment = assignmentReference(ownerId);
   try {
     if (!projectId) throw httpError(400, "Project ID is required.");
     if (req.body?.agreementVersion !== ACCESS_AGREEMENT_VERSION) {
@@ -1870,7 +1867,7 @@ async function acknowledgeProjectAccess(req, res) {
     await adminDb.runTransaction(async transaction => {
       const [projectSnapshot, assignmentSnapshot] = await Promise.all([
         transaction.get(reference),
-        transaction.get(assignment),
+        getAssignmentForPlan(adminDb, projectId, ownerId, { transaction }),
       ]);
       if (!projectSnapshot.exists) throw httpError(404, "Project does not exist.");
       const project = projectSnapshot.data();
@@ -1907,7 +1904,6 @@ async function acknowledgeSubmissionAgreement(req, res) {
   const projectId = normalizedString(req.params.projectId);
   const ownerId = req.clientUser.uid;
   const reference = adminDb.collection(PROJECTS).doc(projectId);
-  const assignment = assignmentReference(ownerId);
   try {
     if (!projectId) throw httpError(400, "Project ID is required.");
     if (
@@ -1919,7 +1915,7 @@ async function acknowledgeSubmissionAgreement(req, res) {
     await adminDb.runTransaction(async transaction => {
       const [projectSnapshot, assignmentSnapshot] = await Promise.all([
         transaction.get(reference),
-        transaction.get(assignment),
+        getAssignmentForPlan(adminDb, projectId, ownerId, { transaction }),
       ]);
       if (!projectSnapshot.exists) throw httpError(404, "Project does not exist.");
       const project = projectSnapshot.data();
@@ -1954,7 +1950,6 @@ async function submitClientProject(req, res) {
   const projectId = normalizedString(req.params.projectId);
   const ownerId = req.clientUser.uid;
   const reference = adminDb.collection(PROJECTS).doc(projectId);
-  const assignment = assignmentReference(ownerId);
   const submissionId = randomUUID();
   const submissionReference = adminDb.collection(PROJECT_SUBMISSIONS).doc(submissionId);
   let uploadedPath;
@@ -1970,7 +1965,7 @@ async function submitClientProject(req, res) {
     const publicConsentAt = publicConsent ? FieldValue.serverTimestamp() : null;
     const [initialSnapshot, assignmentSnapshot] = await Promise.all([
       reference.get(),
-      assignment.get(),
+      getAssignmentForPlan(adminDb, projectId, ownerId),
     ]);
     if (!initialSnapshot.exists) throw httpError(404, "Project does not exist.");
     const initial = initialSnapshot.data();
@@ -2015,7 +2010,7 @@ async function submitClientProject(req, res) {
     await adminDb.runTransaction(async transaction => {
       const [projectSnapshot, currentAssignment] = await Promise.all([
         transaction.get(reference),
-        transaction.get(assignment),
+        getAssignmentForPlan(adminDb, projectId, ownerId, { transaction }),
       ]);
       if (!projectSnapshot.exists) throw httpError(404, "Project does not exist.");
       const current = projectSnapshot.data();
@@ -2172,8 +2167,8 @@ async function reviewSubmittedProject(req, res) {
       await notifyProjectClient({
         eventKey: `${action === "approve" ? "project-approved" : "project-revised"}:${projectId}:${result.submittedSubmissionId || "current"}`,
         eventType: action === "approve" ? "project-approved" : "project-revised",
-        title: action === "approve" ? "Your project is approved" : "Your project has been revised",
-      }, projectId, recipient, req.adminUser, action === "approve" ? `Admin ${req.adminUser.name || "Unknown"} approved your project.` : `Admin ${req.adminUser.name || "Unknown"} made revisions to your project.`);
+        title: action === "approve" ? `"${result.projectName || projectId}" is approved` : `"${result.projectName || projectId}" has been revised`,
+      }, projectId, recipient, req.adminUser, action === "approve" ? `Admin ${req.adminUser.name || "Unknown"} approved "${result.projectName || projectId}".` : `Admin ${req.adminUser.name || "Unknown"} made revisions to "${result.projectName || projectId}".`);
     }
     return res.json({ success: true, ...result });
   } catch (error) {
@@ -2311,7 +2306,7 @@ async function getClientProjectActivity(req, res) {
     if (!projectId) throw httpError(400, "Project ID is required.");
     const [project, assignment] = await Promise.all([
       adminDb.collection(PROJECTS).doc(projectId).get(),
-      assignmentReference(ownerId).get(),
+      getAssignmentForPlan(adminDb, projectId, ownerId),
     ]);
     if (!project.exists) throw httpError(404, "Project does not exist.");
     assertAssignedClient(project.data(), assignment, projectId, ownerId);
@@ -2352,20 +2347,26 @@ async function deleteDraft(req, res) {
       const snapshot = await transaction.get(reference);
       if (!snapshot.exists) return;
       const draft = snapshot.data();
-      const reservationReference = assignmentReference(
+      const assignmentSnapshot = await getAssignmentForPlan(
+        adminDb,
+        draftId,
         normalizedString(draft.intendedClientId),
+        {
+          planType: "draft",
+          legacyOwnerIds: [normalizedString(draft.intendedClientAccountId)],
+          transaction,
+        },
       );
-      const reservationSnapshot = await transaction.get(reservationReference);
       if (draft.createdBy !== req.adminUser.uid || draft.publishedProjectId || draft.deleting !== true) {
         throw httpError(409, "Draft status changed while deleting.");
       }
       transaction.delete(reference);
       if (
-        reservationSnapshot.exists &&
-        reservationSnapshot.data().status === "draft" &&
-        reservationSnapshot.data().draftId === draftId
+        assignmentSnapshot.exists &&
+        assignmentSnapshot.data().status === "draft" &&
+        assignmentSnapshot.data().draftId === draftId
       ) {
-        transaction.delete(reservationReference);
+        transaction.delete(planAssignmentReference(adminDb, draftId, "draft"));
       }
     });
     return res.json({ success: true });

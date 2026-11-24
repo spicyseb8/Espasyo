@@ -9,6 +9,17 @@ export interface StructureHistoryEntry {
 
 export type StructureHistoryByFloor = Record<string, StructureHistoryEntry[]>;
 
+export function createStructureHistoryEntry(
+    floorId: string,
+    before: ManagedStructure,
+    after: ManagedStructure
+): StructureHistoryEntry {
+    return {
+        before: { [floorId]: before },
+        after: { [floorId]: after }
+    };
+}
+
 export function createGroupedStructureHistoryEntry(
     beforeFloors: ManagedEditorFloor[],
     afterFloors: ManagedEditorFloor[],
@@ -30,6 +41,34 @@ export function createGroupedStructureHistoryEntry(
     };
 }
 
+export function canUndoStructureHistory(
+    historyByFloor: StructureHistoryByFloor,
+    activeFloorId: string
+): boolean {
+    const entry = historyByFloor[activeFloorId]?.at(-1);
+    if (!entry) return false;
+    if (entry.before && entry.after) {
+        return !entry.transactionId || Object.keys(entry.before).every(floorId =>
+            historyByFloor[floorId]?.at(-1)?.transactionId === entry.transactionId
+        );
+    }
+    return Boolean(entry.structure);
+}
+
+export function canRedoStructureHistory(
+    futureByFloor: StructureHistoryByFloor,
+    activeFloorId: string
+): boolean {
+    const entry = futureByFloor[activeFloorId]?.[0];
+    if (!entry) return false;
+    if (entry.before && entry.after) {
+        return !entry.transactionId || Object.keys(entry.after).every(floorId =>
+            futureByFloor[floorId]?.[0]?.transactionId === entry.transactionId
+        );
+    }
+    return Boolean(entry.structure);
+}
+
 export interface StructureHistoryTransition {
     floors: ManagedEditorFloor[];
     historyByFloor: StructureHistoryByFloor;
@@ -46,9 +85,9 @@ export function undoStructureHistory(
     const activeHistory = historyByFloor[activeFloorId] ?? [];
     const entry = activeHistory.at(-1);
     if (!entry) return null;
-    if (entry.transactionId && entry.before) {
+    if (entry.before && entry.after) {
         const floorIds = Object.keys(entry.before);
-        if (!floorIds.every(floorId =>
+        if (entry.transactionId && !floorIds.every(floorId =>
             historyByFloor[floorId]?.at(-1)?.transactionId === entry.transactionId
         )) {
             return {
@@ -107,9 +146,9 @@ export function redoStructureHistory(
     const activeFuture = futureByFloor[activeFloorId] ?? [];
     const entry = activeFuture[0];
     if (!entry) return null;
-    if (entry.transactionId && entry.after) {
+    if (entry.before && entry.after) {
         const floorIds = Object.keys(entry.after);
-        if (!floorIds.every(floorId =>
+        if (entry.transactionId && !floorIds.every(floorId =>
             futureByFloor[floorId]?.[0]?.transactionId === entry.transactionId
         )) {
             return {

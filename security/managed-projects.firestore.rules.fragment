@@ -6,27 +6,35 @@ function managedProjectSignedIn() {
 
 function ownsManagedProject(projectId) {
   let projectPath = /databases/(default)/documents/projects/$(projectId);
-  let assignmentPath = /databases/(default)/documents/adminManagedProjectAssignments/$(request.auth.uid);
   return managedProjectSignedIn()
     && exists(projectPath)
     && get(projectPath).data.ownerId == request.auth.uid
-    && exists(assignmentPath)
-    && get(assignmentPath).data.ownerId == request.auth.uid
-    && get(assignmentPath).data.projectId == projectId;
+    && hasProjectAssignment(projectId);
+}
+
+function hasProjectAssignment(projectId) {
+  let planAssignmentPath = /databases/(default)/documents/adminManagedProjectAssignments/project_$(projectId);
+  let legacyAssignmentPath = /databases/(default)/documents/adminManagedProjectAssignments/$(request.auth.uid);
+  return (
+      exists(planAssignmentPath)
+      && get(planAssignmentPath).data.ownerId == request.auth.uid
+      && get(planAssignmentPath).data.projectId == projectId
+    ) || (
+      exists(legacyAssignmentPath)
+      && get(legacyAssignmentPath).data.ownerId == request.auth.uid
+      && get(legacyAssignmentPath).data.projectId == projectId
+    );
 }
 
 function isAssignedPublishedManagedProject(projectId) {
   let projectPath = /databases/(default)/documents/projects/$(projectId);
-  let assignmentPath = /databases/(default)/documents/adminManagedProjectAssignments/$(request.auth.uid);
   return managedProjectSignedIn()
     && exists(projectPath)
     && get(projectPath).data.ownerId == request.auth.uid
     && get(projectPath).data.get("workflowType", "legacy") == "admin-managed"
     && get(projectPath).data.get("structuralStatus", "") == "published"
     && get(projectPath).data.get("publishedStructuralRevision", 0) >= 1
-    && exists(assignmentPath)
-    && get(assignmentPath).data.ownerId == request.auth.uid
-    && get(assignmentPath).data.projectId == projectId;
+    && hasProjectAssignment(projectId);
 }
 
 function containsClientManagedLifecycleFields(data) {

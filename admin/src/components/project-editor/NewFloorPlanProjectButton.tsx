@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Check, Plus, Search, X } from "lucide-react";
 import {
@@ -29,19 +29,16 @@ export default function NewFloorPlanProjectButton() {
     const [search, setSearch] = useState("");
     const [clients, setClients] = useState<AdminClient[]>([]);
     const [selectedClientId, setSelectedClientId] = useState("");
-    const [hasIneligibleMatches, setHasIneligibleMatches] = useState(false);
     const [loadingClients, setLoadingClients] = useState(false);
     const [creating, setCreating] = useState(false);
+    const creatingRef = useRef(false);
     const [openingEditor, setOpeningEditor] = useState(false);
     const [error, setError] = useState("");
 
     const searchQuery = search.trim().toLocaleLowerCase();
 
-    // Only clients who can still receive a floor plan are shown.
     const availableClients = useMemo(
-        () => clients.filter(client =>
-            client.eligible && matchesClientSearch(client, searchQuery)
-        ),
+        () => clients.filter(client => matchesClientSearch(client, searchQuery)),
         [clients, searchQuery]
     );
     const selectedClient = availableClients.find(client => client.uid === selectedClientId);
@@ -55,9 +52,8 @@ export default function NewFloorPlanProjectButton() {
                 .then(result => {
                     if (cancelled) return;
                     setClients(result.clients);
-                    setHasIneligibleMatches(result.hasIneligibleMatches);
                     setSelectedClientId(current =>
-                        result.clients.some(client => client.uid === current && client.eligible)
+                        result.clients.some(client => client.uid === current)
                             ? current
                             : ""
                     );
@@ -66,7 +62,6 @@ export default function NewFloorPlanProjectButton() {
                     console.error("Failed to search clients for floor-plan creation:", loadError);
                     if (cancelled) return;
                     setClients([]);
-                    setHasIneligibleMatches(false);
                     setError("Unable to search clients. Please try again.");
                 })
                 .finally(() => {
@@ -94,15 +89,15 @@ export default function NewFloorPlanProjectButton() {
         setSearch("");
         setClients([]);
         setSelectedClientId("");
-        setHasIneligibleMatches(false);
         setLoadingClients(false);
         setError("");
         setOpen(true);
     }
 
     async function createProject() {
-        if (!projectName.trim() || !selectedClient || creating) return;
+        if (!projectName.trim() || !selectedClient || creatingRef.current) return;
 
+        creatingRef.current = true;
         setCreating(true);
         setError("");
         try {
@@ -123,6 +118,7 @@ export default function NewFloorPlanProjectButton() {
                 ? createError.message
                 : "Unable to create the floor plan.");
         } finally {
+            creatingRef.current = false;
             setCreating(false);
         }
     }
@@ -180,7 +176,7 @@ export default function NewFloorPlanProjectButton() {
                                     className="h-10 rounded-md border border-border bg-background px-3 font-normal outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                                     value={projectName}
                                     onChange={event => setProjectName(event.target.value)}
-                                    maxLength={120}
+                                    maxLength={80}
                                     autoFocus
                                     placeholder="e.g. Ground floor"
                                 />
@@ -263,23 +259,16 @@ export default function NewFloorPlanProjectButton() {
                                                             <span className="block truncate text-xs text-muted-foreground">
                                                                 {client.email || "No email"}
                                                             </span>
+                                                            <span className="block text-xs text-muted-foreground">
+                                                                {client.projectCount} {client.projectCount === 1 ? "floor plan" : "floor plans"}
+                                                            </span>
                                                         </span>
                                                     </button>
                                                 ))
                                             ) : (
-                                                <p className="p-4 text-center text-sm text-muted-foreground">
-                                                    {hasIneligibleMatches
-                                                        ? "Matching clients already have a floor plan."
-                                                        : "No clients found"}
-                                                </p>
+                                                <p className="p-4 text-center text-sm text-muted-foreground">No clients found</p>
                                             )}
                                         </div>
-
-                                        {hasIneligibleMatches && availableClients.length > 0 && (
-                                            <p className="text-xs text-muted-foreground">
-                                                Clients who already have a floor plan are not shown.
-                                            </p>
-                                        )}
                                     </>
                                 )}
                             </div>

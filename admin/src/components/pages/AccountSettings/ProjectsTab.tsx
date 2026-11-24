@@ -32,6 +32,8 @@ interface UserProject {
   jsonPath: string;
   jsonUrl: string;
   schemaVersion: number;
+  projectStatus?: string;
+  deadline?: string | null;
   createdAt?: unknown;
   updatedAt?: unknown;
 }
@@ -191,6 +193,8 @@ export default function ProjectsTab({ ownerId }: ProjectsTabProps) {
           jsonPath: project.jsonPath ?? "",
           jsonUrl: project.jsonUrl ?? "",
           schemaVersion: project.schemaVersion,
+          projectStatus: project.projectStatus,
+          deadline: project.deadline,
           createdAt: project.createdAt,
           updatedAt: project.updatedAt
         }));
@@ -309,6 +313,12 @@ export default function ProjectsTab({ ownerId }: ProjectsTabProps) {
                 <h3 className="truncate text-sm font-semibold text-zinc-900">
                   {project.projectName}
                 </h3>
+                <p className="mt-1 text-xs text-zinc-600">
+                  Status: {project.projectStatus ?? "available"}
+                </p>
+                <p className="mt-1 text-xs text-zinc-600">
+                  Deadline: {project.deadline ? formatProjectDate(project.deadline) : "Not set"}
+                </p>
 
                 {/* CREATED */}
                 <div className="mt-3 flex items-center gap-2 text-xs text-zinc-500">

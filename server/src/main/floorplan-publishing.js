@@ -1,3 +1,19 @@
+export function isDraftPublishSnapshotCurrent(initial, current) {
+  return current.structuralRevision === initial.structuralRevision &&
+    current.draftJsonPath === initial.draftJsonPath;
+}
+
+export function isProjectStructureSnapshotCurrent(initial, current) {
+  return current.structuralRevision === initial.structuralRevision &&
+    current.publishedStructuralRevision === initial.publishedStructuralRevision &&
+    current.structuralStatus === initial.structuralStatus &&
+    current.draftJsonPath === initial.draftJsonPath;
+}
+
+export function hasProjectIdCollision(projectSnapshot, assignmentSnapshot) {
+  return projectSnapshot.exists || assignmentSnapshot.exists;
+}
+
 export function createPublishedFloorPlanRecord({
   projectId,
   projectName,
@@ -33,9 +49,11 @@ export function createPublishedFloorPlanRecord({
 
 export function commitPublishedFloorPlan(transaction, {
   projectReference,
-  assignmentReference,
+  draftAssignmentReference,
+  projectAssignmentReference,
   draftReference,
   projectRecord,
+  assignmentRecord,
   projectId,
   ownerId,
   projectName,
@@ -43,16 +61,10 @@ export function commitPublishedFloorPlan(transaction, {
   revision,
   actor,
   timestamp,
-  deleteField,
   recordActivity,
 }) {
-  transaction.set(assignmentReference, {
-    ownerId,
-    projectId,
-    status: "published",
-    draftId: deleteField,
-    updatedAt: timestamp,
-  }, { merge: true });
+  transaction.create(projectAssignmentReference, assignmentRecord);
+  transaction.delete(draftAssignmentReference);
   transaction.create(projectReference, projectRecord);
   recordActivity(transaction, projectId, actor, "floor-plan-published", {
     newValue: { projectName, deadline, ownerId, structuralRevision: revision },

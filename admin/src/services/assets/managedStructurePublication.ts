@@ -15,8 +15,6 @@ export interface ManagedStructurePublicationCommit {
 }
 
 export interface ManagedStructurePublicationDependencies {
-    findExistingProject: (ownerId: string) => Promise<string | null>;
-    getAssignedProject: (ownerId: string) => Promise<string | null>;
     allocateProjectId: () => Promise<string>;
     upload: (storagePath: string, json: string) => Promise<void>;
     commit: (publication: ManagedStructurePublicationCommit) => Promise<void>;
@@ -31,19 +29,6 @@ export async function publishManagedStructure(
     const projectName = input.projectName.trim();
     if (!ownerId || !projectName) {
         throw new Error("Project name and client owner UID are required before publishing.");
-    }
-
-    const existingProjectId = await dependencies.findExistingProject(ownerId);
-    if (existingProjectId) {
-        throw new Error(
-            `This client already has designated project ${existingProjectId}. Open that project instead of publishing this local draft.`
-        );
-    }
-    const assignedProjectId = await dependencies.getAssignedProject(ownerId);
-    if (assignedProjectId) {
-        throw new Error(
-            `This client is already assigned to project ${assignedProjectId}. Open that project instead of publishing this local draft.`
-        );
     }
 
     const projectId = await dependencies.allocateProjectId();

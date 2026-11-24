@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
     getProjectWorkflowType,
-    findSingleManagedProjectId,
     isPublishedManagedProject,
     validateStructuralProjectData
 } from "./projectStructureContract.ts";
@@ -21,24 +20,6 @@ test("missing workflow metadata defaults to legacy", () => {
 test("admin-managed projects require explicit published revision", () => {
     assert.equal(isPublishedManagedProject({ workflowType: "admin-managed", structuralStatus: "published", publishedStructuralRevision: 2 }), true);
     assert.equal(isPublishedManagedProject({ workflowType: "admin-managed", structuralStatus: "draft", publishedStructuralRevision: 2 }), false);
-});
-
-test("managed project selection reuses a single client project and rejects conflicts", () => {
-    const projects = [
-        { projectId: "legacy", ownerId: "client-1", workflowType: "legacy" },
-        { projectId: "managed", ownerId: "client-1", workflowType: "admin-managed" },
-        { projectId: "other-client", ownerId: "client-2", workflowType: "admin-managed" }
-    ];
-
-    assert.equal(findSingleManagedProjectId(projects, "client-1"), "managed");
-    assert.equal(findSingleManagedProjectId(projects, "client-3"), null);
-    assert.throws(
-        () => findSingleManagedProjectId([
-            ...projects,
-            { projectId: "duplicate", ownerId: "client-1", workflowType: "admin-managed" }
-        ], "client-1"),
-        /multiple admin-managed projects/
-    );
 });
 
 test("managed structural validation accepts runtime-independent geometry and legacy JSON remains compatible", () => {

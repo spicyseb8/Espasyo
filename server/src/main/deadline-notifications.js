@@ -7,13 +7,16 @@ function dayNumber(value) {
   return Math.floor(Date.UTC(year, month - 1, day) / 86_400_000);
 }
 
-export function getDeadlineReminder(deadline, today) {
+export function getDeadlineReminder(deadline, today, projectName = "Your project") {
   if (!isValidDeadlineValue(deadline)) return null;
+  const planName = typeof projectName === "string" && projectName.trim()
+    ? projectName.trim()
+    : "Your project";
   const daysRemaining = dayNumber(deadline.slice(0, 10)) - dayNumber(today.slice(0, 10));
-  if (daysRemaining === 3) return { key: "3-days", title: "Project deadline in 3 days", message: "Your project deadline is approaching in 3 days." };
-  if (daysRemaining === 1) return { key: "1-day", title: "Project deadline tomorrow", message: "Your project deadline is approaching tomorrow." };
-  if (daysRemaining === 0) return { key: "due", title: "Project deadline is today", message: "Your project deadline is today." };
-  if (daysRemaining < 0) return { key: "expired", title: "Project deadline expired", message: "Your project deadline has expired. Contact your admin if you need an extension." };
+  if (daysRemaining === 3) return { key: "3-days", title: `${planName} deadline in 3 days`, message: `The deadline for "${planName}" is approaching in 3 days.` };
+  if (daysRemaining === 1) return { key: "1-day", title: `${planName} deadline tomorrow`, message: `The deadline for "${planName}" is approaching tomorrow.` };
+  if (daysRemaining === 0) return { key: "due", title: `${planName} deadline is today`, message: `The deadline for "${planName}" is today.` };
+  if (daysRemaining < 0) return { key: "expired", title: `${planName} deadline expired`, message: `The deadline for "${planName}" has expired. Contact your admin if you need an extension.` };
   return null;
 }
 
@@ -30,7 +33,7 @@ export async function sendDeadlineNotifications(db, now = new Date()) {
     if (!client?.uid) continue;
     const recipientUid = client.uid;
     const deadlineDate = deadline.slice(0, 10);
-    const reminder = getDeadlineReminder(deadline, today);
+    const reminder = getDeadlineReminder(deadline, today, project.projectName);
     if (!reminder) continue;
     const notificationId = await createNotification(db, {
       eventKey: `deadline:${snapshot.id}:${deadline}:${reminder.key}`,

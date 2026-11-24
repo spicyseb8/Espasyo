@@ -37,28 +37,6 @@ export function isPublishedManagedProject(
         && project.publishedStructuralRevision > 0;
 }
 
-export function findSingleManagedProjectId(
-    projects: Array<{
-        projectId: string;
-        ownerId: string;
-        workflowType?: string;
-    }>,
-    ownerId: string
-): string | null {
-    const matches = projects.filter(project =>
-        project.ownerId === ownerId &&
-        project.workflowType === "admin-managed"
-    );
-
-    if (matches.length > 1) {
-        throw new Error(
-            "This client has multiple admin-managed projects. Resolve the existing project records before creating or editing a designated floor plan."
-        );
-    }
-
-    return matches[0]?.projectId ?? null;
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null;
 }

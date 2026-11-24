@@ -206,14 +206,11 @@ export interface AdminClient {
     uid: string;
     name: string;
     email?: string;
-    eligible: boolean;
-    existingProjectId?: string;
-    existingDraftId?: string;
+    projectCount: number;
 }
 
 export interface AdminClientSearchResult {
     clients: AdminClient[];
-    hasIneligibleMatches: boolean;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -225,8 +222,7 @@ export async function getAdminClients(search = ""): Promise<AdminClientSearchRes
         `/admin/floor-plan-clients?search=${encodeURIComponent(search.trim())}`
     );
     return {
-        clients: response.clients,
-        hasIneligibleMatches: response.hasIneligibleMatches
+        clients: response.clients
     };
 }
 

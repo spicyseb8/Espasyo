@@ -8,14 +8,6 @@ function createDependencies(overrides = {}) {
     return {
         calls,
         dependencies: {
-            findExistingProject: async () => {
-                calls.push("find-existing");
-                return null;
-            },
-            getAssignedProject: async () => {
-                calls.push("find-assignment");
-                return null;
-            },
             allocateProjectId: async () => {
                 calls.push("allocate");
                 return "PRJ-00126";
@@ -71,8 +63,6 @@ test("publishing uploads validated structure before atomically committing metada
     }, dependencies);
 
     assert.deepEqual(calls.filter(item => typeof item === "string"), [
-        "find-existing",
-        "find-assignment",
         "allocate",
         "upload",
         "commit"
@@ -211,23 +201,27 @@ test("publishing preserves procedural staircase parameters and cross-floor conne
     assert.equal(uploadedStairs[1].rotationY, Math.PI / 2);
 });
 
-test("publishing refuses an existing designated project before allocating or uploading", async () => {
-    const { calls, dependencies } = createDependencies({
-        findExistingProject: async () => {
-            calls.push("find-existing");
-            return "PRJ-OLD";
-        }
+test("publishing permits multiple plans for the same client", async () => {
+    let sequence = 125;
+    const commits = [];
+    const { dependencies } = createDependencies({
+        allocateProjectId: async () => `PRJ-${String(++sequence).padStart(5, "0")}`,
+        commit: async publication => commits.push(publication)
     });
 
-    await assert.rejects(
-        publishManagedStructure({
-            ownerId: "client-a",
-            projectName: "Another plan",
-            projectData: emptyStructure
-        }, dependencies),
-        /already has designated project PRJ-OLD/
-    );
-    assert.deepEqual(calls, ["find-existing"]);
+    await publishManagedStructure({
+        ownerId: "client-a",
+        projectName: "Ground floor",
+        projectData: emptyStructure
+    }, dependencies);
+    await publishManagedStructure({
+        ownerId: "client-a",
+        projectName: "Upper floor",
+        projectData: emptyStructure
+    }, dependencies);
+
+    assert.deepEqual(commits.map(publication => publication.projectId), ["PRJ-00126", "PRJ-00127"]);
+    assert.ok(commits.every(publication => publication.ownerId === "client-a"));
 });
 
 test("failed publish commit cleans up the uploaded object and never reports success", async () => {

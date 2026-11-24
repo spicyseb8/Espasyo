@@ -12,6 +12,7 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 import CreateAccountModal, { type CreateAccountType } from "@/components/createfunc/CreateAccountModal";
 import { useAuth } from "@/context/AuthContext";
 import { isAdminRole } from "@/lib/adminRole";
+import { getAdminClients } from "@/services/assets/projectService";
 
 interface User { id: string; full_name: string; email: string; phone_number: string; created_at: string; created_ts: number; avatar?: string; }
 interface FirestoreUser { full_name?: string | null; name?: string | null; email?: string | null; phone_number?: string | null; created_at?: Timestamp | string | null; profile_picture?: string | null; avatar?: string | null; role?: string | null; }
@@ -57,6 +58,8 @@ export default function UserTable({ type }: UserTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [projectCounts, setProjectCounts] = useState<Record<string, number> | null>(null);
+  const [projectCountError, setProjectCountError] = useState("");
   const [createAccountOpen, setCreateAccountOpen] = useState(false);
   const rowsPerPage = 10;
 
@@ -83,6 +86,29 @@ export default function UserTable({ type }: UserTableProps) {
     return () => unsubscribe();
   }, [type]);
 
+  useEffect(() => {
+    let cancelled = false;
+    setProjectCounts(null);
+    setProjectCountError("");
+    if (type !== "customers") return;
+
+    getAdminClients()
+      .then(result => {
+        if (cancelled) return;
+        const counts: Record<string, number> = {};
+        for (const client of result.clients) counts[client.id] = client.projectCount;
+        setProjectCounts(counts);
+      })
+      .catch(countError => {
+        console.error("Failed to load customer floor-plan counts:", countError);
+        if (!cancelled) setProjectCountError("Floor-plan counts could not be loaded.");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [type]);
+
   const filtered = useMemo(() => {
     const value = search.toLowerCase();
     const base = users.filter(u => `${u.full_name} ${u.email} ${u.phone_number}`.toLowerCase().includes(value));
@@ -106,6 +132,11 @@ export default function UserTable({ type }: UserTableProps) {
   return (
     <>
       <div className="rounded-lg border border-border bg-background">
+        {projectCountError && type === "customers" && (
+          <p className="border-b border-border px-4 py-2 text-xs text-destructive" role="alert">
+            {projectCountError}
+          </p>
+        )}
         <div className="flex items-center justify-between gap-4 border-b border-border p-4">
           <div>
             <h2 className="text-sm font-semibold">{getTitle(type)}</h2>
@@ -147,11 +178,12 @@ export default function UserTable({ type }: UserTableProps) {
               <TableHead>Email</TableHead>
               <TableHead>Phone</TableHead>
               <TableHead>Created</TableHead>
+              {type === "customers" && <TableHead>Floor plans</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading && <TableRow><TableCell colSpan={4} className="h-24 text-center text-sm text-muted-foreground">Loading {getTitle(type).toLowerCase()}...</TableCell></TableRow>}
-            {!loading && error && <TableRow><TableCell colSpan={4} className="h-24 text-center text-sm text-destructive">{error}</TableCell></TableRow>}
+            {loading && <TableRow><TableCell colSpan={type === "customers" ? 5 : 4} className="h-24 text-center text-sm text-muted-foreground">Loading {getTitle(type).toLowerCase()}...</TableCell></TableRow>}
+            {!loading && error && <TableRow><TableCell colSpan={type === "customers" ? 5 : 4} className="h-24 text-center text-sm text-destructive">{error}</TableCell></TableRow>}
             {!loading && !error && paginatedUsers.length > 0 && paginatedUsers.map(user => (
               <TableRow key={user.id} className="cursor-pointer border-border hover:bg-muted/50" onClick={() => handleView(user.id)}>
                 <TableCell>
@@ -166,10 +198,21 @@ export default function UserTable({ type }: UserTableProps) {
                 <TableCell className="text-muted-foreground">{user.email}</TableCell>
                 <TableCell className="text-muted-foreground">{user.phone_number}</TableCell>
                 <TableCell className="text-muted-foreground">{user.created_at}</TableCell>
+                {type === "customers" && (
+                  <TableCell className="text-muted-foreground">
+                    {projectCountError
+                      ? "Unavailable"
+                      : projectCounts === null
+                        ? "Loading…"
+                        : projectCounts[user.id] === undefined
+                          ? "—"
+                          : projectCounts[user.id]}
+                  </TableCell>
+                )}
               </TableRow>
             ))}
             {!loading && !error && paginatedUsers.length === 0 && (
-              <TableRow><TableCell colSpan={4} className="h-24 text-center text-sm text-muted-foreground">No {getTitle(type).toLowerCase()} found.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={type === "customers" ? 5 : 4} className="h-24 text-center text-sm text-muted-foreground">No {getTitle(type).toLowerCase()} found.</TableCell></TableRow>
             )}
           </TableBody>
         </Table>

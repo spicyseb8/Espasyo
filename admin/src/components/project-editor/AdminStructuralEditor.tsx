@@ -107,7 +107,10 @@ import {
     type StaircasePlacementAction
 } from "./staircaseActions";
 import {
+    canRedoStructureHistory,
+    canUndoStructureHistory,
     createGroupedStructureHistoryEntry,
+    createStructureHistoryEntry,
     redoStructureHistory,
     undoStructureHistory,
     type StructureHistoryEntry
@@ -386,8 +389,12 @@ export default function AdminStructuralEditor() {
     const [savingAction, setSavingAction] = useState<"draft" | "publish" | null>(null);
     const [historyByFloor, setHistoryByFloor] = useState<Record<string, StructureHistoryEntry[]>>({});
     const [futureByFloor, setFutureByFloor] = useState<Record<string, StructureHistoryEntry[]>>({});
-    const history = activeFloorId ? historyByFloor[activeFloorId] ?? [] : [];
-    const future = activeFloorId ? futureByFloor[activeFloorId] ?? [] : [];
+    const canUndo = activeFloorId
+        ? canUndoStructureHistory(historyByFloor, activeFloorId)
+        : false;
+    const canRedo = activeFloorId
+        ? canRedoStructureHistory(futureByFloor, activeFloorId)
+        : false;
     const [isAddFloorDialogOpen, setIsAddFloorDialogOpen] = useState(false);
     const [floorToDeleteId, setFloorToDeleteId] = useState<string | null>(null);
     const [newFloorMode, setNewFloorMode] = useState<"blank" | "outline">("blank");
@@ -1040,7 +1047,10 @@ export default function AdminStructuralEditor() {
         if (isReadOnly || !structure || !activeFloorId) return;
         setHistoryByFloor(current => ({
             ...current,
-            [activeFloorId]: [...(current[activeFloorId] ?? []).slice(-49), { structure }]
+            [activeFloorId]: [
+                ...(current[activeFloorId] ?? []).slice(-49),
+                createStructureHistoryEntry(activeFloorId, structure, next)
+            ]
         }));
         setFutureByFloor(current => ({ ...current, [activeFloorId]: [] }));
         setActiveFloorStructure(next);
@@ -3250,10 +3260,10 @@ export default function AdminStructuralEditor() {
             )}
             {structure && (
                 <div className="admin-editor-canvas-tools" role="toolbar" aria-label="Structure history">
-                    <button type="button" onClick={undo} disabled={isReadOnly || !history.length} title="Undo" aria-label="Undo">
+                    <button type="button" onClick={undo} disabled={isReadOnly || !canUndo} title="Undo" aria-label="Undo">
                         <Undo2 size={16} />
                     </button>
-                    <button type="button" onClick={redo} disabled={isReadOnly || !future.length} title="Redo" aria-label="Redo">
+                    <button type="button" onClick={redo} disabled={isReadOnly || !canRedo} title="Redo" aria-label="Redo">
                         <Redo2 size={16} />
                     </button>
                     <span className="admin-editor-tools-divider" aria-hidden="true" />
