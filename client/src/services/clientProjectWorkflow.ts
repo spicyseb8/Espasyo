@@ -3,11 +3,22 @@ import { projectApi } from "./projectApi";
 export const ACCESS_AGREEMENT_VERSION = "2026-01";
 export const SUBMISSION_AGREEMENT_VERSION = "2026-01";
 
+export interface DeadlineExtensionRequest {
+    status: "pending" | "handled";
+    requestedBy: string;
+    requestedByName: string;
+    reason: string | null;
+    requestedAt: string | null;
+    handledAt?: string | null;
+    handledBy?: string | null;
+}
+
 export interface ClientProjectWorkflow {
     projectId: string;
     projectName: string;
     projectStatus: "available" | "ongoing" | "submitted" | "revision-requested" | "approved";
     deadline: string | null;
+    deadlineExtensionRequest?: DeadlineExtensionRequest | null;
     currentDesignVersionId: string | null;
     currentDesignVersionNumber: number | null;
     clientDesignStarted: boolean;
@@ -45,6 +56,19 @@ export async function recordClientProjectOpened(projectId: string): Promise<void
       await projectApi(`/projects/${encodeURIComponent(projectId)}/opened`, {
           method: "POST",
       });
+}
+
+export async function requestDeadlineExtension(
+    projectId: string,
+    reason: string,
+): Promise<void> {
+    await projectApi(
+        `/projects/${encodeURIComponent(projectId)}/deadline-extension-request`,
+        {
+            method: "POST",
+            body: JSON.stringify({ reason }),
+        },
+    );
 }
 
 export async function getClientManagedProjectFile<T = Record<string, unknown>>(

@@ -1,3 +1,8 @@
+import {
+  getPhilippineDateTimeKey as getWorkflowPhilippineDateTimeKey,
+  isProjectDeadlineExpired,
+} from "./project-workflow.js";
+
 const DEADLINE_TIME_ZONE = "Asia/Manila";
 
 export function isValidDeadlineValue(value) {
@@ -107,10 +112,23 @@ export async function saveProjectDeadline(db, projectId, deadline, actor, reason
     if (!projectSnapshot.exists) return false;
     const project = projectSnapshot.data();
     const previousDeadline = project.deadline ?? null;
-    transaction.update(projectReference, {
+    const updatedAt = new Date();
+    const updates = {
       deadline,
-      updatedAt: new Date(),
-    });
+      updatedAt,
+    };
+    if (
+      project.deadlineExtensionRequest?.status === "pending" &&
+      !isProjectDeadlineExpired(deadline, getWorkflowPhilippineDateTimeKey(updatedAt))
+    ) {
+      updates.deadlineExtensionRequest = {
+        ...project.deadlineExtensionRequest,
+        status: "handled",
+        handledAt: updatedAt,
+        handledBy: actor.uid,
+      };
+    }
+    transaction.update(projectReference, updates);
     transaction.create(activityReference, {
       projectId,
       actorUid: actor.uid,

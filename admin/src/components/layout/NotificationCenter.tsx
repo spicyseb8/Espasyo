@@ -118,6 +118,14 @@ export default function NotificationCenter({ uid }: { uid: string }) {
   const openItem = async (item: NotificationRecord) => {
     if (!isRead(item) && !await markNotificationRead(item.notificationId)) return;
     setOpen(false);
+    if (
+      (item.eventType === "deadline-extension-requested" ||
+        item.type === "deadline-extension-requested") &&
+      item.projectId
+    ) {
+      navigate("/?tab=projects", { state: { openProjectId: item.projectId } });
+      return;
+    }
     const target = item.targetType === "account" ? "customers" : item.targetType === "asset" ? (item.assetType === "floor" ? "floors" : item.assetType === "wall" ? "walls" : "furniture") : item.category === "Projects" || item.category === "Deadlines" ? "projects" : "dashboard";
     navigate(target === "dashboard" ? "/" : `/?tab=${target}`);
   };

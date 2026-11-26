@@ -46,14 +46,24 @@ import {
     createProjectData
 } from "../../../services/projectSerializer";
 
-import { projectApi } from "../../../services/projectApi";
+import { ProjectApiError, projectApi } from "../../../services/projectApi";
 import {
     acknowledgeSubmissionAgreement,
     getClientProjectActivity,
     getClientProjectWorkflow,
+    requestDeadlineExtension,
     submitClientProject,
+    type DeadlineExtensionRequest,
     type ProjectActivity
 } from "../../../services/clientProjectWorkflow";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle
+} from "../../../components/ui/dialog";
 
 import {
     captureSceneThumbnail
@@ -433,6 +443,11 @@ export default function ProjectPanel({ open }: Props) {
     const [projectStatus, setProjectStatus] = useState<string>("available");
     const [revisionFeedback, setRevisionFeedback] = useState<string | null>(null);
     const [deadline, setDeadline] = useState<string | null>(null);
+    const [deadlineExtensionRequest, setDeadlineExtensionRequest] =
+        useState<DeadlineExtensionRequest | null>(null);
+    const [showDeadlineExtensionDialog, setShowDeadlineExtensionDialog] = useState(false);
+    const [deadlineExtensionReason, setDeadlineExtensionReason] = useState("");
+    const [requestingDeadlineExtension, setRequestingDeadlineExtension] = useState(false);
     const [savedVersionNumber, setSavedVersionNumber] = useState<number | null>(null);
     const [, setProjectActivities] = useState<ProjectActivity[]>([]);
     const [showSubmissionAgreement, setShowSubmissionAgreement] = useState(false);
@@ -509,6 +524,7 @@ export default function ProjectPanel({ open }: Props) {
                     setProjectStatus(workflow.projectStatus);
                     setRevisionFeedback(workflow.revisionFeedback);
                     setDeadline(workflow.deadline);
+                    setDeadlineExtensionRequest(workflow.deadlineExtensionRequest ?? null);
                     setSavedVersionNumber(workflow.currentDesignVersionNumber ??
                         (workflow.clientDesignStarted ? 0 : null));
                     setActiveProjectDeadline(routeProjectId, workflow.deadline);
@@ -565,6 +581,7 @@ export default function ProjectPanel({ open }: Props) {
             if (routeProjectId) {
                 const existingProjectId =
                     routeProjectId;
+                setDeadlineExtensionRequest(null);
 
                 setProjectId(
                     existingProjectId
@@ -605,6 +622,9 @@ export default function ProjectPanel({ open }: Props) {
                     );
 
                     setDeadline(currentDeadline);
+                    setDeadlineExtensionRequest(
+                        data.deadlineExtensionRequest ?? null
+                    );
 
                     setDeadlineLocked(
                         isDeadlinePassed(
@@ -617,6 +637,7 @@ export default function ProjectPanel({ open }: Props) {
                             setProjectStatus(workflow.projectStatus);
                             setRevisionFeedback(workflow.revisionFeedback);
                             setDeadline(workflow.deadline);
+                            setDeadlineExtensionRequest(workflow.deadlineExtensionRequest ?? null);
                             setSavedVersionNumber(workflow.currentDesignVersionNumber ??
                                 (workflow.clientDesignStarted ? 0 : null));
                             dispatch({
@@ -1254,6 +1275,52 @@ export default function ProjectPanel({ open }: Props) {
         projectStatus === "submitted" ||
         projectStatus === "approved";
 
+    const canRequestDeadlineExtension =
+        !viewOnly &&
+        isExistingProject &&
+        deadlineLocked &&
+        isDeadlinePassed(deadline) &&
+        !["submitted", "approved"].includes(projectStatus);
+    const deadlineExtensionPending =
+        deadlineExtensionRequest?.status === "pending";
+
+    async function handleRequestDeadlineExtension() {
+        if (!routeProjectId || requestingDeadlineExtension) return;
+        setRequestingDeadlineExtension(true);
+        try {
+            await requestDeadlineExtension(routeProjectId, deadlineExtensionReason.trim());
+            setDeadlineExtensionRequest({
+                status: "pending",
+                requestedBy: auth.currentUser?.uid ?? "",
+                requestedByName: "",
+                reason: deadlineExtensionReason.trim() || null,
+                requestedAt: new Date().toISOString(),
+            });
+            setDeadlineExtensionReason("");
+            setShowDeadlineExtensionDialog(false);
+            notify("success", "Extension request sent. Waiting for admin.");
+        } catch (error) {
+            if (error instanceof ProjectApiError && error.status === 409) {
+                setDeadlineExtensionRequest({
+                    status: "pending",
+                    requestedBy: auth.currentUser?.uid ?? "",
+                    requestedByName: "",
+                    reason: deadlineExtensionReason.trim() || null,
+                    requestedAt: new Date().toISOString(),
+                });
+                setShowDeadlineExtensionDialog(false);
+                return;
+            }
+            console.error("Failed to request a deadline extension:", error);
+            notify(
+                "error",
+                error instanceof Error ? error.message : "Unable to send the extension request."
+            );
+        } finally {
+            setRequestingDeadlineExtension(false);
+        }
+    }
+
     //==================================================
     // BUTTON STATE
     //==================================================
@@ -1350,6 +1417,25 @@ export default function ProjectPanel({ open }: Props) {
                                         ? "Editing is paused until an administrator sets a deadline."
                                         : "The project deadline has passed. Editing and saving are disabled."}
                         </div>
+                    )}
+                    {!viewOnly && deadlineExtensionPending && (
+                        <button
+                            type="button"
+                            disabled
+                            className="mt-2 rounded-full border border-amber-700/30 px-3 py-1.5 text-xs font-medium text-amber-800 disabled:cursor-not-allowed disabled:opacity-70"
+                            role="status"
+                        >
+                            Extension request sent. Waiting for admin.
+                        </button>
+                    )}
+                    {canRequestDeadlineExtension && !deadlineExtensionPending && (
+                        <button
+                            type="button"
+                            className="mt-2 rounded-full border border-amber-700/30 px-3 py-1.5 text-xs font-medium text-amber-900 transition hover:bg-amber-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            onClick={() => setShowDeadlineExtensionDialog(true)}
+                        >
+                            Request deadline extension
+                        </button>
                     )}
                     {projectStatus === "approved" && (
                         <p className="project-panel-notice project-panel-notice-success">
@@ -1466,6 +1552,61 @@ export default function ProjectPanel({ open }: Props) {
                     />
                 </div>
             )}
+
+            <Dialog
+                open={showDeadlineExtensionDialog}
+                onOpenChange={open => {
+                    if (!requestingDeadlineExtension) setShowDeadlineExtensionDialog(open);
+                }}
+            >
+                <DialogContent>
+                    <form
+                        className="space-y-4"
+                        onSubmit={event => {
+                            event.preventDefault();
+                            void handleRequestDeadlineExtension();
+                        }}
+                    >
+                        <DialogHeader>
+                            <DialogTitle>Request deadline extension</DialogTitle>
+                            <DialogDescription>
+                                Your request will be reviewed by an administrator. An extension is not automatic.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <label className="grid gap-1.5 text-sm font-medium" htmlFor="deadline-extension-reason">
+                            Reason <span className="font-normal text-muted-foreground">(optional)</span>
+                            <textarea
+                                id="deadline-extension-reason"
+                                value={deadlineExtensionReason}
+                                onChange={event => setDeadlineExtensionReason(event.target.value)}
+                                maxLength={500}
+                                rows={4}
+                                className="w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm font-normal outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            />
+                            <span className="text-right text-xs font-normal text-muted-foreground">
+                                {deadlineExtensionReason.length}/500
+                            </span>
+                        </label>
+                        <DialogFooter>
+                            <button
+                                type="button"
+                                className="rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-muted disabled:opacity-50"
+                                onClick={() => setShowDeadlineExtensionDialog(false)}
+                                disabled={requestingDeadlineExtension}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                                disabled={requestingDeadlineExtension}
+                            >
+                                {requestingDeadlineExtension ? "Sending..." : "Send request"}
+                            </button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
 
             {showAdjustmentPolicy && (
                 <LegalModal

@@ -446,6 +446,25 @@ function ModalBody({
                         </dd>
                     </div>
 
+                    {project.deadlineExtensionRequest?.status === "pending" && (
+                        <div
+                            role="status"
+                            className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950"
+                        >
+                            <p className="font-medium">
+                                ⚠ {project.deadlineExtensionRequest.requestedByName || "A client"} requested a deadline extension
+                            </p>
+                            {project.deadlineExtensionRequest.reason && (
+                                <p className="mt-1 whitespace-pre-wrap text-xs">
+                                    {project.deadlineExtensionRequest.reason}
+                                </p>
+                            )}
+                            <p className="mt-1 text-xs text-amber-900/80">
+                                Requested {formatRequestedAt(project.deadlineExtensionRequest.requestedAt)}
+                            </p>
+                        </div>
+                    )}
+
                     {(isSubmitted || isApproved) && (
                         <div>
                             <dt className="text-xs text-muted-foreground">Public sharing consent</dt>
@@ -515,6 +534,7 @@ function ModalBody({
 const INITIAL_ACTIVITY_COUNT = 3;
 
 const ACTION_LABELS: Record<string, string> = {
+    "deadline-extension-requested": "Extension requested",
     "deadline-updated": "Deadline changed",
     "deadline-changed": "Deadline changed",
     "deadline-set": "Deadline set",
@@ -567,6 +587,17 @@ function formatFullWhen(value: unknown): string {
     return ms
         ? new Date(ms).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
         : "Unknown time";
+}
+
+function formatRequestedAt(value: unknown): string {
+    const ms = toMillis(value);
+    return ms
+        ? new Intl.DateTimeFormat("en-PH", {
+            timeZone: "Asia/Manila",
+            dateStyle: "medium",
+            timeStyle: "short"
+        }).format(new Date(ms))
+        : "date unavailable";
 }
 
 const ISO_LIKE = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?)?/;

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import { auth } from "@/firebase/firebase";
 
@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 
 import {
+    getAdminProject,
     getAdminProjects,
     type AdminProject
 } from "../../../services/assets/projectService";
@@ -223,6 +224,7 @@ function ProjectPreview({
 export default function ProjectManagement() {
 
     const navigate = useNavigate();
+    const location = useLocation();
 
     const [projects, setProjects] = useState<AdminProject[]>([]);
     const [unverifiedProjects, setUnverifiedProjects] = useState<AdminProject[]>([]);
@@ -302,6 +304,27 @@ export default function ProjectManagement() {
         };
 
     }, []);
+
+    const openProjectId = typeof location.state?.openProjectId === "string"
+        ? location.state.openProjectId
+        : "";
+
+    useEffect(() => {
+        if (!openProjectId || loading) return;
+        const project = projects.find(item => item.projectId === openProjectId);
+        if (project) {
+            void getAdminProject(project.projectId)
+                .then(latestProject => setSelectedProject(latestProject))
+                .catch(loadError => {
+                    console.error("Failed to refresh project from notification:", loadError);
+                    setSelectedProject(project);
+                });
+        }
+        navigate(`${location.pathname}${location.search}`, {
+            replace: true,
+            state: null
+        });
+    }, [openProjectId, loading, projects, navigate, location.pathname, location.search]);
 
     //==================================================
     // FILTER + SORT
@@ -781,14 +804,28 @@ export default function ProjectManagement() {
                     setProjects(current =>
                         current.map(project =>
                             project.projectId === projectId
-                                ? { ...project, deadline }
+                                ? {
+                                    ...project,
+                                    deadline,
+                                    deadlineExtensionRequest:
+                                        project.deadlineExtensionRequest?.status === "pending"
+                                            ? { ...project.deadlineExtensionRequest, status: "handled" }
+                                            : project.deadlineExtensionRequest
+                                }
                                 : project
                         )
                     );
 
                     setSelectedProject(current =>
                         current?.projectId === projectId
-                            ? { ...current, deadline }
+                            ? {
+                                ...current,
+                                deadline,
+                                deadlineExtensionRequest:
+                                    current.deadlineExtensionRequest?.status === "pending"
+                                        ? { ...current.deadlineExtensionRequest, status: "handled" }
+                                        : current.deadlineExtensionRequest
+                            }
                             : current
                     );
                 }}

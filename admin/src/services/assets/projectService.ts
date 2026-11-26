@@ -57,6 +57,15 @@ export interface AdminProject {
 
     // Manila local deadline; legacy records may contain only YYYY-MM-DD.
     deadline?: string | null;
+    deadlineExtensionRequest?: {
+        status: "pending" | "handled";
+        requestedBy: string;
+        requestedByName: string;
+        reason: string | null;
+        requestedAt: string | null;
+        handledAt?: string | null;
+        handledBy?: string | null;
+    } | null;
 }
 
 //==================================================

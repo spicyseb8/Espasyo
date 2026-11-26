@@ -138,3 +138,81 @@ test("does not update a missing project", async () => {
   }), false);
   assert.equal(didUpdate, false);
 });
+
+test("marks a pending extension request handled when the new deadline is future", async () => {
+  const projectUpdates = [];
+  const db = {
+    collection(name) {
+      if (name === "projectActivity") return { doc: () => ({}) };
+      return { doc: projectId => ({ projectId }) };
+    },
+    async runTransaction(callback) {
+      return callback({
+        async get() {
+          return {
+            exists: true,
+            data: () => ({
+              deadline: "2000-01-01",
+              ownerId: "client-1",
+              deadlineExtensionRequest: {
+                status: "pending",
+                requestedBy: "client-1",
+                requestedByName: "Client",
+                reason: "Delay",
+                requestedAt: new Date("2026-10-01T00:00:00Z"),
+              },
+            }),
+          };
+        },
+        update(reference, fields) {
+          if (reference.projectId) projectUpdates.push(fields);
+        },
+        create() {},
+      });
+    },
+  };
+
+  await saveProjectDeadline(db, "PRJ-00126", "2099-12-31", {
+    uid: "admin-1",
+    role: "admin",
+  });
+
+  assert.equal(projectUpdates[0].deadlineExtensionRequest.status, "handled");
+  assert.equal(projectUpdates[0].deadlineExtensionRequest.handledBy, "admin-1");
+  assert.equal(projectUpdates[0].deadlineExtensionRequest.handledAt, projectUpdates[0].updatedAt);
+});
+
+test("keeps a pending extension request when the new deadline is already passed", async () => {
+  let projectUpdate;
+  const pendingRequest = { status: "pending", requestedBy: "client-1" };
+  const db = {
+    collection(name) {
+      if (name === "projectActivity") return { doc: () => ({}) };
+      return { doc: projectId => ({ projectId }) };
+    },
+    async runTransaction(callback) {
+      return callback({
+        async get() {
+          return {
+            exists: true,
+            data: () => ({
+              deadline: "2000-01-01",
+              deadlineExtensionRequest: pendingRequest,
+            }),
+          };
+        },
+        update(reference, fields) {
+          if (reference.projectId) projectUpdate = fields;
+        },
+        create() {},
+      });
+    },
+  };
+
+  await saveProjectDeadline(db, "PRJ-00126", "2000-01-02", {
+    uid: "admin-1",
+    role: "admin",
+  });
+
+  assert.equal(projectUpdate.deadlineExtensionRequest, undefined);
+});

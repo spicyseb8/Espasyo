@@ -38,6 +38,7 @@ const actionCategories: Record<string, string> = {
   "project-made-private": "Administrative Actions",
   "deadline-created": "Administrative Actions",
   "deadline-changed": "Administrative Actions",
+  "deadline-extension-requested": "Projects",
 };
 
 const actionDescriptions: Record<string, string> = {
@@ -61,6 +62,7 @@ const actionDescriptions: Record<string, string> = {
   "project-made-private": "Made a project private",
   "deadline-created": "Set a project deadline",
   "deadline-changed": "Changed a project deadline",
+  "deadline-extension-requested": "Extension requested",
 };
 
 interface ActivityFeedState {

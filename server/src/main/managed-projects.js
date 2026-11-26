@@ -9,8 +9,13 @@ import {
 } from "../firebase-admin.js";
 import { requireRole } from "./authorization.js";
 import { createNotification, getAdminRecipientUids, upsertNotification } from "./notification-service.js";
-import { recordActivityEvent, recordProjectOpened } from "./activity-service.js";
+import {
+  createActivityEventId,
+  recordActivityEvent,
+  recordProjectOpened,
+} from "./activity-service.js";
 import { findClientAccountByIdentifier } from "./client-account.js";
+import { saveDeadlineExtensionRequest } from "./deadline-extension-request.js";
 import { createReservedFloorPlanDraft } from "./floorplan-reservation.js";
 import {
   createPlanAssignmentRecord,
@@ -520,6 +525,23 @@ function mapProject(document, ownerNames, creatorNames, assignmentByPlan, ownerE
     totalCost: Number.isFinite(Number(data.totalCost)) ? Number(data.totalCost) : undefined,
     estimatedCost: Number.isFinite(Number(data.estimatedCost)) ? Number(data.estimatedCost) : undefined,
     deadline: typeof data.deadline === "string" ? data.deadline : null,
+    deadlineExtensionRequest: mapDeadlineExtensionRequest(data.deadlineExtensionRequest),
+  };
+}
+
+function mapDeadlineExtensionRequest(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  if (value.status !== "pending" && value.status !== "handled") return null;
+  return {
+    status: value.status,
+    requestedBy: typeof value.requestedBy === "string" ? value.requestedBy : "",
+    requestedByName: typeof value.requestedByName === "string" ? value.requestedByName : "",
+    reason: typeof value.reason === "string" ? value.reason : null,
+    requestedAt: timestampToIso(value.requestedAt),
+    ...(value.handledAt !== undefined ? { handledAt: timestampToIso(value.handledAt) } : {}),
+    ...(value.handledBy !== undefined ? {
+      handledBy: typeof value.handledBy === "string" ? value.handledBy : null,
+    } : {}),
   };
 }
 
@@ -1317,6 +1339,7 @@ async function getClientProjectWorkflow(req, res) {
         projectName: project.projectName,
         projectStatus: getProjectStatus(project),
         deadline: project.deadline ?? null,
+        deadlineExtensionRequest: mapDeadlineExtensionRequest(project.deadlineExtensionRequest),
         currentDesignVersionId: project.currentDesignVersionId ?? null,
         currentDesignVersionNumber: project.currentDesignVersionNumber ?? null,
         clientDesignStarted: project.clientDesignStarted === true,
@@ -1339,6 +1362,82 @@ async function getClientProjectWorkflow(req, res) {
     });
   } catch (error) {
     return sendFailure(res, error, "Unable to load project workflow.");
+  }
+}
+
+async function requestProjectDeadlineExtension(req, res) {
+  const projectId = normalizedString(req.params.projectId);
+  const ownerId = req.clientUser.uid;
+  if (!projectId) {
+    return res.status(400).json({ success: false, message: "Project ID is required." });
+  }
+  if (
+    req.body?.reason !== undefined &&
+    typeof req.body.reason !== "string"
+  ) {
+    return res.status(400).json({ success: false, message: "The request reason must be text." });
+  }
+  const reason = typeof req.body?.reason === "string" ? req.body.reason.trim() : "";
+  if (reason.length > 500) {
+    return res.status(400).json({ success: false, message: "The request reason must be 500 characters or fewer." });
+  }
+
+  const actor = await getClientActor(ownerId);
+  const requestedAt = new Date();
+  try {
+    const result = await saveDeadlineExtensionRequest(
+      adminDb,
+      projectId,
+      ownerId,
+      actor.name,
+      reason || null,
+      requestedAt,
+    );
+    const activity = {
+      projectId,
+      actorUid: ownerId,
+      actorId: ownerId,
+      actorRole: "client",
+      actorName: actor.name,
+      targetUserUid: ownerId,
+      action: "deadline-extension-requested",
+      activityType: "deadline-extension-requested",
+      projectName: result.projectName,
+      newValue: result.deadlineExtensionRequest,
+      description: `${actor.name} requested a deadline extension.`,
+    };
+    try {
+      await recordActivityEvent(
+        adminDb,
+        activity,
+        createActivityEventId("deadline-extension-requested", projectId, requestedAt.getTime()),
+      );
+    } catch (error) {
+      console.error("Deadline extension request was saved, but its activity could not be recorded:", error);
+    }
+
+    try {
+      const recipients = await getAdminRecipientUids(adminDb);
+      await createNotification(adminDb, {
+        eventKey: `deadline-extension-requested:${projectId}:${requestedAt.getTime()}`,
+        eventType: "deadline-extension-requested",
+        category: "Deadlines",
+        title: "Deadline extension requested",
+        message: `${actor.name} requested a deadline extension for "${result.projectName}"`,
+        actorUid: ownerId,
+        actorName: actor.name,
+        targetType: "project",
+        targetId: projectId,
+        projectId,
+        recipients,
+      });
+    } catch (error) {
+      console.error("Deadline extension request was saved, but its notification could not be created:", error);
+    }
+
+    return res.json({ success: true });
+  } catch (error) {
+    return sendFailure(res, error, "Unable to submit the deadline extension request.");
   }
 }
 
@@ -2392,6 +2491,7 @@ router.get("/admin/projects/:projectId/files/:kind/:fileId", requireRole("admin"
 router.put("/projects/:projectId/managed-interior", authenticateClient, saveClientInterior);
 router.get("/projects/:projectId/workflow", authenticateClient, getClientProjectWorkflow);
 router.post("/projects/:projectId/opened", authenticateClient, recordClientProjectOpened);
+router.post("/projects/:projectId/deadline-extension-request", authenticateClient, requestProjectDeadlineExtension);
 router.post("/client/profile-updated", authenticateClient, recordClientProfileUpdated);
 router.post("/admin/projects/:projectId/opened", requireRole("admin", "superadmin"), recordAdminProjectOpened);
 router.get("/projects/public", setPublicNoCacheHeaders, authenticateClient, listPublicProjects);
