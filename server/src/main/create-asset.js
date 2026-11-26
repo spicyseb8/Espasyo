@@ -567,7 +567,6 @@ router.post(
         asset.storage_path = modelPath;
         asset.model_path = modelPath;
         asset.placement_surface = placementSurface;
-        asset.rotation_offset_y = 0;
         asset.depth_offset = 0;
         asset.snap_targets = ["wall", "furniture"];
       }

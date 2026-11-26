@@ -151,6 +151,9 @@ function normalizeCategory(
 // LEGACY DEFAULTS
 //==================================================
 
+// Aligns models with width along local X to the wall plane.
+const DEFAULT_WALL_ROTATION_OFFSET_Y = Math.PI / 2;
+
 function getDefaultModelSettings(
     category: "doors" | "windows",
     modelPath: string,
@@ -162,7 +165,7 @@ function getDefaultModelSettings(
     if (category === "doors") {
         return {
             scale: 1,
-            rotationOffsetY: Math.PI / 2
+            rotationOffsetY: DEFAULT_WALL_ROTATION_OFFSET_Y
         };
     }
 
@@ -176,7 +179,7 @@ function getDefaultModelSettings(
     ) {
         return {
             scale: 0.6,
-            rotationOffsetY: Math.PI / 2
+            rotationOffsetY: DEFAULT_WALL_ROTATION_OFFSET_Y
         };
     }
 
@@ -185,13 +188,13 @@ function getDefaultModelSettings(
     ) {
         return {
             scale: 0.6,
-            rotationOffsetY: 0
+            rotationOffsetY: DEFAULT_WALL_ROTATION_OFFSET_Y
         };
     }
 
     return {
         scale: 0.6,
-        rotationOffsetY: 0
+        rotationOffsetY: DEFAULT_WALL_ROTATION_OFFSET_Y
     };
 }
 

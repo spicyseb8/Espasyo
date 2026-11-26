@@ -15,6 +15,7 @@ export interface BuildElementPlacementCandidate extends BuildElementDimensions {
     wallId: string;
     position: Point3;
     direction: { x: number; z: number };
+    side: 1 | -1;
     rotationY: number;
     wallRotationY: number;
     wallWidth: number;
@@ -28,12 +29,25 @@ interface BuildElementPlacementInput {
     structure: ManagedStructure;
     asset: Asset;
     point: Point3;
+    referencePoint: Point3;
     placementWidth: number;
     placementHeight: number;
     placementDepth?: number;
     modelBounds?: Partial<BuildElementDimensions> | null;
     preferredWallId?: string | null;
     excludeElementId?: string | null;
+}
+
+export function getWallSide(
+    direction: { x: number; z: number },
+    wallPoint: Point3,
+    referencePoint: Point3
+): 1 | -1 {
+    const normalX = -direction.z;
+    const normalZ = direction.x;
+    const side = normalX * (referencePoint.x - wallPoint.x)
+        + normalZ * (referencePoint.z - wallPoint.z);
+    return side >= 0 ? 1 : -1;
 }
 
 function findTargetWall(
@@ -142,6 +156,7 @@ export function calculateBuildElementPlacement({
     structure,
     asset,
     point,
+    referencePoint,
     placementWidth,
     placementHeight,
     placementDepth,
@@ -150,7 +165,8 @@ export function calculateBuildElementPlacement({
     excludeElementId
 }: BuildElementPlacementInput): BuildElementPlacementCandidate | null {
     if (asset.type !== "door" && asset.type !== "window" && asset.type !== "opening") return null;
-    if (![point.x, point.y, point.z].every(Number.isFinite)) return null;
+    if (![point.x, point.y, point.z, referencePoint.x, referencePoint.y, referencePoint.z]
+        .every(Number.isFinite)) return null;
 
     const target = findTargetWall(
         structure.walls,
@@ -191,9 +207,13 @@ export function calculateBuildElementPlacement({
     }
 
     const wallRotationY = -Math.atan2(direction.z, direction.x);
-    const rotationY = isOpening
+    const baseRotationY = isOpening
         ? Math.atan2(direction.z, direction.x)
         : Math.atan2(direction.x, direction.z);
+    const side = getWallSide(direction, target.point, referencePoint);
+    const rotationY = !isOpening && side < 0
+        ? baseRotationY + Math.PI
+        : baseRotationY;
     const assetRotationOffset = kind === "door"
         ? asset.rotationOffsetY ?? Math.PI / 2
         : asset.rotationOffsetY ?? 0;
@@ -215,6 +235,7 @@ export function calculateBuildElementPlacement({
         wallId: wall.id,
         position,
         direction,
+        side,
         rotationY,
         wallRotationY,
         width,

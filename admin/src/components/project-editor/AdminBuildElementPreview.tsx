@@ -10,7 +10,7 @@ import {
     prepareAdminDoorModel
 } from "@/components/project-loader/loader-components/AdminElementModelUtils";
 import { disposeClonedMaterials } from "@/lib/disposeClonedMaterials";
-import type { BuildElementPlacementCandidate } from "./buildElementPlacement";
+import { getWallSide, type BuildElementPlacementCandidate } from "./buildElementPlacement";
 
 export default function AdminBuildElementPreview({
     asset,
@@ -77,12 +77,9 @@ export default function AdminBuildElementPreview({
     useFrame(({ camera }) => {
         if (!candidate || !previewGroup.current) return;
         camera.getWorldPosition(cameraPosition.current);
-        const normalX = Math.sin(candidate.wallRotationY);
-        const normalZ = Math.cos(candidate.wallRotationY);
-        const cameraSide = (
-            (cameraPosition.current.x - candidate.position.x) * normalX +
-            (cameraPosition.current.z - candidate.position.z) * normalZ
-        ) >= 0 ? 1 : -1;
+        const normalX = -candidate.direction.z;
+        const normalZ = candidate.direction.x;
+        const cameraSide = getWallSide(candidate.direction, candidate.position, cameraPosition.current);
         const surfaceOffset = wallThickness / 2 + previewDepth / 2 + 0.005;
         previewGroup.current.position.set(
             candidate.position.x + normalX * cameraSide * surfaceOffset,
@@ -144,18 +141,15 @@ export function AdminOpeningPreview({
 
     useEffect(() => () => geometry.dispose(), [geometry]);
 
-    const normalX = Math.sin(candidate.wallRotationY);
-    const normalZ = Math.cos(candidate.wallRotationY);
+    const normalX = -candidate.direction.z;
+    const normalZ = candidate.direction.x;
     const previewColor = candidate.valid ? "#4DA3FF" : "#D9534F";
     const previewMesh = useRef<Mesh>(null);
     const cameraPosition = useRef(new Vector3());
 
     useFrame(({ camera }) => {
         camera.getWorldPosition(cameraPosition.current);
-        const cameraSide = (
-            (cameraPosition.current.x - candidate.position.x) * normalX +
-            (cameraPosition.current.z - candidate.position.z) * normalZ
-        ) >= 0 ? 1 : -1;
+        const cameraSide = getWallSide(candidate.direction, candidate.position, cameraPosition.current);
         const surfaceOffset = wallThickness / 2 + 0.005;
         previewMesh.current?.position.set(
             candidate.position.x + normalX * cameraSide * surfaceOffset,

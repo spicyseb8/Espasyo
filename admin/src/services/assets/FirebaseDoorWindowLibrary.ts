@@ -12,6 +12,10 @@ import {
     registerAssetDownloadURL,
     resolveStorageAssetURL
 } from "@/lib/assetLibraryCache";
+import {
+    getDefaultModelSettings,
+    resolveRotationOffsetY
+} from "./doorWindowModelSettings";
 
 import type {
     Asset
@@ -234,107 +238,6 @@ function positiveDimension(
 
 
 //==================================================
-// LEGACY DEFAULTS
-//==================================================
-
-function getDefaultModelSettings(
-    category: "doors" | "windows",
-    modelPath: string,
-    assetName: string
-): {
-    scale: number;
-    rotationOffsetY: number;
-} {
-
-    //--------------------------------------------------
-    // Doors
-    //--------------------------------------------------
-
-    if (
-        category === "doors"
-    ) {
-
-        return {
-
-            scale:
-                1,
-
-            rotationOffsetY:
-                Math.PI / 2
-
-        };
-    }
-
-    //--------------------------------------------------
-    // Slim Intersection window
-    //--------------------------------------------------
-
-    const normalizedIdentity =
-        `${modelPath} ${assetName}`
-            .toLowerCase()
-            .replace(
-                /[^a-z0-9]+/g,
-                ""
-            );
-
-    if (
-        normalizedIdentity.includes(
-            "slimintersectioni"
-        ) ||
-        normalizedIdentity.includes(
-            "slimintersectionwindow"
-        )
-    ) {
-
-        return {
-
-            scale:
-                0.6,
-
-            rotationOffsetY:
-                Math.PI / 2
-
-        };
-    }
-
-    //--------------------------------------------------
-    // Glass window
-    //--------------------------------------------------
-
-    if (
-        normalizedIdentity.includes(
-            "glasswindow"
-        )
-    ) {
-
-        return {
-
-            scale:
-                0.6,
-
-            rotationOffsetY:
-                0
-
-        };
-    }
-
-    //--------------------------------------------------
-    // Generic window fallback
-    //--------------------------------------------------
-
-    return {
-
-        scale:
-            0.6,
-
-        rotationOffsetY:
-            0
-
-    };
-}
-
-
-//==================================================
 // BUILD ASSET
 //==================================================
 
@@ -470,11 +373,7 @@ async function buildAsset(
 
     const defaults =
         getDefaultModelSettings(
-            category,
-            modelPath,
-            typeof data.name === "string"
-                ? data.name
-                : ""
+            category
         );
 
     //--------------------------------------------------
@@ -498,17 +397,11 @@ async function buildAsset(
     // Firebase rotation override
     //--------------------------------------------------
 
-    const firebaseRotation =
-        Number(
-            data.rotation_offset_y
-        );
-
     const rotationOffsetY =
-        Number.isFinite(
-            firebaseRotation
-        )
-            ? firebaseRotation
-            : defaults.rotationOffsetY;
+        resolveRotationOffsetY(
+            data.rotation_offset_y,
+            defaults.rotationOffsetY
+        );
 
     //--------------------------------------------------
     // View-only asset type

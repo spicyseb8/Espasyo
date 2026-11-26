@@ -358,7 +358,11 @@ export default function AdminStructuralEditor() {
     const [placementWidthEdited, setPlacementWidthEdited] = useState(false);
     const [placementHeightEdited, setPlacementHeightEdited] = useState(false);
     const [assetModelBounds, setAssetModelBounds] = useState<Record<string, AdminElementModelBounds>>({});
-    const [buildPointer, setBuildPointer] = useState<{ point: Point3; wallId: string | null } | null>(null);
+    const [buildPointer, setBuildPointer] = useState<{
+        point: Point3;
+        wallId: string | null;
+        referencePoint: Point3;
+    } | null>(null);
     const [blueprintSessions, setBlueprintSessions] = useState<Record<string, BlueprintSession>>({});
     const blueprintSessionsRef = useRef(blueprintSessions);
     useEffect(() => {
@@ -850,12 +854,17 @@ export default function AdminStructuralEditor() {
         : placementHeightEdited
         ? placementHeight
         : activeBuildAsset?.height ?? activeAssetBounds?.height ?? 0;
-    const getBuildElementCandidate = (point: Point3, preferredWallId?: string | null) => {
+    const getBuildElementCandidate = (
+        point: Point3,
+        referencePoint: Point3,
+        preferredWallId?: string | null
+    ) => {
         if (!structure || !activeBuildAsset) return null;
         return calculateBuildElementPlacement({
             structure,
             asset: activeBuildAsset,
             point,
+            referencePoint,
             placementWidth: effectivePlacementWidth,
             placementHeight: effectivePlacementHeight,
             placementDepth: activeElementSource?.depth,
@@ -867,7 +876,11 @@ export default function AdminStructuralEditor() {
         });
     };
     const buildElementPlacement: BuildElementPlacementCandidate | null = buildPointer
-        ? getBuildElementCandidate(buildPointer.point, buildPointer.wallId ?? selectedWallId)
+        ? getBuildElementCandidate(
+            buildPointer.point,
+            buildPointer.referencePoint,
+            buildPointer.wallId ?? selectedWallId
+        )
         : null;
     const staircaseDimensionsForPlacement = activeStaircasePlacement?.kind === "staircase"
         ? activeStaircasePlacement.source
@@ -1575,7 +1588,11 @@ export default function AdminStructuralEditor() {
         setStatus("Room created from the selected opposite corners.");
     };
 
-    const placeBuildAsset = (wallId: string | null, point: { x: number; y: number; z: number }) => {
+    const placeBuildAsset = (
+        wallId: string | null,
+        point: Point3,
+        referencePoint: Point3
+    ) => {
         if (!structure || !selectedAsset) {
             setStatus("Select an asset before placing it.");
             return;
@@ -1590,6 +1607,7 @@ export default function AdminStructuralEditor() {
         }
         const candidate = getBuildElementCandidate(
             point,
+            referencePoint,
             wallId
         );
         setBuildPointer(null);
@@ -1798,8 +1816,9 @@ export default function AdminStructuralEditor() {
 
     const handleScenePoint = (
         scenePoint: { x: number; y?: number; z: number },
-        forcedWallId: string | null = null,
-        snapCornerId: string | null = null
+        forcedWallId: string | null,
+        snapCornerId: string | null,
+        referencePoint: Point3
     ) => {
         setPreviewWallEnd(null);
         setPreviewRoomEnd(null);
@@ -1869,7 +1888,7 @@ export default function AdminStructuralEditor() {
         }
 
         const wallId = forcedWallId ?? selectedWallId;
-        placeBuildAsset(wallId, { ...planarPoint, y: rawPoint.y });
+        placeBuildAsset(wallId, { ...planarPoint, y: rawPoint.y }, referencePoint);
     };
 
     const handleScenePointerMove = (scenePoint: {
@@ -1880,6 +1899,7 @@ export default function AdminStructuralEditor() {
         snapCornerId: string | null;
         alignedX: number | null;
         alignedZ: number | null;
+        referencePoint: Point3;
     } | null) => {
         if (tool !== "wall" || structure?.layoutConfirmed) {
             setWallGuides(null);
@@ -1993,7 +2013,8 @@ export default function AdminStructuralEditor() {
             setPreviewRoomEnd(null);
             setBuildPointer({
                 point: nextPoint,
-                wallId: scenePoint.wallId ?? selectedWallId
+                wallId: scenePoint.wallId ?? selectedWallId,
+                referencePoint: scenePoint.referencePoint
             });
             return;
         }
@@ -2202,14 +2223,19 @@ export default function AdminStructuralEditor() {
         setStatus("Placement cancelled.");
     };
 
-    const handleWallClick = (wallId: string, point: Vector3, snapCornerId: string | null) => {
+    const handleWallClick = (
+        wallId: string,
+        point: Vector3,
+        snapCornerId: string | null,
+        referencePoint: Point3
+    ) => {
         if (tool === "select" && calibrationStep === "idle") {
             setSelectedStructureElement(null);
             setSelectedWallId(wallId);
             setSelectedRegionId(null);
             return;
         }
-        handleScenePoint({ x: point.x, y: point.y, z: point.z }, wallId, snapCornerId);
+        handleScenePoint({ x: point.x, y: point.y, z: point.z }, wallId, snapCornerId, referencePoint);
     };
 
     const removeSelectedWall = () => {
@@ -3097,8 +3123,8 @@ export default function AdminStructuralEditor() {
                         staircaseDrawingPhase={staircaseDrawingPhase}
                         onCancelDrawing={cancelDrawing}
                         onCancelPlacement={cancelBuildPlacement}
-                        onScenePoint={(point, snapCornerId) =>
-                            handleScenePoint(point, null, snapCornerId)
+                        onScenePoint={(point, snapCornerId, referencePoint) =>
+                            handleScenePoint(point, null, snapCornerId, referencePoint)
                         }
                         onScenePointerMove={handleScenePointerMove}
                         onStaircaseFloorPointerMove={handleStaircaseFloorPointerMove}

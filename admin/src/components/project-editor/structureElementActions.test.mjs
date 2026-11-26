@@ -147,6 +147,7 @@ test("move placement ignores the source collision but rejects other hosted eleme
         structure: base,
         asset,
         point: { x: 2, y: 0, z: 0 },
+        referencePoint: { x: 2, y: 2, z: 3 },
         placementWidth: sourceDoor.width,
         placementHeight: sourceDoor.height,
         placementDepth: sourceDoor.depth,
@@ -167,6 +168,7 @@ test("move placement ignores the source collision but rejects other hosted eleme
         },
         asset,
         point: { x: 2.5, y: 0, z: 0 },
+        referencePoint: { x: 2.5, y: 2, z: 3 },
         placementWidth: sourceDoor.width,
         placementHeight: sourceDoor.height,
         placementDepth: sourceDoor.depth,
@@ -174,4 +176,107 @@ test("move placement ignores the source collision but rejects other hosted eleme
         excludeElementId: sourceDoor.id
     });
     assert.equal(overlappingCandidate?.valid, false);
+});
+
+test("door and window facing is side-based for either wall direction without moving the placement", () => {
+    const assetTypes = [
+        {
+            id: "door-asset",
+            name: "Door",
+            thumbnail: "",
+            model: "door.glb",
+            type: "door",
+            rotationOffsetY: Math.PI / 2
+        },
+        {
+            id: "window-asset",
+            name: "Window",
+            thumbnail: "",
+            model: "window.glb",
+            type: "window",
+            rotationOffsetY: 0
+        }
+    ];
+    const walls = [
+        {
+            id: "wall-x",
+            start: { id: "x-start", position: { x: 0, y: 0, z: 0 } },
+            end: { id: "x-end", position: { x: 5, y: 0, z: 0 } }
+        },
+        {
+            id: "wall-x-reversed",
+            start: { id: "x-end", position: { x: 5, y: 0, z: 0 } },
+            end: { id: "x-start", position: { x: 0, y: 0, z: 0 } }
+        },
+        {
+            id: "wall-z",
+            start: { id: "z-start", position: { x: 0, y: 0, z: 0 } },
+            end: { id: "z-end", position: { x: 0, y: 0, z: 5 } }
+        },
+        {
+            id: "wall-z-reversed",
+            start: { id: "z-end", position: { x: 0, y: 0, z: 5 } },
+            end: { id: "z-start", position: { x: 0, y: 0, z: 0 } }
+        }
+    ];
+    const angleDifference = (first, second) =>
+        Math.abs(Math.atan2(Math.sin(first - second), Math.cos(first - second)));
+
+    for (const asset of assetTypes) {
+        for (const [wall, reversedWall, point, referencePoint] of [
+            [walls[0], walls[1], { x: 2.5, y: 0, z: 0 }, { x: 2.5, y: 2, z: 3 }],
+            [walls[2], walls[3], { x: 0, y: 0, z: 2.5 }, { x: 3, y: 2, z: 2.5 }]
+        ]) {
+            const base = {
+                ...createManagedStructure("project", "Plan", "owner"),
+                walls: [wall],
+                doors: [],
+                windows: [],
+                openings: []
+            };
+            const reversedBase = { ...base, walls: [reversedWall] };
+            const placement = {
+                asset,
+                point: { ...point, y: asset.type === "window" ? 1.2 : 0 },
+                referencePoint,
+                placementWidth: 0.9,
+                placementHeight: 1.2,
+                placementDepth: 0.12
+            };
+            const expectedPosition = {
+                ...point,
+                y: asset.type === "window" ? 1.2 : 0
+            };
+            const firstSide = calculateBuildElementPlacement({
+                ...placement,
+                structure: base,
+                preferredWallId: wall.id
+            });
+            const reversedSide = calculateBuildElementPlacement({
+                ...placement,
+                structure: reversedBase,
+                preferredWallId: reversedWall.id
+            });
+            const oppositeSide = calculateBuildElementPlacement({
+                ...placement,
+                structure: base,
+                preferredWallId: wall.id,
+                referencePoint: {
+                    x: referencePoint.x * -1,
+                    y: referencePoint.y,
+                    z: referencePoint.z * -1
+                }
+            });
+
+            assert.ok(firstSide);
+            assert.ok(reversedSide);
+            assert.ok(oppositeSide);
+            const offset = asset.rotationOffsetY ?? (asset.type === "door" ? Math.PI / 2 : 0);
+            assert.ok(angleDifference(firstSide.rotationY + offset, reversedSide.rotationY + offset) < 1e-10);
+            assert.ok(Math.abs(angleDifference(firstSide.rotationY + offset, oppositeSide.rotationY + offset) - Math.PI) < 1e-10);
+            assert.deepEqual(firstSide.position, expectedPosition);
+            assert.deepEqual(reversedSide.position, firstSide.position);
+            assert.deepEqual(oppositeSide.position, firstSide.position);
+        }
+    }
 });

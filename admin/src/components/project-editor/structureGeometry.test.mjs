@@ -241,6 +241,7 @@ test("door placement uses projected wall width and model rotation metadata", () 
             rotationOffsetY: Math.PI / 2
         },
         point: { x: 3, y: 0, z: 0.05 },
+        referencePoint: { x: 3, y: 2, z: 3 },
         placementWidth: 0.9,
         placementHeight: 2.1,
         preferredWallId: "wall"
@@ -290,6 +291,7 @@ test("window placement uses pointer elevation and rejects overlapping elements",
             depth: 0.1
         },
         point: { x: 2, y: 1.5, z: 0 },
+        referencePoint: { x: 2, y: 2, z: 3 },
         placementWidth: 1,
         placementHeight: 1,
         preferredWallId: "wall"
@@ -325,6 +327,7 @@ test("windows can occupy different elevations and must fit within wall vertical 
         structure,
         asset,
         point: { x: 2, y, z: 0 },
+        referencePoint: { x: 2, y: 2, z: 3 },
         placementWidth: 1,
         placementHeight: 1,
         preferredWallId: "wall"

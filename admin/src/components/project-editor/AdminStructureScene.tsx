@@ -99,7 +99,11 @@ interface AdminStructureSceneProps {
     hiddenLandingId?: string | null;
     movingElement?: { kind: "door" | "window"; id: string } | null;
     onBuildElementPreviewReady?: () => void;
-    onScenePoint?: (point: { x: number; y: number; z: number }, snapCornerId: string | null) => void;
+    onScenePoint?: (
+        point: { x: number; y: number; z: number },
+        snapCornerId: string | null,
+        referencePoint: { x: number; y: number; z: number }
+    ) => void;
     onStaircaseFloorPointerMove?: (hit: StaircaseFloorHit | null) => void;
     onStaircaseFloorClick?: (hit: StaircaseFloorHit | null) => void;
     onScenePointerMove?: (point: {
@@ -110,6 +114,7 @@ interface AdminStructureSceneProps {
         snapCornerId: string | null;
         alignedX: number | null;
         alignedZ: number | null;
+        referencePoint: { x: number; y: number; z: number };
     } | null) => void;
     wallGuides?: {
         snapPosition: { x: number; y: number; z: number } | null;
@@ -119,7 +124,12 @@ interface AdminStructureSceneProps {
     } | null;
     onCancelDrawing?: () => void;
     onCancelPlacement?: () => void;
-    onWallClick?: (wallId: string, point: Vector3, snapCornerId: string | null) => void;
+    onWallClick?: (
+        wallId: string,
+        point: Vector3,
+        snapCornerId: string | null,
+        referencePoint: { x: number; y: number; z: number }
+    ) => void;
 }
 
 interface StaircaseFloorHit {
@@ -132,6 +142,11 @@ interface StaircaseFloorHit {
 }
 
 const ignoreStaircaseFloorHit = () => {};
+
+function getCameraReferencePoint(camera: { getWorldPosition: (target: Vector3) => Vector3 }) {
+    const position = camera.getWorldPosition(new Vector3());
+    return { x: position.x, y: position.y, z: position.z };
+}
 
 type PointerProjection = {
     camera: ThreeEvent<PointerEvent>["camera"];
@@ -613,7 +628,7 @@ export default function AdminStructureScene({
             x: event.point.x,
             y: event.point.y,
             z: event.point.z
-        }, snap.snapCornerId);
+        }, snap.snapCornerId, getCameraReferencePoint(event.camera));
     };
 
     const handleScenePointerMove = (event: ThreeEvent<PointerEvent>) => {
@@ -624,7 +639,8 @@ export default function AdminStructureScene({
             z: event.point.z,
             snapCornerId: snap.snapCornerId,
             alignedX: snap.alignedX,
-            alignedZ: snap.alignedZ
+            alignedZ: snap.alignedZ,
+            referencePoint: getCameraReferencePoint(event.camera)
         });
     };
     const handleWallPointerMove = (
@@ -637,6 +653,7 @@ export default function AdminStructureScene({
             y: point.y,
             z: point.z,
             wallId,
+            referencePoint: getCameraReferencePoint(event.camera),
             ...getPointerSnapDetails(event, point, structure)
         });
     };
@@ -649,7 +666,8 @@ export default function AdminStructureScene({
         onWallClick?.(
             wallId,
             point,
-            getPointerSnapDetails(event, point, structure).snapCornerId
+            getPointerSnapDetails(event, point, structure).snapCornerId,
+            getCameraReferencePoint(event.camera)
         );
     };
 
