@@ -190,6 +190,11 @@
         cover;
 }
 
+.material-card-thumbnail.is-loading,
+.workspace-shell.is-material-panel .material-card-thumbnail.is-loading {
+    background: transparent;
+}
+
 .material-card-placeholder {
     width:
         100%;

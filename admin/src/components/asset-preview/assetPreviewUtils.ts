@@ -23,6 +23,16 @@ export interface PreviewURLs
   modelURL: string | null;
 }
 
+export function getAssetDiffuseSource(asset: Asset): string | null {
+  return (
+    asset.diffuse_url?.trim() ||
+    asset.base_color_url?.trim() ||
+    asset.diffuse_path?.trim() ||
+    asset.base_color_path?.trim() ||
+    null
+  );
+}
+
 // ==================================================
 // URL RESOLUTION
 // ==================================================
@@ -51,7 +61,8 @@ export async function resolveModelURL(
 export async function resolveTextureURLs(
   asset: Asset
 ): Promise<PreviewTextureURLs> {
-  if (!asset.diffuse_path?.trim()) {
+  const diffuseSource = getAssetDiffuseSource(asset);
+  if (!diffuseSource) {
     return {
       diffuseURL: null,
     };
@@ -59,7 +70,7 @@ export async function resolveTextureURLs(
 
   const diffuseURL =
     await resolveStoragePath(
-      asset.diffuse_path,
+      diffuseSource,
       asset.asset_status?.trim().toLowerCase() === "available",
     );
 
@@ -85,7 +96,7 @@ export async function resolvePreviewURLs(
     resolveModelURL(asset),
 
     resolveStoragePath(
-      asset.diffuse_path,
+      getAssetDiffuseSource(asset),
       asset.asset_status?.trim().toLowerCase() === "available",
     ),
   ]);
@@ -491,8 +502,8 @@ export async function loadTexture(
 export async function loadAssetTextures(
   asset: Asset
 ): Promise<PreviewTextures> {
-
-  if (!asset.diffuse_path?.trim()) {
+  const diffuseSource = getAssetDiffuseSource(asset);
+  if (!diffuseSource) {
     return {
       diffuse: null,
     };
@@ -500,7 +511,7 @@ export async function loadAssetTextures(
 
   const diffuse =
     await loadTexture(
-      asset.diffuse_path,
+      diffuseSource,
       {
         repeat: [1, 1],
         anisotropy: 8,
@@ -521,9 +532,7 @@ export function hasTextures(
   asset: Asset
 ): boolean {
 
-  return Boolean(
-    asset.diffuse_path?.trim()
-  );
+  return Boolean(getAssetDiffuseSource(asset));
 
 }
 

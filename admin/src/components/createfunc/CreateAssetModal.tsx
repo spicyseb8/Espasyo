@@ -113,37 +113,19 @@ const ASSET_TYPE_CARDS: {
   {
     value: "wall",
     label: "Walls",
-    description: "Paint, color or image",
+    description: "Paint or physical tile textures",
     icon: PaintRoller,
   },
-];
-
-const COLOR_PRESETS: readonly (readonly [string, string])[] = [
-  ["#ffffff", "White"],
-  ["#f5f1e8", "Warm white"],
-  ["#dedbd3", "Greige"],
-  ["#c9c9c9", "Light gray"],
-  ["#6b6b6b", "Charcoal"],
-  ["#1f1f1f", "Black"],
-  ["#e8d5b7", "Sand"],
-  ["#c27c5a", "Terracotta"],
-  ["#a8b5a0", "Sage"],
-  ["#9db7cf", "Sky blue"],
-  ["#2f4858", "Navy"],
-  ["#e9b8b3", "Blush"],
 ];
 
 const INITIAL_FILES = {
   modelFile: null as File | null,
   diffuseFile: null as File | null,
-  normalFile: null as File | null,
-  roughnessFile: null as File | null,
-  aoFile: null as File | null,
 };
 
 const DEFAULT_COLOR = "#dedbd3";
 
-type WallMode = "color" | "image";
+type WallMode = "paint" | "texture";
 
 /* ------------------------------------------------------------------ */
 /* Helpers                                                             */
@@ -422,6 +404,7 @@ export default function CreateAssetModal({
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
   const [customCategory, setCustomCategory] = useState("");
+  const [addingCategory, setAddingCategory] = useState(false);
   const [price, setPrice] = useState("");
   const [status, setStatus] = useState<AssetStatus>("available");
 
@@ -429,13 +412,13 @@ export default function CreateAssetModal({
     "floor" | "wall" | "furniture"
   >("floor");
 
-  // Walls: solid color or an uploaded image.
-  const [wallMode, setWallMode] = useState<WallMode>("color");
+  // Walls: paint color or physical image texture.
+  const [wallMode, setWallMode] = useState<WallMode>("paint");
   const [color, setColor] = useState(DEFAULT_COLOR);
   const [hexInput, setHexInput] = useState(DEFAULT_COLOR);
 
-  const [roughness, setRoughness] = useState("0.8");
   const [metalness, setMetalness] = useState("0");
+  const [shareWithWalls, setShareWithWalls] = useState(false);
 
   // Flooring dimensions are entered in the selected unit and converted to meters on submit.
   const [floorLength, setFloorLength] = useState("");
@@ -462,17 +445,23 @@ export default function CreateAssetModal({
     diffuse: null,
   });
 
-  const resolvedCategory =
-    category === "other" ? customCategory.trim() : category;
+  const isCustomCategory = addingCategory || category === "other";
+  const resolvedCategory = isCustomCategory
+    ? customCategory.trim()
+    : category;
+  const hasPhysicalTexture =
+    assetType === "floor" ||
+    (assetType === "wall" && wallMode === "texture");
   const priceIsOptional =
     assetType === "furniture" && isOptionalFurniturePrice(category);
 
   const hexInvalid = hexInput.trim() !== "" && !normalizeHex(hexInput);
 
-  const categoryLabel =
-    (assetType &&
+  const categoryLabel = isCustomCategory
+    ? resolvedCategory
+    : (assetType &&
       CATEGORY_OPTIONS[assetType].find(([value]) => value === category)?.[1]) ||
-    resolvedCategory;
+      resolvedCategory;
 
   const parsedFloorLength = Number(floorLength);
   const parsedFloorWidth = Number(floorWidth);
@@ -502,19 +491,15 @@ export default function CreateAssetModal({
     diffuse_path: diffusePreviewURL,
     base_color_url: diffusePreviewURL,
     color:
-      assetType === "wall" && wallMode === "color"
+      assetType === "wall" && wallMode === "paint"
         ? color
         : null,
-    roughness: Number(roughness),
+    roughness: 0.8,
     metalness: Number(metalness),
-    floorMaterialMode:
-      assetType === "floor" ? "single-tile" : undefined,
-    floorPattern:
-      assetType === "floor" ? floorPattern : undefined,
-    length:
-      assetType === "floor" ? previewFloorLength : undefined,
-    width:
-      assetType === "floor" ? previewFloorWidth : undefined,
+    floorMaterialMode: hasPhysicalTexture ? "single-tile" : undefined,
+    floorPattern: hasPhysicalTexture ? floorPattern : undefined,
+    length: hasPhysicalTexture ? previewFloorLength : undefined,
+    width: hasPhysicalTexture ? previewFloorWidth : undefined,
   };
 
   const clearPreviewURLs = () => {
@@ -547,14 +532,15 @@ export default function CreateAssetModal({
     setName("");
     setCategory("");
     setCustomCategory("");
+    setAddingCategory(false);
     setPrice("");
     setStatus("available");
     setPlacementSurface("floor");
-    setWallMode("color");
+    setWallMode("paint");
     setColor(DEFAULT_COLOR);
     setHexInput(DEFAULT_COLOR);
-    setRoughness("0.8");
     setMetalness("0");
+    setShareWithWalls(false);
 
     setFloorLength("");
     setFloorWidth("");
@@ -583,8 +569,10 @@ export default function CreateAssetModal({
     setAssetType(nextType);
     setCategory(CATEGORY_OPTIONS[nextType][0]?.[0] ?? "");
     setCustomCategory("");
+    setAddingCategory(false);
     setFiles(INITIAL_FILES);
-    setWallMode("color");
+    setWallMode("paint");
+    setShareWithWalls(false);
 
     // Clear the old dimensions when switching asset types.
     setFloorLength("");
@@ -630,8 +618,8 @@ export default function CreateAssetModal({
 
     setWallMode(mode);
 
-    // Switching to a solid color drops any uploaded image.
-    if (mode === "color" && files.diffuseFile) {
+    // Switching to paint drops any uploaded image.
+    if (mode === "paint" && files.diffuseFile) {
       setFile("diffuseFile", undefined);
     }
 
@@ -691,19 +679,19 @@ export default function CreateAssetModal({
     }
 
     if (assetType === "wall") {
-      if (wallMode === "image" && !files.diffuseFile) {
+      if (wallMode === "texture" && !files.diffuseFile) {
         return setError(
-          "Upload an image for this wall material, or switch to a solid color."
+          "Upload a texture for this wall material, or switch to Paint."
         );
       }
 
-      if (wallMode === "color" && !normalizeHex(hexInput)) {
+      if (wallMode === "paint" && !normalizeHex(hexInput)) {
         return setError("Enter a valid color, for example #DEDBD3.");
       }
     }
 
-    // Both dimensions are mandatory for floor assets.
-    if (assetType === "floor") {
+    // Both dimensions are mandatory for physical floor and wall textures.
+    if (hasPhysicalTexture) {
       const numericLength = Number(floorLength);
       const numericWidth = Number(floorWidth);
 
@@ -712,7 +700,7 @@ export default function CreateAssetModal({
         !Number.isFinite(numericLength) ||
         numericLength <= 0
       ) {
-        return setError(`Enter a floor length greater than 0 ${floorDimensionUnit}.`);
+        return setError(`Enter a material length greater than 0 ${floorDimensionUnit}.`);
       }
 
       if (
@@ -720,7 +708,7 @@ export default function CreateAssetModal({
         !Number.isFinite(numericWidth) ||
         numericWidth <= 0
       ) {
-        return setError(`Enter a floor width greater than 0 ${floorDimensionUnit}.`);
+        return setError(`Enter a material width greater than 0 ${floorDimensionUnit}.`);
       }
 
       if (
@@ -744,7 +732,7 @@ export default function CreateAssetModal({
     setSaving(true);
 
     try {
-      const useWallColor = assetType === "wall" && wallMode === "color";
+      const useWallColor = assetType === "wall" && wallMode === "paint";
 
       const created = await createAsset({
         asset_type: assetType,
@@ -759,32 +747,29 @@ export default function CreateAssetModal({
 
         modelFile: files.modelFile ?? undefined,
         diffuseFile: useWallColor ? undefined : files.diffuseFile ?? undefined,
-        normalFile: files.normalFile ?? undefined,
-        roughnessFile: files.roughnessFile ?? undefined,
-        aoFile: files.aoFile ?? undefined,
 
         color: useWallColor ? color : undefined,
 
-        roughness: assetType !== "furniture" ? Number(roughness) : undefined,
-
         metalness: assetType !== "furniture" ? Number(metalness) : undefined,
+        shareWithWalls:
+          assetType === "floor" ? shareWithWalls : undefined,
 
         placement_surface:
           assetType === "furniture" ? placementSurface : undefined,
 
-        // Include the dimensions only for floors.
+        // Include dimensions for floors and image-based wall textures.
         length:
-          assetType === "floor"
+          hasPhysicalTexture
             ? floorDimensionToMeters(Number(floorLength), floorDimensionUnit)
             : undefined,
 
         width:
-          assetType === "floor"
+          hasPhysicalTexture
             ? floorDimensionToMeters(Number(floorWidth), floorDimensionUnit)
             : undefined,
 
         floorPattern:
-          assetType === "floor" ? floorPattern : undefined,
+          hasPhysicalTexture ? floorPattern : undefined,
       });
 
       onCreated(created);
@@ -816,7 +801,19 @@ export default function CreateAssetModal({
       );
     }
 
-    if (assetType === "floor" || assetType === "wall") {
+    if (assetType === "floor") {
+      return diffusePreviewURL ? (
+        <img
+          src={diffusePreviewURL}
+          alt={name.trim() || "Uploaded floor tile"}
+          className="h-full w-full object-contain"
+        />
+      ) : (
+        <PreviewEmpty icon={ImageIcon} text="Upload a tile image to preview it." />
+      );
+    }
+
+    if (assetType === "wall") {
       return <PreviewScene asset={previewAsset} />;
     }
 
@@ -897,24 +894,60 @@ export default function CreateAssetModal({
 
                     <div className="grid gap-4 sm:grid-cols-2">
                       <Field label="Category" required>
-                        <Select
-                          value={category}
-                          onValueChange={(value) => setCategory(value ?? "")}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Choose a category" />
-                          </SelectTrigger>
+                        <div className="flex gap-2">
+                          {isCustomCategory ? (
+                            <Input
+                              className="min-w-0 flex-1"
+                              value={customCategory}
+                              onChange={(event) =>
+                                setCustomCategory(event.target.value)
+                              }
+                              placeholder="Enter category name"
+                              required
+                              disabled={saving}
+                            />
+                          ) : (
+                            <Select
+                              value={category}
+                              onValueChange={(value) => setCategory(value ?? "")}
+                              disabled={saving}
+                            >
+                              <SelectTrigger className="min-w-0 flex-1">
+                                <SelectValue placeholder="Choose a category" />
+                              </SelectTrigger>
 
-                          <SelectContent>
-                            {CATEGORY_OPTIONS[assetType].map(
-                              ([value, label]) => (
-                                <SelectItem key={value} value={value}>
-                                  {label}
-                                </SelectItem>
-                              )
-                            )}
-                          </SelectContent>
-                        </Select>
+                              <SelectContent>
+                                {CATEGORY_OPTIONS[assetType].map(
+                                  ([value, label]) => (
+                                    <SelectItem key={value} value={value}>
+                                      {label}
+                                    </SelectItem>
+                                  )
+                                )}
+                              </SelectContent>
+                            </Select>
+                          )}
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                              if (addingCategory || category === "other") {
+                                setAddingCategory(false);
+                                if (category === "other") {
+                                  setCategory(
+                                    CATEGORY_OPTIONS[assetType][0]?.[0] ?? ""
+                                  );
+                                }
+                              } else {
+                                setAddingCategory(true);
+                              }
+                              setCustomCategory("");
+                            }}
+                            disabled={saving}
+                          >
+                            {isCustomCategory ? "Choose" : "Add"}
+                          </Button>
+                        </div>
                       </Field>
 
                       <Field label="Availability">
@@ -937,21 +970,6 @@ export default function CreateAssetModal({
                         </Select>
                       </Field>
                     </div>
-
-                    {category === "other" && (
-                      <Field label="Custom category" required>
-                        <Input
-                          className="w-full"
-                          value={customCategory}
-                          onChange={(event) =>
-                            setCustomCategory(event.target.value)
-                          }
-                          placeholder="Enter category name"
-                          required
-                          disabled={saving}
-                        />
-                      </Field>
-                    )}
 
                     <Field
                       label={
@@ -1024,138 +1042,29 @@ export default function CreateAssetModal({
                     </Section>
                   )}
 
-                  {/* Floors */}
                   {assetType === "floor" && (
-                    <>
-                      <Section
-                        title="Single tile image"
-                        description="The image is cropped to fill each configured tile face."
-                      >
-                        <FileField
-                          label="Diffuse texture"
-                          accept="image/*"
-                          file={files.diffuseFile}
-                          onChange={(file) => setFile("diffuseFile", file)}
-                          hint="PNG, JPG or WebP"
-                          icon={ImageIcon}
-                          disabled={saving}
-                          required
-                        />
-                      </Section>
-
-                      <Section
-                        title="Tile dimensions"
-                        description="Physical size of one tile; image pixel dimensions do not affect this."
-                      >
-                        <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_140px]">
-                          <Field label="Length" htmlFor="floor-length" required>
-                            <Input
-                              id="floor-length"
-                              type="number"
-                              min="0"
-                              step="any"
-                              className="w-full"
-                              value={floorLength}
-                              onChange={(event) =>
-                                setFloorLength(event.target.value)
-                              }
-                              placeholder={floorDimensionUnit === "cm" ? "60" : "600"}
-                              required
-                              disabled={saving}
-                            />
-                          </Field>
-
-                          <Field label="Width" htmlFor="floor-width" required>
-                            <Input
-                              id="floor-width"
-                              type="number"
-                              min="0"
-                              step="any"
-                              className="w-full"
-                              value={floorWidth}
-                              onChange={(event) =>
-                                setFloorWidth(event.target.value)
-                              }
-                              placeholder={floorDimensionUnit === "cm" ? "30" : "300"}
-                              required
-                              disabled={saving}
-                            />
-                          </Field>
-
-                          <Field label="Unit" htmlFor="floor-dimension-unit" required>
-                            <Select
-                              value={floorDimensionUnit}
-                              onValueChange={(value) => {
-                                if (
-                                  value === "cm" ||
-                                  value === "mm"
-                                ) {
-                                  if (value === floorDimensionUnit) return;
-                                  const unitFactor =
-                                    value === "mm" ? 10 : 0.1;
-                                  const convertValue = (current: string) => {
-                                    if (!current.trim()) return current;
-                                    const numeric = Number(current);
-                                    return Number.isFinite(numeric)
-                                      ? String(numeric * unitFactor)
-                                      : current;
-                                  };
-                                  setFloorLength(convertValue);
-                                  setFloorWidth(convertValue);
-                                  setFloorDimensionUnit(value);
-                                }
-                              }}
-                            >
-                              <SelectTrigger id="floor-dimension-unit" className="w-full">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="cm">cm</SelectItem>
-                                <SelectItem value="mm">mm</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </Field>
-                        </div>
-                      </Section>
-
-                      <Section
-                        title="Laying pattern"
-                        description="Choose the arrangement for these individual tiles."
-                      >
-                        <Field label="Pattern" htmlFor="floor-pattern" required>
-                          <Select
-                            value={floorPattern}
-                            onValueChange={(value) => {
-                              if (isFloorPattern(value)) setFloorPattern(value);
-                            }}
-                          >
-                            <SelectTrigger id="floor-pattern" className="w-full">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {FLOOR_PATTERN_DEFINITIONS.map((pattern) => (
-                                <SelectItem key={pattern.id} value={pattern.id}>
-                                  {pattern.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </Field>
-                        <p className="text-xs text-muted-foreground">
-                          Grout is neutral gray and {DEFAULT_FLOOR_GROUT_WIDTH_M * 1000} mm wide.
-                          Images with a different aspect ratio are center-cropped to fill each tile.
-                          {floorPattern === "herringbone" &&
-                            " Herringbone requires a 2:1 tile length-to-width ratio."}
-                        </p>
-                      </Section>
-                    </>
+                    <Section
+                      title="Single tile image"
+                      description="The image is cropped to fill each configured tile face."
+                    >
+                      <FileField
+                        label="Diffuse texture"
+                        accept="image/*"
+                        file={files.diffuseFile}
+                        onChange={(file) => setFile("diffuseFile", file)}
+                        hint="PNG, JPG or WebP"
+                        icon={ImageIcon}
+                        disabled={saving}
+                        required
+                      />
+                    </Section>
                   )}
 
                   {/* Walls */}
                   {assetType === "wall" && (
                     <Section
                       title="Wall material"
-                      description="Use a solid color, or upload an image for patterned and textured walls."
+                      description="Choose Paint for a solid color or Texture for a physical tile or panel."
                     >
                       <div
                         role="radiogroup"
@@ -1164,8 +1073,8 @@ export default function CreateAssetModal({
                       >
                         {(
                           [
-                            ["color", "Solid color", Palette],
-                            ["image", "Image", ImageIcon],
+                            ["paint", "Paint", Palette],
+                            ["texture", "Texture", ImageIcon],
                           ] as const
                         ).map(([value, label, Icon]) => {
                           const active = wallMode === value;
@@ -1191,7 +1100,7 @@ export default function CreateAssetModal({
                         })}
                       </div>
 
-                      {wallMode === "color" ? (
+                      {wallMode === "paint" ? (
                         <div className="space-y-4">
                           <div className="flex items-end gap-3">
                             <Field label="Pick a color">
@@ -1235,45 +1144,149 @@ export default function CreateAssetModal({
                             </p>
                           )}
 
-                          <div className="space-y-2">
-                            <p className="text-sm font-medium">
-                              Quick colors
-                            </p>
-                            <div className="grid grid-cols-6 gap-2 sm:grid-cols-12 lg:grid-cols-6 xl:grid-cols-12">
-                              {COLOR_PRESETS.map(([value, label]) => (
-                                <button
-                                  key={value}
-                                  type="button"
-                                  title={label}
-                                  aria-label={label}
-                                  aria-pressed={color === value}
-                                  disabled={saving}
-                                  onClick={() => handlePickColor(value)}
-                                  style={{ backgroundColor: value }}
-                                  className={[
-                                    "aspect-square w-full rounded-md border transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                                    color === value
-                                      ? "border-primary ring-2 ring-primary ring-offset-2"
-                                      : "border-border",
-                                  ].join(" ")}
-                                />
-                              ))}
-                            </div>
-                          </div>
                         </div>
                       ) : (
                         <FileField
-                          label="Wall image"
+                          label="Wall texture image"
                           accept="image/*"
                           file={files.diffuseFile}
                           onChange={(file) => setFile("diffuseFile", file)}
-                          hint="PNG, JPG or WebP"
+                          hint="One tile or panel image; dimensions control its repetition."
                           icon={ImageIcon}
                           disabled={saving}
                           required
                         />
                       )}
                     </Section>
+                  )}
+
+                  {hasPhysicalTexture && (
+                    <>
+                      <Section
+                        title={assetType === "floor" ? "Tile dimensions" : "Material dimensions"}
+                        description={
+                          assetType === "floor"
+                            ? "Physical size of one tile; image pixel dimensions do not affect this."
+                            : "Physical width and height of one wall tile or panel; these determine texture repetition."
+                        }
+                      >
+                        <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_140px]">
+                          <Field label="Length" htmlFor="material-length" required>
+                            <Input
+                              id="material-length"
+                              type="number"
+                              min="0"
+                              step="any"
+                              className="w-full"
+                              value={floorLength}
+                              onChange={(event) =>
+                                setFloorLength(event.target.value)
+                              }
+                              placeholder={floorDimensionUnit === "cm" ? "60" : "600"}
+                              required
+                              disabled={saving}
+                            />
+                          </Field>
+
+                          <Field label="Width" htmlFor="material-width" required>
+                            <Input
+                              id="material-width"
+                              type="number"
+                              min="0"
+                              step="any"
+                              className="w-full"
+                              value={floorWidth}
+                              onChange={(event) =>
+                                setFloorWidth(event.target.value)
+                              }
+                              placeholder={floorDimensionUnit === "cm" ? "30" : "300"}
+                              required
+                              disabled={saving}
+                            />
+                          </Field>
+
+                          <Field label="Unit" htmlFor="material-dimension-unit" required>
+                            <Select
+                              value={floorDimensionUnit}
+                              disabled={saving}
+                              onValueChange={(value) => {
+                                if (value !== "cm" && value !== "mm") return;
+                                if (value === floorDimensionUnit) return;
+                                const unitFactor = value === "mm" ? 10 : 0.1;
+                                const convertValue = (current: string) => {
+                                  if (!current.trim()) return current;
+                                  const numeric = Number(current);
+                                  return Number.isFinite(numeric)
+                                    ? String(numeric * unitFactor)
+                                    : current;
+                                };
+                                setFloorLength(convertValue(floorLength));
+                                setFloorWidth(convertValue(floorWidth));
+                                setFloorDimensionUnit(value);
+                              }}
+                            >
+                              <SelectTrigger id="material-dimension-unit" className="w-full">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="cm">cm</SelectItem>
+                                <SelectItem value="mm">mm</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </Field>
+                        </div>
+                      </Section>
+
+                      <Section
+                        title={assetType === "floor" ? "Laying pattern" : "Texture pattern"}
+                        description="Choose a supported tile arrangement."
+                      >
+                        <Field label="Pattern" htmlFor="material-pattern" required>
+                          <Select
+                            value={floorPattern}
+                            disabled={saving}
+                            onValueChange={(value) => {
+                              if (isFloorPattern(value)) setFloorPattern(value);
+                            }}
+                          >
+                            <SelectTrigger id="material-pattern" className="w-full">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {FLOOR_PATTERN_DEFINITIONS.map((pattern) => (
+                                <SelectItem key={pattern.id} value={pattern.id}>
+                                  {pattern.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </Field>
+                        <p className="text-xs text-muted-foreground">
+                          Grout is {DEFAULT_FLOOR_GROUT_WIDTH_M * 1000} mm wide.
+                          {floorPattern === "herringbone" &&
+                            " Herringbone requires a 2:1 length-to-width ratio."}
+                        </p>
+                        {assetType === "floor" && (
+                          <label className="flex items-start gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={shareWithWalls}
+                              onChange={(event) =>
+                                setShareWithWalls(event.target.checked)
+                              }
+                              disabled={saving}
+                              className="mt-0.5 size-4 accent-primary"
+                            />
+                            <span>
+                              <span className="font-medium">Share with Walls</span>
+                              <span className="mt-0.5 block text-xs text-muted-foreground">
+                                Make this same floor asset available as a wall texture.
+                              </span>
+                            </span>
+                          </label>
+                        )}
+                      </Section>
+                    </>
                   )}
 
                   {/* Optional material settings (floors + walls) */}
@@ -1287,23 +1300,7 @@ export default function CreateAssetModal({
                       </summary>
 
                       <div className="space-y-4 border-t border-border/60 px-5 py-5">
-                        <div className="grid gap-4 sm:grid-cols-2">
-                          <Field label="Roughness (0–1)" htmlFor="asset-roughness">
-                            <Input
-                              id="asset-roughness"
-                              type="number"
-                              min="0"
-                              max="1"
-                              step="0.05"
-                              className="w-full"
-                              value={roughness}
-                              onChange={(event) =>
-                                setRoughness(event.target.value)
-                              }
-                              disabled={saving}
-                            />
-                          </Field>
-
+                        <div className="max-w-sm">
                           <Field label="Metalness (0–1)" htmlFor="asset-metalness">
                             <Input
                               id="asset-metalness"
@@ -1319,35 +1316,6 @@ export default function CreateAssetModal({
                               disabled={saving}
                             />
                           </Field>
-                        </div>
-
-                        <div className="grid gap-4 sm:grid-cols-3">
-                          <FileField
-                            label="Normal map"
-                            accept="image/*"
-                            file={files.normalFile}
-                            onChange={(file) => setFile("normalFile", file)}
-                            size="sm"
-                            disabled={saving}
-                          />
-
-                          <FileField
-                            label="Roughness map"
-                            accept="image/*"
-                            file={files.roughnessFile}
-                            onChange={(file) => setFile("roughnessFile", file)}
-                            size="sm"
-                            disabled={saving}
-                          />
-
-                          <FileField
-                            label="AO map"
-                            accept="image/*"
-                            file={files.aoFile}
-                            onChange={(file) => setFile("aoFile", file)}
-                            size="sm"
-                            disabled={saving}
-                          />
                         </div>
                       </div>
                     </details>
@@ -1375,7 +1343,7 @@ export default function CreateAssetModal({
                               maximumFractionDigits: 2,
                             })}${assetType === "floor" ? " / tile" : ""}`
                           : null,
-                        assetType === "wall" && wallMode === "color"
+                        assetType === "wall" && wallMode === "paint"
                           ? color.toUpperCase()
                           : null,
                       ]

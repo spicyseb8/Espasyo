@@ -16,8 +16,9 @@ export interface UpdateAssetData {
   asset_status:
     | "available"
     | "not_available";
+  shareWithWalls?: boolean;
 
-  // Only used when updating floor assets.
+  // Used for floor assets and image-based wall textures.
   // Values are in meters.
   length?: number;
   width?: number;
@@ -53,7 +54,7 @@ export async function updateAsset(
     }
 
     if (data.floorPattern !== undefined && !isFloorPattern(data.floorPattern)) {
-      throw new Error("Floor pattern is not supported.");
+      throw new Error("Material pattern is not supported.");
     }
     if (
       data.floorPattern !== undefined &&
@@ -62,13 +63,13 @@ export async function updateAsset(
         data.length <= DEFAULT_FLOOR_GROUT_WIDTH_M ||
         data.width <= DEFAULT_FLOOR_GROUT_WIDTH_M)
     ) {
-      throw new Error("Floor tile dimensions must each be greater than the 3 mm grout width.");
+      throw new Error("Material dimensions must each be greater than the 3 mm grout width.");
     }
     if (
       data.floorPattern === "herringbone" &&
       !isHerringboneTileRatio(length, width ?? 0)
     ) {
-      throw new Error("Herringbone requires tile length to be twice the tile width.");
+      throw new Error("Herringbone requires material length to be twice its width.");
     }
 
     if (

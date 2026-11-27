@@ -23,6 +23,15 @@ import {
     getWallMaterials,
     preloadWallTexture
 } from "../../../../services/assets/wallsload";
+import {
+    getCachedFloorPatternTexture,
+    preloadFloorPatternTexture
+} from "../../../../services/assets/floorsload";
+import {
+    createFloorPatternLayout,
+    getFloorPatternCellSize,
+    isFloorPattern
+} from "../../../../../../shared/flooring/patterns";
 
 import type {
     AdminWallFinishSide
@@ -58,6 +67,8 @@ const DEFAULT_COLOR =
 function useWallTexture(
     url:
         string | undefined,
+    material:
+        Material | null,
     width:
         number,
     height:
@@ -75,21 +86,63 @@ function useWallTexture(
     );
 
     const cachedTexture = getCachedWallTexture(url ?? "");
-    const readyTexture = useMemo(() => {
-        if (!cachedTexture) {
+    const patternCellSize = useMemo(() => {
+        if (
+            material?.floorMaterialMode !== "single-tile" ||
+            !isFloorPattern(material.floorPattern) ||
+            typeof material.length !== "number" ||
+            !Number.isFinite(material.length) ||
+            material.length <= 0 ||
+            typeof material.width !== "number" ||
+            !Number.isFinite(material.width) ||
+            material.width <= 0
+        ) {
             return null;
         }
 
-        const texture = cachedTexture.clone();
+        return getFloorPatternCellSize(
+            createFloorPatternLayout(
+                material.floorPattern,
+                material.length,
+                material.width
+            )
+        );
+    }, [material]);
+    const cachedPatternTexture =
+        url && patternCellSize && material
+            ? getCachedFloorPatternTexture(url, material)
+            : undefined;
+    const readyTexture = useMemo(() => {
+        const source = cachedPatternTexture ?? (
+            patternCellSize ? undefined : cachedTexture
+        );
+        if (!source) {
+            return null;
+        }
+
+        const texture = source.clone();
         texture.wrapS = RepeatWrapping;
         texture.wrapT = RepeatWrapping;
-        texture.repeat.set(
-            Math.max(1, width),
-            Math.max(1, height)
-        );
+        if (patternCellSize) {
+            texture.repeat.set(
+                width / patternCellSize.widthM,
+                height / patternCellSize.heightM
+            );
+        } else {
+            texture.repeat.set(
+                Math.max(1, width),
+                Math.max(1, height)
+            );
+        }
         texture.needsUpdate = true;
         return texture;
-    }, [cachedTexture, width, height]);
+    }, [
+        cachedPatternTexture,
+        cachedTexture,
+        patternCellSize,
+        width,
+        height
+    ]);
 
     useEffect(() => {
         return () => readyTexture?.dispose();
@@ -98,7 +151,7 @@ function useWallTexture(
 
     useEffect(() => {
 
-        if (!url || cachedTexture) {
+        if (!url || readyTexture) {
             return;
         }
 
@@ -108,19 +161,44 @@ function useWallTexture(
         let createdTexture: Texture | null = null;
 
 
-        void preloadWallTexture(url)
-            .then(sourceTexture => {
+        const texturePromise = patternCellSize && material
+            ? preloadFloorPatternTexture(url, material)
+            : preloadWallTexture(url);
+        void texturePromise
+            .then(async sourceTexture => {
                 if (cancelled) {
                     return;
                 }
 
-                createdTexture = sourceTexture.clone();
+                const patternGenerated = Boolean(sourceTexture && patternCellSize);
+                const source = sourceTexture ??
+                    await preloadWallTexture(url);
+                if (cancelled) {
+                    return;
+                }
+                createdTexture = source.clone();
                 createdTexture.wrapS = RepeatWrapping;
                 createdTexture.wrapT = RepeatWrapping;
-                createdTexture.repeat.set(
-                    Math.max(1, width),
-                    Math.max(1, height)
-                );
+                if (patternGenerated && patternCellSize) {
+                    createdTexture.repeat.set(
+                        width / patternCellSize.widthM,
+                        height / patternCellSize.heightM
+                    );
+                } else if (
+                    patternCellSize &&
+                    material?.length &&
+                    material.width
+                ) {
+                    createdTexture.repeat.set(
+                        width / material.length,
+                        height / material.width
+                    );
+                } else {
+                    createdTexture.repeat.set(
+                        Math.max(1, width),
+                        Math.max(1, height)
+                    );
+                }
                 createdTexture.needsUpdate = true;
                 setTexture({
                     url,
@@ -155,7 +233,9 @@ function useWallTexture(
         url,
         width,
         height,
-        cachedTexture
+        readyTexture,
+        material,
+        patternCellSize
     ]);
 
 
@@ -254,6 +334,8 @@ export default function AdminWallFinishSurface({
         useWallTexture(
 
             material?.texture,
+
+            material,
 
             piece.width,
 

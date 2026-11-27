@@ -49,14 +49,11 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
     fileSize: MAX_FILE_SIZE,
-    files: 5,
+    files: 2,
   },
 }).fields([
   { name: "modelFile", maxCount: 1 },
   { name: "diffuseFile", maxCount: 1 },
-  { name: "normalFile", maxCount: 1 },
-  { name: "roughnessFile", maxCount: 1 },
-  { name: "aoFile", maxCount: 1 },
 ]);
 
 function getUploadedFile(files, fieldName) {
@@ -323,40 +320,39 @@ router.post(
 
       const modelFile = getUploadedFile(uploadedFiles, "modelFile");
       const diffuseFile = getUploadedFile(uploadedFiles, "diffuseFile");
-      const normalFile = getUploadedFile(uploadedFiles, "normalFile");
-      const roughnessFile = getUploadedFile(uploadedFiles, "roughnessFile");
-      const aoFile = getUploadedFile(uploadedFiles, "aoFile");
 
-      // Flooring dimensions are received in meters.
-      // They are required only when creating a floor asset.
+      // Physical material dimensions are received in meters.
       let floorLength;
       let floorWidth;
       const floorPattern = req.body.floorPattern;
+      const hasPhysicalTexture =
+        assetType === "floor" ||
+        (assetType === "wall" && Boolean(diffuseFile));
 
-      if (assetType === "floor") {
+      if (hasPhysicalTexture) {
         if (
           req.body.length === undefined ||
           req.body.length === ""
         ) {
-          throw new Error("Floor length is required.");
+          throw new Error("Material length is required.");
         }
 
         if (
           req.body.width === undefined ||
           req.body.width === ""
         ) {
-          throw new Error("Floor width is required.");
+          throw new Error("Material width is required.");
         }
 
         floorLength = Number(req.body.length);
         floorWidth = Number(req.body.width);
 
         if (!Number.isFinite(floorLength) || floorLength <= 0) {
-          throw new Error("Floor length must be greater than 0.");
+          throw new Error("Material length must be greater than 0.");
         }
 
         if (!Number.isFinite(floorWidth) || floorWidth <= 0) {
-          throw new Error("Floor width must be greater than 0.");
+          throw new Error("Material width must be greater than 0.");
         }
 
         if (
@@ -364,19 +360,19 @@ router.post(
           floorWidth <= DEFAULT_FLOOR_GROUT_WIDTH_M
         ) {
           throw new Error(
-            "Floor tile dimensions must each be greater than the 3 mm grout width."
+            "Material dimensions must each be greater than the 3 mm grout width."
           );
         }
 
         if (!FLOOR_PATTERNS.has(floorPattern)) {
-          throw new Error("Choose a supported floor tile pattern.");
+          throw new Error("Choose a supported material pattern.");
         }
 
         if (
           floorPattern === "herringbone" &&
           Math.abs(floorLength / floorWidth - 2) > 1e-6
         ) {
-          throw new Error("Herringbone requires tile length to be twice the tile width.");
+          throw new Error("Herringbone requires material length to be twice its width.");
         }
       }
 
@@ -408,6 +404,16 @@ router.post(
 
       if (!["available", "not_available"].includes(assetStatus)) {
         throw new Error("Asset status is invalid.");
+      }
+
+      let shareWithWalls = false;
+      if (assetType === "floor" && req.body.shareWithWalls !== undefined) {
+        const value = req.body.shareWithWalls;
+        if (value === true || value === "true") {
+          shareWithWalls = true;
+        } else if (value !== false && value !== "false") {
+          throw new Error("Share with Walls must be true or false.");
+        }
       }
 
       if (assetType === "furniture") {
@@ -453,10 +459,6 @@ router.post(
       }
 
       validateImage(diffuseFile, "Diffuse texture");
-      validateImage(normalFile, "Normal map");
-      validateImage(roughnessFile, "Roughness map");
-      validateImage(aoFile, "Ambient occlusion map");
-
       const roughness = parseOptionalNumber(
         req.body.roughness,
         0.8,
@@ -512,15 +514,9 @@ router.post(
       const [
         modelPath,
         diffusePath,
-        normalPath,
-        roughnessPath,
-        aoPath,
       ] = await Promise.all([
         uploadFile(modelFile, "model"),
         uploadFile(diffuseFile, "diffuse"),
-        uploadFile(normalFile, "normal"),
-        uploadFile(roughnessFile, "roughness"),
-        uploadFile(aoFile, "ao"),
       ]);
 
       let thumbnailPath = null;
@@ -553,14 +549,18 @@ router.post(
 
       if (assetType === "floor") {
         asset.pricePerPiece = price;
-        asset.length = floorLength;
-        asset.width = floorWidth;
-        asset.floorMaterialMode = "single-tile";
-        asset.floorPattern = floorPattern;
+        asset.shareWithWalls = shareWithWalls;
       } else {
         if (price !== undefined) {
           asset.price = price;
         }
+      }
+
+      if (hasPhysicalTexture) {
+        asset.length = floorLength;
+        asset.width = floorWidth;
+        asset.floorMaterialMode = "single-tile";
+        asset.floorPattern = floorPattern;
       }
 
       if (modelPath) {
@@ -581,19 +581,6 @@ router.post(
         if (assetType === "wall") {
           asset.base_color_path = diffusePath;
         }
-      }
-
-      if (normalPath) {
-        asset.normal_path = normalPath;
-      }
-
-      if (roughnessPath) {
-        asset.rough_path = roughnessPath;
-        asset.roughness_path = roughnessPath;
-      }
-
-      if (aoPath) {
-        asset.ao_path = aoPath;
       }
 
       if (assetType !== "furniture") {

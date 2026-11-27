@@ -14,6 +14,10 @@ import {
     db
 } from "../../firebase/firebase";
 import {
+    isFloorPattern,
+    isHerringboneTileRatio
+} from "../../../../shared/flooring/patterns";
+import {
     registerAssetDownloadURL,
     resolveStorageAssetURL
 } from "../../lib/assetLibraryCache";
@@ -27,16 +31,24 @@ import type {
 
 interface FirebaseWallAsset {
     name: string;
-    asset_type: "wall";
+    asset_type: "wall" | "floor";
     asset_status?: string;
+    shareWithWalls?: boolean;
     category: string;
-    price: number;
+    price?: number;
+    pricePerPiece?: number;
+    length?: number;
+    width?: number;
+    floorMaterialMode?: "single-tile";
+    floorPattern?: string;
     thumbnail_path?: string;
     base_color_path?: string;
+    diffuse_path?: string;
     normal_path?: string;
     roughness_path?: string;
     thumbnail_url?: string;
     base_color_url?: string;
+    diffuse_url?: string;
     color?: string;
     roughness?: number;
     metalness?: number;
@@ -87,15 +99,19 @@ async function resolveStorageUrl(
 async function getWallTextureUrl(
     data: FirebaseWallAsset
 ): Promise<string | undefined> {
-    if (data.category === "paint" || data.color?.trim()) {
+    if (
+        data.asset_type === "wall" &&
+        (data.category === "paint" || data.color?.trim())
+    ) {
         return undefined;
     }
 
-    if (data.base_color_url?.trim()) {
-        return resolveStorageUrl(data.base_color_url);
-    }
-
-    return resolveStorageUrl(data.base_color_path);
+    return resolveStorageUrl(
+        data.base_color_url?.trim() ||
+        data.diffuse_url?.trim() ||
+        data.base_color_path ||
+        data.diffuse_path
+    );
 }
 
 async function getWallThumbnailUrl(
@@ -109,13 +125,21 @@ async function getWallThumbnailUrl(
 }
 
 async function loadWallMaterials(): Promise<Material[]> {
-    const q = query(
-        collection(db, "assets"),
-        where("asset_type", "==", "wall")
-    );
+    const assets = collection(db, "assets");
+    const [wallsSnapshot, sharedAssetsSnapshot] = await Promise.all([
+        getDocs(query(assets, where("asset_type", "==", "wall"))),
+        getDocs(query(assets, where("shareWithWalls", "==", true)))
+    ]);
+    const sharedFloorDocs = sharedAssetsSnapshot.docs.filter(document => {
+        const data = document.data() as FirebaseWallAsset;
+        return data.asset_type === "floor" && data.shareWithWalls === true;
+    });
+    const documents = [
+        ...wallsSnapshot.docs,
+        ...sharedFloorDocs
+    ];
 
-    const snapshot = await getDocs(q);
-    cachedWallStorageSources = snapshot.docs
+    cachedWallStorageSources = documents
         .filter(document => {
             const data = document.data() as FirebaseWallAsset;
             return (
@@ -125,13 +149,10 @@ async function loadWallMaterials(): Promise<Material[]> {
         })
         .flatMap(document => collectAssetSources(document.data()));
 
-    console.log(
-        "Firebase wall asset documents found:",
-        snapshot.size
-    );
+    console.log("Firebase wall material documents found:", documents.length);
 
-    // Only explicitly available wall materials and paints are loaded.
-    const availableDocuments = snapshot.docs.filter(doc => {
+    // Shared floors require both explicit sharing and availability.
+    const availableDocuments = documents.filter(doc => {
         const data = doc.data() as FirebaseWallAsset;
 
         const available =
@@ -153,19 +174,66 @@ async function loadWallMaterials(): Promise<Material[]> {
         availableDocuments.map(async doc => {
             const data = doc.data() as FirebaseWallAsset;
 
-            const thumbnail = await getWallThumbnailUrl(data);
-            const texture = await getWallTextureUrl(data);
+            const [resolvedThumbnail, texture] = await Promise.all([
+                getWallThumbnailUrl(data),
+                getWallTextureUrl(data)
+            ]);
+            const thumbnail = resolvedThumbnail ?? texture;
+            const length =
+                typeof data.length === "number" &&
+                Number.isFinite(data.length) &&
+                data.length > 0
+                    ? data.length
+                    : undefined;
+            const width =
+                typeof data.width === "number" &&
+                Number.isFinite(data.width) &&
+                data.width > 0
+                    ? data.width
+                    : undefined;
+            const floorPattern = isFloorPattern(data.floorPattern)
+                ? data.floorPattern
+                : undefined;
+            const floorMaterialMode =
+                data.floorMaterialMode === "single-tile" &&
+                floorPattern &&
+                length &&
+                width &&
+                (floorPattern !== "herringbone" ||
+                    isHerringboneTileRatio(length, width))
+                    ? "single-tile"
+                    : undefined;
+            const floorPricePerPiece =
+                data.asset_type === "floor" &&
+                typeof data.pricePerPiece === "number" &&
+                Number.isFinite(data.pricePerPiece) &&
+                data.pricePerPiece >= 0
+                    ? data.pricePerPiece
+                    : undefined;
+            const pricePerSquareMeter =
+                floorPricePerPiece !== undefined && length && width
+                    ? floorPricePerPiece / (length * width)
+                    : Number(data.price ?? 0);
 
             const material: Material = {
                 id: doc.id,
                 name: data.name,
                 category: "wallFinish",
                 sourceCategory: data.category,
-                pricePerSquareMeter: Number(data.price ?? 0),
-                pricePerLiter: Number(data.price ?? 0),
-                priceConfigured: typeof data.price === "number" &&
-                    Number.isFinite(data.price) &&
-                    data.price >= 0,
+                pricePerSquareMeter,
+                ...(data.asset_type === "wall" &&
+                data.category.toLowerCase() === "paint"
+                    ? { pricePerLiter: Number(data.price ?? 0) }
+                    : {}),
+                priceConfigured:
+                    floorPricePerPiece !== undefined ||
+                    (typeof data.price === "number" &&
+                        Number.isFinite(data.price) &&
+                        data.price >= 0),
+                length,
+                width,
+                floorPattern,
+                floorMaterialMode,
                 thumbnail,
                 texture,
                 color: data.color,
@@ -269,11 +337,15 @@ export function preloadWallTexture(url: string): Promise<Texture> {
             texture.wrapS = RepeatWrapping;
             texture.wrapT = RepeatWrapping;
             texture.needsUpdate = true;
-            wallTextureCache.set(normalizedUrl, texture);
+            if (wallTexturePromises.get(normalizedUrl) === promise) {
+                wallTextureCache.set(normalizedUrl, texture);
+            }
             return texture;
         })
         .finally(() => {
-            wallTexturePromises.delete(normalizedUrl);
+            if (wallTexturePromises.get(normalizedUrl) === promise) {
+                wallTexturePromises.delete(normalizedUrl);
+            }
         });
 
     wallTexturePromises.set(normalizedUrl, promise);

@@ -360,11 +360,21 @@ function useFloorTexture(
             materialSettings.floorMaterialMode === "single-tile"
                 ? preloadFloorPatternTexture(url, materialSettings)
                 : preloadFloorTexture(url);
-        loadTexture.then(texture => {
-            if (!cancelled) {
-                setLoadedTexture({ key: requestKey, texture });
-            }
-        });
+        void loadTexture
+            .then(texture => {
+                if (!cancelled) {
+                    setLoadedTexture({ key: requestKey, texture });
+                }
+            })
+            .catch(error => {
+                if (!cancelled) {
+                    console.error(
+                        "Failed to load floor material texture:",
+                        url,
+                        error
+                    );
+                }
+            });
 
         return () => {
             cancelled = true;
@@ -568,7 +578,8 @@ function FloorSectionSurface({
             >
                 <meshStandardMaterial
                     map={texture}
-                    color={material.color ?? (texture ? "#ffffff" : "#d9dde3")}
+                    color={material.color ?? "#ffffff"}
+                    visible={!material.texture || Boolean(texture)}
                     metalness={material.metalness ?? 0}
                     roughness={material.roughness ?? 0.8}
                     side={DoubleSide}
@@ -1084,7 +1095,8 @@ export default function Floor({
                     <meshStandardMaterial
                         key={floorTexture ? "textured" : "untextured"}
                         map={floorTexture}
-                        color={displayMaterial?.color ?? (floorTexture ? "#ffffff" : "#d9dde3")}
+                        color={displayMaterial?.color ?? "#ffffff"}
+                        visible={!displayMaterial?.texture || Boolean(floorTexture)}
                         metalness={displayMaterial?.metalness ?? 0}
                         roughness={displayMaterial?.roughness ?? 0.8}
                         side={DoubleSide}

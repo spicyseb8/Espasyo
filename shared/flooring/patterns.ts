@@ -201,6 +201,15 @@ export function createFloorPatternLayout(
     }
 }
 
+export function getFloorPatternCellSize(
+    layout: FloorPatternLayout,
+): { widthM: number; heightM: number } {
+    return {
+        widthM: Math.hypot(layout.repeatCell.a.x, layout.repeatCell.a.y),
+        heightM: Math.hypot(layout.repeatCell.b.x, layout.repeatCell.b.y),
+    };
+}
+
 function herringboneLayout(
     layout: Omit<FloorPatternLayout, "repeatCell" | "tiles">,
 ): FloorPatternLayout {

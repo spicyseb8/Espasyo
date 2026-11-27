@@ -13,7 +13,6 @@ import {
   UserPlus,
   Mail,
   Lock,
-  MapPin,
   Shield,
   Loader2,
   RefreshCw,
@@ -33,6 +32,7 @@ import {
 } from "@/utils/validators";
 import { createAccount } from "./createAccount";
 import { createClientAccount } from "@/firebase/clientAccounts";
+import PsgcAddressSelector from "./PsgcAddressSelector";
 
 export type CreateAccountType =
   | "user"
@@ -153,6 +153,10 @@ export default function CreateAccountModal({
   const emailError = fieldError("email", form.email, validateEmail);
   const passwordError = fieldError("password", form.password, validatePassword);
   const phoneError = fieldError("phoneNumber", form.phoneNumber, validatePhilippinePhone);
+  const addressError =
+    accountType === "user" && submitted && !form.address.trim()
+      ? "Select a region, city or municipality, and barangay."
+      : "";
   const passwordRequirements = getPasswordRequirements(form.password);
 
   const handleSubmit = async (
@@ -187,6 +191,7 @@ export default function CreateAccountModal({
         validateEmail(form.email),
         validatePassword(form.password),
         validatePhilippinePhone(form.phoneNumber),
+        "Please enter an address.",
       ].includes(validationError)) {
         setError(validationError);
       }
@@ -203,7 +208,7 @@ export default function CreateAccountModal({
           email: form.email.trim().toLowerCase(),
           password: form.password,
           phoneNumber: normalizePhilippinePhone(form.phoneNumber),
-          address: form.address,
+          address: form.address.trim(),
         }, role);
         setCleanupWarning(result.cleanupWarning ?? "");
         setPasswordToShare(form.password);
@@ -540,41 +545,27 @@ export default function CreateAccountModal({
                     </p>
                   </div>
 
-                  {/* ADDRESS (moved here, right after phone) */}
-                  <div className="space-y-2">
-                    <Label htmlFor="account-address">
-                      Address
-                    </Label>
-
-                    <div className="relative">
-                      <MapPin
-                        size={16}
-                        className="
-                          pointer-events-none
-                          absolute
-                          left-3
-                          top-1/2
-                          -translate-y-1/2
-                          text-muted-foreground
-                        "
-                      />
-
-                      <Input
-                        id="account-address"
-                        value={form.address}
-                        onChange={(event) =>
-                          updateField(
-                            "address",
-                            event.target.value
-                          )
-                        }
-                        placeholder="Enter address"
-                        className="pl-9"
+                  {accountType === "user" && (
+                    <div className="space-y-2 md:col-span-2">
+                      <div>
+                        <Label>Address</Label>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Select each location in order, then add street-level details.
+                        </p>
+                      </div>
+                      <PsgcAddressSelector
+                        key={open ? "client-address-open" : "client-address-closed"}
+                        enabled={open && accountType === "user"}
                         disabled={loading}
-                        required={accountType === "user"}
+                        onChange={(address) => updateField("address", address)}
                       />
+                      {addressError && (
+                        <p className="text-xs text-destructive" role="alert">
+                          {addressError}
+                        </p>
+                      )}
                     </div>
-                  </div>
+                  )}
 
                   {/* ROLE (employees / superadmins only) */}
                   {isEmployee && (

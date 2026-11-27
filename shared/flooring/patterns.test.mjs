@@ -8,6 +8,7 @@ import {
     checkFloorImageAspectRatio,
     createFloorPatternLayout,
     floorDimensionToMeters,
+    getFloorPatternCellSize,
     getFloorPatternUV,
     isHerringboneTileRatio,
 } from "./patterns.ts";
@@ -93,8 +94,23 @@ test("Stack Bond uses one physical tile per aligned repeat cell", () => {
         a: { x: 0.6, y: 0 },
         b: { x: 0, y: 0.3 },
     });
+
     assert.equal(layout.tiles.length, 1);
     assertCellHasNoTileGapsOrOverlaps(layout);
+});
+
+test("reports physical repeat-cell dimensions for wall texture repetition", () => {
+    assert.deepEqual(
+        getFloorPatternCellSize(
+            createFloorPatternLayout("brick-bond", 0.6, 0.3),
+        ),
+        { widthM: 1.2, heightM: 0.6 },
+    );
+    const diagonalSize = getFloorPatternCellSize(
+        createFloorPatternLayout("diagonal", 0.6, 0.3),
+    );
+    closeTo(diagonalSize.widthM, 0.6);
+    closeTo(diagonalSize.heightM, 0.3);
 });
 
 test("Brick Bond offsets alternate rows by half a tile length", () => {

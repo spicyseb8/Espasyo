@@ -1,4 +1,3 @@
-
 import {
     useEffect,
     useRef,
@@ -71,6 +70,37 @@ import {
     recordClientProjectOpened,
     type ClientProjectWorkflow
 } from "../services/clientProjectWorkflow";
+
+//==================================================
+// DATE FORMAT
+//==================================================
+
+// Turns "2026-12-01T17:00" into "December 1, 2026 at 5:00 PM".
+// Saved values without a timezone are Philippine time.
+function formatDateTime(value: string | number | Date): string {
+    let input = value;
+    const dateOnly = typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+
+    if (typeof value === "string") {
+        if (dateOnly) {
+            input = `${value}T00:00:00+08:00`;
+        } else if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(value)) {
+            input = `${value}+08:00`;
+        }
+    }
+
+    const date = new Date(input);
+
+    if (Number.isNaN(date.getTime())) {
+        return "date unavailable";
+    }
+
+    return new Intl.DateTimeFormat("en-US", {
+        timeZone: "Asia/Manila",
+        dateStyle: "long",
+        timeStyle: dateOnly ? undefined : "short"
+    }).format(date);
+}
 
 function LoadProjectContent({
     onViewOnlyChange
@@ -543,7 +573,7 @@ function LoadProjectContent({
                     </p>
                     {workflow.submittedAt && (
                         <p className="mt-4 text-sm text-black/60">
-                            Submitted {new Date(workflow.submittedAt).toLocaleString()} · Version {workflow.submittedVersionNumber ?? "saved"}
+                            Submitted {formatDateTime(workflow.submittedAt)} (Philippine time) · Version {workflow.submittedVersionNumber ?? "saved"}
                         </p>
                     )}
                     <div className="mt-6 flex flex-wrap gap-3">
@@ -574,7 +604,12 @@ function LoadProjectContent({
                     <p className="text-xs font-semibold uppercase tracking-[0.12em] text-black/50">Project access acknowledgement</p>
                     <h1 className="mt-2 text-2xl font-semibold">{workflow.projectName}</h1>
                     <p className="mt-3 text-sm leading-6 text-black/65">
-                        This project has been assigned to you. Its current deadline is <strong>{workflow.deadline || "not set"}</strong>.
+                        This project has been assigned to you.{" "}
+                        {workflow.deadline ? (
+                            <>Its current deadline is <strong>{formatDateTime(workflow.deadline)}</strong> (Philippine time).</>
+                        ) : (
+                            <>No deadline has been set yet.</>
+                        )}{" "}
                         Use the assigned floor plan to prepare an interior-design proposal within the project scope.
                         Your design is preliminary and is not a construction-ready plan. You are responsible for reviewing your design before submitting it.
                     </p>

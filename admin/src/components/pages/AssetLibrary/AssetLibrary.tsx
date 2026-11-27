@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -30,6 +36,12 @@ import {
 
 import AssetCard from "@/components/ui/assert-card";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import AssetThumbnail from "../../asset-preview/AssetThumbnail";
 import PreviewScene from "@/components/asset-preview/PreviewScene";
 import CreateAssetModal from "@/components/createfunc/CreateAssetModal";
@@ -39,6 +51,7 @@ import { getFurnitureAssets } from "@/services/assets/furniture";
 import { getWallAssets } from "@/services/assets/walls";
 import { getFloorAssets } from "@/services/assets/floors";
 import { updateAsset } from "@/services/assets/update";
+import { refreshWallMaterials } from "@/services/assets/wallsload";
 import {
   FURNITURE_CATEGORY_OPTIONS,
   FURNITURE_LEGACY_CATEGORIES,
@@ -57,7 +70,16 @@ import type {
   AssetStatus,
 } from "@/services/assets/asset-types";
 
-import { Plus, Trash2 } from "lucide-react";
+import {
+  CheckCircle2,
+  EyeOff,
+  Eye,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { deleteAsset } from "@/services/assets/deleteAsset";
 import { removeCachedDoorWindowAsset } from "@/services/assets/FirebaseDoorWindowLibrary";
@@ -96,12 +118,119 @@ const getPriceInputValue = (asset: Asset) =>
     ? asset.pricePerPiece == null
       ? ""
       : String(asset.pricePerPiece)
-    : String(asset.price ?? 0);
+    : asset.price == null
+      ? ""
+      : String(asset.price);
 
 const metersToCentimetersInput = (value?: number | null) =>
   typeof value === "number" && Number.isFinite(value)
     ? String(metersToCentimeters(value))
     : "";
+
+const formatPeso = (value: number) =>
+  `₱${value.toLocaleString("en-PH", { maximumFractionDigits: 2 })}`;
+
+const getPriceDisplay = (asset: Asset) => {
+  if (asset.asset_type === "floor") {
+    if (asset.pricePerPiece != null) {
+      return {
+        label: "Price per tile",
+        value: formatPeso(asset.pricePerPiece),
+      };
+    }
+    return {
+      label: "Legacy price (per m²)",
+      value: asset.price != null ? formatPeso(asset.price) : "Not set",
+    };
+  }
+  return {
+    label: "Price",
+    value: asset.price != null ? formatPeso(asset.price) : "Price unavailable",
+  };
+};
+
+const getCategoryLabel = (value: string) =>
+  [
+    ...FURNITURE_CATEGORY_OPTIONS,
+    ...FURNITURE_SPECIAL_CATEGORIES,
+    ...FURNITURE_LEGACY_CATEGORIES,
+  ].find(([option]) => option === value)?.[1] ?? value;
+
+type FormErrors = Partial<
+  Record<"name" | "price" | "length" | "width" | "pattern", string>
+>;
+
+function StatusPill({ status }: { status?: AssetStatus | null }) {
+  const unavailable = status === "not_available";
+  const Icon = unavailable ? EyeOff : CheckCircle2;
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${
+        unavailable
+          ? "border-amber-300 bg-amber-50 text-amber-900"
+          : "border-emerald-300 bg-emerald-50 text-emerald-800"
+      }`}
+    >
+      <Icon size={12} aria-hidden="true" />
+      {unavailable ? "Not available" : "Available"}
+    </span>
+  );
+}
+
+function FormSection({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="space-y-4 border-b border-border py-6 last:border-b-0">
+      <div>
+        <h4 className="text-sm font-semibold">{title}</h4>
+        {description && (
+          <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+        )}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function Field({
+  id,
+  label,
+  hint,
+  error,
+  children,
+}: {
+  id: string;
+  label: string;
+  hint?: string;
+  error?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="min-w-0 space-y-2">
+      <label htmlFor={id} className="block text-sm font-medium">
+        {label}
+      </label>
+      {children}
+      {error ? (
+        <p id={`${id}-message`} role="alert" className="text-xs text-destructive">
+          {error}
+        </p>
+      ) : hint ? (
+        <p id={`${id}-message`} className="text-xs text-muted-foreground">
+          {hint}
+        </p>
+      ) : null}
+    </div>
+  );
+}
 
 export default function AssetLibrary({
   type,
@@ -135,12 +264,14 @@ export default function AssetLibrary({
     useState<FloorDimensionUnit>("cm");
   const [editFloorPattern, setEditFloorPattern] =
     useState<FloorPattern>("stack-bond");
+  const [editShareWithWalls, setEditShareWithWalls] = useState(false);
 
   const [editStatus, setEditStatus] =
     useState<AssetStatus>("available");
 
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [showErrors, setShowErrors] = useState(false);
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -152,13 +283,12 @@ export default function AssetLibrary({
   const assetsPerPage = 20;
 
   const selectedPreviewAsset = useMemo(() => {
-    if (
-      !selectedAsset ||
-      selectedAsset.asset_type !== "floor" ||
-      selectedAsset.floorMaterialMode !== "single-tile"
-    ) {
-      return selectedAsset;
-    }
+    if (!selectedAsset) return null;
+
+    const hasPhysicalTexture =
+      selectedAsset.asset_type === "floor" ||
+      selectedAsset.floorMaterialMode === "single-tile";
+    if (!hasPhysicalTexture) return selectedAsset;
 
     const enteredLength = Number(editLength);
     const enteredWidth = Number(editWidth);
@@ -332,7 +462,7 @@ export default function AssetLibrary({
       if (!current.trim()) return current;
       const numeric = Number(current);
       return Number.isFinite(numeric)
-        ? String(numeric * factor)
+        ? String(Number((numeric * factor).toFixed(6)))
         : current;
     };
 
@@ -345,9 +475,9 @@ export default function AssetLibrary({
   // SELECT AND EDIT ASSET
   //==================================================
 
-  const handleSelectAsset = (asset: Asset) => {
-    setSelectedAsset(asset);
+  const resetForm = (asset: Asset) => {
     setSaveError(null);
+    setShowErrors(false);
 
     setEditName(asset.name);
     setEditCategory(asset.category);
@@ -366,78 +496,45 @@ export default function AssetLibrary({
     );
 
     setEditStatus(asset.asset_status ?? "available");
+    setEditShareWithWalls(asset.shareWithWalls === true);
+  };
+
+  const handleSelectAsset = (asset: Asset) => {
+    setSelectedAsset(asset);
+    setDeleteError(null);
+    resetForm(asset);
     setDetailPage(1);
   };
 
-  const handleNext = () => {
+  const openEditor = () => {
     if (!selectedAsset) return;
 
-    setSaveError(null);
-    setEditName(selectedAsset.name);
-    setEditCategory(selectedAsset.category);
-    setEditPrice(getPriceInputValue(selectedAsset));
-
-    setEditLength(metersToCentimetersInput(selectedAsset.length));
-
-    setEditWidth(metersToCentimetersInput(selectedAsset.width));
-    setEditFloorDimensionUnit("cm");
-    setEditFloorPattern(
-      isFloorPattern(selectedAsset.floorPattern)
-        ? selectedAsset.floorPattern
-        : "stack-bond"
-    );
-
-    setEditStatus(
-      selectedAsset.asset_status ?? "available"
-    );
-
+    setCreateNotice("");
+    resetForm(selectedAsset);
     setDetailPage(2);
   };
 
-  const handleDiscard = () => {
-    if (!selectedAsset) return;
-
-    setSaveError(null);
-    setEditName(selectedAsset.name);
-    setEditCategory(selectedAsset.category);
-    setEditPrice(getPriceInputValue(selectedAsset));
-
-    setEditLength(metersToCentimetersInput(selectedAsset.length));
-
-    setEditWidth(metersToCentimetersInput(selectedAsset.width));
-    setEditFloorDimensionUnit("cm");
-    setEditFloorPattern(
-      isFloorPattern(selectedAsset.floorPattern)
-        ? selectedAsset.floorPattern
-        : "stack-bond"
-    );
-
-    setEditStatus(
-      selectedAsset.asset_status ?? "available"
-    );
-
-    setDetailPage(1);
-  };
-
   //==================================================
-  // SAVE ASSET
+  // FORM STATE
   //==================================================
 
-  const handleSave = async () => {
-    if (!selectedAsset || !canManageAssets) return;
+  const hasPhysicalTexture =
+    selectedAsset?.asset_type === "floor" ||
+    selectedAsset?.floorMaterialMode === "single-tile";
 
-    const trimmedName = editName.trim();
+  const optionalPrice =
+    selectedAsset?.asset_type === "furniture" &&
+    isOptionalFurniturePrice(editCategory);
+
+  const getFormErrors = (): FormErrors => {
+    const errors: FormErrors = {};
+    if (!selectedAsset) return errors;
+
     const numericPrice = Number(editPrice);
     const hasPrice = editPrice.trim() !== "";
-    const optionalPrice =
-      selectedAsset.asset_type === "furniture" &&
-      isOptionalFurniturePrice(editCategory);
 
-    setSaveError(null);
-
-    if (!trimmedName) {
-      setSaveError("Asset name is required.");
-      return;
+    if (!editName.trim()) {
+      errors.name = "Asset name is required.";
     }
 
     if (
@@ -445,23 +542,14 @@ export default function AssetLibrary({
       (hasPrice &&
         (!Number.isFinite(numericPrice) || numericPrice < 0))
     ) {
-      setSaveError(
+      errors.price =
         selectedAsset.asset_type === "floor"
           ? "Enter a valid price per tile that is 0 or greater."
-          : "Price must be a valid number that is 0 or greater."
-      );
-      return;
+          : "Price must be a valid number that is 0 or greater.";
     }
 
-    // Dimensions are required only for floor assets.
-    let floorDimensions:
-      | {
-          length: number;
-          width: number;
-        }
-      | undefined;
-
-    if (selectedAsset.asset_type === "floor") {
+    // Dimensions are required for floors and patterned wall textures.
+    if (hasPhysicalTexture) {
       const numericLength = Number(editLength);
       const numericWidth = Number(editWidth);
 
@@ -470,10 +558,7 @@ export default function AssetLibrary({
         !Number.isFinite(numericLength) ||
         numericLength <= 0
       ) {
-        setSaveError(
-          `Floor length must be greater than 0 ${editFloorDimensionUnit}.`
-        );
-        return;
+        errors.length = `Material length must be greater than 0 ${editFloorDimensionUnit}.`;
       }
 
       if (
@@ -481,13 +566,12 @@ export default function AssetLibrary({
         !Number.isFinite(numericWidth) ||
         numericWidth <= 0
       ) {
-        setSaveError(
-          `Floor width must be greater than 0 ${editFloorDimensionUnit}.`
-        );
-        return;
+        errors.width = `Material width must be greater than 0 ${editFloorDimensionUnit}.`;
       }
 
       if (
+        !errors.length &&
+        !errors.width &&
         selectedAsset.floorMaterialMode === "single-tile" &&
         editFloorPattern === "herringbone" &&
         !isHerringboneTileRatio(
@@ -503,23 +587,118 @@ export default function AssetLibrary({
           )
         )
       ) {
-        setSaveError("Herringbone requires tile length to be twice the tile width.");
-        return;
+        errors.pattern = "Herringbone requires material length to be twice its width.";
       }
-
-      floorDimensions = {
-        length: resolveMeterDimension(
-          numericLength,
-          selectedAsset.length,
-          editFloorDimensionUnit
-        ),
-        width: resolveMeterDimension(
-          numericWidth,
-          selectedAsset.width,
-          editFloorDimensionUnit
-        ),
-      };
     }
+
+    return errors;
+  };
+
+  const formErrors = getFormErrors();
+  const hasFormErrors = Object.keys(formErrors).length > 0;
+  const visibleErrors: FormErrors = showErrors ? formErrors : {};
+
+  // Compare sizes in meters so switching cm/mm is not counted as a change.
+  const isSameSize = (entered: string, saved?: number | null) => {
+    const initial = metersToCentimetersInput(saved);
+    if (!initial || !entered.trim()) return initial === entered.trim();
+
+    return (
+      Math.abs(
+        floorDimensionToMeters(Number(entered), editFloorDimensionUnit) -
+          floorDimensionToMeters(Number(initial), "cm")
+      ) < 1e-9
+    );
+  };
+
+  const isDirty =
+    selectedAsset !== null &&
+    (editName !== selectedAsset.name ||
+      editCategory !== selectedAsset.category ||
+      editPrice !== getPriceInputValue(selectedAsset) ||
+      editStatus !== (selectedAsset.asset_status ?? "available") ||
+      (selectedAsset.asset_type === "floor" &&
+        editShareWithWalls !== (selectedAsset.shareWithWalls === true)) ||
+      (hasPhysicalTexture &&
+        (!isSameSize(editLength, selectedAsset.length) ||
+          !isSameSize(editWidth, selectedAsset.width))) ||
+      (selectedAsset.floorMaterialMode === "single-tile" &&
+        editFloorPattern !==
+          (isFloorPattern(selectedAsset.floorPattern)
+            ? selectedAsset.floorPattern
+            : "stack-bond")));
+
+  const closeEditor = () => {
+    if (!selectedAsset || saving) return;
+    if (
+      canManageAssets &&
+      isDirty &&
+      !window.confirm("Discard your unsaved changes?")
+    ) {
+      return;
+    }
+
+    resetForm(selectedAsset);
+    setDetailPage(1);
+  };
+
+  const handleSubmit = (event: FormEvent) => {
+    event.preventDefault();
+    if (!canManageAssets || saving || !isDirty) return;
+
+    setSaveError(null);
+
+    if (hasFormErrors) {
+      setShowErrors(true);
+
+      // Jump to the first field that needs attention.
+      const fieldIds: Record<keyof FormErrors, string> = {
+        name: "edit-asset-name",
+        price: "edit-asset-price",
+        length: "edit-floor-length",
+        width: "edit-floor-width",
+        pattern: "edit-floor-pattern",
+      };
+      const firstError = Object.keys(formErrors)[0] as keyof FormErrors;
+      document.getElementById(fieldIds[firstError])?.focus();
+      return;
+    }
+
+    setConfirmOpen(true);
+  };
+
+  //==================================================
+  // SAVE ASSET
+  //==================================================
+
+  const handleSave = async () => {
+    if (!selectedAsset || !canManageAssets) return;
+
+    const trimmedName = editName.trim();
+    const numericPrice = Number(editPrice);
+    const hasPrice = editPrice.trim() !== "";
+
+    setSaveError(null);
+
+    if (hasFormErrors) {
+      setShowErrors(true);
+      return;
+    }
+
+    const floorDimensions = hasPhysicalTexture
+      ? {
+          length: resolveMeterDimension(
+            Number(editLength),
+            selectedAsset.length,
+            editFloorDimensionUnit
+          ),
+          width: resolveMeterDimension(
+            Number(editWidth),
+            selectedAsset.width,
+            editFloorDimensionUnit
+          ),
+        }
+      : undefined;
 
     try {
       setSaving(true);
@@ -528,6 +707,9 @@ export default function AssetLibrary({
         asset_type: selectedAsset.asset_type,
         name: trimmedName,
         category: editCategory,
+        ...(selectedAsset.asset_type === "floor"
+          ? { shareWithWalls: editShareWithWalls }
+          : {}),
         ...(selectedAsset.asset_type === "floor"
           ? { pricePerPiece: numericPrice }
           : {
@@ -538,13 +720,24 @@ export default function AssetLibrary({
             }),
         asset_status: editStatus,
         ...(floorDimensions ?? {}),
-        ...(selectedAsset.asset_type === "floor" &&
-        selectedAsset.floorMaterialMode === "single-tile"
+        ...(selectedAsset.floorMaterialMode === "single-tile"
           ? { floorPattern: editFloorPattern }
           : {}),
       });
 
       let cacheWarning = false;
+      if (
+        selectedAsset.asset_type === "floor" &&
+        selectedAsset.shareWithWalls !== editShareWithWalls
+      ) {
+        try {
+          await refreshWallMaterials();
+        } catch (error) {
+          console.error("Failed to refresh shared wall materials:", error);
+          cacheWarning = true;
+        }
+      }
+
       if (
         selectedAsset.asset_status !== editStatus &&
         editStatus !== "available"
@@ -563,6 +756,9 @@ export default function AssetLibrary({
         category: editCategory,
         asset_status: editStatus,
         ...(selectedAsset.asset_type === "floor"
+          ? { shareWithWalls: editShareWithWalls }
+          : {}),
+        ...(selectedAsset.asset_type === "floor"
           ? { pricePerPiece: numericPrice }
           : {
               price:
@@ -571,8 +767,7 @@ export default function AssetLibrary({
                   : numericPrice,
             }),
         ...(floorDimensions ?? {}),
-        ...(selectedAsset.asset_type === "floor" &&
-        selectedAsset.floorMaterialMode === "single-tile"
+        ...(selectedAsset.floorMaterialMode === "single-tile"
           ? { floorPattern: editFloorPattern }
           : {}),
       };
@@ -588,10 +783,10 @@ export default function AssetLibrary({
       );
 
       setDetailPage(1);
-      setSaveError(
+      setCreateNotice(
         cacheWarning
           ? "Changes were saved, but this browser could not clear the cached asset preview."
-          : ""
+          : `Changes to ${trimmedName} were saved.`
       );
     } catch (err) {
       console.error("Failed to update asset:", err);
@@ -656,52 +851,52 @@ export default function AssetLibrary({
   return (
     <div className="flex h-[calc(100vh-8rem)] flex-col rounded-lg border border-border bg-background">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-border p-4">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border px-6 py-4">
         <div>
-          <h2 className="text-sm font-semibold">
+          <h2 className="text-lg font-semibold">
             {getTitle(type)}
           </h2>
 
-          <p className="text-xs text-muted-foreground">
-            Manage {getTitle(type).toLowerCase()}
+          <p className="text-sm text-muted-foreground">
+            {loading
+              ? "Loading..."
+              : `${assets.length} ${assets.length === 1 ? "asset" : "assets"} in this library`}
           </p>
-
-          {createNotice && (
-            <p
-              role="status"
-              className="mt-1 text-xs text-muted-foreground"
-            >
-              {createNotice}
-            </p>
-          )}
         </div>
 
-        <div className="flex items-center gap-2">
-          {canManageAssets && (
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => {
-                setCreateNotice("");
-                setCreateOpen(true);
-              }}
-            >
-              <Plus />
-              Create
-            </Button>
-          )}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative">
+            <Search
+              size={16}
+              aria-hidden="true"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              aria-label={`Search ${getTitle(type).toLowerCase()}`}
+              placeholder={`Search ${getTitle(type).toLowerCase()}...`}
+              value={search}
+              onChange={(event) =>
+                handleSearch(event.target.value)
+              }
+              className="w-64 bg-background pl-9"
+            />
+          </div>
 
           <Select
             value={categoryFilter}
             onValueChange={handleCategoryChange}
           >
-            <SelectTrigger className="w-36 bg-background">
-              <SelectValue placeholder="Category" />
+            <SelectTrigger className="w-44 bg-background" aria-label="Filter by category">
+              <SelectValue placeholder="Category">
+                {categoryFilter === "all"
+                  ? "All categories"
+                  : getCategoryLabel(categoryFilter)}
+              </SelectValue>
             </SelectTrigger>
 
             <SelectContent>
               <SelectItem value="all">
-                All Categories
+                All categories
               </SelectItem>
 
               {categories.map((category) => (
@@ -709,571 +904,139 @@ export default function AssetLibrary({
                   key={category}
                   value={category}
                 >
-                  {category}
+                  {getCategoryLabel(category)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
 
-          <Input
-            placeholder={`Search ${getTitle(type).toLowerCase()}...`}
-            value={search}
-            onChange={(event) =>
-              handleSearch(event.target.value)
-            }
-            className="w-64 bg-background"
-          />
+          {canManageAssets && (
+            <Button
+              type="button"
+              onClick={() => {
+                setCreateNotice("");
+                setCreateOpen(true);
+              }}
+            >
+              <Plus />
+              Create asset
+            </Button>
+          )}
         </div>
       </div>
 
+      {createNotice && (
+        <div
+          role="status"
+          className="flex items-center gap-2 border-b border-emerald-300 bg-emerald-50 px-6 py-2 text-sm text-emerald-900"
+        >
+          <CheckCircle2 size={16} aria-hidden="true" className="shrink-0" />
+          <p className="flex-1">{createNotice}</p>
+          <button
+            type="button"
+            onClick={() => setCreateNotice("")}
+            aria-label="Dismiss message"
+            className="rounded-sm p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       {/* Main content */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Asset details panel */}
-        <div className="w-72 shrink-0 overflow-hidden p-2">
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        {/* Selected asset summary */}
+        <aside className="flex w-80 shrink-0 flex-col overflow-y-auto p-5">
           {!selectedAsset ? (
-            <div className="flex h-56 items-center justify-center rounded-2xl border border-dashed border-border text-sm text-muted-foreground">
-              Select an asset to preview
-            </div>
-          ) : detailPage === 1 ? (
-            <div className="flex h-full flex-col">
-              <div className="h-56 shrink-0 overflow-hidden rounded-2xl bg-muted">
-                {selectedAsset.asset_type === "furniture" ? (
-                  <AssetThumbnail asset={selectedAsset} staticPreview />
-                ) : (
-                  <PreviewScene asset={selectedAsset} />
-                )}
-              </div>
-
-              <div className="mt-4">
-                <h3 className="text-base font-semibold">
-                  {selectedAsset.name}
-                </h3>
-              </div>
-
-              <div className="mt-4 grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-muted-foreground">
-                    {selectedAsset.asset_type === "floor"
-                      ? selectedAsset.pricePerPiece != null
-                        ? "Price per tile"
-                        : "Legacy price (per m²)"
-                      : "Price"}
-                  </p>
-                  <p className="mt-1 text-sm font-semibold">
-                    {selectedAsset.asset_type === "floor"
-                      ? selectedAsset.pricePerPiece != null
-                        ? `₱${selectedAsset.pricePerPiece}/tile`
-                        : selectedAsset.price != null
-                          ? `₱${selectedAsset.price}/m²`
-                          : "Not set"
-                      : selectedAsset.price == null
-                        ? "Price unavailable"
-                        : `$${selectedAsset.price}`}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-xs text-muted-foreground">
-                    Category
-                  </p>
-                  <span className="mt-1 inline-flex max-w-full rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground">
-                    <span className="truncate">
-                      {selectedAsset.category}
-                    </span>
-                  </span>
-                </div>
-              </div>
-
-              <div className="mt-4 grid grid-cols-2 items-center gap-4">
-                <p className="text-xs text-muted-foreground">
-                  Status
-                </p>
-
-                <p className="text-sm">
-                  {selectedAsset.asset_status === "not_available"
-                    ? "Not Available"
-                    : "Available"}
-                </p>
-              </div>
-
-              {/* Show existing flooring dimensions, if saved */}
-              {selectedAsset.asset_type === "floor" && (
-                <div className="mt-4 grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      Length
-                    </p>
-                    <p className="mt-1 text-sm">
-                      {selectedAsset.length != null
-                        ? `${metersToCentimeters(selectedAsset.length)} cm`
-                        : "Not set"}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      Width
-                    </p>
-                    <p className="mt-1 text-sm">
-                      {selectedAsset.width != null
-                        ? `${metersToCentimeters(selectedAsset.width)} cm`
-                        : "Not set"}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {deleteError && (
-                <p className="mt-3 text-xs text-destructive" role="alert">
-                  {deleteError}
-                </p>
-              )}
-
-              <div className="mt-auto pt-4">
-                <div className="flex gap-2">
-                  {canManageAssets && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDeleteError(null);
-                        setDeleteConfirmOpen(true);
-                      }}
-                      className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-destructive/40 px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
-                    >
-                      <Trash2 size={15} />
-                      Delete
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={handleNext}
-                    className="flex-1 rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background transition-opacity hover:opacity-90"
-                  >
-                    {canManageAssets ? "Edit" : "View details"}
-                  </button>
-                </div>
-              </div>
+            <div className="flex h-64 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border px-6 text-center">
+              <Eye size={22} aria-hidden="true" className="text-muted-foreground" />
+              <p className="text-sm font-medium">No asset selected</p>
+              <p className="text-xs text-muted-foreground">
+                Choose an asset to see its preview and details.
+              </p>
             </div>
           ) : (
-            <div className="flex h-full min-h-0 flex-col">
-              <div className="mb-3 flex shrink-0 items-center justify-between">
-                <h3 className="text-base font-semibold">
-                  {canManageAssets ? "Edit Asset" : "Asset Details"}
-                </h3>
-
-                <button
-                  type="button"
-                  onClick={() => setDetailPage(1)}
-                  className="text-xs text-muted-foreground hover:text-foreground"
-                >
-                  Back
-                </button>
+            <div className="flex flex-1 flex-col gap-4">
+              <div className="h-48 shrink-0 overflow-hidden rounded-2xl bg-muted">
+                {/* Unmounted while editing so only one preview renders at a time */}
+                {detailPage === 1 &&
+                  (selectedAsset.asset_type === "furniture" ? (
+                    <AssetThumbnail asset={selectedAsset} staticPreview />
+                  ) : (
+                    <PreviewScene asset={selectedAsset} />
+                  ))}
               </div>
 
-              <fieldset
-                disabled={!canManageAssets || saving}
-                className="min-h-0 min-w-0 flex-1 overflow-y-auto border-0 p-0 pr-1"
-              >
-                <div className="mb-4">
-                  <label className="mb-2 block text-xs font-medium">
-                    Asset Preview
-                  </label>
+              <div className="space-y-2">
+                <h3 className="break-words text-xl font-semibold">
+                  {selectedAsset.name}
+                </h3>
+                <StatusPill status={selectedAsset.asset_status} />
+              </div>
 
-                  <div className="h-36 overflow-hidden rounded-xl border border-border bg-muted">
-                    {selectedAsset.asset_type === "furniture" ? (
-                      <AssetThumbnail asset={selectedAsset} staticPreview />
-                    ) : (
-                      <PreviewScene asset={selectedPreviewAsset} />
-                    )}
+              <dl className="divide-y divide-border border-y border-border text-sm">
+                {[
+                  [
+                    getPriceDisplay(selectedAsset).label,
+                    getPriceDisplay(selectedAsset).value,
+                  ],
+                  ["Category", getCategoryLabel(selectedAsset.category)],
+                  ...(hasPhysicalTexture
+                    ? [
+                        [
+                          "Length",
+                          selectedAsset.length != null
+                            ? `${metersToCentimeters(selectedAsset.length)} cm`
+                            : "Not set",
+                        ],
+                        [
+                          "Width",
+                          selectedAsset.width != null
+                            ? `${metersToCentimeters(selectedAsset.width)} cm`
+                            : "Not set",
+                        ],
+                      ]
+                    : []),
+                ].map(([label, value]) => (
+                  <div key={label} className="flex items-start justify-between gap-4 py-2.5">
+                    <dt className="text-muted-foreground">{label}</dt>
+                    <dd className="min-w-0 break-words text-right font-medium">
+                      {value}
+                    </dd>
                   </div>
-                </div>
+                ))}
+              </dl>
 
-                <div className="space-y-2">
-                  <label className="text-xs font-medium">
-                    Name
-                  </label>
+              <div className="mt-auto space-y-2">
+                <Button type="button" className="w-full" onClick={openEditor}>
+                  {canManageAssets ? <Pencil /> : <Eye />}
+                  {canManageAssets ? "Edit asset" : "View details"}
+                </Button>
 
-                  <Input
-                    value={editName}
-                    onChange={(event) =>
-                      setEditName(event.target.value)
-                    }
-                    disabled={saving}
-                  />
-                </div>
-
-                <div className="mt-4 grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium">
-                      {selectedAsset.asset_type === "floor"
-                        ? "Price per tile (₱)"
-                        : "Price"}
-                    </label>
-
-                    <Input
-                      type="number"
-                      min="0"
-                      step="any"
-                      value={editPrice}
-                      onChange={(event) =>
-                        setEditPrice(event.target.value)
-                      }
-                      disabled={saving}
-                      required={
-                        !(
-                          selectedAsset.asset_type === "furniture" &&
-                          isOptionalFurniturePrice(editCategory)
-                        )
-                      }
-                    />
-                    {selectedAsset.asset_type === "furniture" &&
-                      isOptionalFurniturePrice(editCategory) && (
-                        <p className="text-xs text-muted-foreground">
-                          Optional for Decorations and Appliances.
-                        </p>
-                      )}
-                    {selectedAsset.asset_type === "floor" &&
-                      selectedAsset.pricePerPiece == null && (
-                        <p className="text-xs text-muted-foreground">
-                          The legacy price field is treated as ₱/m². Enter the intended tile price; the legacy value will remain unchanged.
-                        </p>
-                      )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium">
-                      Status
-                    </label>
-
-                    <Select
-                      value={editStatus}
-                      onValueChange={(value) =>
-                        setEditStatus(value as AssetStatus)
-                      }
-                      disabled={saving}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-
-                      <SelectContent>
-                        <SelectItem value="available">
-                          Available
-                        </SelectItem>
-
-                        <SelectItem value="not_available">
-                          Not Available
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {editFloorPattern === "herringbone" && (
-                      <p className="text-xs text-muted-foreground">
-                        Herringbone requires tile length to be twice the tile width.
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Flooring-only dimension inputs */}
-                {selectedAsset.asset_type === "floor" && (
-                  <div className="mt-4 rounded-lg border border-border bg-muted/30 p-3">
-                    <p className="mb-1 text-xs font-medium">
-                      Flooring Dimensions *
-                    </p>
-
-                    <p className="mb-3 text-xs text-muted-foreground">
-                      Enter the physical tile length and width in centimeters or millimeters.
-                    </p>
-
-                    <div className="mb-3 max-w-36 space-y-2">
-                      <label
-                        htmlFor="edit-floor-dimension-unit"
-                        className="text-xs font-medium"
-                      >
-                        Unit
-                      </label>
-                      <Select
-                        value={editFloorDimensionUnit}
-                        onValueChange={handleFloorDimensionUnitChange}
-                        disabled={saving}
-                      >
-                        <SelectTrigger id="edit-floor-dimension-unit">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="cm">cm</SelectItem>
-                          <SelectItem value="mm">mm</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-2">
-                        <label
-                          htmlFor="edit-floor-length"
-                          className="text-xs font-medium"
-                        >
-                          Length *
-                        </label>
-
-                        <div className="flex items-center gap-2">
-                          <Input
-                            id="edit-floor-length"
-                            type="number"
-                            min="0"
-                            step="any"
-                            value={editLength}
-                            onChange={(event) =>
-                              setEditLength(event.target.value)
-                            }
-                            placeholder="Enter length"
-                            disabled={saving}
-                            required
-                          />
-                          <span className="text-sm text-muted-foreground">
-                            {editFloorDimensionUnit}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <label
-                          htmlFor="edit-floor-width"
-                          className="text-xs font-medium"
-                        >
-                          Width *
-                        </label>
-
-                        <div className="flex items-center gap-2">
-                          <Input
-                            id="edit-floor-width"
-                            type="number"
-                            min="0"
-                            step="any"
-                            value={editWidth}
-                            onChange={(event) =>
-                              setEditWidth(event.target.value)
-                            }
-                            placeholder="Enter width"
-                            disabled={saving}
-                            required
-                          />
-                          <span className="text-sm text-muted-foreground">
-                            {editFloorDimensionUnit}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {selectedAsset.floorMaterialMode === "single-tile" ? (
-                      <div className="mt-4 space-y-2">
-                        <label htmlFor="edit-floor-pattern" className="text-xs font-medium">
-                          Laying pattern
-                        </label>
-                        <Select
-                          value={editFloorPattern}
-                          onValueChange={(value) => {
-                            if (isFloorPattern(value)) setEditFloorPattern(value);
-                          }}
-                          disabled={saving}
-                        >
-                          <SelectTrigger id="edit-floor-pattern">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {FLOOR_PATTERN_DEFINITIONS.map((pattern) => (
-                              <SelectItem key={pattern.id} value={pattern.id}>
-                                {pattern.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    ) : (
-                      <p className="mt-4 text-xs text-muted-foreground">
-                        This older material keeps its existing texture-sheet rendering. Editing dimensions will not convert it to single-tile mode.
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                <div className="mt-4 grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium">
-                      Category
-                    </label>
-
-                  {selectedAsset.asset_type === "furniture" ? (
-                    <Select
-                      value={editCategory}
-                      onValueChange={(value) => {
-                        if (value !== null) setEditCategory(value);
-                      }}
-                      disabled={saving}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {![
-                          ...FURNITURE_CATEGORY_OPTIONS,
-                          ...FURNITURE_SPECIAL_CATEGORIES,
-                        ].some(([value]) => value === editCategory) && (
-                          <SelectItem value={editCategory} disabled>
-                            {FURNITURE_LEGACY_CATEGORIES.find(
-                              ([value]) => value === editCategory
-                            )?.[1] ?? editCategory}
-                          </SelectItem>
-                        )}
-                        {FURNITURE_CATEGORY_OPTIONS.map(([value, label]) => (
-                          <SelectItem key={value} value={value}>
-                            {label}
-                          </SelectItem>
-                        ))}
-                        {FURNITURE_SPECIAL_CATEGORIES.map(([value, label]) => (
-                          <SelectItem key={value} value={value}>
-                            {label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <div className="rounded-md border border-border bg-muted px-3 py-2 text-sm text-muted-foreground">
-                      {selectedAsset.category}
-                    </div>
-                  )}
-                </div>
-
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium">
-                      Asset Type
-                    </label>
-
-                    <div className="rounded-md border border-border bg-muted px-3 py-2 text-sm capitalize text-muted-foreground">
-                      {selectedAsset.asset_type}
-                    </div>
-                  </div>
-                </div>
-
-                {(selectedAsset.color ||
-                  selectedAsset.roughness != null ||
-                  selectedAsset.metalness != null) && (
-                  <div className="mt-4 rounded-lg border border-border bg-muted/30 p-3">
-                    <p className="mb-2 text-xs font-medium">
-                      Material
-                    </p>
-
-                    <div className="grid grid-cols-2 gap-3 text-xs">
-                      {selectedAsset.color && (
-                        <div>
-                          <p className="text-muted-foreground">
-                            Color
-                          </p>
-                          <p className="mt-1">
-                            {selectedAsset.color}
-                          </p>
-                        </div>
-                      )}
-
-                      {selectedAsset.roughness != null && (
-                        <div>
-                          <p className="text-muted-foreground">
-                            Roughness
-                          </p>
-                          <p className="mt-1">
-                            {selectedAsset.roughness}
-                          </p>
-                        </div>
-                      )}
-
-                      {selectedAsset.metalness != null && (
-                        <div>
-                          <p className="text-muted-foreground">
-                            Metalness
-                          </p>
-                          <p className="mt-1">
-                            {selectedAsset.metalness}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {(selectedAsset.storage_path ||
-                  selectedAsset.diffuse_path) && (
-                  <div className="mt-4 rounded-lg border border-border bg-muted/30 p-3">
-                    <p className="mb-2 text-xs font-medium">
-                      Files
-                    </p>
-
-                    <div className="space-y-2 text-xs">
-                      {selectedAsset.storage_path && (
-                        <div>
-                          <p className="text-muted-foreground">
-                            Model
-                          </p>
-                          <p className="break-all">
-                            {selectedAsset.storage_path}
-                          </p>
-                        </div>
-                      )}
-
-                      {selectedAsset.diffuse_path && (
-                        <div>
-                          <p className="text-muted-foreground">
-                            Diffuse
-                          </p>
-                          <p className="break-all">
-                            {selectedAsset.diffuse_path}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </fieldset>
-
-              {saveError && (
-                <p className="mt-3 shrink-0 text-xs text-destructive">
-                  {saveError}
-                </p>
-              )}
-
-              {canManageAssets ? (
-                <div className="mt-3 flex shrink-0 gap-2 border-t border-border pt-3">
-                  <button
+                {canManageAssets && (
+                  <Button
                     type="button"
-                    disabled={saving}
-                    onClick={handleDiscard}
-                    className="flex-1 rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-muted disabled:opacity-50"
+                    variant="ghost"
+                    className="w-full text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => {
+                      setDeleteError(null);
+                      setDeleteConfirmOpen(true);
+                    }}
                   >
-                    Discard
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={saving}
-                    onClick={() => setConfirmOpen(true)}
-                    className="flex-1 rounded-lg bg-foreground px-3 py-2 text-sm font-medium text-background hover:opacity-90 disabled:opacity-50"
-                  >
-                    Confirm
-                  </button>
-                </div>
-              ) : (
-                <p className="mt-3 shrink-0 border-t border-border pt-3 text-xs text-muted-foreground">
-                  View-only details. Only superadmins can edit assets.
-                </p>
-              )}
+                    <Trash2 />
+                    Delete asset
+                  </Button>
+                )}
+              </div>
             </div>
           )}
-        </div>
+        </aside>
 
         <Separator orientation="vertical" className="h-auto" />
 
         {/* Asset catalog */}
-        <div className="flex flex-1 flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <div className="flex-1 overflow-y-auto p-5">
             {loading ? (
               <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
                 Loading {getTitle(type).toLowerCase()}...
@@ -1287,22 +1050,37 @@ export default function AssetLibrary({
                 No {getTitle(type).toLowerCase()} found.
               </div>
             ) : (
-              <div className="grid grid-cols-5 gap-4">
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-5">
                 {paginatedAssets.map((asset) => (
                   <button
                     key={asset.id}
                     type="button"
                     onClick={() => handleSelectAsset(asset)}
-                    className={`rounded-3xl text-left transition-shadow ${
+                    aria-pressed={selectedAsset?.id === asset.id}
+                    className={`relative rounded-3xl text-left transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transform-none ${
                       selectedAsset?.id === asset.id
                         ? "ring-2 ring-offset-2 ring-[#6b8050]"
                         : ""
                     }`}
                   >
+                    {asset.asset_status === "not_available" && (
+                      <span className="absolute left-3 top-3 z-10">
+                        <StatusPill status={asset.asset_status} />
+                      </span>
+                    )}
                     <AssetCard
-                      preview={<AssetThumbnail asset={asset} staticPreview />}
+                      preview={
+                        <AssetThumbnail
+                          asset={asset}
+                          staticPreview
+                          cardPreview={
+                            asset.asset_type === "floor" ||
+                            asset.asset_type === "wall"
+                          }
+                        />
+                      }
                       title={asset.name}
-                      categories={[asset.category]}
+                      categories={[getCategoryLabel(asset.category)]}
                       className="max-w-none"
                     />
                   </button>
@@ -1376,41 +1154,416 @@ export default function AssetLibrary({
         </div>
       </div>
 
-      {/* Confirm save dialog */}
-      <AlertDialog
-        open={confirmOpen}
-        onOpenChange={setConfirmOpen}
+      {/* Edit asset dialog */}
+      <Dialog
+        open={detailPage === 2 && selectedAsset !== null}
+        onOpenChange={(open) => {
+          if (!open) closeEditor();
+        }}
       >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              Save changes?
-            </AlertDialogTitle>
+        <DialogContent className="flex h-[90vh] max-h-[760px] w-[95vw] max-w-5xl flex-col gap-0 overflow-hidden p-0 sm:max-w-5xl">
+          {selectedAsset && (
+            <>
+              <header className="shrink-0 border-b border-border px-6 py-4 pr-14">
+                <DialogTitle className="text-lg font-semibold">
+                  {canManageAssets ? "Edit asset" : "Asset details"}
+                </DialogTitle>
+                <DialogDescription className="mt-1 truncate text-sm text-muted-foreground">
+                  {getTitle(selectedAsset.asset_type)} · {selectedAsset.name}
+                </DialogDescription>
+              </header>
 
-            <AlertDialogDescription>
-              Are you sure you want to save these changes to{" "}
-              <strong>{selectedAsset?.name}</strong>?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+              <form
+                noValidate
+                onSubmit={handleSubmit}
+                className="flex min-h-0 flex-1 flex-col"
+              >
+                <div className="flex min-h-0 flex-1 flex-col overflow-y-auto md:grid md:grid-cols-[5fr_6fr] md:grid-rows-1 md:overflow-hidden">
+                  {/* Preview */}
+                  <div className="flex shrink-0 flex-col gap-3 border-b border-border bg-muted/30 p-6 md:min-h-0 md:border-b-0 md:border-r">
+                    <p className="text-sm font-medium">Preview</p>
+                    <div className="h-64 overflow-hidden rounded-2xl border border-border bg-muted md:h-auto md:min-h-0 md:flex-1">
+                      {selectedAsset.asset_type === "furniture" ? (
+                        <AssetThumbnail asset={selectedAsset} staticPreview />
+                      ) : (
+                        <PreviewScene asset={selectedPreviewAsset} />
+                      )}
+                    </div>
+                    {hasPhysicalTexture && (
+                      <p className="text-xs text-muted-foreground">
+                        The preview updates as you change the size or pattern.
+                      </p>
+                    )}
+                  </div>
 
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={saving}>
-              Cancel
-            </AlertDialogCancel>
+                  {/* Fields */}
+                  <fieldset
+                    disabled={!canManageAssets || saving}
+                    className="min-w-0 border-0 px-6 py-0 md:min-h-0 md:overflow-y-auto"
+                  >
+                    <FormSection title="Basic details">
+                      <Field id="edit-asset-name" label="Name" error={visibleErrors.name}>
+                        <Input
+                          id="edit-asset-name"
+                          value={editName}
+                          onChange={(event) =>
+                            setEditName(event.target.value)
+                          }
+                          disabled={!canManageAssets || saving}
+                          aria-invalid={Boolean(visibleErrors.name)}
+                          aria-describedby="edit-asset-name-message"
+                          className="h-10"
+                        />
+                      </Field>
 
-            <AlertDialogAction
-              disabled={saving}
-              onClick={async (event) => {
-                event.preventDefault();
-                setConfirmOpen(false);
-                await handleSave();
-              }}
-            >
-              {saving ? "Saving..." : "Yes, Save Changes"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+                      {selectedAsset.asset_type === "furniture" ? (
+                        <Field id="edit-asset-category" label="Category">
+                          <Select
+                            value={editCategory}
+                            onValueChange={(value) => {
+                              if (value !== null) setEditCategory(value);
+                            }}
+                            disabled={!canManageAssets || saving}
+                          >
+                            <SelectTrigger id="edit-asset-category" className="w-full">
+                              <SelectValue>{getCategoryLabel(editCategory)}</SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              {![
+                                ...FURNITURE_CATEGORY_OPTIONS,
+                                ...FURNITURE_SPECIAL_CATEGORIES,
+                              ].some(([value]) => value === editCategory) && (
+                                <SelectItem value={editCategory} disabled>
+                                  {getCategoryLabel(editCategory)}
+                                </SelectItem>
+                              )}
+                              {FURNITURE_CATEGORY_OPTIONS.map(([value, label]) => (
+                                <SelectItem key={value} value={value}>
+                                  {label}
+                                </SelectItem>
+                              ))}
+                              {FURNITURE_SPECIAL_CATEGORIES.map(([value, label]) => (
+                                <SelectItem key={value} value={value}>
+                                  {label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </Field>
+                      ) : (
+                        <dl className="text-sm">
+                          <dt className="font-medium">Category</dt>
+                          <dd className="mt-1 text-muted-foreground">
+                            {selectedAsset.category} (can't be changed)
+                          </dd>
+                        </dl>
+                      )}
+                    </FormSection>
+
+                    <FormSection title="Pricing">
+                      <Field
+                        id="edit-asset-price"
+                        label={
+                          selectedAsset.asset_type === "floor"
+                            ? "Price per tile"
+                            : "Price"
+                        }
+                        error={visibleErrors.price}
+                        hint={
+                          optionalPrice
+                            ? "Optional for Decorations and Appliances."
+                            : selectedAsset.asset_type === "floor" &&
+                                selectedAsset.pricePerPiece == null
+                              ? "The legacy price field is treated as ₱/m². Enter the intended tile price; the legacy value will remain unchanged."
+                              : undefined
+                        }
+                      >
+                        <div className="relative">
+                          <span
+                            aria-hidden="true"
+                            className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground"
+                          >
+                            ₱
+                          </span>
+                          <Input
+                            id="edit-asset-price"
+                            type="number"
+                            inputMode="decimal"
+                            min="0"
+                            step="any"
+                            value={editPrice}
+                            onChange={(event) =>
+                              setEditPrice(event.target.value)
+                            }
+                            disabled={!canManageAssets || saving}
+                            required={!optionalPrice}
+                            aria-invalid={Boolean(visibleErrors.price)}
+                            aria-describedby="edit-asset-price-message"
+                            placeholder="0.00"
+                            className="h-10 pl-8"
+                          />
+                        </div>
+                      </Field>
+                    </FormSection>
+
+                    {hasPhysicalTexture && (
+                      <FormSection
+                        title="Material size"
+                        description="The physical length and width of one tile or panel."
+                      >
+                        <div
+                          role="group"
+                          aria-label="Unit"
+                          className="inline-flex rounded-lg border border-border bg-muted/40 p-1"
+                        >
+                          {(["cm", "mm"] as const).map((unit) => (
+                            <button
+                              key={unit}
+                              type="button"
+                              aria-pressed={editFloorDimensionUnit === unit}
+                              onClick={() => handleFloorDimensionUnitChange(unit)}
+                              className={`rounded-md px-4 py-1.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                                editFloorDimensionUnit === unit
+                                  ? "bg-background font-medium shadow-sm"
+                                  : "text-muted-foreground hover:text-foreground"
+                              }`}
+                            >
+                              {unit}
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
+                          <Field
+                            id="edit-floor-length"
+                            label={`Length (${editFloorDimensionUnit})`}
+                            error={visibleErrors.length}
+                          >
+                            <Input
+                              id="edit-floor-length"
+                              type="number"
+                              inputMode="decimal"
+                              min="0"
+                              step="any"
+                              value={editLength}
+                              onChange={(event) =>
+                                setEditLength(event.target.value)
+                              }
+                              placeholder="Enter length"
+                              disabled={!canManageAssets || saving}
+                              required
+                              aria-invalid={Boolean(visibleErrors.length)}
+                              aria-describedby="edit-floor-length-message"
+                              className="h-10"
+                            />
+                          </Field>
+
+                          <Field
+                            id="edit-floor-width"
+                            label={`Width (${editFloorDimensionUnit})`}
+                            error={visibleErrors.width}
+                          >
+                            <Input
+                              id="edit-floor-width"
+                              type="number"
+                              inputMode="decimal"
+                              min="0"
+                              step="any"
+                              value={editWidth}
+                              onChange={(event) =>
+                                setEditWidth(event.target.value)
+                              }
+                              placeholder="Enter width"
+                              disabled={!canManageAssets || saving}
+                              required
+                              aria-invalid={Boolean(visibleErrors.width)}
+                              aria-describedby="edit-floor-width-message"
+                              className="h-10"
+                            />
+                          </Field>
+                        </div>
+
+                        {selectedAsset.floorMaterialMode === "single-tile" ? (
+                          <Field
+                            id="edit-floor-pattern"
+                            label="Pattern"
+                            error={visibleErrors.pattern}
+                            hint={
+                              editFloorPattern === "herringbone"
+                                ? "Herringbone requires material length to be twice its width."
+                                : undefined
+                            }
+                          >
+                            <Select
+                              value={editFloorPattern}
+                              onValueChange={(value) => {
+                                if (isFloorPattern(value)) setEditFloorPattern(value);
+                              }}
+                              disabled={!canManageAssets || saving}
+                            >
+                              <SelectTrigger id="edit-floor-pattern" className="w-full">
+                                <SelectValue>
+                                  {FLOOR_PATTERN_DEFINITIONS.find(
+                                    (pattern) => pattern.id === editFloorPattern
+                                  )?.label ?? editFloorPattern}
+                                </SelectValue>
+                              </SelectTrigger>
+                              <SelectContent>
+                                {FLOOR_PATTERN_DEFINITIONS.map((pattern) => (
+                                  <SelectItem key={pattern.id} value={pattern.id}>
+                                    {pattern.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </Field>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">
+                            This older material keeps its existing texture-sheet rendering. Editing dimensions will not convert it to single-tile mode.
+                          </p>
+                        )}
+                      </FormSection>
+                    )}
+
+                    <FormSection title="Availability">
+                      <div className="flex items-center justify-between gap-4 rounded-lg border border-border p-4">
+                        <div>
+                          <p className="text-sm font-medium">
+                            {editStatus === "available" ? "Available" : "Not available"}
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {editStatus === "available"
+                              ? "This asset is turned on for use."
+                              : "This asset is turned off."}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-label="Asset availability"
+                          aria-checked={editStatus === "available"}
+                          onClick={() =>
+                            setEditStatus((current) =>
+                              current === "available"
+                                ? "not_available"
+                                : "available"
+                            )
+                          }
+                          className={`relative h-6 w-11 shrink-0 rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+                            editStatus === "available"
+                              ? "bg-emerald-600"
+                              : "bg-gray-500"
+                          }`}
+                        >
+                          <span
+                            className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200 ${
+                              editStatus === "available"
+                                ? "translate-x-5"
+                                : "translate-x-0"
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      {selectedAsset.asset_type === "floor" && (
+                        <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-4 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={editShareWithWalls}
+                            onChange={(event) =>
+                              setEditShareWithWalls(event.target.checked)
+                            }
+                            className="mt-0.5 size-4 accent-primary"
+                          />
+                          <span>
+                            <span className="font-medium">Share with walls</span>
+                            <span className="mt-1 block text-xs text-muted-foreground">
+                              Make this same floor asset available as a wall texture.
+                            </span>
+                          </span>
+                        </label>
+                      )}
+                    </FormSection>
+                  </fieldset>
+                </div>
+
+                <footer className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-border px-6 py-4">
+                  <p
+                    aria-live="polite"
+                    className={`text-sm ${
+                      saveError || (showErrors && hasFormErrors)
+                        ? "text-destructive"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    {!canManageAssets
+                      ? "View only. Only superadmins can edit assets."
+                      : saveError
+                        ? saveError
+                        : showErrors && hasFormErrors
+                          ? "Fix the highlighted fields to continue."
+                          : isDirty
+                            ? "You have unsaved changes."
+                            : "No changes yet."}
+                  </p>
+
+                  <div className="ml-auto flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={saving}
+                      onClick={closeEditor}
+                    >
+                      {canManageAssets && isDirty ? "Discard changes" : "Close"}
+                    </Button>
+                    {canManageAssets && (
+                      <Button type="submit" disabled={saving || !isDirty}>
+                        {saving ? "Saving..." : "Save changes"}
+                      </Button>
+                    )}
+                  </div>
+                </footer>
+              </form>
+            </>
+          )}
+
+          {/* Confirm save dialog (nested so it stacks above the editor) */}
+          <AlertDialog
+            open={confirmOpen}
+            onOpenChange={setConfirmOpen}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  Save changes?
+                </AlertDialogTitle>
+
+                <AlertDialogDescription>
+                  Are you sure you want to save these changes to{" "}
+                  <strong>{selectedAsset?.name}</strong>?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={saving}>
+                  Cancel
+                </AlertDialogCancel>
+
+                <AlertDialogAction
+                  disabled={saving}
+                  onClick={async (event) => {
+                    event.preventDefault();
+                    setConfirmOpen(false);
+                    await handleSave();
+                  }}
+                >
+                  {saving ? "Saving..." : "Yes, save changes"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog
         open={deleteConfirmOpen}
@@ -1427,6 +1580,12 @@ export default function AssetLibrary({
               the deleted asset when they are loaded.
             </AlertDialogDescription>
           </AlertDialogHeader>
+
+          {deleteError && (
+            <p role="alert" className="text-sm text-destructive">
+              {deleteError}
+            </p>
+          )}
 
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>
@@ -1453,6 +1612,18 @@ export default function AssetLibrary({
           onOpenChange={setCreateOpen}
           onCreated={(createdAsset) => {
             setCreateOpen(false);
+
+            if (
+              createdAsset.asset_type === "floor" &&
+              createdAsset.shareWithWalls === true
+            ) {
+              void refreshWallMaterials().catch((error: unknown) => {
+                console.error("Failed to refresh newly shared wall materials:", error);
+                setCreateNotice(
+                  `${createdAsset.name} was created, but the wall texture list could not be refreshed.`
+                );
+              });
+            }
 
             if (createdAsset.asset_type === type) {
               setAssets((current) => [

@@ -8,6 +8,15 @@ import {
     getWallMaterials,
     preloadWallTexture
 } from "../../engine/materials/walls";
+import {
+    getCachedFloorPatternTexture,
+    preloadFloorPatternTexture
+} from "../../engine/materials/floors";
+import {
+    createFloorPatternLayout,
+    getFloorPatternCellSize,
+    isFloorPattern
+} from "../../../../shared/flooring/patterns";
 import type { WallFinishSide } from "../../engine/walls/WallFinishUtils";
 
 interface Props {
@@ -48,52 +57,127 @@ export default function WallFinishSurface({ piece, finish }: Props) {
         };
     }, [finish.materialId]);
 
-    const textureUrl = material?.texture;
+    const activeMaterial = material?.id === finish.materialId
+        ? material
+        : null;
+    const textureUrl = activeMaterial?.texture;
     const cachedTexture = textureUrl
         ? getCachedWallTexture(textureUrl)
         : undefined;
-
-    const cachedSurfaceTexture = useMemo(() => {
-        if (!cachedTexture) {
+    const patternCellSize = useMemo(() => {
+        if (
+            activeMaterial?.floorMaterialMode !== "single-tile" ||
+            !isFloorPattern(activeMaterial.floorPattern) ||
+            typeof activeMaterial.length !== "number" ||
+            !Number.isFinite(activeMaterial.length) ||
+            activeMaterial.length <= 0 ||
+            typeof activeMaterial.width !== "number" ||
+            !Number.isFinite(activeMaterial.width) ||
+            activeMaterial.width <= 0
+        ) {
             return null;
         }
 
-        const texture = cachedTexture.clone();
+        return getFloorPatternCellSize(
+            createFloorPatternLayout(
+                activeMaterial.floorPattern,
+                activeMaterial.length,
+                activeMaterial.width
+            )
+        );
+    }, [activeMaterial]);
+    const cachedPatternTexture =
+        textureUrl && patternCellSize && activeMaterial
+            ? getCachedFloorPatternTexture(textureUrl, activeMaterial)
+            : undefined;
+
+    const cachedSurfaceTexture = useMemo(() => {
+        if (!textureUrl) {
+            return null;
+        }
+
+        const source = cachedPatternTexture ?? (
+            patternCellSize ? undefined : cachedTexture
+        );
+        if (!source) {
+            return null;
+        }
+
+        const texture = source.clone();
         texture.wrapS = RepeatWrapping;
         texture.wrapT = RepeatWrapping;
-        texture.repeat.set(
-            Math.max(1, piece.width),
-            Math.max(1, piece.height)
-        );
+        if (patternCellSize) {
+            texture.repeat.set(
+                piece.width / patternCellSize.widthM,
+                piece.height / patternCellSize.heightM
+            );
+        } else {
+            texture.repeat.set(
+                Math.max(1, piece.width),
+                Math.max(1, piece.height)
+            );
+        }
         texture.needsUpdate = true;
         return texture;
-    }, [cachedTexture, piece.width, piece.height]);
+    }, [
+        textureUrl,
+        cachedPatternTexture,
+        cachedTexture,
+        patternCellSize,
+        piece.width,
+        piece.height
+    ]);
 
     useEffect(() => {
         return () => cachedSurfaceTexture?.dispose();
     }, [cachedSurfaceTexture]);
 
     useEffect(() => {
-        if (!textureUrl || cachedTexture) {
+        if (!textureUrl || cachedSurfaceTexture) {
             return;
         }
 
         let cancelled = false;
         let surfaceTexture: Texture | null = null;
 
-        void preloadWallTexture(textureUrl)
-            .then(sourceTexture => {
+        const texturePromise = patternCellSize && activeMaterial
+            ? preloadFloorPatternTexture(textureUrl, activeMaterial)
+            : preloadWallTexture(textureUrl);
+        void texturePromise
+            .then(async sourceTexture => {
                 if (cancelled) {
                     return;
                 }
 
-                surfaceTexture = sourceTexture.clone();
+                const patternGenerated = Boolean(sourceTexture && patternCellSize);
+                const source = sourceTexture ??
+                    await preloadWallTexture(textureUrl);
+                if (cancelled) {
+                    return;
+                }
+                surfaceTexture = source.clone();
                 surfaceTexture.wrapS = RepeatWrapping;
                 surfaceTexture.wrapT = RepeatWrapping;
-                surfaceTexture.repeat.set(
-                    Math.max(1, piece.width),
-                    Math.max(1, piece.height)
-                );
+                if (patternGenerated && patternCellSize) {
+                    surfaceTexture.repeat.set(
+                        piece.width / patternCellSize.widthM,
+                        piece.height / patternCellSize.heightM
+                    );
+                } else if (
+                    patternCellSize &&
+                    activeMaterial?.length &&
+                    activeMaterial.width
+                ) {
+                    surfaceTexture.repeat.set(
+                        piece.width / activeMaterial.length,
+                        piece.height / activeMaterial.width
+                    );
+                } else {
+                    surfaceTexture.repeat.set(
+                        Math.max(1, piece.width),
+                        Math.max(1, piece.height)
+                    );
+                }
                 surfaceTexture.needsUpdate = true;
                 setLoadedTexture({
                     url: textureUrl,
@@ -108,7 +192,14 @@ export default function WallFinishSurface({ piece, finish }: Props) {
             cancelled = true;
             surfaceTexture?.dispose();
         };
-    }, [textureUrl, cachedTexture, piece.width, piece.height]);
+    }, [
+        textureUrl,
+        cachedSurfaceTexture,
+        activeMaterial,
+        patternCellSize,
+        piece.width,
+        piece.height
+    ]);
 
     const texture = cachedSurfaceTexture ?? (
         loadedTexture && loadedTexture.url === textureUrl
@@ -156,14 +247,15 @@ export default function WallFinishSurface({ piece, finish }: Props) {
     const finishMaterial = useMemo(() => {
         return new MeshStandardMaterial({
             ...(texture ? { map: texture } : {}),
-            color: material?.color ?? "#FFFFFF",
-            roughness: material?.roughness ?? 0.92,
-            metalness: material?.metalness ?? 0,
+            color: activeMaterial?.color ?? "#FFFFFF",
+            roughness: activeMaterial?.roughness ?? 0.92,
+            metalness: activeMaterial?.metalness ?? 0,
+            visible: !activeMaterial?.texture || Boolean(texture),
             polygonOffset: true,
             polygonOffsetFactor: -1,
             polygonOffsetUnits: -1
         });
-    }, [material, texture]);
+    }, [activeMaterial, texture]);
 
     useEffect(() => {
         return () => {
@@ -171,7 +263,7 @@ export default function WallFinishSurface({ piece, finish }: Props) {
         };
     }, [finishMaterial]);
 
-    if (!material) {
+    if (!activeMaterial) {
         return null;
     }
 

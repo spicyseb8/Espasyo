@@ -33,15 +33,21 @@ export default function MaterialCard({
     favoriteType
 }: Props) {
 
-    const [
-        imageFailed,
-        setImageFailed
-    ] = useState(false);
-
-    const showImage =
-        Boolean(material.thumbnail || material.texture) &&
-        !imageFailed;
     const imageSource = material.thumbnail || material.texture;
+    const [imageResult, setImageResult] = useState<{
+        source: string;
+        status: "loaded" | "failed";
+    } | null>(null);
+    const imageLoaded =
+        imageSource !== undefined &&
+        imageResult?.source === imageSource &&
+        imageResult.status === "loaded";
+    const imageFailed =
+        imageSource !== undefined &&
+        imageResult?.source === imageSource &&
+        imageResult.status === "failed";
+    const showImage = Boolean(imageSource) && !imageFailed;
+    const imageLoading = showImage && !imageLoaded;
     const {
         isFavorite,
         toggleFavorite
@@ -72,13 +78,14 @@ export default function MaterialCard({
             >
 
             <div
-                className="material-card-thumbnail"
+                className={`material-card-thumbnail${imageLoading ? " is-loading" : ""}`}
             >
 
                 {showImage ? (
 
                     <img
 
+                        key={imageSource}
                         src={
                             imageSource
                         }
@@ -87,11 +94,23 @@ export default function MaterialCard({
                             material.name
                         }
 
-                        onError={() =>
-                            setImageFailed(
-                                true
-                            )
-                        }
+                        style={{ visibility: imageLoaded ? "visible" : "hidden" }}
+                        onLoad={() => {
+                            if (imageSource) {
+                                setImageResult({
+                                    source: imageSource,
+                                    status: "loaded",
+                                });
+                            }
+                        }}
+                        onError={() => {
+                            if (imageSource) {
+                                setImageResult({
+                                    source: imageSource,
+                                    status: "failed",
+                                });
+                            }
+                        }}
 
                     />
 

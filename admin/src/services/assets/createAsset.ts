@@ -19,8 +19,9 @@ export interface CreateAssetInput {
   price?: number;
   pricePerPiece?: number;
   asset_status: AssetStatus;
+  shareWithWalls?: boolean;
 
-  // Required by validation when asset_type is "floor".
+  // Required for floors and image-based wall textures.
   // Values are converted to meters before this service is called.
   length?: number;
   width?: number;
@@ -28,12 +29,8 @@ export interface CreateAssetInput {
 
   modelFile?: File;
   diffuseFile?: File;
-  normalFile?: File;
-  roughnessFile?: File;
-  aoFile?: File;
 
   color?: string;
-  roughness?: number;
   metalness?: number;
 
   placement_surface?: "floor" | "wall" | "furniture";
@@ -50,7 +47,10 @@ export async function createAsset(
     );
   }
 
-  // Validate again before sending the request.
+  const hasPhysicalTexture =
+    input.asset_type === "floor" ||
+    (input.asset_type === "wall" && input.diffuseFile != null);
+
   if (input.asset_type === "floor") {
     if (
       input.pricePerPiece == null ||
@@ -60,44 +60,6 @@ export async function createAsset(
       throw new Error(
         "Floor price per tile must be a valid number of 0 or more."
       );
-    }
-
-    if (
-      input.length == null ||
-      !Number.isFinite(input.length) ||
-      input.length <= 0
-    ) {
-      throw new Error(
-        "Floor length must be greater than 0."
-      );
-    }
-
-    if (
-      input.width == null ||
-      !Number.isFinite(input.width) ||
-      input.width <= 0
-    ) {
-      throw new Error(
-        "Floor width must be greater than 0."
-      );
-    }
-
-    if (!input.floorPattern) {
-      throw new Error("Choose a floor tile pattern.");
-    }
-
-    if (
-      input.length <= DEFAULT_FLOOR_GROUT_WIDTH_M ||
-      input.width <= DEFAULT_FLOOR_GROUT_WIDTH_M
-    ) {
-      throw new Error("Floor tile dimensions must each be greater than the 3 mm grout width.");
-    }
-
-    if (
-      input.floorPattern === "herringbone" &&
-      !isHerringboneTileRatio(input.length, input.width)
-    ) {
-      throw new Error("Herringbone requires tile length to be twice the tile width.");
     }
   } else if (
     !(
@@ -112,6 +74,46 @@ export async function createAsset(
     throw new Error(
       "Asset price must be a valid number of 0 or more."
     );
+  }
+
+  if (hasPhysicalTexture) {
+    if (
+      input.length == null ||
+      !Number.isFinite(input.length) ||
+      input.length <= 0
+    ) {
+      throw new Error(
+        "Material length must be greater than 0."
+      );
+    }
+
+    if (
+      input.width == null ||
+      !Number.isFinite(input.width) ||
+      input.width <= 0
+    ) {
+      throw new Error(
+        "Material width must be greater than 0."
+      );
+    }
+
+    if (!input.floorPattern) {
+      throw new Error("Choose a supported material pattern.");
+    }
+
+    if (
+      input.length <= DEFAULT_FLOOR_GROUT_WIDTH_M ||
+      input.width <= DEFAULT_FLOOR_GROUT_WIDTH_M
+    ) {
+      throw new Error("Material dimensions must each be greater than the 3 mm grout width.");
+    }
+
+    if (
+      input.floorPattern === "herringbone" &&
+      !isHerringboneTileRatio(input.length, input.width)
+    ) {
+      throw new Error("Herringbone requires material length to be twice its width.");
+    }
   }
 
   const formData = new FormData();
@@ -129,11 +131,15 @@ export async function createAsset(
   }
   formData.append("asset_status", input.asset_status);
 
-  // Send the dimensions only for floor assets.
   if (input.asset_type === "floor") {
+    formData.append("shareWithWalls", String(input.shareWithWalls ?? false));
+  }
+
+  // Send dimensions for floors and image-based wall textures.
+  if (hasPhysicalTexture) {
     const floorPattern = input.floorPattern;
     if (!floorPattern) {
-      throw new Error("Choose a floor tile pattern.");
+      throw new Error("Choose a supported material pattern.");
     }
     formData.append("length", String(input.length));
     formData.append("width", String(input.width));
@@ -148,24 +154,8 @@ export async function createAsset(
     formData.append("diffuseFile", input.diffuseFile);
   }
 
-  if (input.normalFile) {
-    formData.append("normalFile", input.normalFile);
-  }
-
-  if (input.roughnessFile) {
-    formData.append("roughnessFile", input.roughnessFile);
-  }
-
-  if (input.aoFile) {
-    formData.append("aoFile", input.aoFile);
-  }
-
   if (input.color) {
     formData.append("color", input.color);
-  }
-
-  if (input.roughness != null) {
-    formData.append("roughness", String(input.roughness));
   }
 
   if (input.metalness != null) {

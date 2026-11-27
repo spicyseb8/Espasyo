@@ -58,9 +58,25 @@ export function buildAssetUpdate(asset, input, fieldValue) {
     asset_status: input.asset_status,
   };
 
+  if (input.shareWithWalls !== undefined) {
+    if (
+      asset.asset_type !== "floor" ||
+      typeof input.shareWithWalls !== "boolean"
+    ) {
+      throw invalid("Share with Walls is only available for floor assets.");
+    }
+    updates.shareWithWalls = input.shareWithWalls;
+  }
+
   if (hasLength && hasWidth) {
-    if (asset.asset_type !== "floor") {
-      throw invalid("Only floor assets can have tile dimensions.");
+    if (
+      asset.asset_type !== "floor" &&
+      !(
+        asset.asset_type === "wall" &&
+        asset.floorMaterialMode === "single-tile"
+      )
+    ) {
+      throw invalid("Only physical floor or wall textures can have material dimensions.");
     }
 
     if (
@@ -84,10 +100,14 @@ export function buildAssetUpdate(asset, input, fieldValue) {
 
   if (input.floorPattern !== undefined) {
     if (
-      asset.asset_type !== "floor" ||
+      !(
+        asset.asset_type === "floor" ||
+        (asset.asset_type === "wall" &&
+          asset.floorMaterialMode === "single-tile")
+      ) ||
       !FLOOR_PATTERNS.has(input.floorPattern)
     ) {
-      throw invalid("Floor pattern is not supported.");
+      throw invalid("Material pattern is not supported.");
     }
     if (!hasLength || !hasWidth) {
       throw invalid("Floor dimensions are required when updating the pattern.");

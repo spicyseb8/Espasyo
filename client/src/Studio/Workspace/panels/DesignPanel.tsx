@@ -772,7 +772,7 @@ export default function DesignPanel({ mode }: Props) {
             {mode === "paint" && (
                 <>
                     <MaterialSection
-                        title="Paint"
+                        title="Wall Materials"
                         materials={filteredWallMaterials}
                         favoriteType="wallPaint"
                         favoritesFirst={wallFavoritesFirst}
@@ -788,12 +788,12 @@ export default function DesignPanel({ mode }: Props) {
                         filteredWallMaterials.length === 0 &&
                         wallMaterials.length > 0 && (
                             <div className="material-empty">
-                                No paint materials match your search.
+                                No wall materials match your search.
                             </div>
                         )}
                     {wallMaterialsLoading && (
                         <div className="material-empty">
-                            Loading wall paints...
+                            Loading wall materials...
                         </div>
                     )}
                     {!wallMaterialsLoading && wallMaterialsError && (

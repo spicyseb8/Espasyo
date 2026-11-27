@@ -27,6 +27,7 @@ import {
 } from "../../../../shared/flooring/patternCanvas";
 
 import {
+  getAssetDiffuseSource,
   loadAssetTextures,
   hasTextures,
   type PreviewTextures,
@@ -130,8 +131,7 @@ function AssetMaterial({
         {
           asset: asset.name,
           assetId: asset.id,
-          diffuse:
-            asset.diffuse_path,
+          diffuse: getAssetDiffuseSource(asset),
         }
       );
 
@@ -149,6 +149,8 @@ function AssetMaterial({
         if (cancelled) {
           return;
         }
+
+        setTextures(loadedTextures);
 
         if (floorPatternLayout && loadedTextures.diffuse) {
           const source = getFloorCanvasImageSource(
@@ -177,9 +179,6 @@ function AssetMaterial({
           }
         );
 
-        setTextures(
-          loadedTextures
-        );
       } catch (error) {
         if (!cancelled) {
           console.error(
@@ -197,8 +196,7 @@ function AssetMaterial({
       generatedPatternTexture?.dispose();
     };
   }, [
-    asset.id,
-    asset.diffuse_path,
+    asset,
     floorPatternLayout,
   ]);
 
@@ -231,8 +229,11 @@ function AssetMaterial({
    * When there is no texture,
    * use the Firestore/default color.
    */
+  const previewTexture =
+    floorPatternTexture ?? textures.diffuse;
+
   const materialColor =
-    floorPatternTexture || textures.diffuse
+    previewTexture
       ? "#ffffff"
       : color;
 
@@ -254,12 +255,15 @@ function AssetMaterial({
       color={
         materialColor
       }
+      visible={
+        !hasTextures(asset) || Boolean(previewTexture)
+      }
 
       /**
        * Firebase diffuse texture.
        */
       map={
-        floorPatternTexture ?? textures.diffuse
+        previewTexture
       }
 
       /**

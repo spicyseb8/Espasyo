@@ -30,6 +30,8 @@ export interface Asset {
 
   floorPattern?: FloorPattern;
 
+  shareWithWalls?: boolean;
+
   asset_status?:
     | AssetStatus
     | null;

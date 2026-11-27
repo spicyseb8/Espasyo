@@ -583,10 +583,12 @@ export function preloadFloorTexture(
                     texture.repeat.set(1, 1);
                     texture.needsUpdate = true;
 
-                    floorTextureCache.set(
-                        normalizedUrl,
-                        texture
-                    );
+                    if (floorTexturePromises.get(normalizedUrl) === promise) {
+                        floorTextureCache.set(
+                            normalizedUrl,
+                            texture
+                        );
+                    }
 
                     resolve(texture);
                 },
@@ -603,7 +605,9 @@ export function preloadFloorTexture(
             );
         }
     ).finally(() => {
-        floorTexturePromises.delete(normalizedUrl);
+        if (floorTexturePromises.get(normalizedUrl) === promise) {
+            floorTexturePromises.delete(normalizedUrl);
+        }
     });
 
     floorTexturePromises.set(normalizedUrl, promise);
@@ -642,7 +646,9 @@ export function preloadFloorPatternTexture(
             texture.wrapS = RepeatWrapping;
             texture.wrapT = RepeatWrapping;
             texture.needsUpdate = true;
-            floorPatternTextureCache.set(settings.key, texture);
+            if (floorPatternTexturePromises.get(settings.key) === promise) {
+                floorPatternTextureCache.set(settings.key, texture);
+            }
             return texture;
         })
         .catch(error => {
@@ -654,7 +660,9 @@ export function preloadFloorPatternTexture(
             return null;
         })
         .finally(() => {
-            floorPatternTexturePromises.delete(settings.key);
+            if (floorPatternTexturePromises.get(settings.key) === promise) {
+                floorPatternTexturePromises.delete(settings.key);
+            }
         });
 
     floorPatternTexturePromises.set(settings.key, promise);
